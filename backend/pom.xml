@@ -3,7 +3,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>riscvsim</groupId>
+  <groupId>io.github.satchitseth</groupId>
   <artifactId>riscvsim-backend</artifactId>
   <version>0.1.0</version>
 
@@ -43,7 +43,7 @@
               <createDependencyReducedPom>false</createDependencyReducedPom>
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>riscvsim.Server</mainClass>
+                  <mainClass>riscvsim.Main</mainClass>
                 </transformer>
               </transformers>
             </configuration>
