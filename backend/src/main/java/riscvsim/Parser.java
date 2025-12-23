@@ -8,6 +8,9 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Utility class for parsing assembly source into a {@link Program}.
+ */
 public final class Parser {
 
     private static final Map<String, Integer> REG_ALIASES = Map.ofEntries(
@@ -21,6 +24,9 @@ public final class Parser {
         Map.entry("s10", 26), Map.entry("s11", 27),
         Map.entry("t3", 28), Map.entry("t4", 29), Map.entry("t5", 30), Map.entry("t6", 31)
     );
+
+    /** Prevent instantiation. */
+    private Parser() { }
 
     /**
      * Parses a register token, accepting both xN and ABI aliases.

@@ -14,15 +14,15 @@ public final class Instruction {
      * Supported instruction opcodes.
      */
     public enum Op {
-        ADDI,
-        LW,
-        SW,
-        BEQ,
-        BNE,
-        BLT,
-        BGE,
-        BLTU,
-        BGEU
+        /** Add immediate. */ ADDI,
+        /** Load word. */ LW,
+        /** Store word. */ SW,
+        /** Branch if equal (signed). */ BEQ,
+        /** Branch if not equal (signed). */ BNE,
+        /** Branch if less than (signed). */ BLT,
+        /** Branch if greater or equal (signed). */ BGE,
+        /** Branch if less than (unsigned). */ BLTU,
+        /** Branch if greater or equal (unsigned). */ BGEU
     }
 
     private Op op;

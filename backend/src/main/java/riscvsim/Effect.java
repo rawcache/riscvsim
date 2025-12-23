@@ -106,42 +106,74 @@ public final class Effect {
         return e;
     }
 
-    /** @return effect type identifier */
+    /**
+     * Returns the effect type identifier.
+     *
+     * @return effect kind
+     */
     public String getKind() {
         return kind;
     }
 
-    /** @return affected register index, or {@code null} if not a register effect */
+    /**
+     * Returns the affected register index, or {@code null} if not a register effect.
+     *
+     * @return register index or null
+     */
     public Integer getReg() {
         return reg;
     }
 
-    /** @return value before execution */
+    /**
+     * Returns the value before execution.
+     *
+     * @return pre-execution value
+     */
     public Integer getBefore() {
         return before;
     }
 
-    /** @return value after execution */
+    /**
+     * Returns the value after execution.
+     *
+     * @return post-execution value
+     */
     public Integer getAfter() {
         return after;
     }
 
-    /** @return base memory address */
+    /**
+     * Returns the base memory address for memory effects.
+     *
+     * @return base address
+     */
     public Integer getAddr() {
         return addr;
     }
 
-    /** @return number of bytes written */
+    /**
+     * Returns the number of bytes written for memory effects.
+     *
+     * @return byte count
+     */
     public Integer getSize() {
         return size;
     }
 
-    /** @return memory bytes before write */
+    /**
+     * Returns the memory bytes before the write.
+     *
+     * @return bytes prior to store
+     */
     public int[] getBeforeBytes() {
         return beforeBytes;
     }
 
-    /** @return memory bytes after write */
+    /**
+     * Returns the memory bytes after the write.
+     *
+     * @return bytes after store
+     */
     public int[] getAfterBytes() {
         return afterBytes;
     }

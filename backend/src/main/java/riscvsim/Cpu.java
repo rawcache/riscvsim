@@ -174,17 +174,29 @@ public final class Cpu {
         return new StepResult(inst, effects, false);
     }
 
-    /** @return current program counter */
+    /**
+     * Returns the current program counter (byte address).
+     *
+     * @return program counter
+     */
     public int getPc() {
         return pc;
     }
 
-    /** @return copy of the register file */
+    /**
+     * Returns a copy of the register file.
+     *
+     * @return array of 32 integer registers
+     */
     public int[] getRegs() {
         return regs.clone();
     }
 
-    /** @return memory instance */
+    /**
+     * Returns the backing memory instance.
+     *
+     * @return memory
+     */
     public Memory getMemory() {
         return mem;
     }
