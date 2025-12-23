@@ -79,6 +79,106 @@ public final class Rv2CMapper {
     }
 
     /**
+     * Emits C lines that model a BNE instruction.
+     *
+     * @param lines    accumulator for generated C source lines
+     * @param labelMap map from pc to labels for human-readable comments
+     * @param inst     BNE instruction being translated
+     * @param pcVal    byte-addressed pc value for this instruction
+     */
+    private static void bne(List<String> lines, Map<Integer, List<String>> labelMap,
+            Instruction inst, int pcVal) {
+        String targetLabel = firstLabel(labelMap, inst.getTargetPC());
+        String targetComment = " // goto " + (targetLabel != null ? targetLabel : hex(inst.getTargetPC()));
+        lines.add("        if (x[" + inst.getRs1() + "] != x[" + inst.getRs2() + "]) {");
+        lines.add("          pc = " + inst.getTargetPC() + ";" + targetComment);
+        lines.add("        } else {");
+        lines.add("          pc = " + (pcVal + 4) + ";");
+        lines.add("        }");
+    }
+
+
+    /**
+     * Emits C lines that model a BLT instruction.
+     *
+     * @param lines    accumulator for generated C source lines
+     * @param labelMap map from pc to labels for human-readable comments
+     * @param inst     BLT instruction being translated
+     * @param pcVal    byte-addressed pc value for this instruction
+     */
+    private static void blt(List<String> lines, Map<Integer, List<String>> labelMap,
+            Instruction inst, int pcVal) {
+        String targetLabel = firstLabel(labelMap, inst.getTargetPC());
+        String targetComment = " // goto " + (targetLabel != null ? targetLabel : hex(inst.getTargetPC()));
+        lines.add("        if (x[" + inst.getRs1() + "] < x[" + inst.getRs2() + "]) {");
+        lines.add("          pc = " + inst.getTargetPC() + ";" + targetComment);
+        lines.add("        } else {");
+        lines.add("          pc = " + (pcVal + 4) + ";");
+        lines.add("        }");
+    }
+
+    /**
+     * Emits C lines that model a BGE instruction.
+     *
+     * @param lines    accumulator for generated C source lines
+     * @param labelMap map from pc to labels for human-readable comments
+     * @param inst     BGE instruction being translated
+     * @param pcVal    byte-addressed pc value for this instruction
+     */
+    private static void bge(List<String> lines, Map<Integer, List<String>> labelMap,
+        Instruction inst, int pcVal) {
+        String targetLabel = firstLabel(labelMap, inst.getTargetPC());
+        String targetComment = " // goto " + (targetLabel != null ? targetLabel : hex(inst.getTargetPC()));
+        lines.add("        if (x[" + inst.getRs1() + "] >= x[" + inst.getRs2() + "]) {");
+        lines.add("          pc = " + inst.getTargetPC() + ";" + targetComment);
+        lines.add("        } else {");
+        lines.add("          pc = " + (pcVal + 4) + ";");
+        lines.add("        }");
+    }
+
+    /**
+     * Emits C lines that model a BLTU instruction.
+     *
+     * @param lines    accumulator for generated C source lines
+     * @param labelMap map from pc to labels for human-readable comments
+     * @param inst     BLTU instruction being translated
+     * @param pcVal    byte-addressed pc value for this instruction
+     */
+    private static void bltu(List<String> lines, Map<Integer, List<String>> labelMap,
+        Instruction inst, int pcVal) {
+        String targetLabel = firstLabel(labelMap, inst.getTargetPC());
+        String targetComment = " // goto " + (targetLabel != null ? targetLabel : hex(inst.getTargetPC()));
+        lines.add("        uint32_t a = (uint32_t)x[" + inst.getRs1() + "];");
+        lines.add("        uint32_t b = (uint32_t)x[" + inst.getRs2() + "];");
+        lines.add("        if (a < b) {");
+        lines.add("          pc = " + inst.getTargetPC() + ";" + targetComment);
+        lines.add("        } else {");
+        lines.add("          pc = " + (pcVal + 4) + ";");
+        lines.add("        }");
+    }
+
+    /**
+     * Emits C lines that model a BGEU instruction.
+     *
+     * @param lines    accumulator for generated C source lines
+     * @param labelMap map from pc to labels for human-readable comments
+     * @param inst     BGEU instruction being translated
+     * @param pcVal    byte-addressed pc value for this instruction
+     */
+    private static void bgeu(List<String> lines, Map<Integer, List<String>> labelMap,
+        Instruction inst, int pcVal) {
+        String targetLabel = firstLabel(labelMap, inst.getTargetPC());
+        String targetComment = " // goto " + (targetLabel != null ? targetLabel : hex(inst.getTargetPC()));
+        lines.add("        uint32_t a = (uint32_t)x[" + inst.getRs1() + "];");
+        lines.add("        uint32_t b = (uint32_t)x[" + inst.getRs2() + "];");
+        lines.add("        if (a >= b) {");
+        lines.add("          pc = " + inst.getTargetPC() + ";" + targetComment);
+        lines.add("        } else {");
+        lines.add("          pc = " + (pcVal + 4) + ";");
+        lines.add("        }");
+    }
+
+    /**
      * Generates a C program that simulates the given program by switching on pc.
      *
      * @param program parsed program
@@ -160,6 +260,12 @@ public final class Rv2CMapper {
                 lines.add("        pc = " + (pcVal + 4) + ";");
             }
             case BEQ -> beq(lines, labelMap, inst, pcVal);
+            case BNE -> bne(lines, labelMap, inst, pcVal);
+            case BLT -> blt(lines, labelMap, inst, pcVal);
+            case BGE -> bge(lines, labelMap, inst, pcVal);
+            case BLTU -> bltu(lines, labelMap, inst, pcVal);
+            case BGEU -> bgeu(lines, labelMap, inst, pcVal);
+
             default -> {
                 lines.add("        // unsupported op");
                 lines.add("        return 0;");

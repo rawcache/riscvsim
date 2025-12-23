@@ -130,6 +130,38 @@ public final class Cpu {
             pc = taken ? inst.getTargetPC() : (pc0 + 4);
         }
 
+        case BNE -> {
+            boolean taken = 
+                    regs[inst.getRs1()] != regs[inst.getRs2()];
+            pc = taken ? inst.getTargetPC() : (pc0 + 4);
+        }
+
+        case BLT -> {
+            boolean taken = 
+                    regs[inst.getRs1()] < regs[inst.getRs2()];
+            pc = taken ? inst.getTargetPC() : (pc0 + 4);
+        }
+
+        case BGE -> {
+            boolean taken = 
+                    regs[inst.getRs1()] >= regs[inst.getRs2()];
+            pc = taken ? inst.getTargetPC() : (pc0 + 4);
+        }
+
+        case BLTU -> {
+            long a = regs[inst.getRs1()] & 0xffffffffL;
+            long b = regs[inst.getRs2()] & 0xffffffffL;
+            boolean taken = a < b;
+            pc = taken ? inst.getTargetPC() : (pc0 + 4);
+        }
+
+        case BGEU -> {
+            long a = regs[inst.getRs1()] & 0xffffffffL;
+            long b = regs[inst.getRs2()] & 0xffffffffL;
+            boolean taken = a >= b;
+            pc = taken ? inst.getTargetPC() : (pc0 + 4);
+        }
+
         default -> {
             // Defensive: should never happen
             pc = pc0 + 4;

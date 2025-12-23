@@ -94,7 +94,18 @@ public final class Parser {
      */
     public static Program parseProgram(String src) {
         List<String> sourceLines = Arrays.asList(src.split("\\R", -1));
-        List<Instruction> instructions = new ArrayList<>();
+        FirstPassResult first = firstPass(sourceLines);
+        List<Instruction> instructions = secondPass(first.pending(), first.labels(), first.symbols());
+        return new Program(instructions, sourceLines, first.symbols(), first.labels());
+    }
+
+    /**
+     * Performs the first pass to collect symbols, labels, and pending instruction lines.
+     *
+     * @param sourceLines all source lines
+     * @return aggregated first-pass state
+     */
+    private static FirstPassResult firstPass(List<String> sourceLines) {
         Map<String, Integer> symbols = new LinkedHashMap<>();
         Map<String, Integer> labels = new LinkedHashMap<>();
         List<Pending> pending = new ArrayList<>();
@@ -105,20 +116,8 @@ public final class Parser {
             String raw = sourceLines.get(i);
             String rawTrim = raw.trim();
 
-            // #sym name=1000 OR #sym name 1000
             if (rawTrim.startsWith("#sym")) {
-                String rest = rawTrim.substring(4).trim();
-                Matcher m1 = Pattern.compile("^([A-Za-z_]\\w*)\\s*=\\s*(0x[0-9a-fA-F]+|\\d+)$").matcher(rest);
-                Matcher m2 = Pattern.compile("^([A-Za-z_]\\w*)\\s+(0x[0-9a-fA-F]+|\\d+)$").matcher(rest);
-                Matcher m = m1.matches() ? m1 : (m2.matches() ? m2 : null);
-                if (m == null) {
-                    throw new RuntimeException("Bad #sym format on line " + (i + 1));
-                }
-                String name = m.group(1);
-                String val = m.group(2);
-                int addr = val.toLowerCase().startsWith("0x") ? (int) Long.parseLong(val.substring(2), 16)
-                    : Integer.parseInt(val, 10);
-                symbols.put(name, addr);
+                parseSymbolLine(symbols, i, rawTrim);
                 continue;
             }
 
@@ -128,21 +127,8 @@ public final class Parser {
             }
 
             String rest = line;
-
-            // allow multiple labels on same line: label1: label2: addi ...
-            while (true) {
-                Matcher lm = Pattern.compile("^([A-Za-z_]\\w*):\\s*(.*)$").matcher(rest);
-                if (!lm.matches()) { 
-                    break;
-                }
-                String label = lm.group(1);
-                String after = lm.group(2);
-                if (labels.containsKey(label)) {
-                    throw new RuntimeException("Duplicate label \"" + label + "\" on line " + (i + 1));
-                }
-                labels.put(label, pc);
-                rest = after;
-            }
+            pc = recordLabels(labels, pc, i, rest);
+            rest = stripLeadingLabels(rest);
 
             if (rest.trim().isEmpty()) {
                 continue;
@@ -152,7 +138,88 @@ public final class Parser {
             pc += 4;
         }
 
-        // helper to resolve beq target
+        return new FirstPassResult(pending, labels, symbols);
+    }
+
+    /**
+     * Parses a #sym directive line and records the symbol.
+     *
+     * @param symbols symbol table to populate
+     * @param lineIndex zero-based source line index
+     * @param rawTrim trimmed line text starting with {@code #sym}
+     */
+    private static void parseSymbolLine(Map<String, Integer> symbols, int lineIndex, String rawTrim) {
+        String rest = rawTrim.substring(4).trim();
+        Matcher m1 = Pattern.compile("^([A-Za-z_]\\w*)\\s*=\\s*(0x[0-9a-fA-F]+|\\d+)$").matcher(rest);
+        Matcher m2 = Pattern.compile("^([A-Za-z_]\\w*)\\s+(0x[0-9a-fA-F]+|\\d+)$").matcher(rest);
+        Matcher m = m1.matches() ? m1 : (m2.matches() ? m2 : null);
+        if (m == null) {
+            throw new RuntimeException("Bad #sym format on line " + (lineIndex + 1));
+        }
+        String name = m.group(1);
+        String val = m.group(2);
+        int addr = val.toLowerCase().startsWith("0x") ? (int) Long.parseLong(val.substring(2), 16)
+            : Integer.parseInt(val, 10);
+        symbols.put(name, addr);
+    }
+
+    /**
+     * Records any labels at the start of the given line.
+     *
+     * @param labels label table to update
+     * @param pc current program counter
+     * @param lineIndex zero-based source line index
+     * @param rest remaining line text
+     * @return unchanged pc (included for symmetry)
+     */
+    private static int recordLabels(Map<String, Integer> labels, int pc, int lineIndex, String rest) {
+        String cursor = rest;
+        while (true) {
+            Matcher lm = Pattern.compile("^([A-Za-z_]\\w*):\\s*(.*)$").matcher(cursor);
+            if (!lm.matches()) {
+                break;
+            }
+            String label = lm.group(1);
+            String after = lm.group(2);
+            if (labels.containsKey(label)) {
+                throw new RuntimeException("Duplicate label \"" + label + "\" on line " + (lineIndex + 1));
+            }
+            labels.put(label, pc);
+            cursor = after;
+        }
+        return pc;
+    }
+
+    /**
+     * Removes leading labels from a line, returning the remainder.
+     *
+     * @param line line text possibly containing labels
+     * @return text after the last leading label
+     */
+    private static String stripLeadingLabels(String line) {
+        String rest = line;
+        while (true) {
+            Matcher lm = Pattern.compile("^([A-Za-z_]\\w*):\\s*(.*)$").matcher(rest);
+            if (!lm.matches()) {
+                break;
+            }
+            rest = lm.group(2);
+        }
+        return rest;
+    }
+
+    /**
+     * Second pass: decode pending instruction lines into Instruction objects.
+     *
+     * @param pending pending lines with source indices
+     * @param labels label table
+     * @param symbols symbol table
+     * @return list of decoded instructions
+     */
+    private static List<Instruction> secondPass(List<Pending> pending, Map<String, Integer> labels,
+            Map<String, Integer> symbols) {
+        List<Instruction> instructions = new ArrayList<>();
+
         java.util.function.BiFunction<String, Integer, Integer> parseTargetPC = (tok, srcLine) -> {
             if (labels.containsKey(tok)) {
                 return labels.get(tok);
@@ -212,13 +279,70 @@ public final class Parser {
                 continue;
             }
 
+            if (op.equals("bne")) {
+                if (tokens.length != 4) {
+                    throw new RuntimeException("Bad bne on line " + (p.srcLine + 1));
+                }
+                int rs1 = parseReg(tokens[1]);
+                int rs2 = parseReg(tokens[2]);
+                int target = parseTargetPC.apply(tokens[3], p.srcLine);
+                instructions.add(Instruction.bne(rs1, rs2, target, p.srcLine));
+                continue;
+            }
+
+            if (op.equals("blt")) {
+                if (tokens.length != 4) {
+                    throw new RuntimeException("Bad blt on line " + (p.srcLine + 1));
+                }
+                int rs1 = parseReg(tokens[1]);
+                int rs2 = parseReg(tokens[2]);
+                int target = parseTargetPC.apply(tokens[3], p.srcLine);
+                instructions.add(Instruction.blt(rs1, rs2, target, p.srcLine));
+                continue;
+            }
+
+            if (op.equals("bge")) {
+                if (tokens.length != 4) {
+                    throw new RuntimeException("Bad bge on line " + (p.srcLine + 1));
+                }
+                int rs1 = parseReg(tokens[1]);
+                int rs2 = parseReg(tokens[2]);
+                int target = parseTargetPC.apply(tokens[3], p.srcLine);
+                instructions.add(Instruction.bge(rs1, rs2, target, p.srcLine));
+                continue;
+            }
+
+            if (op.equals("bltu")) {
+                if (tokens.length != 4) {
+                    throw new RuntimeException("Bad bltu on line " + (p.srcLine + 1));
+                }
+                int rs1 = parseReg(tokens[1]);
+                int rs2 = parseReg(tokens[2]);
+                int target = parseTargetPC.apply(tokens[3], p.srcLine);
+                instructions.add(Instruction.bltu(rs1, rs2, target, p.srcLine));
+                continue;
+            }
+
+            if (op.equals("bgeu")) {
+                if (tokens.length != 4) {
+                    throw new RuntimeException("Bad bgeu on line " + (p.srcLine + 1));
+                }
+                int rs1 = parseReg(tokens[1]);
+                int rs2 = parseReg(tokens[2]);
+                int target = parseTargetPC.apply(tokens[3], p.srcLine);
+                instructions.add(Instruction.bgeu(rs1, rs2, target, p.srcLine));
+                continue;
+            }
+
             throw new RuntimeException("Unsupported instruction \"" + op + "\" on line " + (p.srcLine + 1));
         }
 
-        return new Program(instructions, sourceLines, symbols, labels);
+        return instructions;
     }
 
     private record OffsetBase(int imm, int rs1) { }
 
     private record Pending(String line, int srcLine) { }
+
+    private record FirstPassResult(List<Pending> pending, Map<String, Integer> labels, Map<String, Integer> symbols) { }
 }

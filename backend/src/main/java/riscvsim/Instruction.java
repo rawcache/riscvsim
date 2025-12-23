@@ -17,7 +17,12 @@ public final class Instruction {
         ADDI,
         LW,
         SW,
-        BEQ
+        BEQ,
+        BNE,
+        BLT,
+        BGE,
+        BLTU,
+        BGEU
     }
 
     private Op op;
@@ -111,6 +116,101 @@ public final class Instruction {
     public static Instruction beq(int rs1, int rs2, int targetPC, int srcLine) {
         Instruction i = new Instruction();
         i.op = Op.BEQ;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.targetPC = targetPC;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a BNE instruction.
+     *
+     * @param rs1 first register to compare
+     * @param rs2 second register to compare
+     * @param targetPC branch target PC
+     * @param srcLine source line number
+     * @return BNE instruction
+     */
+    public static Instruction bne(int rs1, int rs2, int targetPC, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.BNE;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.targetPC = targetPC;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a BLT instruction.
+     *
+     * @param rs1 first register to compare
+     * @param rs2 second register to compare
+     * @param targetPC branch target PC
+     * @param srcLine source line number
+     * @return BLT instruction
+     */
+    public static Instruction blt(int rs1, int rs2, int targetPC, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.BLT;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.targetPC = targetPC;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a BGE instruction.
+     *
+     * @param rs1 first register to compare
+     * @param rs2 second register to compare
+     * @param targetPC branch target PC
+     * @param srcLine source line number
+     * @return BGE instruction
+     */
+    public static Instruction bge(int rs1, int rs2, int targetPC, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.BGE;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.targetPC = targetPC;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a BLTU instruction.
+     *
+     * @param rs1 first register to compare
+     * @param rs2 second register to compare
+     * @param targetPC branch target PC
+     * @param srcLine source line number
+     * @return BLTU instruction
+     */
+    public static Instruction bltu(int rs1, int rs2, int targetPC, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.BLTU;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.targetPC = targetPC;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a BGEU instruction.
+     *
+     * @param rs1 first register to compare
+     * @param rs2 second register to compare
+     * @param targetPC branch target PC
+     * @param srcLine source line number
+     * @return BGEU instruction
+     */
+    public static Instruction bgeu(int rs1, int rs2, int targetPC, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.BGEU;
         i.rs1 = rs1;
         i.rs2 = rs2;
         i.targetPC = targetPC;

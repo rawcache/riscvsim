@@ -135,97 +135,207 @@ public final class CLikeExplainer {
             Instruction ins = insts.get(i);
             int pc = i * 4;
 
-            List<String> labelsHere = labelMap.get(pc);
-            if (labelsHere != null) {
-                for (String name : labelsHere) {
-                    lines.add(name + ":");
-                }
-            }
-
-            switch (ins.getOp()) {
-            case ADDI -> {
-                if (ins.getRs1() == 0) {
-                    regConst.put(ins.getRd(), ins.getImm());
-                    lines.add(regName(ins.getRd()) + " = " + ins.getImm() + ";");
-                } else {
-                    regConst.remove(ins.getRd());
-                    regPtrFromVar.remove(ins.getRd());
-                    lines.add(
-                        regName(ins.getRd()) + " = "
-                        + regName(ins.getRs1()) + " + "
-                        + ins.getImm() + ";"
-                    );
-                }
-            }
-
-            case LW -> {
-                Integer baseConst = regConst.get(ins.getRs1());
-                regConst.remove(ins.getRd());
-
-                if (baseConst != null && ins.getImm() == 0) {
-                    lines.add(
-                        regName(ins.getRd()) + " = *(int32_t*)"
-                        + formatAddress(inv, baseConst) + ";"
-                    );
-                    regPtrFromVar.put(ins.getRd(), baseConst);
-                } else {
-                    regPtrFromVar.remove(ins.getRd());
-                    lines.add(
-                        regName(ins.getRd()) + " = *(int32_t*)("
-                        + regName(ins.getRs1()) + " + "
-                        + ins.getImm() + ");"
-                    );
-                }
-            }
-
-            case SW -> {
-                Integer baseConst = regConst.get(ins.getRs1());
-                Integer valConst = regConst.get(ins.getRs2());
-
-                Integer ptrVarAddr = regPtrFromVar.get(ins.getRs1());
-                if (ptrVarAddr != null && ins.getImm() == 0) {
-                    String rhs = (valConst != null)
-                            ? String.valueOf(valConst)
-                            : regName(ins.getRs2());
-                    lines.add("*" + formatAddress(inv, ptrVarAddr) + " = " + rhs + ";");
-                    break;
-                }
-
-                if (baseConst != null && ins.getImm() == 0) {
-                    String baseName = formatAddress(inv, baseConst);
-                    String rhs = (valConst != null)
-                            ? "(int32_t)" + formatAddress(inv, valConst)
-                            : regName(ins.getRs2());
-                    lines.add("*(int32_t*)" + baseName + " = " + rhs + ";");
-                    break;
-                }
-
-                lines.add(
-                    "*(int32_t*)("
-                    + regName(ins.getRs1()) + " + "
-                    + ins.getImm() + ") = "
-                    + regName(ins.getRs2()) + ";"
-                );
-            }
-
-            case BEQ -> {
-                String target = formatLabel(labelMap, ins.getTargetPC());
-                if (ins.getRs1() == ins.getRs2()) {
-                    lines.add("goto " + target + ";");
-                } else {
-                    lines.add(
-                        "if (" + regName(ins.getRs1())
-                        + " == " + regName(ins.getRs2())
-                        + ") goto " + target + ";"
-                    );
-                }
-            }
-
-            default -> throw new IllegalStateException(
-                        "Unhandled op: " + ins.getOp());
-            }
+            addLabels(labelMap.get(pc), lines);
+            emitInstruction(lines, ins, inv, labelMap, regConst, regPtrFromVar);
         }
 
         return String.join("\n", lines);
+    }
+
+    /**
+     * Appends any labels present at the current PC to the output lines.
+     *
+     * @param labelsHere labels associated with the current PC
+     * @param lines accumulated output lines
+     */
+    private static void addLabels(List<String> labelsHere, List<String> lines) {
+        if (labelsHere == null) {
+            return;
+        }
+        for (String name : labelsHere) {
+            lines.add(name + ":");
+        }
+    }
+
+    /**
+     * Emits C-like text for the given instruction and updates simple tracking maps.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param inv reverse symbol map for addresses
+     * @param labelMap labels grouped by PC
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     */
+    private static void emitInstruction(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, String> inv,
+            Map<Integer, List<String>> labelMap,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar) {
+
+        switch (ins.getOp()) {
+        case ADDI -> handleAddi(lines, ins, regConst, regPtrFromVar);
+        case LW -> handleLw(lines, ins, inv, regConst, regPtrFromVar);
+        case SW -> handleSw(lines, ins, inv, regConst, regPtrFromVar);
+        case BEQ -> handleBeq(lines, ins, labelMap);
+        case BNE -> handleBranch(lines, ins, labelMap, "!=", null);
+        case BLT -> handleBranch(lines, ins, labelMap, "<", null);
+        case BGE -> handleBranch(lines, ins, labelMap, ">=", null);
+        case BLTU -> handleBranch(lines, ins, labelMap, "<", "uint32_t");
+        case BGEU -> handleBranch(lines, ins, labelMap, ">=", "uint32_t");
+        default -> throw new IllegalStateException("Unhandled op: " + ins.getOp());
+        }
+    }
+
+    /**
+     * Handles ADDI, including constant propagation shortcuts.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     */
+    private static void handleAddi(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar) {
+        if (ins.getRs1() == 0) {
+            regConst.put(ins.getRd(), ins.getImm());
+            lines.add(regName(ins.getRd()) + " = " + ins.getImm() + ";");
+            return;
+        }
+        regConst.remove(ins.getRd());
+        regPtrFromVar.remove(ins.getRd());
+        lines.add(
+            regName(ins.getRd()) + " = "
+            + regName(ins.getRs1()) + " + "
+            + ins.getImm() + ";"
+        );
+    }
+
+    /**
+     * Handles LW, emitting pointers when the base is a known constant.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param inv reverse symbol map
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     */
+    private static void handleLw(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, String> inv,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar) {
+        Integer baseConst = regConst.get(ins.getRs1());
+        regConst.remove(ins.getRd());
+
+        if (baseConst != null && ins.getImm() == 0) {
+            lines.add(
+                regName(ins.getRd()) + " = *(int32_t*)"
+                + formatAddress(inv, baseConst) + ";"
+            );
+            regPtrFromVar.put(ins.getRd(), baseConst);
+            return;
+        }
+
+        regPtrFromVar.remove(ins.getRd());
+        lines.add(
+            regName(ins.getRd()) + " = *(int32_t*)("
+            + regName(ins.getRs1()) + " + "
+            + ins.getImm() + ");"
+        );
+    }
+
+    /**
+     * Handles SW, including cases where the address or value are known constants.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param inv reverse symbol map
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     */
+    private static void handleSw(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, String> inv,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar) {
+        Integer baseConst = regConst.get(ins.getRs1());
+        Integer valConst = regConst.get(ins.getRs2());
+
+        Integer ptrVarAddr = regPtrFromVar.get(ins.getRs1());
+        if (ptrVarAddr != null && ins.getImm() == 0) {
+            String rhs = (valConst != null)
+                    ? String.valueOf(valConst)
+                    : regName(ins.getRs2());
+            lines.add("*" + formatAddress(inv, ptrVarAddr) + " = " + rhs + ";");
+            return;
+        }
+
+        if (baseConst != null && ins.getImm() == 0) {
+            String baseName = formatAddress(inv, baseConst);
+            String rhs = (valConst != null)
+                    ? "(int32_t)" + formatAddress(inv, valConst)
+                    : regName(ins.getRs2());
+            lines.add("*(int32_t*)" + baseName + " = " + rhs + ";");
+            return;
+        }
+
+        lines.add(
+            "*(int32_t*)("
+            + regName(ins.getRs1()) + " + "
+            + ins.getImm() + ") = "
+            + regName(ins.getRs2()) + ";"
+        );
+    }
+
+    /**
+     * Handles BEQ, including the unconditional jump shortcut when comparing the same register.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param labelMap labels grouped by PC
+     */
+    private static void handleBeq(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, List<String>> labelMap) {
+        String target = formatLabel(labelMap, ins.getTargetPC());
+        if (ins.getRs1() == ins.getRs2()) {
+            lines.add("goto " + target + ";");
+            return;
+        }
+        lines.add(
+            "if (" + regName(ins.getRs1())
+            + " == " + regName(ins.getRs2())
+            + ") goto " + target + ";"
+        );
+    }
+
+    /**
+     * Handles generic branch emission with optional casting for unsigned comparisons.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param labelMap labels grouped by PC
+     * @param op comparison operator string
+     * @param cast optional cast type (e.g., {@code uint32_t}) or {@code null}
+     */
+    private static void handleBranch(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, List<String>> labelMap,
+            String op,
+            String cast) {
+        String target = formatLabel(labelMap, ins.getTargetPC());
+        String lhs = cast == null ? regName(ins.getRs1()) : "(" + cast + ")" + regName(ins.getRs1());
+        String rhs = cast == null ? regName(ins.getRs2()) : "(" + cast + ")" + regName(ins.getRs2());
+        lines.add("if (" + lhs + " " + op + " " + rhs + ") goto " + target + ";");
     }
 }
