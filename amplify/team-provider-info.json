@@ -1,0 +1,15 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-riscvsim-dev-c61a4-authRole",
+      "UnauthRoleArn": "arn:aws:iam::831714861916:role/amplify-riscvsim-dev-c61a4-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::831714861916:role/amplify-riscvsim-dev-c61a4-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-riscvsim-dev-c61a4-deployment",
+      "UnauthRoleName": "amplify-riscvsim-dev-c61a4-unauthRole",
+      "StackName": "amplify-riscvsim-dev-c61a4",
+      "StackId": "arn:aws:cloudformation:us-east-1:831714861916:stack/amplify-riscvsim-dev-c61a4/acd2cdb0-e50c-11f0-99f6-12f367878bb5",
+      "AmplifyAppId": "d38frsq3u5ddhg"
+    }
+  }
+}
