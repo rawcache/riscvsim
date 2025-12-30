@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "paths": {
+    "/simulate": {
+      "name": "/simulate",
+      "lambdaFunction": "riscvsimBackend",
+      "permissions": {
+        "setting": "open"
+      }
+    }
+  }
+}

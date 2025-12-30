@@ -1,1 +1,43 @@
-{}
+{
+  "api": {
+    "riscvsimAPI": {
+      "dependsOn": [
+        {
+          "attributes": [
+            "Name",
+            "Arn"
+          ],
+          "category": "function",
+          "resourceName": "riscvsimBackend"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "API Gateway"
+    }
+  },
+  "function": {
+    "riscvsimBackend": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    }
+  },
+  "parameters": {
+    "AMPLIFY_function_riscvsimBackend_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "riscvsimBackend"
+        }
+      ]
+    },
+    "AMPLIFY_function_riscvsimBackend_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "riscvsimBackend"
+        }
+      ]
+    }
+  }
+}

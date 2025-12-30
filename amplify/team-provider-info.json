@@ -10,6 +10,17 @@
       "StackName": "amplify-riscvsim-dev-c61a4",
       "StackId": "arn:aws:cloudformation:us-east-1:831714861916:stack/amplify-riscvsim-dev-c61a4/acd2cdb0-e50c-11f0-99f6-12f367878bb5",
       "AmplifyAppId": "d38frsq3u5ddhg"
+    },
+    "categories": {
+      "function": {
+        "riscvsimBackend": {
+          "deploymentBucketName": "amplify-riscvsim-dev-c61a4-deployment",
+          "s3Key": "amplify-builds/riscvsimBackend-534d634a707771495553-build.zip"
+        }
+      },
+      "api": {
+        "riscvsimAPI": {}
+      }
     }
   }
 }
