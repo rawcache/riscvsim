@@ -1,6 +1,4 @@
-plugins {
-    id 'java'
-}
+apply plugin: 'java'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -16,17 +14,12 @@ dependencies {
     implementation 'com.amazonaws:aws-lambda-java-events:2.2.7'
 }
 
-jar {
-    archiveBaseName.set('latest_build')
-}
-
-tasks.register('buildZip', Zip) {
-    from compileJava
-    from processResources
+task buildZip(type: Zip) {
+    from sourceSets.main.output      
     into('lib') {
         from configurations.runtimeClasspath
     }
-    archiveFileName.set('latest_build.zip')
+    archiveFileName = 'latest_build.zip'
 }
 
-build.dependsOn(tasks.buildZip)
+build.dependsOn buildZip
