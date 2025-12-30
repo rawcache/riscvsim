@@ -1,20 +1,29 @@
-// package example;
-
 import java.util.HashMap;
 import java.util.Map;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 
-public class Handler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
+public class Handler implements
+        RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     @Override
-    public Map<String, Object> handleRequest(Map<String, Object> input, Context context) {
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent request,
+            Context context) {
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "ok");
-        response.put("message", "RISC-V backend is live");
-        response.put("input", input);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/json");
+
+        String body = "{ \"status\": \"ok\", \"message\": \"RISC-V backend is live\" }";
+
+        APIGatewayProxyResponseEvent response =
+                new APIGatewayProxyResponseEvent();
+        response.setStatusCode(200);
+        response.setHeaders(headers);
+        response.setBody(body);
 
         return response;
     }
