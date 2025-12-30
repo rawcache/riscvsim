@@ -42,7 +42,6 @@ public class Handler implements RequestHandler<Map<String, Object>, Map<String, 
             payload.put("clike", sim.cLike());
             payload.put("rv2c", sim.rv2c());
             payload.put("error", null);
-            payload.put("pcBefore", step.getPcBefore());
             payload.put("pcAfter", sim.cpu().getPc());
             payload.put("stepExecuted", true);
 
