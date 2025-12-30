@@ -1,0 +1,6 @@
+{
+  "pluginId": "amplify-java-function-runtime-provider",
+  "functionRuntime": "java",
+  "useLegacyBuild": false,
+  "defaultEditorFile": "src/main/java/example/LambdaRequestHandler.java"
+}
