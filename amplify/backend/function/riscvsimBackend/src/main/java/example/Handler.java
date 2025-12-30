@@ -17,13 +17,10 @@ public class Handler implements
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json");
 
-        String body = "{ \"status\": \"ok\", \"message\": \"RISC-V backend is live\" }";
-
-        APIGatewayProxyResponseEvent response =
-                new APIGatewayProxyResponseEvent();
+        APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
         response.setStatusCode(200);
         response.setHeaders(headers);
-        response.setBody(body);
+        response.setBody("{\"status\":\"ok\",\"message\":\"Backend live\"}");
 
         return response;
     }
