@@ -2,6 +2,7 @@
 
 console.log("VITE_API_BASE =", import.meta.env.VITE_API_BASE);
 
+let sessionId: string | undefined;
 const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? "";
 
 function api(path: string): string {
@@ -71,7 +72,6 @@ function renderRegs(regs?: number[]): string {
 window.addEventListener("DOMContentLoaded", () => {
   const assembleBtn = document.getElementById("assemble") as HTMLButtonElement;
   const stepBtn = document.getElementById("step") as HTMLButtonElement;
-  const loadSampleBtn = document.getElementById("loadSample") as HTMLButtonElement;
   const sourceEl = document.getElementById("source") as HTMLTextAreaElement;
 
   const clikeEl = document.getElementById("clike") as HTMLElement;
@@ -126,7 +126,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
     try {
       const source = sourceEl.value;
-      const data = await postJson(api("/simulate"), { code: source });
+      const data = await postJson(api("/api/session"), { source });
+      sessionId = data.sessionId;
       renderAll(data);
       stepBtn.disabled = false;
     } catch (err) {
@@ -135,26 +136,16 @@ window.addEventListener("DOMContentLoaded", () => {
   };
 
   stepBtn.onclick = async () => {
+    if (!sessionId) {
+      effectsEl.textContent = "Error: no sessionId. Click Assemble first.";
+      return;
+    }
+
     try {
-      const source = sourceEl.value;
-      const data = await postJson(api("/simulate"), { code: source });
+      const data = await postJson(api("/api/step"), { sessionId });
       renderAll(data);
     } catch (err) {
       effectsEl.textContent = `Error: ${(err as Error).message}`;
     }
-  };
-
-  loadSampleBtn.onclick = () => {
-    sourceEl.value = `
-addi x1, x0, -1      # 0xffffffff
-addi x2, x0, 1
-bltu x1, x2, not_taken   # unsigned: false
-addi x3, x0, 123         # executes
-not_taken:
-bgeu x1, x2, done        # unsigned: true
-addi x3, x0, 999         # skipped
-done:
-`.trim();
-    assembleBtn.click();
   };
 });
