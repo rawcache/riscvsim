@@ -6,6 +6,12 @@ yarn-debug.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Gradle
+.gradle/
+**/.gradle/
+build/
+**/build/
+
 # Frontend
 frontend/node_modules/
 frontend/dist/
