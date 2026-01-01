@@ -1,6 +1,6 @@
 RISC-V Simulator (RV32 Teaching Tool)
 =====================================
-
+GO TO: studyriscv.com
 A lightweight RV32 learning rig: assemble a small subset of RISC-V in the browser, single-step it on a Java backend, and see registers/memory/branches come alive with C-like explanations and an auto-generated C “switch(pc)” mapping.
 
 Why this exists
