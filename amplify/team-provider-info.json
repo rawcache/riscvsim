@@ -15,7 +15,7 @@
       "function": {
         "riscvsimBackend": {
           "deploymentBucketName": "amplify-riscvsim-dev-c61a4-deployment",
-          "s3Key": "amplify-builds/riscvsimBackend-4e55657965446e64316c-build.zip"
+          "s3Key": "amplify-builds/riscvsimBackend-4744454a514c59624f77-build.zip"
         }
       },
       "api": {

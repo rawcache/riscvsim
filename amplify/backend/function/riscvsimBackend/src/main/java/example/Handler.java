@@ -6,6 +6,7 @@ import java.util.Map;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonObject;
 
 import riscvsim.Simulator;
@@ -69,7 +70,7 @@ public class Handler implements RequestHandler<Map<String, Object>, Map<String, 
                 if (code instanceof String s) {
                     return s;
                 }
-            } catch (Exception ignored) {
+            } catch (JsonParseException | ClassCastException ignored) {
                 // fall back to raw body if it is plain text
                 return bodyStr;
             }
