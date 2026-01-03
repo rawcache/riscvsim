@@ -1,21 +1,21 @@
 {
   "dev": {
     "awscloudformation": {
-      "AuthRoleName": "amplify-riscvsim-dev-c61a4-authRole",
-      "UnauthRoleArn": "arn:aws:iam::831714861916:role/amplify-riscvsim-dev-c61a4-unauthRole",
-      "AuthRoleArn": "arn:aws:iam::831714861916:role/amplify-riscvsim-dev-c61a4-authRole",
+      "AuthRoleName": "amplify-riscvsim-dev-5f2e2-authRole",
+      "UnauthRoleArn": "arn:aws:iam::831714861916:role/amplify-riscvsim-dev-5f2e2-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::831714861916:role/amplify-riscvsim-dev-5f2e2-authRole",
       "Region": "us-east-1",
-      "DeploymentBucketName": "amplify-riscvsim-dev-c61a4-deployment",
-      "UnauthRoleName": "amplify-riscvsim-dev-c61a4-unauthRole",
-      "StackName": "amplify-riscvsim-dev-c61a4",
-      "StackId": "arn:aws:cloudformation:us-east-1:831714861916:stack/amplify-riscvsim-dev-c61a4/acd2cdb0-e50c-11f0-99f6-12f367878bb5",
-      "AmplifyAppId": "d38frsq3u5ddhg"
+      "DeploymentBucketName": "amplify-riscvsim-dev-5f2e2-deployment",
+      "UnauthRoleName": "amplify-riscvsim-dev-5f2e2-unauthRole",
+      "StackName": "amplify-riscvsim-dev-5f2e2",
+      "StackId": "arn:aws:cloudformation:us-east-1:831714861916:stack/amplify-riscvsim-dev-5f2e2/37fd3250-e8f4-11f0-bbd8-1215e9dfd15f",
+      "AmplifyAppId": "d3esu1lrsxz2lg"
     },
     "categories": {
       "function": {
-        "riscvsimBackend": {
-          "deploymentBucketName": "amplify-riscvsim-dev-c61a4-deployment",
-          "s3Key": "amplify-builds/riscvsimBackend-4744454a514c59624f77-build.zip"
+        "riscvsim7bf74184": {
+          "deploymentBucketName": "amplify-riscvsim-dev-5f2e2-deployment",
+          "s3Key": "amplify-builds/riscvsim7bf74184-534d634a707771495553-build.zip"
         }
       },
       "api": {
