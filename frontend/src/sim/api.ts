@@ -13,7 +13,7 @@ async function postJson(path: string, body: any): Promise<ApiResponse> {
 }
 
 export async function createSession(source: string): Promise<ApiResponse> {
-  return postJson("/api/session", { source });
+  return postJson("/simulate", { code: source });
 }
 
 export async function assemble(sessionId: string, source: string): Promise<ApiResponse> {

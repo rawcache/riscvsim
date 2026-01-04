@@ -143,8 +143,8 @@ window.addEventListener("DOMContentLoaded", () => {
     stepBtn.textContent = "Step";
 
     try {
-      const source = sourceEl.value;
-      const data = await postJson(api("/api/session"), { source });
+      const programText = sourceEl.value;
+      const data = await postJson(api("/simulate"), { code: programText });
       sessionId = data.sessionId;
       renderAll(data);
       stepBtn.disabled = false;
