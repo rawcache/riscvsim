@@ -1,7 +1,7 @@
 // src/main.ts
 
 let sessionId: string | undefined;
-const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.trim().replace(/\/$/, "") || "";
+const API_BASE = "https://88s3kh09of.execute-api.us-east-1.amazonaws.com/dev";
 
 function api(path: string): string {
   return `${API_BASE}${path}`;
