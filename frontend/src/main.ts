@@ -71,6 +71,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const assembleBtn = document.getElementById("assemble") as HTMLButtonElement;
   const stepBtn = document.getElementById("step") as HTMLButtonElement;
   const sourceEl = document.getElementById("source") as HTMLTextAreaElement;
+  const loadSampleBtn = document.getElementById("loadSample") as HTMLButtonElement;
 
   const clikeEl = document.getElementById("clike") as HTMLElement;
   const effectsEl = document.getElementById("effects") as HTMLElement;
@@ -113,6 +114,25 @@ window.addEventListener("DOMContentLoaded", () => {
       stepBtn.textContent = "Step";
     }
   }
+
+  const sampleProgram = [
+    "# Sample: add two numbers and halt",
+    "addi x1, x0, 5",
+    "addi x2, x0, 7",
+    "add x3, x1, x2",
+    "jal x0, 0 # loop/halt",
+    "",
+  ].join("\n");
+
+  loadSampleBtn.onclick = () => {
+    sourceEl.value = sampleProgram;
+    effectsEl.textContent = "";
+    clikeEl.textContent = "";
+    regsEl.textContent = "";
+    stepBtn.disabled = true;
+    stepBtn.textContent = "Step";
+    sourceEl.focus();
+  };
 
   assembleBtn.onclick = async () => {
     effectsEl.textContent = "";
