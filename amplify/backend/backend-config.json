@@ -8,7 +8,7 @@
             "Arn"
           ],
           "category": "function",
-          "resourceName": "riscvsim7bf74184"
+          "resourceName": "riscvsimBackend"
         }
       ],
       "providerPlugin": "awscloudformation",
@@ -16,8 +16,9 @@
     }
   },
   "function": {
-    "riscvsim7bf74184": {
+    "riscvsimBackend": {
       "build": true,
+      "dependsOn": [],
       "providerPlugin": "awscloudformation",
       "service": "Lambda"
     }
@@ -36,6 +37,22 @@
         {
           "category": "function",
           "resourceName": "riscvsim7bf74184"
+        }
+      ]
+    },
+    "AMPLIFY_function_riscvsimBackend_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "riscvsimBackend"
+        }
+      ]
+    },
+    "AMPLIFY_function_riscvsimBackend_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "riscvsimBackend"
         }
       ]
     }

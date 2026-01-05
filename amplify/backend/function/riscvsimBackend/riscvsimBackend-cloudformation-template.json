@@ -43,16 +43,16 @@
             "Ref": "s3Key"
           }
         },
-        "Handler": "example.LambdaRequestHandler::handleRequest",
+        "Handler": "example.Handler::handleRequest",
         "FunctionName": {
           "Fn::If": [
             "ShouldNotCreateEnvResources",
-            "riscvsim7bf74184",
+            "riscvsimBackend",
             {
               "Fn::Join": [
                 "",
                 [
-                  "riscvsim7bf74184",
+                  "riscvsimBackend",
                   "-",
                   {
                     "Ref": "env"
@@ -78,7 +78,7 @@
             "Arn"
           ]
         },
-        "Runtime": "java11",
+        "Runtime": "java17",
         "Layers": [],
         "Timeout": 25
       }
@@ -89,12 +89,12 @@
         "RoleName": {
           "Fn::If": [
             "ShouldNotCreateEnvResources",
-            "riscvsimLambdaRole93ba2376",
+            "riscvsimLambdaRole7d67ce94",
             {
               "Fn::Join": [
                 "",
                 [
-                  "riscvsimLambdaRole93ba2376",
+                  "riscvsimLambdaRole7d67ce94",
                   "-",
                   {
                     "Ref": "env"
