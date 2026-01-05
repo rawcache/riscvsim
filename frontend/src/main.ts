@@ -1,9 +1,7 @@
 // src/main.ts
 
 let sessionId: string | undefined;
-const API_BASE =
-  ((import.meta.env.VITE_API_BASE as string | undefined) ??
-    "https://88s3kh09of.execute-api.us-east-1.amazonaws.com/dev").replace(/\/$/, "");
+const API_BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? "").replace(/\/$/, "");
 
 function api(path: string): string {
   return `${API_BASE}${path}`;
@@ -131,6 +129,7 @@ window.addEventListener("DOMContentLoaded", () => {
     effectsEl.textContent = "";
     clikeEl.textContent = "";
     regsEl.textContent = "";
+    sessionId = undefined;
     stepBtn.disabled = true;
     stepBtn.textContent = "Step";
     sourceEl.focus();
@@ -146,12 +145,13 @@ window.addEventListener("DOMContentLoaded", () => {
 
     try {
       const programText = sourceEl.value;
-      const data = await postJson(api("/simulate"), { code: programText });
+      const data = await postJson(api("/api/session"), { source: programText });
       sessionId = data.sessionId;
       renderAll(data);
-      stepBtn.disabled = false;
+      stepBtn.disabled = !sessionId;
     } catch (err) {
       effectsEl.textContent = `Error: ${(err as Error).message}`;
+      sessionId = undefined;
     }
   };
 
