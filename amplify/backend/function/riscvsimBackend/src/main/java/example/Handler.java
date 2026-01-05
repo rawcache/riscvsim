@@ -142,6 +142,12 @@ public class Handler implements RequestHandler<APIGatewayProxyRequestEvent, APIG
         }
     }
 
+    /**
+         * Processes an assembly request for a specific session.
+         *
+         * @param event API Gateway proxy event containing sessionId and source code
+         * @return response containing the updated simulator state or an error if the session is unknown
+         */
     private APIGatewayProxyResponseEvent handleAssemble(APIGatewayProxyRequestEvent event) {
         try {
             String body = event.getBody();
@@ -166,6 +172,15 @@ public class Handler implements RequestHandler<APIGatewayProxyRequestEvent, APIG
         }
     }
 
+    /**
+     * Creates a serializable representation of the current simulator state.
+     *
+     * @param sessionId the unique identifier for the session
+     * @param sim the simulator instance to inspect
+     * @param halted boolean flag indicating if execution has stopped
+     * @param effects a list of side effects resulting from the last operation
+     * @return a map containing the registers, program counter, and simulation metadata
+     */
     private static Map<String, Object> snapshot(String sessionId, Simulator sim, boolean halted, List<Effect> effects) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("sessionId", sessionId);
