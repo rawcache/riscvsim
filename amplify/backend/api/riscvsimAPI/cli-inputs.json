@@ -3,7 +3,7 @@
   "paths": {
     "/simulate": {
       "name": "/simulate",
-      "lambdaFunction": "riscvsim7bf74184",
+      "lambdaFunction": "riscvsimBackend",
       "permissions": {
         "setting": "open"
       }
