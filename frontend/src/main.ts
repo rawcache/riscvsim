@@ -116,11 +116,12 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   const sampleProgram = [
-    "# Sample: add two numbers and halt",
-    "addi x1, x0, 5",
-    "addi x2, x0, 7",
-    "add x3, x1, x2",
-    "jal x0, 0 # loop/halt",
+    "# Sample: add two numbers (supported opcodes only) and halt",
+    "addi x1, x0, 5        # x1 = 5",
+    "addi x2, x0, 7        # x2 = 7",
+    "addi x3, x2, 5        # x3 = x2 + 5 = 12",
+    "beq x0, x0, done      # branch past program to halt",
+    "done:",
     "",
   ].join("\n");
 
