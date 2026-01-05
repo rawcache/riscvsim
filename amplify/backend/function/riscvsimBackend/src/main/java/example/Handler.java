@@ -1,16 +1,21 @@
 package example;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
 
+import riscvsim.Effect;
 import riscvsim.Simulator;
 import riscvsim.StepResult;
 
@@ -22,7 +27,8 @@ import riscvsim.StepResult;
  */
 public class Handler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = new GsonBuilder().serializeNulls().create();
+    private static final Map<String, Simulator> SESSIONS = new ConcurrentHashMap<>();
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
@@ -36,48 +42,70 @@ public class Handler implements RequestHandler<APIGatewayProxyRequestEvent, APIG
             return corsResponse(200, "");
         }
 
-        switch (path) {
-        case "/api/session":
-            return handleSession(event);
-        case "/api/step":
-            return handleStep(event);
-        case "/api/reset":
-            return handleReset(event);
-        default:
-            return corsResponse(404, "{\"error\":\"Unknown route: " + path + "\"}");
-        }
+        return switch (path) {
+        case "/api/session" -> handleSession(event);
+        case "/api/assemble" -> handleAssemble(event);
+        case "/api/step" -> handleStep(event);
+        case "/api/reset" -> handleReset(event);
+        default -> corsResponse(404, "{\"error\":\"Unknown route: " + path + "\"}");
+        };
     }
 
+    /**
+     * Handles the session initialization request.
+     *
+     * @param event API Gateway proxy event
+     * @return response containing a session identifier
+     */
     private APIGatewayProxyResponseEvent handleSession(APIGatewayProxyRequestEvent event) {
-        String body = "{\"sessionId\":\"abc123\"}";
-        return corsResponse(200, body);
+        try {
+            String source = "";
+            String body = event.getBody();
+            if (body != null && !body.isEmpty()) {
+                JsonObject obj = JsonParser.parseString(body).getAsJsonObject();
+                if (obj.has("source") && !obj.get("source").isJsonNull()) {
+                    source = obj.get("source").getAsString();
+                }
+            }
+
+            String sessionId = UUID.randomUUID().toString();
+            Simulator sim = new Simulator();
+            if (!source.isBlank()) {
+                sim.assemble(source);
+            }
+            SESSIONS.put(sessionId, sim);
+
+            return corsResponse(200, GSON.toJson(snapshot(sessionId, sim, false, List.of())));
+        } catch (RuntimeException ex) {
+            return corsResponse(400, "{\"error\":\"" + ex.getMessage() + "\"}");
+        }
     }
 
+    /**
+     * Processes a single step of the RISC-V simulation.
+     *
+     * @param event API Gateway proxy event containing assembly code
+     * @return response containing the CPU state, registers, and execution results
+     */
     private APIGatewayProxyResponseEvent handleStep(APIGatewayProxyRequestEvent event) {
-        String code = extractCode(event);
-        if (code == null || code.isEmpty()) {
-            return corsResponse(400, "{\"error\":\"missing code\"}");
-        }
-
         try {
-            Simulator sim = new Simulator();
-            sim.assemble(code);
+            String body = event.getBody();
+            if (body == null || body.isEmpty()) {
+                return corsResponse(400, "{\"error\":\"missing request body\"}");
+            }
+            JsonObject obj = JsonParser.parseString(body).getAsJsonObject();
+            String sessionId = obj.get("sessionId").getAsString();
+
+            Simulator sim = SESSIONS.get(sessionId);
+            if (sim == null) {
+                return corsResponse(404, "{\"error\":\"Unknown session\"}");
+            }
 
             StepResult step = sim.step();
+            boolean halted = step.isHalted();
+            List<Effect> effects = step.getEffects();
 
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("regs", sim.cpu().getRegs());
-            payload.put("pc", sim.cpu().getPc());
-            payload.put("halted", step.isHalted());
-            payload.put("effects", step.getEffects());
-            payload.put("clike", sim.cLike());
-            payload.put("rv2c", sim.rv2c());
-            payload.put("error", null);
-            payload.put("pcAfter", sim.cpu().getPc());
-            payload.put("stepExecuted", true);
-
-
-            return corsResponse(200, GSON.toJson(payload));
+            return corsResponse(200, GSON.toJson(snapshot(sessionId, sim, halted, effects)));
         } catch (RuntimeException ex) {
             JsonObject err = new JsonObject();
             err.addProperty("error", ex.getMessage());
@@ -85,40 +113,70 @@ public class Handler implements RequestHandler<APIGatewayProxyRequestEvent, APIG
         }
     }
 
-    private APIGatewayProxyResponseEvent handleReset(APIGatewayProxyRequestEvent event) {
-        String body = "{\"status\":\"reset\"}";
-        return corsResponse(200, body);
-    }
-
     /**
-     * Extracts the assembly source from the event payload.
+     * Resets the simulator state.
      *
      * @param event API Gateway proxy event
-     * @return assembly source text or null if missing
+     * @return response indicating the reset status
      */
-    private static String extractCode(APIGatewayProxyRequestEvent event) {
-        String bodyStr = event.getBody();
-        if (bodyStr != null && !bodyStr.isEmpty()) {
-            try {
-                Map<?, ?> bodyMap = GSON.fromJson(bodyStr, Map.class);
-                Object code = bodyMap.get("code");
-                if (code instanceof String s) {
-                    return s;
-                }
-            } catch (JsonParseException | ClassCastException ignored) {
-                // fall back to raw body if it is plain text
-                return bodyStr;
+    private APIGatewayProxyResponseEvent handleReset(APIGatewayProxyRequestEvent event) {
+        try {
+            String body = event.getBody();
+            if (body == null || body.isEmpty()) {
+                return corsResponse(400, "{\"error\":\"missing request body\"}");
             }
-        }
+            JsonObject obj = JsonParser.parseString(body).getAsJsonObject();
+            String sessionId = obj.get("sessionId").getAsString();
 
-        Map<String, String> queryParams = event.getQueryStringParameters();
-        if (queryParams != null) {
-            String code = queryParams.get("code");
-            if (code != null) {
-                return code;
+            Simulator sim = SESSIONS.get(sessionId);
+            if (sim == null) {
+                return corsResponse(404, "{\"error\":\"Unknown session\"}");
             }
+
+            sim.reset();
+            return corsResponse(200, GSON.toJson(snapshot(sessionId, sim, false, List.of())));
+        } catch (RuntimeException ex) {
+            JsonObject err = new JsonObject();
+            err.addProperty("error", ex.getMessage());
+            return corsResponse(400, GSON.toJson(err));
         }
-        return null;
+    }
+
+    private APIGatewayProxyResponseEvent handleAssemble(APIGatewayProxyRequestEvent event) {
+        try {
+            String body = event.getBody();
+            if (body == null || body.isEmpty()) {
+                return corsResponse(400, "{\"error\":\"missing request body\"}");
+            }
+            JsonObject obj = JsonParser.parseString(body).getAsJsonObject();
+            String sessionId = obj.get("sessionId").getAsString();
+            String source = obj.get("source").getAsString();
+
+            Simulator sim = SESSIONS.get(sessionId);
+            if (sim == null) {
+                return corsResponse(404, "{\"error\":\"Unknown session\"}");
+            }
+
+            sim.assemble(source);
+            return corsResponse(200, GSON.toJson(snapshot(sessionId, sim, false, List.of())));
+        } catch (RuntimeException ex) {
+            JsonObject err = new JsonObject();
+            err.addProperty("error", ex.getMessage());
+            return corsResponse(400, GSON.toJson(err));
+        }
+    }
+
+    private static Map<String, Object> snapshot(String sessionId, Simulator sim, boolean halted, List<Effect> effects) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("sessionId", sessionId);
+        payload.put("regs", sim.cpu().getRegs());
+        payload.put("pc", sim.cpu().getPc());
+        payload.put("halted", halted);
+        payload.put("effects", effects);
+        payload.put("clike", sim.cLike());
+        payload.put("rv2c", sim.rv2c());
+        payload.put("error", null);
+        return payload;
     }
 
     /**
