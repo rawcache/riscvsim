@@ -87,7 +87,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const assembleBtn = document.getElementById("assemble") as HTMLButtonElement;
   const stepBtn = document.getElementById("step") as HTMLButtonElement;
   const sourceEl = document.getElementById("source") as HTMLTextAreaElement;
-  const loadSampleBtn = document.getElementById("loadSample") as HTMLButtonElement;
 
   const clikeEl = document.getElementById("clike") as HTMLElement;
   const effectsEl = document.getElementById("effects") as HTMLElement;
@@ -164,8 +163,7 @@ window.addEventListener("DOMContentLoaded", () => {
     jalLwSw: [
       "# Sample: jal/jalr with lw/sw round trip",
       "addi x5, x0, 0x100      # buffer addr",
-      "lui  x6, 0x12345        # x6 = 0x12345000",
-      "addi x6, x6, 0x678      # x6 = 0x12345678",
+      "addi x6, x0, 0x123      # value to store (fits in addi)",
       "sw   x6, 0(x5)          # store word",
       "jal  ra, load_back      # call",
       "addi x10, x7, 0         # copy after return",
@@ -202,9 +200,12 @@ window.addEventListener("DOMContentLoaded", () => {
     sourceEl.focus();
   }
 
-  loadSampleBtn.onclick = () => {
+  sampleSelect.onchange = () => {
     loadSample(sampleSelect.value || "simpleAdd");
   };
+
+  // Load default sample on first render
+  loadSample(sampleSelect.value || "simpleAdd");
 
   assembleBtn.onclick = async () => {
     effectsEl.textContent = "";
