@@ -57,6 +57,38 @@ public final class Server {
             sendText(ex, 200, "ok");
         });
 
+        // Legacy compatibility: mirror /api/session behavior at /simulate
+        server.createContext("/simulate", ex -> {
+            if (handleOptions(ex)) {
+                return;
+            }
+            if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) {
+                sendText(ex, 405, "Method Not Allowed");
+                return;
+            }
+            String body = readBody(ex.getRequestBody());
+            String source = "";
+            if (!body.isBlank()) {
+                JsonObject obj = JsonParser.parseString(body).getAsJsonObject();
+                if (obj.has("source") && !obj.get("source").isJsonNull()) {
+                    source = obj.get("source").getAsString();
+                }
+            }
+            try {
+                Simulator sim = new Simulator();
+                if (!source.isBlank()) {
+                    sim.assemble(source);
+                }
+                // simulate endpoint historically returned one snapshot; reuse session DTO
+                ApiResponse r = snapshot("legacy", sim, false, List.of(), null);
+                sendJson(ex, 200, r);
+            } catch (IOException | RuntimeException e) {
+                ApiResponse r = new ApiResponse();
+                r.error = e.getMessage();
+                sendJson(ex, 400, r);
+            }
+        });
+
         server.createContext("/api/session", ex -> {
             if (handleOptions(ex)) {
                 return;
