@@ -6,28 +6,166 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RISC-V Simulator</title>
     <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-      textarea { width: min(900px, 95vw); height: 240px; font-family: ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
-      pre { width: min(900px, 95vw); white-space: pre-wrap; word-break: break-word; background: #f6f6f6; padding: 12px; border-radius: 6px; }
-      button { margin-right: 8px; }
+      :root {
+        --bg: #05060b;
+        --panel: rgba(20, 24, 33, 0.8);
+        --panel-border: rgba(255, 255, 255, 0.06);
+        --accent: #4af2c5;
+        --accent-2: #7ea7ff;
+        --text: #e8ecf3;
+        --muted: #9aa4b5;
+        --mono: "SFMono-Regular", "JetBrains Mono", "Fira Code", "Menlo", monospace;
+        --sans: "Space Grotesk", "IBM Plex Sans", "Segoe UI Variable", system-ui, sans-serif;
+        --radius: 14px;
+        --shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        padding: 32px 16px 48px;
+        min-height: 100vh;
+        font-family: var(--sans);
+        color: var(--text);
+        background: radial-gradient(circle at 15% 20%, rgba(74, 242, 197, 0.08), transparent 25%),
+          radial-gradient(circle at 85% 10%, rgba(126, 167, 255, 0.08), transparent 20%),
+          radial-gradient(circle at 70% 80%, rgba(74, 242, 197, 0.04), transparent 20%),
+          var(--bg);
+      }
+
+      h1 {
+        letter-spacing: 0.02em;
+        font-weight: 600;
+        margin: 0 0 6px;
+      }
+
+      .lede {
+        color: var(--muted);
+        margin: 0 0 24px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 1fr;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      @media (min-width: 960px) {
+        .grid {
+          grid-template-columns: 1.2fr 0.8fr;
+        }
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 18px;
+        backdrop-filter: blur(6px);
+      }
+
+      .panel h2 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      textarea,
+      pre {
+        width: 100%;
+        border-radius: var(--radius);
+        border: 1px solid var(--panel-border);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 14px;
+        padding: 14px;
+        line-height: 1.4;
+      }
+
+      textarea {
+        min-height: 260px;
+        resize: vertical;
+      }
+
+      pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        min-height: 120px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      button {
+        cursor: pointer;
+        padding: 10px 16px;
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(74, 242, 197, 0.16), rgba(126, 167, 255, 0.2));
+        color: var(--text);
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        border-color: rgba(74, 242, 197, 0.5);
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .metrics {
+        display: grid;
+        gap: 12px;
+      }
     </style>
   </head>
   <body>
-    <textarea id="source" placeholder="Type RV32 assembly here..."></textarea>
-    <div>
-      <button id="assemble">Assemble</button>
-      <button id="step" disabled>Step</button>
-      <button id="loadSample">Load sample program</button>
-    </div>
+    <main class="grid">
+      <section class="panel">
+        <h1>RISC-V Lab</h1>
+        <p class="lede">Assemble, step, and inspect RV32 programs with immediate visual feedback.</p>
+        <textarea id="source" placeholder="Paste RV32 assembly here..."></textarea>
+        <div class="actions">
+          <button id="assemble">Assemble</button>
+          <button id="step" disabled>Step</button>
+          <button id="loadSample">Load sample program</button>
+        </div>
+      </section>
 
-    <h2>C-like explanation</h2>
-    <pre id="clike"></pre>
+      <section class="panel">
+        <h2>C-like explanation</h2>
+        <pre id="clike"></pre>
+      </section>
 
-    <h2>Last step effects</h2>
-    <pre id="effects"></pre>
+      <section class="panel">
+        <h2>Last step effects</h2>
+        <pre id="effects"></pre>
+      </section>
 
-    <h2>Registers</h2>
-    <pre id="regs"></pre>
+      <section class="panel">
+        <h2>Registers</h2>
+        <pre id="regs"></pre>
+      </section>
+    </main>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

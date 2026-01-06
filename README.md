@@ -13,9 +13,9 @@ Why this exists
 
 What’s implemented
 ------------------
-- ISA subset: `addi`, `lw`, `sw`, `beq`, `bne`, `blt`, `bge`, `bltu`, `bgeu`.
-- Parser: labels, symbols (`#sym name=value`), ABI register aliases, alignment checks.
-- CPU: 32 regs, 64 KB memory, per-step interpreter with effect tracking.
+- ISA subset: `addi`, `lui`, `lw`, `sw`, `jal`, `jalr`, `beq`, `bne`, `blt`, `bge`, `bltu`, `bgeu` plus pseudos `li`, `mv`, `nop`, `j`, `call`, `ret`.
+- Parser: labels, symbols (`#sym name=value`), ABI register aliases, alignment checks (toggleable), `#` and `//` comments, instruction/size limits.
+- CPU: 32 regs, 64 KB memory, per-step interpreter with effect tracking and traps (`TRAP_*` codes for alignment/memory/PC faults).
 - Views:
   - C-like explainer (semantic, human friendly).
   - RV→C mapper (mechanical switch-on-pc rendering).

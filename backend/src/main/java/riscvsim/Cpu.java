@@ -76,102 +76,134 @@ public final class Cpu {
      * @return result of executing one instruction
      */
     public StepResult step(Program program) {
-        int idx = pc >>> 2;
-
-        if (idx < 0 || idx >= program.getInstructions().size()) {
-            return new StepResult(null, List.of(), true);
-        }
-
-        Instruction inst = program.getInstructions().get(idx);
         List<Effect> effects = new ArrayList<>();
         int pc0 = pc;
+        Instruction inst = null;
 
-        /*
-         * Helper for register writes.
-         * Ensures x0 is immutable and records effects only on change.
-         */
-        BiConsumer<Integer, Integer> writeReg = (reg, value) -> {
-            if (reg == 0) {
-                return;
+        try {
+            if ((pc & 3) != 0) {
+                throw new TrapException(TrapCode.TRAP_BAD_ALIGNMENT, "PC is not word-aligned: " + pc);
             }
-            int before = regs[reg];
-            int after = value;
-            if (before != after) {
-                regs[reg] = after;
-                effects.add(Effect.reg(reg, before, after));
+
+            int idx = pc >>> 2;
+            if (idx < 0 || idx >= program.getInstructions().size()) {
+                throw new TrapException(TrapCode.TRAP_PC_OOB, "PC outside program: " + pc);
             }
-        };
 
-        switch (inst.getOp()) {
-        case ADDI -> {
-            int v = regs[inst.getRs1()] + inst.getImm();
-            writeReg.accept(inst.getRd(), v);
-            pc = pc0 + 4;
+            inst = program.getInstructions().get(idx);
+
+            /*
+             * Helper for register writes.
+             * Ensures x0 is immutable and records effects only on change.
+             */
+            BiConsumer<Integer, Integer> writeReg = (reg, value) -> {
+                if (reg == 0) {
+                    return;
+                }
+                int before = regs[reg];
+                int after = value;
+                if (before != after) {
+                    regs[reg] = after;
+                    effects.add(Effect.reg(reg, before, after));
+                }
+            };
+
+            switch (inst.getOp()) {
+            case ADDI -> {
+                int v = regs[inst.getRs1()] + inst.getImm();
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case LUI -> {
+                int v = inst.getImm() << 12;
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case LW -> {
+                int addr = (int) (((regs[inst.getRs1()] & 0xffffffffL)
+                        + (inst.getImm() & 0xffffffffL)) & 0xffffffffL);
+                int v = mem.loadWord(addr);
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SW -> {
+                int addr = (int) (((regs[inst.getRs1()] & 0xffffffffL)
+                        + (inst.getImm() & 0xffffffffL)) & 0xffffffffL);
+                Memory.StoreResult sr =
+                        mem.storeWord(addr, regs[inst.getRs2()]);
+                effects.add(Effect.mem(addr, 4, sr.getBefore(), sr.getAfter()));
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case JAL -> {
+                writeReg.accept(inst.getRd(), pc0 + 4);
+                pc = inst.getTargetPC();
+            }
+
+            case JALR -> {
+                writeReg.accept(inst.getRd(), pc0 + 4);
+                int target = (int) (((regs[inst.getRs1()] & 0xffffffffL)
+                        + (inst.getImm() & 0xffffffffL)) & 0xffffffffL);
+                target &= ~1;
+                pc = target;
+            }
+
+            case BEQ -> {
+                boolean taken =
+                        regs[inst.getRs1()] == regs[inst.getRs2()];
+                pc = taken ? inst.getTargetPC() : (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case BNE -> {
+                boolean taken = 
+                        regs[inst.getRs1()] != regs[inst.getRs2()];
+                pc = taken ? inst.getTargetPC() : (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case BLT -> {
+                boolean taken = 
+                        regs[inst.getRs1()] < regs[inst.getRs2()];
+                pc = taken ? inst.getTargetPC() : (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case BGE -> {
+                boolean taken = 
+                        regs[inst.getRs1()] >= regs[inst.getRs2()];
+                pc = taken ? inst.getTargetPC() : (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case BLTU -> {
+                long a = regs[inst.getRs1()] & 0xffffffffL;
+                long b = regs[inst.getRs2()] & 0xffffffffL;
+                boolean taken = a < b;
+                pc = taken ? inst.getTargetPC() : (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case BGEU -> {
+                long a = regs[inst.getRs1()] & 0xffffffffL;
+                long b = regs[inst.getRs2()] & 0xffffffffL;
+                boolean taken = a >= b;
+                pc = taken ? inst.getTargetPC() : (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            default -> throw new TrapException(TrapCode.TRAP_ILLEGAL_INSTRUCTION,
+                    "Unsupported opcode: " + inst.getOp());
+            }
+
+            if ((pc & 3) != 0) {
+                throw new TrapException(TrapCode.TRAP_BAD_ALIGNMENT, "PC became unaligned: " + pc);
+            }
+
+            effects.add(Effect.pc(pc0, pc));
+            return new StepResult(inst, effects, false, null);
+        } catch (TrapException te) {
+            return new StepResult(inst, effects, true, new Trap(te.getCode(), te.getMessage()));
+        } finally {
+            regs[0] = 0;
         }
-
-        case LW -> {
-            int addr = regs[inst.getRs1()] + inst.getImm();
-            int v = mem.loadWord(addr);
-            writeReg.accept(inst.getRd(), v);
-            pc = pc0 + 4;
-        }
-
-        case SW -> {
-            int addr = regs[inst.getRs1()] + inst.getImm();
-            Memory.StoreResult sr =
-                    mem.storeWord(addr, regs[inst.getRs2()]);
-            effects.add(Effect.mem(addr, 4, sr.getBefore(), sr.getAfter()));
-            pc = pc0 + 4;
-        }
-
-        case BEQ -> {
-            boolean taken =
-                    regs[inst.getRs1()] == regs[inst.getRs2()];
-            pc = taken ? inst.getTargetPC() : (pc0 + 4);
-        }
-
-        case BNE -> {
-            boolean taken = 
-                    regs[inst.getRs1()] != regs[inst.getRs2()];
-            pc = taken ? inst.getTargetPC() : (pc0 + 4);
-        }
-
-        case BLT -> {
-            boolean taken = 
-                    regs[inst.getRs1()] < regs[inst.getRs2()];
-            pc = taken ? inst.getTargetPC() : (pc0 + 4);
-        }
-
-        case BGE -> {
-            boolean taken = 
-                    regs[inst.getRs1()] >= regs[inst.getRs2()];
-            pc = taken ? inst.getTargetPC() : (pc0 + 4);
-        }
-
-        case BLTU -> {
-            long a = regs[inst.getRs1()] & 0xffffffffL;
-            long b = regs[inst.getRs2()] & 0xffffffffL;
-            boolean taken = a < b;
-            pc = taken ? inst.getTargetPC() : (pc0 + 4);
-        }
-
-        case BGEU -> {
-            long a = regs[inst.getRs1()] & 0xffffffffL;
-            long b = regs[inst.getRs2()] & 0xffffffffL;
-            boolean taken = a >= b;
-            pc = taken ? inst.getTargetPC() : (pc0 + 4);
-        }
-
-        default -> {
-            // Defensive: should never happen
-            pc = pc0 + 4;
-        }
-        }
-
-        effects.add(Effect.pc(pc0, pc));
-        regs[0] = 0;
-
-        return new StepResult(inst, effects, false);
     }
 
     /**

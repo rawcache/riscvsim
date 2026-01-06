@@ -13,6 +13,9 @@ import java.util.regex.Pattern;
  */
 public final class Parser {
 
+    /** Maximum number of instructions allowed in one program. */
+    public static final int MAX_INSTRUCTIONS = 5000;
+
     private static final Map<String, Integer> REG_ALIASES = Map.ofEntries(
         Map.entry("zero", 0), Map.entry("ra", 1), Map.entry("sp", 2), Map.entry("gp", 3), Map.entry("tp", 4),
         Map.entry("t0", 5), Map.entry("t1", 6), Map.entry("t2", 7),
@@ -57,8 +60,24 @@ public final class Parser {
      */
     private static int parseImm(String tok) {
         String t = tok.trim().toLowerCase();
-        int v = t.startsWith("0x") ? (int) Long.parseLong(t.substring(2), 16) : Integer.parseInt(t, 10);
-        return v;
+        boolean negative = t.startsWith("-");
+        String body = negative ? t.substring(1) : t;
+
+        int base;
+        String digits;
+        if (body.startsWith("0x")) {
+            base = 16;
+            digits = body.substring(2);
+        } else {
+            base = 10;
+            digits = body;
+        }
+
+        long parsed = Long.parseLong(digits, base);
+        if (negative) {
+            parsed = -parsed;
+        }
+        return (int) parsed;
     }
 
     /**
@@ -68,8 +87,19 @@ public final class Parser {
      * @return line without comment text
      */
     private static String stripComment(String line) {
-        int i = line.indexOf('#');
-        String s = (i >= 0) ? line.substring(0, i) : line;
+        int hash = line.indexOf('#');
+        int slash = line.indexOf("//");
+
+        int cut = -1;
+        if (hash >= 0 && slash >= 0) {
+            cut = Math.min(hash, slash);
+        } else if (hash >= 0) {
+            cut = hash;
+        } else if (slash >= 0) {
+            cut = slash;
+        }
+
+        String s = (cut >= 0) ? line.substring(0, cut) : line;
         return s.trim();
     }
 
@@ -155,7 +185,7 @@ public final class Parser {
      * @param rawTrim trimmed line text starting with {@code #sym}
      */
     private static void parseSymbolLine(Map<String, Integer> symbols, int lineIndex, String rawTrim) {
-        String rest = rawTrim.substring(4).trim();
+        String rest = stripComment(rawTrim.substring(4).trim());
         Matcher m1 = Pattern.compile("^([A-Za-z_]\\w*)\\s*=\\s*(0x[0-9a-fA-F]+|\\d+)$").matcher(rest);
         Matcher m2 = Pattern.compile("^([A-Za-z_]\\w*)\\s+(0x[0-9a-fA-F]+|\\d+)$").matcher(rest);
         Matcher m = m1.matches() ? m1 : (m2.matches() ? m2 : null);
@@ -226,7 +256,242 @@ public final class Parser {
             Map<String, Integer> symbols) {
         List<Instruction> instructions = new ArrayList<>();
 
-        java.util.function.BiFunction<String, Integer, Integer> parseTargetPC = (tok, srcLine) -> {
+        java.util.function.BiFunction<String, Integer, Integer> parseTargetPC = buildTargetParser(labels, symbols);
+
+        for (Pending p : pending) {
+            String[] tokens = p.line.replace(",", " ").trim().replaceAll("\\s+", " ").split(" ");
+            String op = tokens[0].toLowerCase();
+
+            java.util.function.Consumer<Instruction> addInst = inst -> {
+                instructions.add(inst);
+                if (instructions.size() > MAX_INSTRUCTIONS) {
+                    throw new RuntimeException("Too many instructions (limit " + MAX_INSTRUCTIONS + ")");
+                }
+            };
+
+            if (handlePseudo(op, tokens, p, parseTargetPC, addInst)) {
+                continue;
+            }
+            if (handleBase(op, tokens, p, parseTargetPC, addInst)) {
+                continue;
+            }
+
+            throw new RuntimeException("Unsupported instruction \"" + op + "\" on line " + (p.srcLine + 1));
+        }
+
+        return instructions;
+    }
+
+    /**
+     * Handles pseudo-instructions during the second pass of parsing.
+     *
+     * @param op the operation code of the instruction
+     * @param tokens the tokens of the instruction line
+     * @param p the pending instruction with its source line
+     * @param parseTargetPC a function to parse target program counters
+     * @param addInst a consumer to add the parsed instruction
+     * @return true if the pseudo-instruction was successfully handled, false otherwise
+     */
+    private static boolean handlePseudo(
+            String op,
+            String[] tokens,
+            Pending p,
+            java.util.function.BiFunction<String, Integer, Integer> parseTargetPC,
+            java.util.function.Consumer<Instruction> addInst) {
+        if (op.equals("nop")) {
+            addInst.accept(Instruction.addi(0, 0, 0, p.srcLine));
+            return true;
+        }
+        if (op.equals("mv")) {
+            if (tokens.length != 3) {
+                throw new RuntimeException("Bad mv on line " + (p.srcLine + 1));
+            }
+            addInst.accept(Instruction.addi(parseReg(tokens[1]), parseReg(tokens[2]), 0, p.srcLine));
+            return true;
+        }
+        if (op.equals("j")) {
+            if (tokens.length != 2) {
+                throw new RuntimeException("Bad j on line " + (p.srcLine + 1));
+            }
+            int target = parseTargetPC.apply(tokens[1], p.srcLine);
+            addInst.accept(Instruction.jal(0, target, p.srcLine));
+            return true;
+        }
+        if (op.equals("ret")) {
+            if (tokens.length != 1) {
+                throw new RuntimeException("Bad ret on line " + (p.srcLine + 1));
+            }
+            OffsetBase ob = new OffsetBase(0, 1); // 0(ra)
+            addInst.accept(Instruction.jalr(0, ob.rs1(), ob.imm(), p.srcLine));
+            return true;
+        }
+        if (op.equals("call")) {
+            if (tokens.length != 2) {
+                throw new RuntimeException("Bad call on line " + (p.srcLine + 1));
+            }
+            int target = parseTargetPC.apply(tokens[1], p.srcLine);
+            addInst.accept(Instruction.jal(1, target, p.srcLine)); // ra
+            return true;
+        }
+        if (op.equals("li")) {
+            if (tokens.length != 3) {
+                throw new RuntimeException("Bad li on line " + (p.srcLine + 1));
+            }
+            int rd = parseReg(tokens[1]);
+            int imm = parseImm(tokens[2]);
+            if (imm >= -2048 && imm <= 2047) {
+                addInst.accept(Instruction.addi(rd, 0, imm, p.srcLine));
+            } else {
+                int hi = (imm + 0x800) >> 12;
+                int lo = imm - (hi << 12);
+                addInst.accept(Instruction.lui(rd, hi, p.srcLine));
+                addInst.accept(Instruction.addi(rd, rd, lo, p.srcLine));
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Handles base instructions during the second pass of parsing.
+     *
+     * @param op the operation code of the instruction
+     * @param tokens the tokens of the instruction line
+     * @param p the pending instruction with its source line
+     * @param parseTargetPC a function to parse target program counters
+     * @param addInst a consumer to add the parsed instruction
+     * @return true if the base instruction was successfully handled, false otherwise
+     */
+    private static boolean handleBase(
+            String op,
+            String[] tokens,
+            Pending p,
+            java.util.function.BiFunction<String, Integer, Integer> parseTargetPC,
+            java.util.function.Consumer<Instruction> addInst) {
+        if (op.equals("addi")) {
+            if (tokens.length != 4) {
+                throw new RuntimeException("Bad addi on line " + (p.srcLine + 1));
+            }
+            addInst.accept(Instruction.addi(
+                parseReg(tokens[1]), parseReg(tokens[2]), parseImm(tokens[3]), p.srcLine));
+            return true;
+        }
+        if (op.equals("lui")) {
+            if (tokens.length != 3) {
+                throw new RuntimeException("Bad lui on line " + (p.srcLine + 1));
+            }
+            addInst.accept(Instruction.lui(parseReg(tokens[1]), parseImm(tokens[2]), p.srcLine));
+            return true;
+        }
+        if (op.equals("lw")) {
+            if (tokens.length != 3) {
+                throw new RuntimeException("Bad lw on line " + (p.srcLine + 1));
+            }
+            OffsetBase ob = parseOffsetBase(tokens[2], p.srcLine);
+            addInst.accept(Instruction.lw(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
+            return true;
+        }
+        if (op.equals("sw")) {
+            if (tokens.length != 3) {
+                throw new RuntimeException("Bad sw on line " + (p.srcLine + 1));
+            }
+            OffsetBase ob = parseOffsetBase(tokens[2], p.srcLine);
+            addInst.accept(Instruction.sw(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
+            return true;
+        }
+        if (op.equals("jal")) {
+            if (tokens.length != 2 && tokens.length != 3) {
+                throw new RuntimeException("Bad jal on line " + (p.srcLine + 1));
+            }
+            int rd = tokens.length == 3 ? parseReg(tokens[1]) : 1; // default ra
+            String targetTok = tokens.length == 3 ? tokens[2] : tokens[1];
+            int target = parseTargetPC.apply(targetTok, p.srcLine);
+            addInst.accept(Instruction.jal(rd, target, p.srcLine));
+            return true;
+        }
+        if (op.equals("jalr")) {
+            if (tokens.length != 2 && tokens.length != 3) {
+                throw new RuntimeException("Bad jalr on line " + (p.srcLine + 1));
+            }
+            int rd = tokens.length == 3 ? parseReg(tokens[1]) : 1; // default ra
+            OffsetBase ob = parseOffsetBase(tokens[tokens.length - 1], p.srcLine);
+            addInst.accept(Instruction.jalr(rd, ob.rs1(), ob.imm(), p.srcLine));
+            return true;
+        }
+        if (op.equals("beq")) {
+            if (tokens.length != 4) {
+                throw new RuntimeException("Bad beq on line " + (p.srcLine + 1));
+            }
+            int rs1 = parseReg(tokens[1]);
+            int rs2 = parseReg(tokens[2]);
+            int target = parseTargetPC.apply(tokens[3], p.srcLine);
+            addInst.accept(Instruction.beq(rs1, rs2, target, p.srcLine));
+            return true;
+        }
+        if (op.equals("bne")) {
+            if (tokens.length != 4) {
+                throw new RuntimeException("Bad bne on line " + (p.srcLine + 1));
+            }
+            int rs1 = parseReg(tokens[1]);
+            int rs2 = parseReg(tokens[2]);
+            int target = parseTargetPC.apply(tokens[3], p.srcLine);
+            addInst.accept(Instruction.bne(rs1, rs2, target, p.srcLine));
+            return true;
+        }
+        if (op.equals("blt")) {
+            if (tokens.length != 4) {
+                throw new RuntimeException("Bad blt on line " + (p.srcLine + 1));
+            }
+            int rs1 = parseReg(tokens[1]);
+            int rs2 = parseReg(tokens[2]);
+            int target = parseTargetPC.apply(tokens[3], p.srcLine);
+            addInst.accept(Instruction.blt(rs1, rs2, target, p.srcLine));
+            return true;
+        }
+        if (op.equals("bge")) {
+            if (tokens.length != 4) {
+                throw new RuntimeException("Bad bge on line " + (p.srcLine + 1));
+            }
+            int rs1 = parseReg(tokens[1]);
+            int rs2 = parseReg(tokens[2]);
+            int target = parseTargetPC.apply(tokens[3], p.srcLine);
+            addInst.accept(Instruction.bge(rs1, rs2, target, p.srcLine));
+            return true;
+        }
+        if (op.equals("bltu")) {
+            if (tokens.length != 4) {
+                throw new RuntimeException("Bad bltu on line " + (p.srcLine + 1));
+            }
+            int rs1 = parseReg(tokens[1]);
+            int rs2 = parseReg(tokens[2]);
+            int target = parseTargetPC.apply(tokens[3], p.srcLine);
+            addInst.accept(Instruction.bltu(rs1, rs2, target, p.srcLine));
+            return true;
+        }
+        if (op.equals("bgeu")) {
+            if (tokens.length != 4) {
+                throw new RuntimeException("Bad bgeu on line " + (p.srcLine + 1));
+            }
+            int rs1 = parseReg(tokens[1]);
+            int rs2 = parseReg(tokens[2]);
+            int target = parseTargetPC.apply(tokens[3], p.srcLine);
+            addInst.accept(Instruction.bgeu(rs1, rs2, target, p.srcLine));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Builds a parser function to resolve target program counters from labels, symbols, or immediate values.
+     *
+     * @param labels the map of label names to their corresponding program counters
+     * @param symbols the map of symbol names to their corresponding values
+     * @return a function that takes a token and source line index, and resolves the target program counter
+     */
+    private static java.util.function.BiFunction<String, Integer, Integer> buildTargetParser(
+            Map<String, Integer> labels,
+            Map<String, Integer> symbols) {
+        return (tok, srcLine) -> {
             if (labels.containsKey(tok)) {
                 return labels.get(tok);
             }
@@ -242,108 +507,6 @@ public final class Parser {
             }
             return pcVal;
         };
-
-        for (Pending p : pending) {
-            String[] tokens = p.line.replace(",", " ").trim().replaceAll("\\s+", " ").split(" ");
-            String op = tokens[0].toLowerCase();
-
-            if (op.equals("addi")) {
-                if (tokens.length != 4) {
-                    throw new RuntimeException("Bad addi on line " + (p.srcLine + 1));
-                }
-                instructions.add(Instruction.addi(
-                    parseReg(tokens[1]), parseReg(tokens[2]), parseImm(tokens[3]), p.srcLine));
-                continue;
-            }
-
-            if (op.equals("lw")) {
-                if (tokens.length != 3) {
-                    throw new RuntimeException("Bad lw on line " + (p.srcLine + 1));
-                }
-                OffsetBase ob = parseOffsetBase(tokens[2], p.srcLine);
-                instructions.add(Instruction.lw(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
-                continue;
-            }
-
-            if (op.equals("sw")) {
-                if (tokens.length != 3) {
-                    throw new RuntimeException("Bad sw on line " + (p.srcLine + 1));
-                }
-                OffsetBase ob = parseOffsetBase(tokens[2], p.srcLine);
-                instructions.add(Instruction.sw(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
-                continue;
-            }
-
-            if (op.equals("beq")) {
-                if (tokens.length != 4) {
-                    throw new RuntimeException("Bad beq on line " + (p.srcLine + 1));
-                }
-                int rs1 = parseReg(tokens[1]);
-                int rs2 = parseReg(tokens[2]);
-                int target = parseTargetPC.apply(tokens[3], p.srcLine);
-                instructions.add(Instruction.beq(rs1, rs2, target, p.srcLine));
-                continue;
-            }
-
-            if (op.equals("bne")) {
-                if (tokens.length != 4) {
-                    throw new RuntimeException("Bad bne on line " + (p.srcLine + 1));
-                }
-                int rs1 = parseReg(tokens[1]);
-                int rs2 = parseReg(tokens[2]);
-                int target = parseTargetPC.apply(tokens[3], p.srcLine);
-                instructions.add(Instruction.bne(rs1, rs2, target, p.srcLine));
-                continue;
-            }
-
-            if (op.equals("blt")) {
-                if (tokens.length != 4) {
-                    throw new RuntimeException("Bad blt on line " + (p.srcLine + 1));
-                }
-                int rs1 = parseReg(tokens[1]);
-                int rs2 = parseReg(tokens[2]);
-                int target = parseTargetPC.apply(tokens[3], p.srcLine);
-                instructions.add(Instruction.blt(rs1, rs2, target, p.srcLine));
-                continue;
-            }
-
-            if (op.equals("bge")) {
-                if (tokens.length != 4) {
-                    throw new RuntimeException("Bad bge on line " + (p.srcLine + 1));
-                }
-                int rs1 = parseReg(tokens[1]);
-                int rs2 = parseReg(tokens[2]);
-                int target = parseTargetPC.apply(tokens[3], p.srcLine);
-                instructions.add(Instruction.bge(rs1, rs2, target, p.srcLine));
-                continue;
-            }
-
-            if (op.equals("bltu")) {
-                if (tokens.length != 4) {
-                    throw new RuntimeException("Bad bltu on line " + (p.srcLine + 1));
-                }
-                int rs1 = parseReg(tokens[1]);
-                int rs2 = parseReg(tokens[2]);
-                int target = parseTargetPC.apply(tokens[3], p.srcLine);
-                instructions.add(Instruction.bltu(rs1, rs2, target, p.srcLine));
-                continue;
-            }
-
-            if (op.equals("bgeu")) {
-                if (tokens.length != 4) {
-                    throw new RuntimeException("Bad bgeu on line " + (p.srcLine + 1));
-                }
-                int rs1 = parseReg(tokens[1]);
-                int rs2 = parseReg(tokens[2]);
-                int target = parseTargetPC.apply(tokens[3], p.srcLine);
-                instructions.add(Instruction.bgeu(rs1, rs2, target, p.srcLine));
-                continue;
-            }
-
-            throw new RuntimeException("Unsupported instruction \"" + op + "\" on line " + (p.srcLine + 1));
-        }
-
-        return instructions;
     }
 
     private record OffsetBase(int imm, int rs1) { }

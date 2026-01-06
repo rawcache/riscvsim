@@ -249,6 +249,10 @@ public final class Rv2CMapper {
                         + "] + " + inst.getImm() + ");");
                 lines.add("        pc = " + (pcVal + 4) + ";");
             }
+            case LUI -> {
+                lines.add("        x[" + inst.getRd() + "] = (int32_t)(" + inst.getImm() + " << 12);");
+                lines.add("        pc = " + (pcVal + 4) + ";");
+            }
             case LW -> {
                 lines.add("        x[" + inst.getRd() + "] = load32(mem, (uint32_t)(x["
                         + inst.getRs1() + "] + " + inst.getImm() + "));");
@@ -258,6 +262,16 @@ public final class Rv2CMapper {
                 lines.add("        store32(mem, (uint32_t)(x[" + inst.getRs1() + "] + "
                         + inst.getImm() + "), x[" + inst.getRs2() + "]);");
                 lines.add("        pc = " + (pcVal + 4) + ";");
+            }
+            case JAL -> {
+                String targetLabel = firstLabel(labelMap, inst.getTargetPC());
+                String targetComment = " // goto " + (targetLabel != null ? targetLabel : hex(inst.getTargetPC()));
+                lines.add("        x[" + inst.getRd() + "] = " + (pcVal + 4) + ";");
+                lines.add("        pc = " + inst.getTargetPC() + ";" + targetComment);
+            }
+            case JALR -> {
+                lines.add("        x[" + inst.getRd() + "] = " + (pcVal + 4) + ";");
+                lines.add("        pc = (uint32_t)((x[" + inst.getRs1() + "] + " + inst.getImm() + ") & ~1);");
             }
             case BEQ -> beq(lines, labelMap, inst, pcVal);
             case BNE -> bne(lines, labelMap, inst, pcVal);

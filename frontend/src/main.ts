@@ -28,6 +28,11 @@ type Effect = {
   afterBytes?: number[];
 };
 
+type Trap = {
+  code: string;
+  message: string;
+};
+
 type ApiResponse = {
   sessionId?: string;
   pc?: number;
@@ -37,6 +42,7 @@ type ApiResponse = {
   clike?: string;
   rv2c?: string;
   error?: string | null;
+  trap?: Trap | null;
 };
 
 function hex32(n: number): string {
@@ -126,8 +132,12 @@ window.addEventListener("DOMContentLoaded", () => {
     clikeEl.textContent =
       data.clike && data.clike.trim().length > 0 ? data.clike : data.rv2c ?? "";
 
-    const effects = data.effects ?? [];
-    effectsEl.textContent = effects.length ? effects.map(fmtEffect).join("\n") : "(no effects)";
+    if (data.trap) {
+      effectsEl.textContent = `TRAP ${data.trap.code}: ${data.trap.message}`;
+    } else {
+      const effects = data.effects ?? [];
+      effectsEl.textContent = effects.length ? effects.map(fmtEffect).join("\n") : "(no effects)";
+    }
 
     regsEl.textContent = renderRegs(data.regs);
 

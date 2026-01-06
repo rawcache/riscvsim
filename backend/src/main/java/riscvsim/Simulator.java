@@ -1,5 +1,7 @@
 package riscvsim;
 
+import java.util.List;
+
 /**
  * High-level façade for the RISC-V simulator.
  *
@@ -15,6 +17,12 @@ public final class Simulator {
      * Size of simulated memory in bytes.
      */
     public static final int MEM_SIZE = 64 * 1024;
+
+    /** Maximum input source size in bytes. */
+    public static final int MAX_SOURCE_BYTES = 20 * 1024;
+
+    /** Maximum steps allowed in a single multi-step request. */
+    public static final int MAX_STEPS_PER_REQUEST = 5000;
 
     /**
      * Currently assembled program.
@@ -45,6 +53,9 @@ public final class Simulator {
      * @throws RuntimeException if parsing fails
      */
     public void assemble(String source) {
+        if (source != null && source.getBytes().length > MAX_SOURCE_BYTES) {
+            throw new RuntimeException("Source too large (limit " + MAX_SOURCE_BYTES + " bytes)");
+        }
         this.program = Parser.parseProgram(source);
         this.cpu.reset();
     }
@@ -63,6 +74,26 @@ public final class Simulator {
      */
     public StepResult step() {
         return cpu.step(program);
+    }
+
+    /**
+     * Executes up to {@code maxSteps} instructions or until halt/trap.
+     *
+     * @param maxSteps maximum steps allowed
+     * @return final step result (last executed or trap)
+     */
+    public StepResult stepMany(int maxSteps) {
+        int steps = 0;
+        StepResult last = null;
+        while (steps < maxSteps) {
+            last = step();
+            steps++;
+            if (last.isHalted()) {
+                return last;
+            }
+        }
+        return new StepResult(last == null ? null : last.getInst(), last == null ? List.of() : last.getEffects(),
+                true, new Trap(TrapCode.TRAP_STEP_LIMIT, "Step limit hit"));
     }
 
     /**

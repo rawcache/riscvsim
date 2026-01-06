@@ -29,16 +29,23 @@ public final class StepResult {
     private final boolean halted;
 
     /**
+     * Trap information if execution stopped due to a fault.
+     */
+    private final Trap trap;
+
+    /**
      * Constructs a new step result.
      *
      * @param inst executed instruction
      * @param effects list of side effects
      * @param halted whether execution halted
+     * @param trap trap information if halted due to a fault
      */
-    public StepResult(Instruction inst, List<Effect> effects, boolean halted) {
+    public StepResult(Instruction inst, List<Effect> effects, boolean halted, Trap trap) {
         this.inst = inst;
         this.effects = effects;
         this.halted = halted;
+        this.trap = trap;
     }
 
     /**
@@ -66,5 +73,14 @@ public final class StepResult {
      */
     public boolean isHalted() {
         return halted;
+    }
+
+    /**
+     * Returns trap information if execution halted due to a fault.
+     *
+     * @return trap info or {@code null} if no trap occurred
+     */
+    public Trap getTrap() {
+        return trap;
     }
 }
