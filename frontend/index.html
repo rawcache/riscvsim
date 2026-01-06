@@ -143,6 +143,12 @@
       <section class="panel">
         <h1>RISC-V Lab</h1>
         <p class="lede">Assemble, step, and inspect RV32 programs with immediate visual feedback.</p>
+        <label for="sampleSelect" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Samples</label>
+        <select id="sampleSelect" style="width:100%;margin-bottom:10px;padding:10px;border-radius:10px;border:1px solid var(--panel-border);background:rgba(255,255,255,0.03);color:var(--text);font-family:var(--sans);">
+          <option value="simpleAdd">Add and halt</option>
+          <option value="jalLwSw">jal/jalr + lw/sw</option>
+          <option value="loopsUnsigned">Unsigned branches</option>
+        </select>
         <textarea id="source" placeholder="Paste RV32 assembly here..."></textarea>
         <div class="actions">
           <button id="assemble">Assemble</button>
@@ -154,6 +160,7 @@
       <section class="panel">
         <h2>C-like explanation</h2>
         <pre id="clike"></pre>
+        <div id="status" style="color:var(--muted);margin-top:8px;min-height:18px;"></div>
       </section>
 
       <section class="panel">

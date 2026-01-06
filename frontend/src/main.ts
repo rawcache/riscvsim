@@ -92,6 +92,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const clikeEl = document.getElementById("clike") as HTMLElement;
   const effectsEl = document.getElementById("effects") as HTMLElement;
   const regsEl = document.getElementById("regs") as HTMLElement;
+  const statusEl = document.getElementById("status") as HTMLElement;
+  const sampleSelect = document.getElementById("sampleSelect") as HTMLSelectElement;
 
   function nonJsonError(status: number, text: string): string {
     if (status === 404 && text.includes("<!DOCTYPE")) {
@@ -129,6 +131,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderAll(data: ApiResponse) {
+    statusEl.textContent = "";
     clikeEl.textContent =
       data.clike && data.clike.trim().length > 0 ? data.clike : data.rv2c ?? "";
 
@@ -149,31 +152,65 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  const sampleProgram = [
-    "# Sample: add two numbers (supported opcodes only) and halt",
-    "addi x1, x0, 5        # x1 = 5",
-    "addi x2, x0, 7        # x2 = 7",
-    "addi x3, x2, 5        # x3 = x2 + 5 = 12",
-    "beq x0, x0, done      # branch past program to halt",
-    "done:",
-    "",
-  ].join("\n");
+  const samplePrograms: Record<string, string> = {
+    simpleAdd: [
+      "# Sample: add two numbers and halt",
+      "addi x1, x0, 5        # x1 = 5",
+      "addi x2, x0, 7        # x2 = 7",
+      "addi x3, x2, 5        # x3 = x2 + 5 = 12",
+      "beq x0, x0, done      # branch past program to halt",
+      "done:",
+    ].join("\n"),
+    jalLwSw: [
+      "# Sample: jal/jalr with lw/sw round trip",
+      "addi x5, x0, 0x100      # buffer addr",
+      "lui  x6, 0x12345        # x6 = 0x12345000",
+      "addi x6, x6, 0x678      # x6 = 0x12345678",
+      "sw   x6, 0(x5)          # store word",
+      "jal  ra, load_back      # call",
+      "addi x10, x7, 0         # copy after return",
+      "halt:",
+      "beq  x0, x0, halt       # halt loop",
+      "load_back:",
+      "lw   x7, 0(x5)",
+      "jalr x0, 0(ra)",
+    ].join("\n"),
+    loopsUnsigned: [
+      "# Sample: unsigned vs signed branches",
+      "addi x1, x0, -1      # 0xffffffff",
+      "addi x2, x0, 1",
+      "bltu x1, x2, not_taken",
+      "addi x3, x0, 123",
+      "not_taken:",
+      "bgeu x1, x2, done",
+      "addi x3, x0, 999",
+      "done:",
+      "beq x0, x0, done",
+    ].join("\n"),
+  };
 
-  loadSampleBtn.onclick = () => {
-    sourceEl.value = sampleProgram;
+  function loadSample(name: string) {
+    const program = samplePrograms[name] ?? "";
+    sourceEl.value = program;
     effectsEl.textContent = "";
     clikeEl.textContent = "";
     regsEl.textContent = "";
+    statusEl.textContent = "";
     sessionId = undefined;
     stepBtn.disabled = true;
     stepBtn.textContent = "Step";
     sourceEl.focus();
+  }
+
+  loadSampleBtn.onclick = () => {
+    loadSample(sampleSelect.value || "simpleAdd");
   };
 
   assembleBtn.onclick = async () => {
     effectsEl.textContent = "";
     clikeEl.textContent = "";
     regsEl.textContent = "";
+    statusEl.textContent = "Assembling…";
 
     stepBtn.disabled = true;
     stepBtn.textContent = "Step";
@@ -187,6 +224,7 @@ window.addEventListener("DOMContentLoaded", () => {
     } catch (err) {
       effectsEl.textContent = `Error: ${(err as Error).message}`;
       sessionId = undefined;
+      statusEl.textContent = "";
     }
   };
 
