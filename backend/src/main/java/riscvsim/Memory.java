@@ -4,8 +4,8 @@ package riscvsim;
  * Represents a byte-addressable memory used by the RISC-V simulator.
  *
  * <p>
- * This memory supports aligned 32-bit word loads and stores only.
- * All accesses are bounds-checked and alignment-checked.
+ * This memory supports 32-bit little-endian loads and stores.
+ * All accesses are bounds-checked, and alignment checking can be toggled.
  * </p>
  */
 public final class Memory {
@@ -13,13 +13,27 @@ public final class Memory {
     /** Backing byte array for memory storage. */
     private final byte[] memory;
 
+    /** Whether to enforce 4-byte alignment checks on loads/stores. */
+    private boolean alignmentChecksEnabled;
+
     /**
      * Constructs a memory instance with the given size.
      *
      * @param size total number of bytes
      */
     public Memory(int size) {
+        this(size, true);
+    }
+
+    /**
+     * Constructs a memory instance with the given size and alignment behavior.
+     *
+     * @param size total number of bytes
+     * @param alignmentChecksEnabled whether to enforce 4-byte alignment
+     */
+    public Memory(int size, boolean alignmentChecksEnabled) {
         this.memory = new byte[size];
+        this.alignmentChecksEnabled = alignmentChecksEnabled;
     }
 
     /**
@@ -36,7 +50,7 @@ public final class Memory {
      *
      * @param address byte address (must be 4-byte aligned)
      * @return loaded word value
-     * @throws IllegalStateException if unaligned or out of bounds
+     * @throws TrapException if unaligned or out of bounds
      */
     public int loadWord(int address) {
         checkAlignment(address);
@@ -59,7 +73,7 @@ public final class Memory {
      * @param address byte address (must be 4-byte aligned)
      * @param value value to store
      * @return store result containing before/after bytes
-     * @throws IllegalStateException if unaligned or out of bounds
+     * @throws TrapException if unaligned or out of bounds
      */
     public StoreResult storeWord(int address, int value) {
         checkAlignment(address);
@@ -80,11 +94,11 @@ public final class Memory {
      * Ensures address is aligned to a 4-byte boundary.
      *
      * @param address byte address
-     * @throws IllegalStateException if unaligned
+     * @throws TrapException if unaligned
      */
-    private static void checkAlignment(int address) {
-        if ((address & 3) != 0) {
-            throw new IllegalStateException("Unaligned memory access");
+    private void checkAlignment(int address) {
+        if (alignmentChecksEnabled && (address & 3) != 0) {
+            throw new TrapException(TrapCode.TRAP_BAD_ALIGNMENT, "Unaligned memory access at " + address);
         }
     }
 
@@ -93,11 +107,11 @@ public final class Memory {
      *
      * @param address start address
      * @param size number of bytes
-     * @throws IllegalStateException if out of bounds
+     * @throws TrapException if out of bounds
      */
     private void checkBounds(int address, int size) {
         if (address < 0 || address + size > memory.length) {
-            throw new IllegalStateException("Memory access out of bounds");
+            throw new TrapException(TrapCode.TRAP_OOB_MEMORY, "Memory access out of bounds at " + address);
         }
     }
 
@@ -114,6 +128,24 @@ public final class Memory {
             out[i] = memory[address + i] & 0xff;
         }
         return out;
+    }
+
+    /**
+     * Enables or disables alignment checks for subsequent accesses.
+     *
+     * @param enabled {@code true} to enforce alignment, {@code false} to allow unaligned accesses
+     */
+    public void setAlignmentChecksEnabled(boolean enabled) {
+        this.alignmentChecksEnabled = enabled;
+    }
+
+    /**
+     * Indicates whether alignment checks are enabled.
+     *
+     * @return {@code true} if alignment checks are enforced
+     */
+    public boolean isAlignmentChecksEnabled() {
+        return alignmentChecksEnabled;
     }
 
     /**

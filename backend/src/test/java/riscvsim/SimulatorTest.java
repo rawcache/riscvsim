@@ -1,6 +1,8 @@
 package riscvsim;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 class SimulatorTest {
@@ -10,15 +12,48 @@ class SimulatorTest {
      *
      * @param sim simulator instance to drive
      * @param maxSteps safety cap to avoid infinite loops
+     * @return the result of the last step, which indicates the simulator's state
      */
-    private static void runUntilHalt(Simulator sim, int maxSteps) {
+    private static StepResult runUntilHalt(Simulator sim, int maxSteps) {
         for (int i = 0; i < maxSteps; i++) {
             StepResult r = sim.step();
             if (r.isHalted()) {
-                return;
+                return r;
             }
         }
         throw new IllegalStateException("Program did not halt within " + maxSteps + " steps");
+    }
+
+    @Test
+    void luiWritesUpper20Bits() {
+        Simulator sim = new Simulator();
+        sim.assemble("lui x5, 0x12345");
+
+        StepResult r = runUntilHalt(sim, 5);
+        assertNotNull(r.getTrap());
+        assertEquals(TrapCode.TRAP_PC_OOB, r.getTrap().getCode());
+        assertEquals(0x12345000, sim.cpu().getRegs()[5]);
+    }
+
+    @Test
+    void jalAndJalrSetReturnAddressAndAlignPc() {
+        Simulator sim = new Simulator();
+        sim.assemble("""
+                addi x1, x0, 13        # base for jalr target
+                jalr x2, 0(x1)         # rd=x2 (return addr), target = (13) & ~1 = 12
+                addi x3, x0, 1         # should be skipped because target is 12
+                addi x4, x0, 2         # executes at pc=12 after jalr
+                beq x0, x0, 24         # jump past program to halt via PC trap
+                """);
+
+        StepResult r = runUntilHalt(sim, 20);
+        int[] regs = sim.cpu().getRegs();
+        assertEquals(13, regs[1], "x1 should hold base value used for jalr");
+        assertEquals(8, regs[2], "jalr must write pc+4 (8) into rd");
+        assertEquals(0, regs[3], "skip instruction at pc+4 because jalr redirected");
+        assertEquals(2, regs[4], "instruction at aligned target should execute");
+        assertNotNull(r.getTrap());
+        assertEquals(TrapCode.TRAP_PC_OOB, r.getTrap().getCode());
     }
 
     /**
@@ -259,5 +294,38 @@ class SimulatorTest {
         runUntilHalt(sim, 15);
 
         assertEquals(77, sim.cpu().getRegs()[3]);
+    }
+
+    @Test
+    void misalignedLoadTriggersTrap() {
+        Simulator sim = new Simulator();
+        sim.assemble("""
+                addi x1, x0, 1
+                lw x2, 0(x1)
+                """);
+
+        sim.step(); // addi
+        StepResult r = sim.step(); // lw traps
+
+        assertTrue(r.isHalted());
+        assertNotNull(r.getTrap());
+        assertEquals(TrapCode.TRAP_BAD_ALIGNMENT, r.getTrap().getCode());
+    }
+
+    @Test
+    void outOfBoundsMemoryTriggersTrap() {
+        Simulator sim = new Simulator();
+        int nearEnd = Simulator.MEM_SIZE - 4;
+        sim.assemble("""
+                addi x1, x0, %d
+                lw x2, 4(x1)
+                """.formatted(nearEnd));
+
+        sim.step(); // addi
+        StepResult r = sim.step(); // lw traps OOB
+
+        assertTrue(r.isHalted());
+        assertNotNull(r.getTrap());
+        assertEquals(TrapCode.TRAP_OOB_MEMORY, r.getTrap().getCode());
     }
 }

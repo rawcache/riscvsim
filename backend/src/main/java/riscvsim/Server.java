@@ -84,7 +84,7 @@ public final class Server {
                     sim.assemble(source);
                 }
                 SESSIONS.put(id, sim);
-                sendJson(ex, 200, snapshot(id, sim, false, List.of()));
+                sendJson(ex, 200, snapshot(id, sim, false, List.of(), null));
             } catch (IOException | RuntimeException e) {
                 ApiResponse r = new ApiResponse();
                 r.sessionId = id;
@@ -114,7 +114,7 @@ public final class Server {
                 }
 
                 sim.assemble(source);
-                sendJson(ex, 200, snapshot(id, sim, false, List.of()));
+                sendJson(ex, 200, snapshot(id, sim, false, List.of(), null));
             } catch (IOException | RuntimeException e) {
                 ApiResponse r = new ApiResponse();
                 r.error = e.getMessage();
@@ -142,7 +142,7 @@ public final class Server {
                 }
 
                 sim.reset();
-                sendJson(ex, 200, snapshot(id, sim, false, List.of()));
+                sendJson(ex, 200, snapshot(id, sim, false, List.of(), null));
             } catch (IOException | RuntimeException e) {
                 ApiResponse r = new ApiResponse();
                 r.error = e.getMessage();
@@ -169,11 +169,21 @@ public final class Server {
                     return;
                 }
 
-                StepResult sr = sim.step();
+                int steps = obj.has("steps") && obj.get("steps").isJsonPrimitive()
+                        ? obj.get("steps").getAsInt()
+                        : 1;
+                if (steps < 1 || steps > Simulator.MAX_STEPS_PER_REQUEST) {
+                    ApiResponse r = new ApiResponse();
+                    r.error = "steps must be between 1 and " + Simulator.MAX_STEPS_PER_REQUEST;
+                    sendJson(ex, 400, r);
+                    return;
+                }
+
+                StepResult sr = steps == 1 ? sim.step() : sim.stepMany(steps);
                 boolean halted = sr.isHalted();
                 List<Effect> effects = sr.getEffects();
 
-                sendJson(ex, 200, snapshot(id, sim, halted, effects));
+                sendJson(ex, 200, snapshot(id, sim, halted, effects, sr.getTrap()));
             } catch (IOException | RuntimeException e) {
                 ApiResponse r = new ApiResponse();
                 r.error = e.getMessage();
@@ -279,13 +289,15 @@ public final class Server {
      * @param effects list of execution effects
      * @return populated API response
      */
-    private static ApiResponse snapshot(String sessionId, Simulator sim, boolean halted, List<Effect> effects) {
+    private static ApiResponse snapshot(String sessionId, Simulator sim, boolean halted, List<Effect> effects,
+            Trap trap) {
         ApiResponse r = new ApiResponse();
         r.sessionId = sessionId;
         r.pc = sim.cpu().getPc();
         r.regs = sim.cpu().getRegs();
         r.halted = halted;
         r.effects = effects;
+        r.trap = trap;
         r.clike = sim.cLike();
         r.rv2c = sim.rv2c();
         return r;
@@ -304,6 +316,7 @@ public final class Server {
         private List<Effect> effects;
         private String clike;
         private String rv2c;
+        private Trap trap;
         private String error;
 
         /**
@@ -381,6 +394,15 @@ public final class Server {
          */
         public String getError() {
             return error;
+        }
+
+        /**
+         * Returns trap information if execution halted due to a fault.
+         *
+         * @return trap or null
+         */
+        public Trap getTrap() {
+            return trap;
         }
 
     }
