@@ -287,6 +287,7 @@ public final class Server {
      * @param sim simulator instance
      * @param halted whether execution has halted
      * @param effects list of execution effects
+     * @param trap trap information if execution halted due to a fault
      * @return populated API response
      */
     private static ApiResponse snapshot(String sessionId, Simulator sim, boolean halted, List<Effect> effects,
