@@ -266,11 +266,15 @@ public final class Rv2CMapper {
             case JAL -> {
                 String targetLabel = firstLabel(labelMap, inst.getTargetPC());
                 String targetComment = " // goto " + (targetLabel != null ? targetLabel : hex(inst.getTargetPC()));
-                lines.add("        x[" + inst.getRd() + "] = " + (pcVal + 4) + ";");
+                if (inst.getRd() != 0) {
+                    lines.add("        x[" + inst.getRd() + "] = " + (pcVal + 4) + ";");
+                }
                 lines.add("        pc = " + inst.getTargetPC() + ";" + targetComment);
             }
             case JALR -> {
-                lines.add("        x[" + inst.getRd() + "] = " + (pcVal + 4) + ";");
+                if (inst.getRd() != 0) {
+                    lines.add("        x[" + inst.getRd() + "] = " + (pcVal + 4) + ";");
+                }
                 lines.add("        pc = (uint32_t)((x[" + inst.getRs1() + "] + " + inst.getImm() + ") & ~1);");
             }
             case BEQ -> beq(lines, labelMap, inst, pcVal);

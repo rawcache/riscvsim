@@ -50,13 +50,40 @@ public final class Server {
     public static void start() throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
 
+        createHealthContext(server);
+        createSimulateContext(server);
+        createSessionContext(server);
+        createAssembleContext(server);
+        createResetContext(server);
+        createStepContext(server);
+
+        ExecutorService pool = Executors.newFixedThreadPool(8);
+        server.setExecutor(pool);
+
+        System.out.println("Backend listening on http://localhost:" + PORT);
+        server.start();
+    }
+
+    /**
+     * Registers the /health endpoint that returns an "ok" string.
+     *
+     * @param server HTTP server
+     */
+    private static void createHealthContext(HttpServer server) {
         server.createContext("/health", ex -> {
             if (handleOptions(ex)) {
                 return;
             }
             sendText(ex, 200, "ok");
         });
+    }
 
+    /**
+     * Registers the legacy /simulate endpoint that mirrors /api/session.
+     *
+     * @param server HTTP server
+     */
+    private static void createSimulateContext(HttpServer server) {
         // Legacy compatibility: mirror /api/session behavior at /simulate
         server.createContext("/simulate", ex -> {
             if (handleOptions(ex)) {
@@ -83,12 +110,18 @@ public final class Server {
                 ApiResponse r = snapshot("legacy", sim, false, List.of(), null);
                 sendJson(ex, 200, r);
             } catch (IOException | RuntimeException e) {
-                ApiResponse r = new ApiResponse();
-                r.error = e.getMessage();
+                ApiResponse r = new ApiResponse().setError(e.getMessage());
                 sendJson(ex, 400, r);
             }
         });
+    }
 
+    /**
+     * Registers the /api/session endpoint that creates a new simulator session.
+     *
+     * @param server HTTP server
+     */
+    private static void createSessionContext(HttpServer server) {
         server.createContext("/api/session", ex -> {
             if (handleOptions(ex)) {
                 return;
@@ -118,13 +151,20 @@ public final class Server {
                 SESSIONS.put(id, sim);
                 sendJson(ex, 200, snapshot(id, sim, false, List.of(), null));
             } catch (IOException | RuntimeException e) {
-                ApiResponse r = new ApiResponse();
-                r.sessionId = id;
-                r.error = e.getMessage();
+                ApiResponse r = new ApiResponse()
+                        .setSessionId(id)
+                        .setError(e.getMessage());
                 sendJson(ex, 400, r);
             }
         });
+    }
 
+    /**
+     * Registers the /api/assemble endpoint that assembles source into a session.
+     *
+     * @param server HTTP server
+     */
+    private static void createAssembleContext(HttpServer server) {
         server.createContext("/api/assemble", ex -> {
             if (handleOptions(ex)) {
                 return;
@@ -148,12 +188,18 @@ public final class Server {
                 sim.assemble(source);
                 sendJson(ex, 200, snapshot(id, sim, false, List.of(), null));
             } catch (IOException | RuntimeException e) {
-                ApiResponse r = new ApiResponse();
-                r.error = e.getMessage();
+                ApiResponse r = new ApiResponse().setError(e.getMessage());
                 sendJson(ex, 400, r);
             }
         });
+    }
 
+    /**
+     * Registers the /api/reset endpoint that resets simulator state.
+     *
+     * @param server HTTP server
+     */
+    private static void createResetContext(HttpServer server) {
         server.createContext("/api/reset", ex -> {
             if (handleOptions(ex)) {
                 return;
@@ -176,12 +222,18 @@ public final class Server {
                 sim.reset();
                 sendJson(ex, 200, snapshot(id, sim, false, List.of(), null));
             } catch (IOException | RuntimeException e) {
-                ApiResponse r = new ApiResponse();
-                r.error = e.getMessage();
+                ApiResponse r = new ApiResponse().setError(e.getMessage());
                 sendJson(ex, 400, r);
             }
         });
+    }
 
+    /**
+     * Registers the /api/step endpoint that advances execution.
+     *
+     * @param server HTTP server
+     */
+    private static void createStepContext(HttpServer server) {
         server.createContext("/api/step", ex -> {
             if (handleOptions(ex)) {
                 return;
@@ -205,8 +257,8 @@ public final class Server {
                         ? obj.get("steps").getAsInt()
                         : 1;
                 if (steps < 1 || steps > Simulator.MAX_STEPS_PER_REQUEST) {
-                    ApiResponse r = new ApiResponse();
-                    r.error = "steps must be between 1 and " + Simulator.MAX_STEPS_PER_REQUEST;
+                    ApiResponse r = new ApiResponse()
+                            .setError("steps must be between 1 and " + Simulator.MAX_STEPS_PER_REQUEST);
                     sendJson(ex, 400, r);
                     return;
                 }
@@ -217,17 +269,10 @@ public final class Server {
 
                 sendJson(ex, 200, snapshot(id, sim, halted, effects, sr.getTrap()));
             } catch (IOException | RuntimeException e) {
-                ApiResponse r = new ApiResponse();
-                r.error = e.getMessage();
+                ApiResponse r = new ApiResponse().setError(e.getMessage());
                 sendJson(ex, 400, r);
             }
         });
-
-        ExecutorService pool = Executors.newFixedThreadPool(8);
-        server.setExecutor(pool);
-
-        System.out.println("Backend listening on http://localhost:" + PORT);
-        server.start();
     }
 
     /**
@@ -324,16 +369,15 @@ public final class Server {
      */
     private static ApiResponse snapshot(String sessionId, Simulator sim, boolean halted, List<Effect> effects,
             Trap trap) {
-        ApiResponse r = new ApiResponse();
-        r.sessionId = sessionId;
-        r.pc = sim.cpu().getPc();
-        r.regs = sim.cpu().getRegs();
-        r.halted = halted;
-        r.effects = effects;
-        r.trap = trap;
-        r.clike = sim.cLike();
-        r.rv2c = sim.rv2c();
-        return r;
+        return new ApiResponse()
+                .setSessionId(sessionId)
+                .setPc(sim.cpu().getPc())
+                .setRegs(sim.cpu().getRegs())
+                .setHalted(halted)
+                .setEffects(effects)
+                .setTrap(trap)
+                .setClike(sim.cLike())
+                .setRv2c(sim.rv2c());
     }
 
     /**
@@ -436,6 +480,105 @@ public final class Server {
          */
         public Trap getTrap() {
             return trap;
+        }
+
+        /**
+         * Sets the session identifier for the response.
+         *
+         * @param sessionId session id value
+         * @return this response for chaining
+         */
+        ApiResponse setSessionId(String sessionId) {
+            this.sessionId = sessionId;
+            return this;
+        }
+
+        /**
+         * Sets the program counter value.
+         *
+         * @param pc program counter
+         * @return this response for chaining
+         */
+        ApiResponse setPc(int pc) {
+            this.pc = pc;
+            return this;
+        }
+
+        /**
+         * Sets the register snapshot.
+         *
+         * @param regs register array
+         * @return this response for chaining
+         */
+        ApiResponse setRegs(int[] regs) {
+            this.regs = regs;
+            return this;
+        }
+
+        /**
+         * Sets whether execution halted.
+         *
+         * @param halted halt flag
+         * @return this response for chaining
+         */
+        ApiResponse setHalted(boolean halted) {
+            this.halted = halted;
+            return this;
+        }
+
+        /**
+         * Sets the execution side effects.
+         *
+         * @param effects list of effects
+         * @return this response for chaining
+         */
+        ApiResponse setEffects(List<Effect> effects) {
+            this.effects = effects;
+            return this;
+        }
+
+        /**
+         * Sets the C-like explanation of the program.
+         *
+         * @param clike C-like translation
+         * @return this response for chaining
+         */
+        ApiResponse setClike(String clike) {
+            this.clike = clike;
+            return this;
+        }
+
+        /**
+         * Sets the RISC-V to C mapping.
+         *
+         * @param rv2c mapping text
+         * @return this response for chaining
+         */
+        ApiResponse setRv2c(String rv2c) {
+            this.rv2c = rv2c;
+            return this;
+        }
+
+        /**
+         * Sets the trap details if execution faulted.
+         *
+         * @param trap trap info
+         * @return this response for chaining
+         */
+        ApiResponse setTrap(Trap trap) {
+            this.trap = trap;
+            return this;
+        }
+
+        /**
+         * Sets an error message for the response.
+         *
+         * @param error error text
+         * @return this response for chaining
+         */
+        ApiResponse setError(String error) {
+            this.error = error;
+            return this;
         }
 
     }
