@@ -519,8 +519,15 @@ public final class Parser {
             Pending p,
             java.util.function.BiFunction<String, Integer, Integer> parseTargetPC,
             java.util.function.Consumer<Instruction> addInst) {
-        if (tokens.length != 4) {
+        boolean isBranch = switch (op) {
+        case "beq", "bne", "blt", "bge", "bltu", "bgeu" -> true;
+        default -> false;
+        };
+        if (!isBranch) {
             return false;
+        }
+        if (tokens.length != 4) {
+            throw new RuntimeException("Bad " + op + " on line " + (p.srcLine + 1));
         }
         int rs1 = parseReg(tokens[1]);
         int rs2 = parseReg(tokens[2]);
