@@ -58,6 +58,9 @@ addi x3, x0, 999         # skipped
 done:
 ```
 
+Other built-in samples in the UI include a `jal/jalr + lw/sw` round trip and a memory test
+that exercises `sb`/`sh`/`sw` plus `lb`/`lbu`/`lh`/`lhu`/`lw`.
+
 Project layout
 --------------
 - `backend/`: Java simulator, server, and explainers.
