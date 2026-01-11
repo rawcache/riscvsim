@@ -68,7 +68,13 @@ public final class Disassembler {
         return switch (ins.getOp()) {
         case ADDI -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", " + ins.getImm();
         case LUI -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm();
+        case LB -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
+        case LBU -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
+        case LH -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
+        case LHU -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
         case LW -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
+        case SB -> formatPc(pc) + op + " x" + ins.getRs2() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
+        case SH -> formatPc(pc) + op + " x" + ins.getRs2() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
         case SW -> formatPc(pc) + op + " x" + ins.getRs2() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
         case JAL -> formatPc(pc) + op + " x" + ins.getRd() + ", " + formatTarget(labelsByPc, ins.getTargetPC());
         case JALR -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";

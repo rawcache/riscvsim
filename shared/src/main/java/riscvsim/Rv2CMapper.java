@@ -60,6 +60,113 @@ public final class Rv2CMapper {
     }
 
     /**
+     * Emits C lines that model an ADDI instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst ADDI instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void addi(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)(x[" + inst.getRs1()
+                + "] + " + inst.getImm() + ");");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a LUI instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst LUI instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void lui(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)(" + inst.getImm() + " << 12);");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model an LB/LBU instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst load-byte instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     * @param signed true for LB, false for LBU
+     */
+    private static void lb(List<String> lines, Instruction inst, int pcVal, boolean signed) {
+        String cast = signed ? "(int8_t)" : "(uint8_t)";
+        lines.add("        x[" + inst.getRd() + "] = " + cast + "load8(mem, (uint32_t)(x["
+                + inst.getRs1() + "] + " + inst.getImm() + "));");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model an LH/LHU instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst load-halfword instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     * @param signed true for LH, false for LHU
+     */
+    private static void lh(List<String> lines, Instruction inst, int pcVal, boolean signed) {
+        String cast = signed ? "(int16_t)" : "(uint16_t)";
+        lines.add("        x[" + inst.getRd() + "] = " + cast + "load16(mem, (uint32_t)(x["
+                + inst.getRs1() + "] + " + inst.getImm() + "));");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a LW instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst LW instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void lw(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = load32(mem, (uint32_t)(x["
+                + inst.getRs1() + "] + " + inst.getImm() + "));");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a SB instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst SB instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void sb(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        store8(mem, (uint32_t)(x[" + inst.getRs1() + "] + "
+                + inst.getImm() + "), (uint8_t)x[" + inst.getRs2() + "]);");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a SH instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst SH instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void sh(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        store16(mem, (uint32_t)(x[" + inst.getRs1() + "] + "
+                + inst.getImm() + "), (uint16_t)x[" + inst.getRs2() + "]);");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a SW instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst SW instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void sw(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        store32(mem, (uint32_t)(x[" + inst.getRs1() + "] + "
+                + inst.getImm() + "), x[" + inst.getRs2() + "]);");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
      * Emits C lines that model a JAL instruction.
      *
      * @param lines accumulator for generated C source lines
@@ -233,8 +340,26 @@ public final class Rv2CMapper {
         lines.add("  return v;");
         lines.add("}");
         lines.add("");
+        lines.add("static inline uint8_t load8(uint8_t *mem, uint32_t addr) {");
+        lines.add("  return mem[addr];");
+        lines.add("}");
+        lines.add("");
+        lines.add("static inline uint16_t load16(uint8_t *mem, uint32_t addr) {");
+        lines.add("  uint16_t v;");
+        lines.add("  memcpy(&v, mem + addr, 2);");
+        lines.add("  return v;");
+        lines.add("}");
+        lines.add("");
         lines.add("static inline void store32(uint8_t *mem, uint32_t addr, int32_t v) {");
         lines.add("  memcpy(mem + addr, &v, 4);");
+        lines.add("}");
+        lines.add("");
+        lines.add("static inline void store8(uint8_t *mem, uint32_t addr, uint8_t v) {");
+        lines.add("  mem[addr] = v;");
+        lines.add("}");
+        lines.add("");
+        lines.add("static inline void store16(uint8_t *mem, uint32_t addr, uint16_t v) {");
+        lines.add("  memcpy(mem + addr, &v, 2);");
         lines.add("}");
         lines.add("");
         lines.add("int main(void) {");
@@ -276,21 +401,16 @@ public final class Rv2CMapper {
 
             Instruction.Op op = inst.getOp();
             switch (op) {
-            case ADDI -> {
-                lines.add("        x[" + inst.getRd() + "] = (int32_t)(x[" + inst.getRs1()
-                        + "] + " + inst.getImm() + ");");
-                lines.add("        pc = " + (pcVal + 4) + ";");
-            }
-            case LW -> {
-                lines.add("        x[" + inst.getRd() + "] = load32(mem, (uint32_t)(x["
-                        + inst.getRs1() + "] + " + inst.getImm() + "));");
-                lines.add("        pc = " + (pcVal + 4) + ";");
-            }
-            case SW -> {
-                lines.add("        store32(mem, (uint32_t)(x[" + inst.getRs1() + "] + "
-                        + inst.getImm() + "), x[" + inst.getRs2() + "]);");
-                lines.add("        pc = " + (pcVal + 4) + ";");
-            }
+            case ADDI -> addi(lines, inst, pcVal);
+            case LUI -> lui(lines, inst, pcVal);
+            case LB -> lb(lines, inst, pcVal, true);
+            case LBU -> lb(lines, inst, pcVal, false);
+            case LH -> lh(lines, inst, pcVal, true);
+            case LHU -> lh(lines, inst, pcVal, false);
+            case LW -> lw(lines, inst, pcVal);
+            case SB -> sb(lines, inst, pcVal);
+            case SH -> sh(lines, inst, pcVal);
+            case SW -> sw(lines, inst, pcVal);
             case JAL -> jal(lines, labelMap, inst, pcVal);
             case JALR -> jalr(lines, inst, pcVal);
             case BEQ -> beq(lines, labelMap, inst, pcVal);

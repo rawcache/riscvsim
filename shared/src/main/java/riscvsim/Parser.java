@@ -383,20 +383,10 @@ public final class Parser {
             addInst.accept(Instruction.lui(parseReg(tokens[1]), parseImm(tokens[2]), p.srcLine));
             return true;
         }
-        if (op.equals("lw")) {
-            if (tokens.length != 3) {
-                throw new RuntimeException("Bad lw on line " + (p.srcLine + 1));
-            }
-            OffsetBase ob = parseOffsetBase(tokens[2], p.srcLine);
-            addInst.accept(Instruction.lw(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
+        if (handleLoads(op, tokens, p, addInst)) {
             return true;
         }
-        if (op.equals("sw")) {
-            if (tokens.length != 3) {
-                throw new RuntimeException("Bad sw on line " + (p.srcLine + 1));
-            }
-            OffsetBase ob = parseOffsetBase(tokens[2], p.srcLine);
-            addInst.accept(Instruction.sw(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
+        if (handleStores(op, tokens, p, addInst)) {
             return true;
         }
         if (op.equals("jal")) {
@@ -418,67 +408,136 @@ public final class Parser {
             addInst.accept(Instruction.jalr(rd, ob.rs1(), ob.imm(), p.srcLine));
             return true;
         }
-        if (op.equals("beq")) {
-            if (tokens.length != 4) {
-                throw new RuntimeException("Bad beq on line " + (p.srcLine + 1));
-            }
-            int rs1 = parseReg(tokens[1]);
-            int rs2 = parseReg(tokens[2]);
-            int target = parseTargetPC.apply(tokens[3], p.srcLine);
+        return handleBranch(op, tokens, p, parseTargetPC, addInst);
+    }
+
+    /**
+     * Handles base load instructions.
+     *
+     * @param op the operation code of the instruction
+     * @param tokens the tokens of the instruction line
+     * @param p the pending instruction with its source line
+     * @param addInst a consumer to add the parsed instruction
+     * @return true if a load instruction was parsed, false otherwise
+     */
+    private static boolean handleLoads(
+            String op,
+            String[] tokens,
+            Pending p,
+            java.util.function.Consumer<Instruction> addInst) {
+        if (tokens.length != 3) {
+            return false;
+        }
+        OffsetBase ob = parseOffsetBase(tokens[2], p.srcLine);
+        return switch (op) {
+        case "lb" -> {
+            addInst.accept(Instruction.lb(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
+            yield true;
+        }
+        case "lbu" -> {
+            addInst.accept(Instruction.lbu(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
+            yield true;
+        }
+        case "lh" -> {
+            addInst.accept(Instruction.lh(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
+            yield true;
+        }
+        case "lhu" -> {
+            addInst.accept(Instruction.lhu(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
+            yield true;
+        }
+        case "lw" -> {
+            addInst.accept(Instruction.lw(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
+            yield true;
+        }
+        default -> false;
+        };
+    }
+
+    /**
+     * Handles base store instructions.
+     *
+     * @param op the operation code of the instruction
+     * @param tokens the tokens of the instruction line
+     * @param p the pending instruction with its source line
+     * @param addInst a consumer to add the parsed instruction
+     * @return true if a store instruction was parsed, false otherwise
+     */
+    private static boolean handleStores(
+            String op,
+            String[] tokens,
+            Pending p,
+            java.util.function.Consumer<Instruction> addInst) {
+        if (tokens.length != 3) {
+            return false;
+        }
+        OffsetBase ob = parseOffsetBase(tokens[2], p.srcLine);
+        return switch (op) {
+        case "sb" -> {
+            addInst.accept(Instruction.sb(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
+            yield true;
+        }
+        case "sh" -> {
+            addInst.accept(Instruction.sh(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
+            yield true;
+        }
+        case "sw" -> {
+            addInst.accept(Instruction.sw(parseReg(tokens[1]), ob.rs1(), ob.imm(), p.srcLine));
+            yield true;
+        }
+        default -> false;
+        };
+    }
+
+    /**
+     * Handles base branch instructions.
+     *
+     * @param op the operation code of the instruction
+     * @param tokens the tokens of the instruction line
+     * @param p the pending instruction with its source line
+     * @param parseTargetPC a function to parse target program counters
+     * @param addInst a consumer to add the parsed instruction
+     * @return true if a branch instruction was parsed, false otherwise
+     */
+    private static boolean handleBranch(
+            String op,
+            String[] tokens,
+            Pending p,
+            java.util.function.BiFunction<String, Integer, Integer> parseTargetPC,
+            java.util.function.Consumer<Instruction> addInst) {
+        if (tokens.length != 4) {
+            return false;
+        }
+        int rs1 = parseReg(tokens[1]);
+        int rs2 = parseReg(tokens[2]);
+        int target = parseTargetPC.apply(tokens[3], p.srcLine);
+        return switch (op) {
+        case "beq" -> {
             addInst.accept(Instruction.beq(rs1, rs2, target, p.srcLine));
-            return true;
+            yield true;
         }
-        if (op.equals("bne")) {
-            if (tokens.length != 4) {
-                throw new RuntimeException("Bad bne on line " + (p.srcLine + 1));
-            }
-            int rs1 = parseReg(tokens[1]);
-            int rs2 = parseReg(tokens[2]);
-            int target = parseTargetPC.apply(tokens[3], p.srcLine);
+        case "bne" -> {
             addInst.accept(Instruction.bne(rs1, rs2, target, p.srcLine));
-            return true;
+            yield true;
         }
-        if (op.equals("blt")) {
-            if (tokens.length != 4) {
-                throw new RuntimeException("Bad blt on line " + (p.srcLine + 1));
-            }
-            int rs1 = parseReg(tokens[1]);
-            int rs2 = parseReg(tokens[2]);
-            int target = parseTargetPC.apply(tokens[3], p.srcLine);
+        case "blt" -> {
             addInst.accept(Instruction.blt(rs1, rs2, target, p.srcLine));
-            return true;
+            yield true;
         }
-        if (op.equals("bge")) {
-            if (tokens.length != 4) {
-                throw new RuntimeException("Bad bge on line " + (p.srcLine + 1));
-            }
-            int rs1 = parseReg(tokens[1]);
-            int rs2 = parseReg(tokens[2]);
-            int target = parseTargetPC.apply(tokens[3], p.srcLine);
+        case "bge" -> {
             addInst.accept(Instruction.bge(rs1, rs2, target, p.srcLine));
-            return true;
+            yield true;
         }
-        if (op.equals("bltu")) {
-            if (tokens.length != 4) {
-                throw new RuntimeException("Bad bltu on line " + (p.srcLine + 1));
-            }
-            int rs1 = parseReg(tokens[1]);
-            int rs2 = parseReg(tokens[2]);
-            int target = parseTargetPC.apply(tokens[3], p.srcLine);
+        case "bltu" -> {
             addInst.accept(Instruction.bltu(rs1, rs2, target, p.srcLine));
-            return true;
+            yield true;
         }
-        if (op.equals("bgeu")) {
-            if (tokens.length != 4) {
-                throw new RuntimeException("Bad bgeu on line " + (p.srcLine + 1));
-            }
-            int rs1 = parseReg(tokens[1]);
-            int rs2 = parseReg(tokens[2]);
-            int target = parseTargetPC.apply(tokens[3], p.srcLine);
+        case "bgeu" -> {
             addInst.accept(Instruction.bgeu(rs1, rs2, target, p.srcLine));
-            return true;
+            yield true;
         }
-        return false;
+        default -> false;
+        };
     }
 
     /**

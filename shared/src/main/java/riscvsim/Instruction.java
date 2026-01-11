@@ -15,7 +15,14 @@ public final class Instruction {
      */
     public enum Op {
         /** Add immediate. */ ADDI,
+        /** Load upper immediate. */ LUI,
+        /** Load byte (signed). */ LB,
+        /** Load byte (unsigned). */ LBU,
+        /** Load halfword (signed). */ LH,
+        /** Load halfword (unsigned). */ LHU,
         /** Load word. */ LW,
+        /** Store byte. */ SB,
+        /** Store halfword. */ SH,
         /** Store word. */ SW,
         /** Jump and link. */ JAL,
         /** Jump and link register. */ JALR,
@@ -69,6 +76,23 @@ public final class Instruction {
     }
 
     /**
+     * Creates a LUI instruction.
+     *
+     * @param rd destination register
+     * @param imm upper immediate value
+     * @param srcLine source line number
+     * @return LUI instruction
+     */
+    public static Instruction lui(int rd, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.LUI;
+        i.rd = rd;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
      * Creates a LW instruction.
      *
      * @param rd destination register
@@ -88,6 +112,82 @@ public final class Instruction {
     }
 
     /**
+     * Creates a LB instruction.
+     *
+     * @param rd destination register
+     * @param rs1 base register
+     * @param imm byte offset
+     * @param srcLine source line number
+     * @return LB instruction
+     */
+    public static Instruction lb(int rd, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.LB;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a LBU instruction.
+     *
+     * @param rd destination register
+     * @param rs1 base register
+     * @param imm byte offset
+     * @param srcLine source line number
+     * @return LBU instruction
+     */
+    public static Instruction lbu(int rd, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.LBU;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a LH instruction.
+     *
+     * @param rd destination register
+     * @param rs1 base register
+     * @param imm byte offset
+     * @param srcLine source line number
+     * @return LH instruction
+     */
+    public static Instruction lh(int rd, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.LH;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a LHU instruction.
+     *
+     * @param rd destination register
+     * @param rs1 base register
+     * @param imm byte offset
+     * @param srcLine source line number
+     * @return LHU instruction
+     */
+    public static Instruction lhu(int rd, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.LHU;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
      * Creates a SW instruction.
      *
      * @param rs2 value register
@@ -99,6 +199,44 @@ public final class Instruction {
     public static Instruction sw(int rs2, int rs1, int imm, int srcLine) {
         Instruction i = new Instruction();
         i.op = Op.SW;
+        i.rs2 = rs2;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a SB instruction.
+     *
+     * @param rs2 value register
+     * @param rs1 base register
+     * @param imm byte offset
+     * @param srcLine source line number
+     * @return SB instruction
+     */
+    public static Instruction sb(int rs2, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.SB;
+        i.rs2 = rs2;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a SH instruction.
+     *
+     * @param rs2 value register
+     * @param rs1 base register
+     * @param imm byte offset
+     * @param srcLine source line number
+     * @return SH instruction
+     */
+    public static Instruction sh(int rs2, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.SH;
         i.rs2 = rs2;
         i.rs1 = rs1;
         i.imm = imm;

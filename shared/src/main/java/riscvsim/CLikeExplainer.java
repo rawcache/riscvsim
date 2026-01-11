@@ -180,7 +180,13 @@ public final class CLikeExplainer {
         switch (ins.getOp()) {
         case ADDI -> handleAddi(lines, ins, regConst, regPtrFromVar);
         case LUI -> handleLui(lines, ins, regConst, regPtrFromVar);
+        case LB -> handleLb(lines, ins, inv, regConst, regPtrFromVar, true);
+        case LBU -> handleLb(lines, ins, inv, regConst, regPtrFromVar, false);
+        case LH -> handleLh(lines, ins, inv, regConst, regPtrFromVar, true);
+        case LHU -> handleLh(lines, ins, inv, regConst, regPtrFromVar, false);
         case LW -> handleLw(lines, ins, inv, regConst, regPtrFromVar);
+        case SB -> handleSb(lines, ins, inv, regConst, regPtrFromVar);
+        case SH -> handleSh(lines, ins, inv, regConst, regPtrFromVar);
         case SW -> handleSw(lines, ins, inv, regConst, regPtrFromVar);
         case JAL -> handleJal(lines, ins, pc, labelMap, regConst, regPtrFromVar);
         case JALR -> handleJalr(lines, ins, pc, regConst, regPtrFromVar);
@@ -276,6 +282,82 @@ public final class CLikeExplainer {
     }
 
     /**
+     * Handles LB/LBU, emitting pointer loads with the correct signedness.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param inv reverse symbol map
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     * @param signed true for LB, false for LBU
+     */
+    private static void handleLb(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, String> inv,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar,
+            boolean signed) {
+        Integer baseConst = regConst.get(ins.getRs1());
+        regConst.remove(ins.getRd());
+
+        String cType = signed ? "int8_t" : "uint8_t";
+        if (baseConst != null && ins.getImm() == 0) {
+            lines.add(
+                regName(ins.getRd()) + " = *(" + cType + "*)"
+                + formatAddress(inv, baseConst) + ";"
+            );
+            regPtrFromVar.put(ins.getRd(), baseConst);
+            return;
+        }
+
+        regPtrFromVar.remove(ins.getRd());
+        lines.add(
+            regName(ins.getRd()) + " = *(" + cType + "*)("
+            + regName(ins.getRs1()) + " + "
+            + ins.getImm() + ");"
+        );
+    }
+
+    /**
+     * Handles LH/LHU, emitting pointer loads with the correct signedness.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param inv reverse symbol map
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     * @param signed true for LH, false for LHU
+     */
+    private static void handleLh(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, String> inv,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar,
+            boolean signed) {
+        Integer baseConst = regConst.get(ins.getRs1());
+        regConst.remove(ins.getRd());
+
+        String cType = signed ? "int16_t" : "uint16_t";
+        if (baseConst != null && ins.getImm() == 0) {
+            lines.add(
+                regName(ins.getRd()) + " = *(" + cType + "*)"
+                + formatAddress(inv, baseConst) + ";"
+            );
+            regPtrFromVar.put(ins.getRd(), baseConst);
+            return;
+        }
+
+        regPtrFromVar.remove(ins.getRd());
+        lines.add(
+            regName(ins.getRd()) + " = *(" + cType + "*)("
+            + regName(ins.getRs1()) + " + "
+            + ins.getImm() + ");"
+        );
+    }
+
+    /**
      * Handles SW, including cases where the address or value are known constants.
      *
      * @param lines output accumulator
@@ -317,6 +399,72 @@ public final class CLikeExplainer {
             + ins.getImm() + ") = "
             + regName(ins.getRs2()) + ";"
         );
+    }
+
+    /**
+     * Handles SB, including cases where the address is a known constant.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param inv reverse symbol map
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     */
+    private static void handleSb(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, String> inv,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar) {
+        Integer baseConst = regConst.get(ins.getRs1());
+        if (baseConst != null && ins.getImm() == 0) {
+            lines.add(
+                "*(uint8_t*)" + formatAddress(inv, baseConst)
+                + " = (uint8_t)" + regName(ins.getRs2()) + ";"
+            );
+            return;
+        }
+
+        lines.add(
+            "*(uint8_t*)("
+            + regName(ins.getRs1()) + " + "
+            + ins.getImm() + ") = (uint8_t)"
+            + regName(ins.getRs2()) + ";"
+        );
+        regPtrFromVar.remove(ins.getRs1());
+    }
+
+    /**
+     * Handles SH, including cases where the address is a known constant.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param inv reverse symbol map
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     */
+    private static void handleSh(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, String> inv,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar) {
+        Integer baseConst = regConst.get(ins.getRs1());
+        if (baseConst != null && ins.getImm() == 0) {
+            lines.add(
+                "*(uint16_t*)" + formatAddress(inv, baseConst)
+                + " = (uint16_t)" + regName(ins.getRs2()) + ";"
+            );
+            return;
+        }
+
+        lines.add(
+            "*(uint16_t*)("
+            + regName(ins.getRs1()) + " + "
+            + ins.getImm() + ") = (uint16_t)"
+            + regName(ins.getRs2()) + ";"
+        );
+        regPtrFromVar.remove(ins.getRs1());
     }
 
     /**

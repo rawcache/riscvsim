@@ -154,6 +154,40 @@ class SimulatorTest {
     }
 
     /**
+     * Ensures SB stores only the low 8 bits of a register.
+     */
+    @Test
+    void sbStoresByteToMemory() {
+        Simulator sim = new Simulator();
+        sim.assemble("""
+                addi x1, x0, 24
+                addi x2, x0, 0x1234
+                sb x2, 0(x1)
+                """);
+
+        runUntilHalt(sim, 5);
+
+        assertEquals(0x34, sim.cpu().getMemory().loadByte(24));
+    }
+
+    /**
+     * Ensures SH stores only the low 16 bits of a register.
+     */
+    @Test
+    void shStoresHalfwordToMemory() {
+        Simulator sim = new Simulator();
+        sim.assemble("""
+                addi x1, x0, 28
+                addi x2, x0, 0x89ab
+                sh x2, 0(x1)
+                """);
+
+        runUntilHalt(sim, 5);
+
+        assertEquals(0x89ab, sim.cpu().getMemory().loadHalf(28));
+    }
+
+    /**
      * Ensures LW loads a word from memory at base+offset.
      */
     @Test
@@ -168,6 +202,44 @@ class SimulatorTest {
         runUntilHalt(sim, 5);
 
         assertEquals(0xdeadbeef, sim.cpu().getRegs()[2]);
+    }
+
+    /**
+     * Ensures LB sign-extends and LBU zero-extends loaded bytes.
+     */
+    @Test
+    void lbAndLbuRespectSignedness() {
+        Simulator sim = new Simulator();
+        sim.cpu().getMemory().storeByte(32, 0x80);
+        sim.assemble("""
+                addi x1, x0, 32
+                lb x2, 0(x1)
+                lbu x3, 0(x1)
+                """);
+
+        runUntilHalt(sim, 5);
+
+        assertEquals(-128, sim.cpu().getRegs()[2]);
+        assertEquals(128, sim.cpu().getRegs()[3]);
+    }
+
+    /**
+     * Ensures LH sign-extends and LHU zero-extends loaded halfwords.
+     */
+    @Test
+    void lhAndLhuRespectSignedness() {
+        Simulator sim = new Simulator();
+        sim.cpu().getMemory().storeHalf(36, 0x8001);
+        sim.assemble("""
+                addi x1, x0, 36
+                lh x2, 0(x1)
+                lhu x3, 0(x1)
+                """);
+
+        runUntilHalt(sim, 5);
+
+        assertEquals((short) 0x8001, sim.cpu().getRegs()[2]);
+        assertEquals(0x8001, sim.cpu().getRegs()[3]);
     }
 
     /**
