@@ -53,6 +53,7 @@ public final class Instruction {
         /** Store word. */ SW,
         /** Jump and link. */ JAL,
         /** Jump and link register. */ JALR,
+        /** Environment call. */ ECALL,
         /** Branch if equal (signed). */ BEQ,
         /** Branch if not equal (signed). */ BNE,
         /** Branch if less than (signed). */ BLT,
@@ -814,6 +815,19 @@ public final class Instruction {
         i.rd = rd;
         i.rs1 = rs1;
         i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates an ECALL instruction.
+     *
+     * @param srcLine source line number
+     * @return ECALL instruction
+     */
+    public static Instruction ecall(int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.ECALL;
         i.srcLine = srcLine;
         return i;
     }

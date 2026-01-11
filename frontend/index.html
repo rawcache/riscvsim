@@ -130,6 +130,41 @@
         margin-top: 12px;
       }
 
+      details {
+        margin-top: 14px;
+      }
+
+      details summary {
+        cursor: pointer;
+        color: var(--muted);
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        font-size: 12px;
+      }
+
+      .reg-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 12px;
+      }
+
+      .reg-table th,
+      .reg-table td {
+        border: 1px solid var(--panel-border);
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .reg-table th {
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+
       button {
         cursor: pointer;
         padding: 10px 16px;
@@ -222,20 +257,47 @@
         <p class="lede">Assemble, step, and inspect your RISC-V program with immediate visual feedback!</p>
         <label for="sampleSelect" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Samples</label>
         <select id="sampleSelect" style="width:100%;margin-bottom:10px;padding:10px;border-radius:10px;border:1px solid var(--panel-border);background:rgba(255,255,255,0.03);color:var(--text);font-family:var(--sans);">
-          <option value="simpleAdd">Add and halt</option>
-          <option value="jalLwSw">jal/jalr + lw/sw</option>
-          <option value="loopsUnsigned">Unsigned branches</option>
-          <option value="memoryTests">Memory tests</option>
-          <option value="shifts">Shift ops</option>
-          <option value="logicOps">Logic ops</option>
-          <option value="arithOps">Arithmetic ops</option>
+          <option value="arraySum">Array sum (sensor readings)</option>
+          <option value="stringLength">String length</option>
+          <option value="memoryCopy">Memory copy</option>
+          <option value="functionCall">Function call (jal/jalr)</option>
+          <option value="tempConvert">Temp conversion (mul/div)</option>
+          <option value="checksum">XOR checksum</option>
+          <option value="syscall">Syscall (ecall)</option>
         </select>
         <textarea id="source" placeholder="Paste RV32 assembly here..."></textarea>
         <div class="actions">
           <button id="assemble">Assemble</button>
           <button id="step" disabled>Step</button>
+          <button id="stepBack" disabled>Step back</button>
           <button id="run" disabled>Run</button>
         </div>
+        <details>
+          <summary>Register guide</summary>
+          <table class="reg-table">
+            <thead>
+              <tr>
+                <th>Register</th>
+                <th>Mnemonic</th>
+                <th>Use</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>x0</td><td>zero</td><td>Constant value 0</td></tr>
+              <tr><td>x1</td><td>ra</td><td>Return address</td></tr>
+              <tr><td>x2</td><td>sp</td><td>Stack pointer</td></tr>
+              <tr><td>x3</td><td>gp</td><td>Global pointer</td></tr>
+              <tr><td>x4</td><td>tp</td><td>Thread pointer</td></tr>
+              <tr><td>x5-x7</td><td>t0-t2</td><td>Temporaries</td></tr>
+              <tr><td>x8</td><td>s0/fp</td><td>Saved register/frame pointer</td></tr>
+              <tr><td>x9</td><td>s1</td><td>Saved register</td></tr>
+              <tr><td>x10-x11</td><td>a0-a1</td><td>Function args/return values</td></tr>
+              <tr><td>x12-x17</td><td>a2-a7</td><td>Function arguments</td></tr>
+              <tr><td>x18-x27</td><td>s2-s11</td><td>Saved registers</td></tr>
+              <tr><td>x28-x31</td><td>t3-t6</td><td>Temporaries</td></tr>
+            </tbody>
+          </table>
+        </details>
       </section>
 
       <section class="panel panel--clike">

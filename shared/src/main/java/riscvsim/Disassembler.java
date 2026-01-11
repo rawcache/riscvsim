@@ -112,6 +112,7 @@ public final class Disassembler {
         case SW -> formatPc(pc) + op + " x" + ins.getRs2() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
         case JAL -> formatPc(pc) + op + " x" + ins.getRd() + ", " + formatTarget(labelsByPc, ins.getTargetPC());
         case JALR -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
+        case ECALL -> formatPc(pc) + op;
         case BEQ -> formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
                 + formatTarget(labelsByPc, ins.getTargetPC());
         case BNE -> formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "

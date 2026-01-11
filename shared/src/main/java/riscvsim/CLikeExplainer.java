@@ -217,6 +217,7 @@ public final class CLikeExplainer {
         case SW -> handleSw(lines, ins, inv, regConst, regPtrFromVar);
         case JAL -> handleJal(lines, ins, pc, labelMap, regConst, regPtrFromVar);
         case JALR -> handleJalr(lines, ins, pc, regConst, regPtrFromVar);
+        case ECALL -> handleEcall(lines, regConst);
         case BEQ -> handleBeq(lines, ins, labelMap);
         case BNE -> handleBranch(lines, ins, labelMap, "!=", null);
         case BLT -> handleBranch(lines, ins, labelMap, "<", null);
@@ -225,6 +226,18 @@ public final class CLikeExplainer {
         case BGEU -> handleBranch(lines, ins, labelMap, ">=", "uint32_t");
         default -> throw new IllegalStateException("Unhandled op: " + ins.getOp());
         }
+    }
+
+    /**
+     * Handles ECALL by emitting a note about the syscall ID and arguments.
+     *
+     * @param lines output accumulator
+     * @param regConst known constant registers
+     */
+    private static void handleEcall(List<String> lines, Map<Integer, Integer> regConst) {
+        Integer id = regConst.get(17);
+        String idText = id != null ? id.toString() : "a7";
+        lines.add("ecall(id=" + idText + ", args=a0..a6);");
     }
 
     /**

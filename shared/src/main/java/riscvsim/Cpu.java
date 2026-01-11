@@ -412,6 +412,16 @@ public final class Cpu {
                 pc = target;
             }
 
+            case ECALL -> {
+                int callId = regs[17];
+                StringBuilder msg = new StringBuilder("ECALL id=").append(callId)
+                        .append(" (a7) args:");
+                for (int reg = 10; reg <= 16; reg++) {
+                    msg.append(" a").append(reg - 10).append("=").append(regs[reg]);
+                }
+                throw new TrapException(TrapCode.TRAP_ECALL, msg.toString());
+            }
+
             case BEQ -> {
                 boolean taken =
                         regs[inst.getRs1()] == regs[inst.getRs2()];

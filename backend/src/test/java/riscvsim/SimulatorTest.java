@@ -533,4 +533,25 @@ class SimulatorTest {
         assertNotNull(r.getTrap());
         assertEquals(TrapCode.TRAP_OOB_MEMORY, r.getTrap().getCode());
     }
+
+    @Test
+    void ecallTriggersTrapWithId() {
+        Simulator sim = new Simulator();
+        sim.assemble("""
+                addi a0, x0, 1
+                addi a1, x0, 2
+                addi a7, x0, 103
+                ecall
+                """);
+
+        sim.step(); // a0
+        sim.step(); // a1
+        sim.step(); // a7
+        StepResult r = sim.step(); // ecall
+
+        assertTrue(r.isHalted());
+        assertNotNull(r.getTrap());
+        assertEquals(TrapCode.TRAP_ECALL, r.getTrap().getCode());
+        assertTrue(r.getTrap().getMessage().contains("id=103"));
+    }
 }

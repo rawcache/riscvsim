@@ -14,6 +14,7 @@ const MAX_RUN_STEPS = 2000;
 window.addEventListener("DOMContentLoaded", () => {
   const assembleBtn = document.getElementById("assemble") as HTMLButtonElement;
   const stepBtn = document.getElementById("step") as HTMLButtonElement;
+  const stepBackBtn = document.getElementById("stepBack") as HTMLButtonElement;
   const runBtn = document.getElementById("run") as HTMLButtonElement;
   const sourceEl = document.getElementById("source") as HTMLTextAreaElement;
 
@@ -32,6 +33,8 @@ window.addEventListener("DOMContentLoaded", () => {
   let runTimer: number | null = null;
   let assembleTimer: number | null = null;
   let runSteps = 0;
+  let history: ApiResponse[] = [];
+  let historyIndex = -1;
   const apiClient = createApiClient();
 
   function resetMemoryView() {
@@ -50,6 +53,32 @@ window.addEventListener("DOMContentLoaded", () => {
     runBtn.textContent = "Run";
     if (message) {
       statusEl.textContent = message;
+    }
+  }
+
+  function setHistory(data: ApiResponse) {
+    history = [data];
+    historyIndex = 0;
+  }
+
+  function pushHistory(data: ApiResponse) {
+    history.push(data);
+    historyIndex = history.length - 1;
+  }
+
+  function syncHistoryControls() {
+    const hasSession = Boolean(sessionId);
+    const atHistoryEnd = historyIndex >= history.length - 1;
+    stepBackBtn.disabled = !hasSession || historyIndex <= 0;
+    if (!hasSession) {
+      stepBtn.disabled = true;
+      runBtn.disabled = true;
+      return;
+    }
+    if (!atHistoryEnd) {
+      stepBtn.disabled = false;
+      stepBtn.textContent = "Step";
+      runBtn.disabled = true;
     }
   }
 
@@ -110,107 +139,143 @@ window.addEventListener("DOMContentLoaded", () => {
       stepBtn.textContent = "Step";
     }
     runBtn.disabled = !sessionId || halted || stalled;
+    syncHistoryControls();
+  }
+
+  function renderFromHistory(index: number) {
+    resetMemoryView();
+    lastPc = undefined;
+    for (let i = 0; i < index; i++) {
+      memoryView.applyEffects(history[i].effects ?? []);
+    }
+    renderAll(history[index]);
   }
 
   const samplePrograms: Record<string, string> = {
-    simpleAdd: [
-      "# Sample: add two numbers and halt",
-      "addi x1, x0, 5        # x1 = 5",
-      "addi x2, x0, 7        # x2 = 7",
-      "addi x3, x2, 5        # x3 = x2 + 5 = 12",
-      "beq x0, x0, done      # branch past program to halt",
+    arraySum: [
+      "# Sample: sum 4 sensor readings",
+      "addi x1, x0, 64       # base address",
+      "addi x2, x0, 10",
+      "addi x3, x0, 20",
+      "addi x4, x0, 30",
+      "addi x5, x0, 40",
+      "sw   x2, 0(x1)",
+      "sw   x3, 4(x1)",
+      "sw   x4, 8(x1)",
+      "sw   x5, 12(x1)",
+      "addi x6, x0, 0        # i",
+      "addi x7, x0, 0        # sum",
+      "loop:",
+      "slti x8, x6, 4        # i < 4 ?",
+      "beq  x8, x0, done",
+      "slli x9, x6, 2        # byte offset",
+      "add  x10, x1, x9",
+      "lw   x11, 0(x10)",
+      "add  x7, x7, x11",
+      "addi x6, x6, 1",
+      "beq  x0, x0, loop",
       "done:",
+      "beq x0, x0, done",
     ].join("\n"),
-    jalLwSw: [
-      "# Sample: jal/jalr with lw/sw round trip",
-      "addi x5, x0, 0x100      # buffer addr",
-      "addi x6, x0, 0x123      # value to store (fits in addi)",
-      "sw   x6, 0(x5)          # store word",
-      "jal  ra, load_back      # call",
-      "addi x10, x7, 0         # copy after return",
+    stringLength: [
+      "# Sample: string length (null-terminated)",
+      "addi x1, x0, 128      # base address",
+      "addi x2, x0, 0x48     # 'H'",
+      "sb   x2, 0(x1)",
+      "addi x2, x0, 0x69     # 'i'",
+      "sb   x2, 1(x1)",
+      "addi x2, x0, 0x21     # '!'",
+      "sb   x2, 2(x1)",
+      "sb   x0, 3(x1)        # null terminator",
+      "addi x3, x0, 0        # len",
+      "loop:",
+      "lb   x4, 0(x1)",
+      "beq  x4, x0, done",
+      "addi x3, x3, 1",
+      "addi x1, x1, 1",
+      "beq  x0, x0, loop",
+      "done:",
+      "beq x0, x0, done",
+    ].join("\n"),
+    memoryCopy: [
+      "# Sample: memcpy 3 words",
+      "addi x1, x0, 200      # src",
+      "addi x2, x0, 300      # dst",
+      "addi x3, x0, 0x1111",
+      "sw   x3, 0(x1)",
+      "addi x3, x0, 0x2222",
+      "sw   x3, 4(x1)",
+      "addi x3, x0, 0x3333",
+      "sw   x3, 8(x1)",
+      "addi x4, x0, 0        # i",
+      "loop:",
+      "slti x5, x4, 3",
+      "beq  x5, x0, done",
+      "slli x6, x4, 2",
+      "add  x7, x1, x6",
+      "add  x8, x2, x6",
+      "lw   x9, 0(x7)",
+      "sw   x9, 0(x8)",
+      "addi x4, x4, 1",
+      "beq  x0, x0, loop",
+      "done:",
+      "beq x0, x0, done",
+    ].join("\n"),
+    functionCall: [
+      "# Sample: function call to scale and add",
+      "addi a0, x0, 6",
+      "addi a1, x0, 7",
+      "jal  ra, scale_add",
+      "addi x5, a0, 0        # result copy",
       "halt:",
-      "beq  x0, x0, halt       # halt loop",
-      "load_back:",
-      "lw   x7, 0(x5)",
+      "beq  x0, x0, halt",
+      "scale_add:",
+      "add  a0, a0, a1",
+      "slli a0, a0, 1",
       "jalr x0, 0(ra)",
     ].join("\n"),
-    loopsUnsigned: [
-      "# Sample: unsigned vs signed branches",
-      "addi x1, x0, -1      # 0xffffffff",
-      "addi x2, x0, 1",
-      "bltu x1, x2, not_taken",
-      "addi x3, x0, 123",
-      "not_taken:",
-      "bgeu x1, x2, done",
-      "addi x3, x0, 999",
+    tempConvert: [
+      "# Sample: temperature conversion C -> F (F = C*9/5 + 32)",
+      "addi a0, x0, 25       # C",
+      "addi t0, x0, 9",
+      "mul  t1, a0, t0",
+      "addi t2, x0, 5",
+      "div  t3, t1, t2",
+      "addi a0, t3, 32       # F",
+      "halt:",
+      "beq  x0, x0, halt",
+    ].join("\n"),
+    checksum: [
+      "# Sample: XOR checksum over 4 bytes",
+      "addi x1, x0, 400",
+      "addi x2, x0, 0x12",
+      "sb   x2, 0(x1)",
+      "addi x2, x0, 0x34",
+      "sb   x2, 1(x1)",
+      "addi x2, x0, 0x56",
+      "sb   x2, 2(x1)",
+      "addi x2, x0, 0x78",
+      "sb   x2, 3(x1)",
+      "addi x3, x0, 0        # i",
+      "addi x4, x0, 0        # checksum",
+      "loop:",
+      "slti x5, x3, 4",
+      "beq  x5, x0, done",
+      "add  x6, x1, x3",
+      "lbu  x7, 0(x6)",
+      "xor  x4, x4, x7",
+      "addi x3, x3, 1",
+      "beq  x0, x0, loop",
       "done:",
       "beq x0, x0, done",
     ].join("\n"),
-    memoryTests: [
-      "# Sample: memory writes and signed/unsigned loads",
-      "addi x1, x0, 64       # base address",
-      "addi x2, x0, 0x7a5    # test value (fits in addi)",
-      "sw   x2, 0(x1)        # store word",
-      "sb   x2, 4(x1)        # store low byte (0xa5)",
-      "sh   x2, 6(x1)        # store low half (0x07a5)",
-      "lw   x3, 0(x1)        # load word",
-      "lb   x4, 4(x1)        # sign-extended byte",
-      "lbu  x5, 4(x1)        # zero-extended byte",
-      "lh   x6, 6(x1)        # sign-extended half",
-      "lhu  x7, 6(x1)        # zero-extended half",
-      "beq x0, x0, done",
-      "done:",
-      "beq x0, x0, done",
-    ].join("\n"),
-    shifts: [
-      "# Sample: shift operations",
-      "addi x1, x0, 1",
-      "slli x2, x1, 3        # 1 << 3 = 8",
-      "addi x3, x0, -1       # 0xffffffff",
-      "srli x4, x3, 4        # logical shift",
-      "srai x5, x3, 4        # arithmetic shift",
-      "addi x6, x0, 2",
-      "sll  x7, x1, x6       # 1 << 2 = 4",
-      "srl  x8, x3, x6       # logical shift",
-      "sra  x9, x3, x6       # arithmetic shift",
-      "beq x0, x0, done",
-      "done:",
-    ].join("\n"),
-    logicOps: [
-      "# Sample: logic operations",
-      "addi x1, x0, 0x5a",
-      "addi x2, x0, 0x0f",
-      "and  x3, x1, x2       # 0x0a",
-      "or   x4, x1, x2       # 0x5f",
-      "xor  x5, x1, x2       # 0x55",
-      "andi x6, x1, 0x3      # 0x02",
-      "ori  x7, x1, 0x80     # 0xda",
-      "xori x8, x2, 0xff     # 0xf0",
-      "beq x0, x0, done",
-      "done:",
-    ].join("\n"),
-    arithOps: [
-      "# Sample: arithmetic and mul/div operations",
-      "lui   x1, 0x1         # 0x00001000",
-      "auipc x2, 1           # pc + 0x1000",
-      "addi  x3, x0, 6",
-      "addi  x4, x0, -2",
-      "add   x5, x3, x4      # 4",
-      "sub   x6, x3, x4      # 8",
-      "slt   x7, x4, x3      # signed compare",
-      "sltu  x8, x4, x3      # unsigned compare",
-      "slti  x9, x4, 0       # signed imm",
-      "sltiu x10, x4, 0      # unsigned imm",
-      "mul   x11, x3, x4",
-      "mulh  x12, x4, x4",
-      "mulhsu x13, x4, x3",
-      "mulhu x14, x3, x3",
-      "div   x15, x3, x4",
-      "divu  x16, x3, x4",
-      "rem   x17, x3, x4",
-      "remu  x18, x3, x4",
-      "done:",
-      "beq x0, x0, done",
+    syscall: [
+      "# Sample: ecall with ID in a7 (a0-a6 are args)",
+      "addi a0, x0, 42",
+      "addi a1, x0, 7",
+      "addi a2, x0, 3",
+      "addi a7, x0, 103",
+      "ecall",
     ].join("\n"),
   };
 
@@ -257,29 +322,26 @@ window.addEventListener("DOMContentLoaded", () => {
     resetMemoryView();
     statusEl.textContent = "";
     sessionId = undefined;
+    history = [];
+    historyIndex = -1;
     stopRun();
     stopAssembleSpinner();
     assembleBtn.disabled = false;
     stepBtn.disabled = true;
     stepBtn.textContent = "Step";
     runBtn.disabled = true;
+    stepBackBtn.disabled = true;
     sourceEl.focus();
   }
 
   sampleSelect.onchange = () => {
-    loadSample(sampleSelect.value || "simpleAdd");
+    loadSample(sampleSelect.value || "arraySum");
   };
 
   // Load default sample on first render
-  loadSample(sampleSelect.value || "simpleAdd");
+  loadSample(sampleSelect.value || "arraySum");
 
   assembleBtn.onclick = async () => {
-    effectsEl.textContent = "";
-    clikeEl.textContent = "";
-    regsEl.textContent = "";
-    pcEl.textContent = "";
-    disasmEl.textContent = "";
-    resetMemoryView();
     stopAssembleSpinner();
     const baseMessage = assembleMessages[Math.floor(Math.random() * assembleMessages.length)].replace(
       /[.]+$/g,
@@ -302,17 +364,31 @@ window.addEventListener("DOMContentLoaded", () => {
       const programText = sourceEl.value;
       const data = await apiClient.postJson("/api/session", { source: programText });
       sessionId = data.sessionId;
+      resetMemoryView();
+      setHistory(data);
       renderAll(data);
       stepBtn.disabled = !sessionId;
       runBtn.disabled = !sessionId;
     } catch (err) {
       effectsEl.textContent = `Error: ${(err as Error).message}`;
       sessionId = undefined;
+      history = [];
+      historyIndex = -1;
       statusEl.textContent = "";
       runBtn.disabled = true;
+      stepBackBtn.disabled = true;
     } finally {
       stopAssembleSpinner();
     }
+  };
+
+  stepBackBtn.onclick = () => {
+    if (!sessionId || historyIndex <= 0) {
+      return;
+    }
+    stopRun();
+    historyIndex -= 1;
+    renderFromHistory(historyIndex);
   };
 
   stepBtn.onclick = async () => {
@@ -321,8 +397,15 @@ window.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    if (historyIndex < history.length - 1) {
+      historyIndex += 1;
+      renderFromHistory(historyIndex);
+      return;
+    }
+
     try {
       const data = await apiClient.postJson("/api/step", { sessionId });
+      pushHistory(data);
       renderAll(data);
     } catch (err) {
       effectsEl.textContent = `Error: ${(err as Error).message}`;
@@ -332,6 +415,10 @@ window.addEventListener("DOMContentLoaded", () => {
   runBtn.onclick = async () => {
     if (!sessionId) {
       effectsEl.textContent = "Error: no sessionId. Click Assemble first.";
+      return;
+    }
+    if (historyIndex < history.length - 1) {
+      effectsEl.textContent = "Error: step forward to the latest state before running.";
       return;
     }
 

@@ -433,6 +433,13 @@ public final class Parser {
             addInst.accept(Instruction.jalr(rd, ob.rs1(), ob.imm(), p.srcLine));
             return true;
         }
+        if (op.equals("ecall")) {
+            if (tokens.length != 1) {
+                throw new RuntimeException("Bad ecall on line " + (p.srcLine + 1));
+            }
+            addInst.accept(Instruction.ecall(p.srcLine));
+            return true;
+        }
         return handleBranch(op, tokens, p, parseTargetPC, addInst);
     }
 
