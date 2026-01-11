@@ -236,7 +236,7 @@ window.addEventListener("DOMContentLoaded", () => {
     assembleTimer = window.setInterval(() => {
       assembleIndex = (assembleIndex + 1) % assembleMessages.length;
       statusEl.textContent = assembleMessages[assembleIndex];
-    }, 650);
+    }, 1000);
 
     stepBtn.disabled = true;
     stepBtn.textContent = "Step";
