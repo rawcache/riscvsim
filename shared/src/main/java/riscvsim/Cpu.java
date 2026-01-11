@@ -121,6 +121,219 @@ public final class Cpu {
                 pc = (int) ((pc0 + 4L) & 0xffffffffL);
             }
 
+            case AUIPC -> {
+                int v = (int) ((pc0 + ((long) inst.getImm() << 12)) & 0xffffffffL);
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case ADD -> {
+                int v = regs[inst.getRs1()] + regs[inst.getRs2()];
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SUB -> {
+                int v = regs[inst.getRs1()] - regs[inst.getRs2()];
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SLT -> {
+                int v = regs[inst.getRs1()] < regs[inst.getRs2()] ? 1 : 0;
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SLTU -> {
+                long a = regs[inst.getRs1()] & 0xffffffffL;
+                long b = regs[inst.getRs2()] & 0xffffffffL;
+                int v = a < b ? 1 : 0;
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SLTI -> {
+                int v = regs[inst.getRs1()] < inst.getImm() ? 1 : 0;
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SLTIU -> {
+                long a = regs[inst.getRs1()] & 0xffffffffL;
+                long b = inst.getImm() & 0xffffffffL;
+                int v = a < b ? 1 : 0;
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SLLI -> {
+                int shamt = inst.getImm() & 31;
+                int v = regs[inst.getRs1()] << shamt;
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SRLI -> {
+                int shamt = inst.getImm() & 31;
+                int v = regs[inst.getRs1()] >>> shamt;
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SRAI -> {
+                int shamt = inst.getImm() & 31;
+                int v = regs[inst.getRs1()] >> shamt;
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SLL -> {
+                int shamt = regs[inst.getRs2()] & 31;
+                int v = regs[inst.getRs1()] << shamt;
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SRL -> {
+                int shamt = regs[inst.getRs2()] & 31;
+                int v = regs[inst.getRs1()] >>> shamt;
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SRA -> {
+                int shamt = regs[inst.getRs2()] & 31;
+                int v = regs[inst.getRs1()] >> shamt;
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case MUL -> {
+                int v = (int) ((long) regs[inst.getRs1()] * (long) regs[inst.getRs2()]);
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case MULH -> {
+                long prod = (long) regs[inst.getRs1()] * (long) regs[inst.getRs2()];
+                int v = (int) (prod >> 32);
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case MULHSU -> {
+                long a = regs[inst.getRs1()];
+                long b = regs[inst.getRs2()] & 0xffffffffL;
+                long prod = a * b;
+                int v = (int) (prod >> 32);
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case MULHU -> {
+                long a = regs[inst.getRs1()] & 0xffffffffL;
+                long b = regs[inst.getRs2()] & 0xffffffffL;
+                long prod = a * b;
+                int v = (int) (prod >>> 32);
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case DIV -> {
+                int rs2 = regs[inst.getRs2()];
+                int rs1 = regs[inst.getRs1()];
+                int v;
+                if (rs2 == 0) {
+                    v = -1;
+                } else if (rs1 == Integer.MIN_VALUE && rs2 == -1) {
+                    v = Integer.MIN_VALUE;
+                } else {
+                    v = rs1 / rs2;
+                }
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case DIVU -> {
+                int rs2 = regs[inst.getRs2()];
+                long b = rs2 & 0xffffffffL;
+                int v;
+                if (b == 0) {
+                    v = -1;
+                } else {
+                    long a = regs[inst.getRs1()] & 0xffffffffL;
+                    v = (int) (a / b);
+                }
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case REM -> {
+                int rs2 = regs[inst.getRs2()];
+                int rs1 = regs[inst.getRs1()];
+                int v;
+                if (rs2 == 0) {
+                    v = rs1;
+                } else if (rs1 == Integer.MIN_VALUE && rs2 == -1) {
+                    v = 0;
+                } else {
+                    v = rs1 % rs2;
+                }
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case REMU -> {
+                int rs2 = regs[inst.getRs2()];
+                long b = rs2 & 0xffffffffL;
+                int v;
+                if (b == 0) {
+                    v = regs[inst.getRs1()];
+                } else {
+                    long a = regs[inst.getRs1()] & 0xffffffffL;
+                    v = (int) (a % b);
+                }
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case AND -> {
+                int v = regs[inst.getRs1()] & regs[inst.getRs2()];
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case OR -> {
+                int v = regs[inst.getRs1()] | regs[inst.getRs2()];
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case XOR -> {
+                int v = regs[inst.getRs1()] ^ regs[inst.getRs2()];
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case ANDI -> {
+                int v = regs[inst.getRs1()] & inst.getImm();
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case ORI -> {
+                int v = regs[inst.getRs1()] | inst.getImm();
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case XORI -> {
+                int v = regs[inst.getRs1()] ^ inst.getImm();
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
             case LB -> {
                 int addr = (int) (((regs[inst.getRs1()] & 0xffffffffL)
                         + (inst.getImm() & 0xffffffffL)) & 0xffffffffL);

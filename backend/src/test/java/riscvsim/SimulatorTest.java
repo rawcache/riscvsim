@@ -243,6 +243,139 @@ class SimulatorTest {
     }
 
     /**
+     * Ensures shift instructions apply correct logical vs arithmetic behavior.
+     */
+    @Test
+    void shiftInstructionsRespectSignedness() {
+        Simulator sim = new Simulator();
+        sim.assemble("""
+                addi x1, x0, 1
+                slli x2, x1, 3
+                addi x3, x0, -1
+                srli x4, x3, 4
+                srai x5, x3, 4
+                addi x6, x0, 2
+                sll x7, x1, x6
+                srl x8, x3, x6
+                sra x9, x3, x6
+                """);
+
+        runUntilHalt(sim, 20);
+
+        int[] regs = sim.cpu().getRegs();
+        assertEquals(8, regs[2], "slli should shift left by immediate");
+        assertEquals(0x0fffffff, regs[4], "srli should zero-fill");
+        assertEquals(-1, regs[5], "srai should sign-fill");
+        assertEquals(4, regs[7], "sll should shift left by register amount");
+        assertEquals(0x3fffffff, regs[8], "srl should zero-fill");
+        assertEquals(-1, regs[9], "sra should sign-fill");
+    }
+
+    /**
+     * Ensures logic ops produce expected bitwise results.
+     */
+    @Test
+    void logicInstructionsComputeBitwiseResults() {
+        Simulator sim = new Simulator();
+        sim.assemble("""
+                addi x1, x0, 0x5a
+                addi x2, x0, 0x0f
+                and x3, x1, x2
+                or  x4, x1, x2
+                xor x5, x1, x2
+                andi x6, x1, 0x3
+                ori  x7, x1, 0x80
+                xori x8, x2, 0xff
+                """);
+
+        runUntilHalt(sim, 20);
+
+        int[] regs = sim.cpu().getRegs();
+        assertEquals(0x0a, regs[3], "and should mask bits");
+        assertEquals(0x5f, regs[4], "or should set bits");
+        assertEquals(0x55, regs[5], "xor should flip differing bits");
+        assertEquals(0x02, regs[6], "andi should mask with immediate");
+        assertEquals(0xda, regs[7], "ori should set immediate bits");
+        assertEquals(0xf0, regs[8], "xori should flip immediate bits");
+    }
+
+    /**
+     * Ensures arithmetic ops (add/sub/slt/slti/auipc) behave as expected.
+     */
+    @Test
+    void arithmeticInstructionsComputeResults() {
+        Simulator sim = new Simulator();
+        sim.assemble("""
+                addi x1, x0, 5
+                addi x2, x0, 3
+                add x3, x1, x2
+                sub x4, x1, x2
+                addi x5, x0, -1
+                slt x6, x5, x2
+                sltu x7, x5, x2
+                slti x8, x5, 0
+                sltiu x9, x5, 0
+                auipc x10, 1
+                auipc x11, 1
+                """);
+
+        runUntilHalt(sim, 20);
+
+        int[] regs = sim.cpu().getRegs();
+        assertEquals(8, regs[3], "add should sum registers");
+        assertEquals(2, regs[4], "sub should subtract registers");
+        assertEquals(1, regs[6], "slt should set on signed less-than");
+        assertEquals(0, regs[7], "sltu should compare unsigned values");
+        assertEquals(1, regs[8], "slti should compare signed immediate");
+        assertEquals(0, regs[9], "sltiu should compare unsigned immediate");
+        assertEquals(0x00001024, regs[10], "auipc should add immediate to pc");
+        assertEquals(0x00001028, regs[11], "auipc should use current pc");
+    }
+
+    /**
+     * Ensures mul/div/rem ops follow RV32 semantics.
+     */
+    @Test
+    void mulDivRemInstructionsComputeResults() {
+        Simulator sim = new Simulator();
+        sim.assemble("""
+                addi x1, x0, -1
+                addi x2, x0, -1
+                mul x3, x1, x2
+                mulh x4, x1, x2
+                mulhu x5, x1, x2
+                mulhsu x6, x1, x2
+                addi x7, x0, -7
+                addi x8, x0, 2
+                div x9, x7, x8
+                rem x10, x7, x8
+                divu x11, x1, x8
+                remu x12, x1, x8
+                addi x13, x0, 0
+                div x14, x7, x13
+                rem x15, x7, x13
+                divu x16, x1, x13
+                remu x17, x1, x13
+                """);
+
+        runUntilHalt(sim, 30);
+
+        int[] regs = sim.cpu().getRegs();
+        assertEquals(1, regs[3], "mul should return low 32 bits");
+        assertEquals(0, regs[4], "mulh should return high 32 bits for signed multiply");
+        assertEquals(-2, regs[5], "mulhu should return high 32 bits for unsigned multiply");
+        assertEquals(-1, regs[6], "mulhsu should return high 32 bits for signed*unsigned");
+        assertEquals(-3, regs[9], "div should truncate toward zero");
+        assertEquals(-1, regs[10], "rem should keep signed remainder");
+        assertEquals(0x7fffffff, regs[11], "divu should treat operands as unsigned");
+        assertEquals(1, regs[12], "remu should treat operands as unsigned");
+        assertEquals(-1, regs[14], "div by zero should return -1");
+        assertEquals(-7, regs[15], "rem by zero should return dividend");
+        assertEquals(-1, regs[16], "divu by zero should return 0xffffffff");
+        assertEquals(-1, regs[17], "remu by zero should return dividend");
+    }
+
+    /**
      * Ensures BEQ branches when operands are equal.
      */
     @Test

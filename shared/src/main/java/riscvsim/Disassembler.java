@@ -38,6 +38,13 @@ public final class Disassembler {
             }
             lines.add(new DisasmLine(pc, formatInst(insts.get(i), pc, labelsByPc), false));
         }
+        int endPc = insts.size() * 4;
+        List<String> tailLabels = labelsByPc.get(endPc);
+        if (tailLabels != null) {
+            for (String label : tailLabels) {
+                lines.add(new DisasmLine(endPc, label + ":", true));
+            }
+        }
         return lines;
     }
 
@@ -68,6 +75,33 @@ public final class Disassembler {
         return switch (ins.getOp()) {
         case ADDI -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", " + ins.getImm();
         case LUI -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm();
+        case AUIPC -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm();
+        case ADD -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case SUB -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case SLT -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case SLTU -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case SLTI -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", " + ins.getImm();
+        case SLTIU -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", " + ins.getImm();
+        case MUL -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case MULH -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case MULHSU -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case MULHU -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case DIV -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case DIVU -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case REM -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case REMU -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case SLLI -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", " + ins.getImm();
+        case SRLI -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", " + ins.getImm();
+        case SRAI -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", " + ins.getImm();
+        case SLL -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case SRL -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case SRA -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case AND -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case OR -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case XOR -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", x" + ins.getRs2();
+        case ANDI -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", " + ins.getImm();
+        case ORI -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", " + ins.getImm();
+        case XORI -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", " + ins.getImm();
         case LB -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
         case LBU -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
         case LH -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
