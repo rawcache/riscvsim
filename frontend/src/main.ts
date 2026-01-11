@@ -215,14 +215,14 @@ window.addEventListener("DOMContentLoaded", () => {
   };
 
   const assembleMessages = [
-    "Taking a calculated RISC…",
+    "Taking a calculated RISC",
     "Reducing complexity, one instruction at a time",
     "Keeping it RISC-y, not complicated",
     "Minimal instructions, maximum intent",
-    "Less is more. That's the RISC.",
+    "Less is more. That's the RISC",
     "Cutting the fat from your instruction set",
-    "Decoding instructions… no shortcuts",
-    "Fetching, decoding, executing. Repeat.",
+    "Decoding instructions, no shortcuts",
+    "Fetching, decoding, executing. Repeat",
     "One pipeline stage at a time",
     "No microcode magic here",
     "Straight to the silicon mindset",
@@ -233,14 +233,14 @@ window.addEventListener("DOMContentLoaded", () => {
     "Vendor-neutral, opinionated execution",
     "Instruction set kept intentionally small",
     "Architected to be understood",
-    "Aligning registers…",
+    "Aligning registers",
     "Stalling pipeline (just kidding)",
     "Branch prediction feeling confident today",
-    "Cache miss avoided. Hopefully.",
+    "Cache miss avoided. Hopefully",
     "All zeros, no undefined behavior",
     "Executing exactly what you wrote",
     "This is a RISC worth taking",
-    "Complexity declined. Simplicity accepted.",
+    "Complexity declined. Simplicity accepted",
     "Built to teach, not to confuse",
     "You control the ISA here",
     "Understanding hardware, not memorizing it",
@@ -280,13 +280,18 @@ window.addEventListener("DOMContentLoaded", () => {
     pcEl.textContent = "";
     disasmEl.textContent = "";
     resetMemoryView();
-    let assembleIndex = Math.floor(Math.random() * assembleMessages.length);
-    statusEl.textContent = assembleMessages[assembleIndex];
     stopAssembleSpinner();
-    assembleTimer = window.setInterval(() => {
-      assembleIndex = (assembleIndex + 1) % assembleMessages.length;
-      statusEl.textContent = assembleMessages[assembleIndex];
-    }, 1000);
+    const baseMessage = assembleMessages[Math.floor(Math.random() * assembleMessages.length)].replace(
+      /[.]+$/g,
+      ""
+    );
+    let dots = 1;
+    const renderAssembleStatus = () => {
+      statusEl.textContent = `${baseMessage}${".".repeat(dots)}`;
+      dots = dots === 3 ? 1 : dots + 1;
+    };
+    renderAssembleStatus();
+    assembleTimer = window.setInterval(renderAssembleStatus, 500);
 
     stepBtn.disabled = true;
     stepBtn.textContent = "Step";
