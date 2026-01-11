@@ -40,6 +40,15 @@
         margin: 0 0 6px;
       }
 
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+
+      a:hover {
+        color: var(--accent);  
+      }
+
       .lede {
         color: var(--muted);
         margin: 0 0 24px;
@@ -195,18 +204,22 @@
   <body>
     <main class="grid">
       <section class="panel">
-        <h1>RISC-V Simulator</h1>
-        <p class="lede">Assemble, step, and inspect RV32 programs with immediate visual feedback.</p>
+        <a href="https://github.com/sseth30/riscvsim">
+          <h1>RISC-V Simulator</h1>
+        </a>
+        <p class="lede">Assemble, step, and inspect your RISC-V program with immediate visual feedback!</p>
         <label for="sampleSelect" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Samples</label>
         <select id="sampleSelect" style="width:100%;margin-bottom:10px;padding:10px;border-radius:10px;border:1px solid var(--panel-border);background:rgba(255,255,255,0.03);color:var(--text);font-family:var(--sans);">
           <option value="simpleAdd">Add and halt</option>
           <option value="jalLwSw">jal/jalr + lw/sw</option>
           <option value="loopsUnsigned">Unsigned branches</option>
+          <option value="memoryTests">Memory tests</option>
         </select>
         <textarea id="source" placeholder="Paste RV32 assembly here..."></textarea>
         <div class="actions">
           <button id="assemble">Assemble</button>
           <button id="step" disabled>Step</button>
+          <button id="run" disabled>Run</button>
         </div>
       </section>
 

@@ -1,141 +1,20 @@
 // src/main.ts
 
+import type { ApiResponse, Effect } from "./types";
+import { createApiClient } from "./api";
+import { renderDisasm } from "./disasm";
+import { fmtEffect, hex32, renderRegs } from "./format";
+import { createMemoryView } from "./memory";
+
 let sessionId: string | undefined;
 
-function resolveApiBase(): string {
-  const params = new URLSearchParams(window.location.search);
-  const fromQuery = params.get("api");
-  if (fromQuery) return fromQuery.replace(/\/$/, "");
-
-  const fromEnv = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
-  return fromEnv.replace(/\/$/, "");
-}
-
-const API_BASE = resolveApiBase();
-
-function api(path: string): string {
-  return `${API_BASE}${path}`;
-}
-
-type Effect = {
-  kind: string; // "reg" | "mem" | "pc"
-  reg?: number;
-  addr?: number;
-  size?: number;
-  before?: number;
-  after?: number;
-  beforeBytes?: number[];
-  afterBytes?: number[];
-};
-
-type Trap = {
-  code: string;
-  message: string;
-};
-
-type DisasmLine = {
-  pc: number;
-  text: string;
-  label?: boolean;
-};
-
-type ApiResponse = {
-  sessionId?: string;
-  pc?: number;
-  regs?: number[];
-  halted?: boolean;
-  effects?: Effect[];
-  clike?: string;
-  rv2c?: string;
-  error?: string | null;
-  trap?: Trap | null;
-  disasm?: DisasmLine[];
-};
-
-const MEM_SIZE = 64 * 1024;
-const WINDOW_BYTES = 128;
-const BYTES_PER_ROW = 16;
-const MAX_RECENT_WRITES = 8;
-
-function hex32(n: number): string {
-  const u = n >>> 0;
-  return "0x" + u.toString(16).padStart(8, "0");
-}
-
-function hex8(n: number): string {
-  return (n & 0xff).toString(16).padStart(2, "0");
-}
-
-function fmtBytes(bytes?: number[]): string {
-  if (!bytes || bytes.length === 0) return "[]";
-  return (
-    "[" +
-    bytes.map((b) => "0x" + (b & 0xff).toString(16).padStart(2, "0")).join(" ") +
-    "]"
-  );
-}
-
-function fmtEffect(e: Effect): string {
-  if (e.kind === "pc") {
-    return `PC ${hex32(e.before ?? 0)} -> ${hex32(e.after ?? 0)}`;
-  }
-  if (e.kind === "reg") {
-    return `REG x${e.reg ?? -1} ${hex32(e.before ?? 0)} -> ${hex32(e.after ?? 0)}`;
-  }
-  if (e.kind === "mem") {
-    return `MEM [${hex32(e.addr ?? 0)}] ${fmtBytes(e.beforeBytes)} -> ${fmtBytes(
-      e.afterBytes
-    )}`;
-  }
-  return `Effect(${e.kind})`;
-}
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, n));
-}
-
-function escapeHtml(input: string): string {
-  return input
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function renderRegs(regs?: number[]): string {
-  if (!regs || regs.length !== 32) return "";
-  const lines: string[] = [];
-  for (let i = 0; i < 32; i++) {
-    lines.push(`x${i.toString().padStart(2, "0")}: ${hex32(regs[i])}`);
-  }
-  return lines.join("\n");
-}
-
-function renderDisasm(
-  pc: number | undefined,
-  prevPc: number | undefined,
-  disasm?: DisasmLine[]
-): string {
-  if (!disasm || disasm.length === 0) return "";
-  return disasm
-    .map((line) => {
-      const classes = ["disasm-line"];
-      if (line.label) {
-        classes.push("label");
-      } else {
-        if (pc !== undefined && line.pc === pc) {
-          classes.push("current");
-        } else if (prevPc !== undefined && line.pc === prevPc) {
-          classes.push("prev");
-        }
-      }
-      return `<span class="${classes.join(" ")}">${escapeHtml(line.text)}</span>`;
-    })
-    .join("\n");
-}
+const RUN_DELAY_MS = 80;
+const MAX_RUN_STEPS = 2000;
 
 window.addEventListener("DOMContentLoaded", () => {
   const assembleBtn = document.getElementById("assemble") as HTMLButtonElement;
   const stepBtn = document.getElementById("step") as HTMLButtonElement;
+  const runBtn = document.getElementById("run") as HTMLButtonElement;
   const sourceEl = document.getElementById("source") as HTMLTextAreaElement;
 
   const clikeEl = document.getElementById("clike") as HTMLElement;
@@ -148,76 +27,28 @@ window.addEventListener("DOMContentLoaded", () => {
   const statusEl = document.getElementById("status") as HTMLElement;
   const sampleSelect = document.getElementById("sampleSelect") as HTMLSelectElement;
 
-  const memBytes = new Map<number, number>();
-  let recentWrites: string[] = [];
-  let lastMemAddr: number | undefined;
+  const memoryView = createMemoryView();
   let lastPc: number | undefined;
-
-  function nonJsonError(status: number, text: string): string {
-    if (status === 404 && text.includes("<!DOCTYPE")) {
-      return "Backend endpoint not found (got HTML). Start the backend (see README) or set VITE_API_BASE or ?api= to your backend URL.";
-    }
-    const snippet = text.length > 200 ? `${text.slice(0, 200)}…` : text;
-    return `Non-JSON response (${status}): ${snippet}`;
-  }
-
-  async function postJson(url: string, payload: unknown): Promise<ApiResponse> {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const text = await res.text();
-    const contentType = res.headers.get("Content-Type") ?? "";
-
-    let data: ApiResponse;
-    if (contentType.includes("application/json")) {
-      try {
-        data = JSON.parse(text) as ApiResponse;
-      } catch {
-        throw new Error(`Non-JSON response (${res.status}): ${text}`);
-      }
-    } else {
-      throw new Error(nonJsonError(res.status, text));
-    }
-
-    if (!res.ok) {
-      throw new Error(data.error ?? `HTTP ${res.status}`);
-    }
-    return data;
-  }
+  let runTimer: number | null = null;
+  let runSteps = 0;
+  const apiClient = createApiClient();
 
   function resetMemoryView() {
-    memBytes.clear();
-    recentWrites = [];
-    lastMemAddr = undefined;
+    memoryView.reset();
     lastPc = undefined;
     memWritesEl.textContent = "";
     memWindowEl.textContent = "";
   }
 
-  function formatWriteEffect(e: Effect): string {
-    const addr = e.addr ?? 0;
-    const size = e.size ?? e.afterBytes?.length ?? 0;
-    return `${hex32(addr)} (${size}b) ${fmtBytes(e.beforeBytes)} -> ${fmtBytes(e.afterBytes)}`;
-  }
-
-  function applyMemEffects(effects: Effect[]) {
-    for (const effect of effects) {
-      if (effect.kind !== "mem" || effect.addr === undefined || !effect.afterBytes) continue;
-      const base = effect.addr >>> 0;
-      effect.afterBytes.forEach((value, idx) => {
-        const addr = base + idx;
-        if (addr >= 0 && addr < MEM_SIZE) {
-          memBytes.set(addr, value & 0xff);
-        }
-      });
-      recentWrites.unshift(formatWriteEffect(effect));
-      if (recentWrites.length > MAX_RECENT_WRITES) {
-        recentWrites = recentWrites.slice(0, MAX_RECENT_WRITES);
-      }
-      lastMemAddr = base;
+  function stopRun(message?: string) {
+    if (runTimer !== null) {
+      window.clearInterval(runTimer);
+      runTimer = null;
+    }
+    runSteps = 0;
+    runBtn.textContent = "Run";
+    if (message) {
+      statusEl.textContent = message;
     }
   }
 
@@ -228,20 +59,12 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function renderMemWindow(anchor: number): string {
-    const windowStart = clamp(anchor - Math.floor(WINDOW_BYTES / 4), 0, MEM_SIZE - WINDOW_BYTES);
-    const lines: string[] = [];
-    lines.push(`base ${hex32(windowStart)} (16 bytes/row)`);
-    for (let offset = 0; offset < WINDOW_BYTES; offset += BYTES_PER_ROW) {
-      const addr = windowStart + offset;
-      const bytes: string[] = [];
-      for (let i = 0; i < BYTES_PER_ROW; i++) {
-        const value = memBytes.get(addr + i) ?? 0;
-        bytes.push(hex8(value));
-      }
-      lines.push(`${hex32(addr)}: ${bytes.join(" ")}`);
-    }
-    return lines.join("\n");
+  function isPcStalled(effects: Effect[]): boolean {
+    const pcEffect = effects.find(
+      (effect) =>
+        effect.kind === "pc" && effect.before !== undefined && effect.after !== undefined
+    );
+    return pcEffect ? pcEffect.before === pcEffect.after : false;
   }
 
   function renderAll(data: ApiResponse) {
@@ -250,7 +73,7 @@ window.addEventListener("DOMContentLoaded", () => {
       data.clike && data.clike.trim().length > 0 ? data.clike : data.rv2c ?? "";
 
     const effects = data.effects ?? [];
-    applyMemEffects(effects);
+    memoryView.applyEffects(effects);
     updateLastPc(effects);
 
     if (data.trap) {
@@ -262,16 +85,23 @@ window.addEventListener("DOMContentLoaded", () => {
     regsEl.textContent = renderRegs(data.regs);
     pcEl.textContent = data.pc !== undefined ? hex32(data.pc) : "";
     disasmEl.innerHTML = renderDisasm(data.pc, lastPc, data.disasm);
+    const recentWrites = memoryView.getRecentWrites();
     memWritesEl.textContent = recentWrites.length ? recentWrites.join("\n") : "(no writes yet)";
-    const anchor = lastMemAddr ?? data.regs?.[2] ?? 0;
-    memWindowEl.textContent = renderMemWindow(anchor);
+    const anchor = memoryView.getLastAddr() ?? data.regs?.[2] ?? 0;
+    memWindowEl.textContent = memoryView.renderWindow(anchor);
 
-    if (data.halted) {
+    const halted = data.halted === true;
+    const stalled = isPcStalled(effects);
+    if (halted || stalled) {
       stepBtn.disabled = true;
       stepBtn.textContent = "Halted";
+      stopRun(stalled && !halted ? "Halt loop detected." : "Program halted.");
+      statusEl.textContent = stalled && !halted ? "Halt loop detected." : "Program halted.";
+      assembleBtn.disabled = false;
     } else {
       stepBtn.textContent = "Step";
     }
+    runBtn.disabled = !sessionId || halted || stalled;
   }
 
   const samplePrograms: Record<string, string> = {
@@ -308,6 +138,22 @@ window.addEventListener("DOMContentLoaded", () => {
       "done:",
       "beq x0, x0, done",
     ].join("\n"),
+    memoryTests: [
+      "# Sample: memory writes and signed/unsigned loads",
+      "addi x1, x0, 64       # base address",
+      "addi x2, x0, 0x7a5    # test value (fits in addi)",
+      "sw   x2, 0(x1)        # store word",
+      "sb   x2, 4(x1)        # store low byte (0xa5)",
+      "sh   x2, 6(x1)        # store low half (0x07a5)",
+      "lw   x3, 0(x1)        # load word",
+      "lb   x4, 4(x1)        # sign-extended byte",
+      "lbu  x5, 4(x1)        # zero-extended byte",
+      "lh   x6, 6(x1)        # sign-extended half",
+      "lhu  x7, 6(x1)        # zero-extended half",
+      "beq x0, x0, done",
+      "done:",
+      "beq x0, x0, done",
+    ].join("\n"),
   };
 
   function loadSample(name: string) {
@@ -321,8 +167,11 @@ window.addEventListener("DOMContentLoaded", () => {
     resetMemoryView();
     statusEl.textContent = "";
     sessionId = undefined;
+    stopRun();
+    assembleBtn.disabled = false;
     stepBtn.disabled = true;
     stepBtn.textContent = "Step";
+    runBtn.disabled = true;
     sourceEl.focus();
   }
 
@@ -344,17 +193,21 @@ window.addEventListener("DOMContentLoaded", () => {
 
     stepBtn.disabled = true;
     stepBtn.textContent = "Step";
+    runBtn.disabled = true;
+    stopRun();
 
     try {
       const programText = sourceEl.value;
-      const data = await postJson(api("/api/session"), { source: programText });
+      const data = await apiClient.postJson("/api/session", { source: programText });
       sessionId = data.sessionId;
       renderAll(data);
       stepBtn.disabled = !sessionId;
+      runBtn.disabled = !sessionId;
     } catch (err) {
       effectsEl.textContent = `Error: ${(err as Error).message}`;
       sessionId = undefined;
       statusEl.textContent = "";
+      runBtn.disabled = true;
     }
   };
 
@@ -365,10 +218,64 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const data = await postJson(api("/api/step"), { sessionId });
+      const data = await apiClient.postJson("/api/step", { sessionId });
       renderAll(data);
     } catch (err) {
       effectsEl.textContent = `Error: ${(err as Error).message}`;
     }
+  };
+
+  runBtn.onclick = async () => {
+    if (!sessionId) {
+      effectsEl.textContent = "Error: no sessionId. Click Assemble first.";
+      return;
+    }
+
+    if (runTimer !== null) {
+      stopRun("Run stopped.");
+      assembleBtn.disabled = false;
+      stepBtn.disabled = !sessionId;
+      runBtn.disabled = !sessionId;
+      return;
+    }
+
+    assembleBtn.disabled = true;
+    stepBtn.disabled = true;
+    runBtn.textContent = "Stop";
+    statusEl.textContent = "Running…";
+    runSteps = 0;
+
+    runTimer = window.setInterval(async () => {
+      if (!sessionId) {
+        stopRun();
+        assembleBtn.disabled = false;
+        stepBtn.disabled = !sessionId;
+        runBtn.disabled = !sessionId;
+        return;
+      }
+      if (runSteps >= MAX_RUN_STEPS) {
+        stopRun(`Run stopped after ${MAX_RUN_STEPS} steps.`);
+        assembleBtn.disabled = false;
+        stepBtn.disabled = !sessionId;
+        runBtn.disabled = !sessionId;
+        return;
+      }
+      runSteps += 1;
+      try {
+        const data = await apiClient.postJson("/api/step", { sessionId });
+        renderAll(data);
+        if (data.halted) {
+          stopRun("Program halted.");
+          assembleBtn.disabled = false;
+          stepBtn.disabled = true;
+          runBtn.disabled = true;
+        }
+      } catch (err) {
+        stopRun(`Error: ${(err as Error).message}`);
+        assembleBtn.disabled = false;
+        stepBtn.disabled = !sessionId;
+        runBtn.disabled = !sessionId;
+      }
+    }, RUN_DELAY_MS);
   };
 });

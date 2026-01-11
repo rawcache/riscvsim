@@ -121,11 +121,59 @@ public final class Cpu {
                 pc = (int) ((pc0 + 4L) & 0xffffffffL);
             }
 
+            case LB -> {
+                int addr = (int) (((regs[inst.getRs1()] & 0xffffffffL)
+                        + (inst.getImm() & 0xffffffffL)) & 0xffffffffL);
+                int v = (byte) mem.loadByte(addr);
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case LBU -> {
+                int addr = (int) (((regs[inst.getRs1()] & 0xffffffffL)
+                        + (inst.getImm() & 0xffffffffL)) & 0xffffffffL);
+                int v = mem.loadByte(addr);
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case LH -> {
+                int addr = (int) (((regs[inst.getRs1()] & 0xffffffffL)
+                        + (inst.getImm() & 0xffffffffL)) & 0xffffffffL);
+                int v = (short) mem.loadHalf(addr);
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case LHU -> {
+                int addr = (int) (((regs[inst.getRs1()] & 0xffffffffL)
+                        + (inst.getImm() & 0xffffffffL)) & 0xffffffffL);
+                int v = mem.loadHalf(addr);
+                writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
             case LW -> {
                 int addr = (int) (((regs[inst.getRs1()] & 0xffffffffL)
                         + (inst.getImm() & 0xffffffffL)) & 0xffffffffL);
                 int v = mem.loadWord(addr);
                 writeReg.accept(inst.getRd(), v);
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SB -> {
+                int addr = (int) (((regs[inst.getRs1()] & 0xffffffffL)
+                        + (inst.getImm() & 0xffffffffL)) & 0xffffffffL);
+                Memory.StoreResult sr = mem.storeByte(addr, regs[inst.getRs2()]);
+                effects.add(Effect.mem(addr, 1, sr.getBefore(), sr.getAfter()));
+                pc = (int) ((pc0 + 4L) & 0xffffffffL);
+            }
+
+            case SH -> {
+                int addr = (int) (((regs[inst.getRs1()] & 0xffffffffL)
+                        + (inst.getImm() & 0xffffffffL)) & 0xffffffffL);
+                Memory.StoreResult sr = mem.storeHalf(addr, regs[inst.getRs2()]);
+                effects.add(Effect.mem(addr, 2, sr.getBefore(), sr.getAfter()));
                 pc = (int) ((pc0 + 4L) & 0xffffffffL);
             }
 

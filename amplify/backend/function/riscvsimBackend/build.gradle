@@ -5,6 +5,14 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
+sourceSets {
+    main {
+        java {
+            srcDir '../../../../shared/src/main/java'
+        }
+    }
+}
+
 repositories {
     mavenCentral()
 }

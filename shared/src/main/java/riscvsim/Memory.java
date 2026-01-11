@@ -4,7 +4,7 @@ package riscvsim;
  * Represents a byte-addressable memory used by the RISC-V simulator.
  *
  * <p>
- * This memory supports 32-bit little-endian loads and stores.
+ * This memory supports 8/16/32-bit little-endian loads and stores.
  * All accesses are bounds-checked, and alignment checking can be toggled.
  * </p>
  */
@@ -13,7 +13,7 @@ public final class Memory {
     /** Backing byte array for memory storage. */
     private final byte[] memory;
 
-    /** Whether to enforce 4-byte alignment checks on loads/stores. */
+    /** Whether to enforce alignment checks on loads/stores. */
     private boolean alignmentChecksEnabled;
 
     /**
@@ -29,7 +29,7 @@ public final class Memory {
      * Constructs a memory instance with the given size and alignment behavior.
      *
      * @param size total number of bytes
-     * @param alignmentChecksEnabled whether to enforce 4-byte alignment
+     * @param alignmentChecksEnabled whether to enforce alignment checks
      */
     public Memory(int size, boolean alignmentChecksEnabled) {
         this.memory = new byte[size];
@@ -46,6 +46,33 @@ public final class Memory {
     }
 
     /**
+     * Loads an 8-bit value from memory.
+     *
+     * @param address byte address
+     * @return loaded byte value (0-255)
+     * @throws TrapException if out of bounds
+     */
+    public int loadByte(int address) {
+        checkAlignment(address, 1);
+        checkBounds(address, 1);
+        return memory[address] & 0xff;
+    }
+
+    /**
+     * Loads a 16-bit halfword from memory.
+     *
+     * @param address byte address (must be 2-byte aligned)
+     * @return loaded halfword value (0-65535)
+     * @throws TrapException if unaligned or out of bounds
+     */
+    public int loadHalf(int address) {
+        checkAlignment(address, 2);
+        checkBounds(address, 2);
+        return (memory[address] & 0xff)
+             | ((memory[address + 1] & 0xff) << 8);
+    }
+
+    /**
      * Loads a 32-bit word from memory.
      *
      * @param address byte address (must be 4-byte aligned)
@@ -53,13 +80,60 @@ public final class Memory {
      * @throws TrapException if unaligned or out of bounds
      */
     public int loadWord(int address) {
-        checkAlignment(address);
+        checkAlignment(address, 4);
         checkBounds(address, 4);
 
         return (memory[address] & 0xff)
              | ((memory[address + 1] & 0xff) << 8)
              | ((memory[address + 2] & 0xff) << 16)
              | (memory[address + 3] << 24);
+    }
+
+    /**
+     * Stores an 8-bit value into memory.
+     *
+     * <p>
+     * Returns the byte values before and after the store to support
+     * visualization of memory effects.
+     * </p>
+     *
+     * @param address byte address
+     * @param value value to store
+     * @return store result containing before/after bytes
+     * @throws TrapException if out of bounds
+     */
+    public StoreResult storeByte(int address, int value) {
+        checkAlignment(address, 1);
+        checkBounds(address, 1);
+
+        int[] before = readBytes(address, 1);
+        memory[address] = (byte) (value & 0xff);
+        int[] after = readBytes(address, 1);
+        return new StoreResult(before, after);
+    }
+
+    /**
+     * Stores a 16-bit halfword into memory.
+     *
+     * <p>
+     * Returns the byte values before and after the store to support
+     * visualization of memory effects.
+     * </p>
+     *
+     * @param address byte address (must be 2-byte aligned)
+     * @param value value to store
+     * @return store result containing before/after bytes
+     * @throws TrapException if unaligned or out of bounds
+     */
+    public StoreResult storeHalf(int address, int value) {
+        checkAlignment(address, 2);
+        checkBounds(address, 2);
+
+        int[] before = readBytes(address, 2);
+        memory[address] = (byte) (value & 0xff);
+        memory[address + 1] = (byte) ((value >>> 8) & 0xff);
+        int[] after = readBytes(address, 2);
+        return new StoreResult(before, after);
     }
 
     /**
@@ -76,7 +150,7 @@ public final class Memory {
      * @throws TrapException if unaligned or out of bounds
      */
     public StoreResult storeWord(int address, int value) {
-        checkAlignment(address);
+        checkAlignment(address, 4);
         checkBounds(address, 4);
 
         int[] before = readBytes(address, 4);
@@ -91,13 +165,18 @@ public final class Memory {
     }
 
     /**
-     * Ensures address is aligned to a 4-byte boundary.
+     * Ensures address is aligned to the access size.
      *
      * @param address byte address
+     * @param size access size in bytes
      * @throws TrapException if unaligned
      */
-    private void checkAlignment(int address) {
-        if (alignmentChecksEnabled && (address & 3) != 0) {
+    private void checkAlignment(int address, int size) {
+        if (!alignmentChecksEnabled) {
+            return;
+        }
+        int mask = size - 1;
+        if (mask != 0 && (address & mask) != 0) {
             throw new TrapException(TrapCode.TRAP_BAD_ALIGNMENT, "Unaligned memory access at " + address);
         }
     }
