@@ -13,7 +13,12 @@ Why this exists
 
 What’s implemented
 ------------------
-- ISA subset: `addi`, `lui`, `lw`, `sw`, `jal`, `jalr`, `beq`, `bne`, `blt`, `bge`, `bltu`, `bgeu` plus pseudos `li`, `mv`, `nop`, `j`, `call`, `ret`.
+- ISA subset:
+  - Arithmetic/compare: `addi`, `add`, `sub`, `slt`, `sltu`, `slti`, `sltiu`, `mul`, `mulh`, `mulhsu`, `mulhu`, `div`, `divu`, `rem`, `remu`
+  - Shifts/logic: `slli`, `srli`, `srai`, `sll`, `srl`, `sra`, `andi`, `ori`, `xori`, `and`, `or`, `xor`
+  - Immediates/jumps/branches: `lui`, `auipc`, `jal`, `jalr`, `beq`, `bne`, `blt`, `bge`, `bltu`, `bgeu`
+  - Loads/stores: `lb`, `lbu`, `lh`, `lhu`, `lw`, `sb`, `sh`, `sw`
+  - Pseudos: `li`, `mv`, `nop`, `j`, `call`, `ret`
 - Parser: labels, symbols (`#sym name=value`), ABI register aliases, alignment checks (toggleable), `#` and `//` comments, instruction/size limits.
 - CPU: 32 regs, 64 KB memory, per-step interpreter with effect tracking and traps (`TRAP_*` codes for alignment/memory/PC faults).
 - Views:

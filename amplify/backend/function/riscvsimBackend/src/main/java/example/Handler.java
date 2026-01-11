@@ -30,7 +30,7 @@ public class Handler implements RequestHandler<APIGatewayProxyRequestEvent, APIG
 
     private static final Gson GSON = new GsonBuilder().serializeNulls().create();
     private static final Map<String, Simulator> SESSIONS = new ConcurrentHashMap<>();
-    private static final String BUILD_TAG = "parser-fix-2026-01-11";
+    private static final String BUILD_TAG = "opcodes-2026-01-11";
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
