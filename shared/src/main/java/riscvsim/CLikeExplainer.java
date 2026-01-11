@@ -180,6 +180,33 @@ public final class CLikeExplainer {
         switch (ins.getOp()) {
         case ADDI -> handleAddi(lines, ins, regConst, regPtrFromVar);
         case LUI -> handleLui(lines, ins, regConst, regPtrFromVar);
+        case AUIPC -> handleAuipc(lines, ins, pc, regConst, regPtrFromVar);
+        case ADD -> handleBinaryReg(lines, ins, regConst, regPtrFromVar, "+");
+        case SUB -> handleBinaryReg(lines, ins, regConst, regPtrFromVar, "-");
+        case SLT -> handleSetLessThanReg(lines, ins, regConst, regPtrFromVar, false);
+        case SLTU -> handleSetLessThanReg(lines, ins, regConst, regPtrFromVar, true);
+        case SLTI -> handleSetLessThanImm(lines, ins, regConst, regPtrFromVar, false);
+        case SLTIU -> handleSetLessThanImm(lines, ins, regConst, regPtrFromVar, true);
+        case MUL -> handleBinaryReg(lines, ins, regConst, regPtrFromVar, "*");
+        case MULH -> handleMulHighSigned(lines, ins, regConst, regPtrFromVar);
+        case MULHSU -> handleMulHighSignedUnsigned(lines, ins, regConst, regPtrFromVar);
+        case MULHU -> handleMulHighUnsigned(lines, ins, regConst, regPtrFromVar);
+        case DIV -> handleDivRem(lines, ins, regConst, regPtrFromVar, false, false);
+        case DIVU -> handleDivRem(lines, ins, regConst, regPtrFromVar, true, false);
+        case REM -> handleDivRem(lines, ins, regConst, regPtrFromVar, false, true);
+        case REMU -> handleDivRem(lines, ins, regConst, regPtrFromVar, true, true);
+        case SLLI -> handleShiftImm(lines, ins, regConst, regPtrFromVar, "<<", false);
+        case SRLI -> handleShiftImm(lines, ins, regConst, regPtrFromVar, ">>", true);
+        case SRAI -> handleShiftImm(lines, ins, regConst, regPtrFromVar, ">>", false);
+        case SLL -> handleShiftReg(lines, ins, regConst, regPtrFromVar, "<<", false);
+        case SRL -> handleShiftReg(lines, ins, regConst, regPtrFromVar, ">>", true);
+        case SRA -> handleShiftReg(lines, ins, regConst, regPtrFromVar, ">>", false);
+        case AND -> handleLogicReg(lines, ins, regConst, regPtrFromVar, "&");
+        case OR -> handleLogicReg(lines, ins, regConst, regPtrFromVar, "|");
+        case XOR -> handleLogicReg(lines, ins, regConst, regPtrFromVar, "^");
+        case ANDI -> handleLogicImm(lines, ins, regConst, regPtrFromVar, "&");
+        case ORI -> handleLogicImm(lines, ins, regConst, regPtrFromVar, "|");
+        case XORI -> handleLogicImm(lines, ins, regConst, regPtrFromVar, "^");
         case LB -> handleLb(lines, ins, inv, regConst, regPtrFromVar, true);
         case LBU -> handleLb(lines, ins, inv, regConst, regPtrFromVar, false);
         case LH -> handleLh(lines, ins, inv, regConst, regPtrFromVar, true);
@@ -224,6 +251,303 @@ public final class CLikeExplainer {
             regName(ins.getRd()) + " = "
             + regName(ins.getRs1()) + " + "
             + ins.getImm() + ";"
+        );
+    }
+
+    /**
+     * Handles AUIPC, treating the computed address as a known constant.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param pc current program counter
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     */
+    private static void handleAuipc(
+            List<String> lines,
+            Instruction ins,
+            int pc,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar) {
+        int value = (int) ((pc + ((long) ins.getImm() << 12)) & 0xffffffffL);
+        regConst.put(ins.getRd(), value);
+        regPtrFromVar.remove(ins.getRd());
+        lines.add(regName(ins.getRd()) + " = " + hex32(value) + ";");
+    }
+
+    /**
+     * Handles a simple binary register arithmetic op, clearing tracking.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     * @param op operator string (e.g., "+", "-", "*")
+     */
+    private static void handleBinaryReg(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar,
+            String op) {
+        regConst.remove(ins.getRd());
+        regPtrFromVar.remove(ins.getRd());
+        lines.add(
+            regName(ins.getRd()) + " = "
+            + regName(ins.getRs1()) + " " + op + " "
+            + regName(ins.getRs2()) + ";"
+        );
+    }
+
+    /**
+     * Handles SLT/SLTU register comparisons.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     * @param unsigned true for unsigned comparisons
+     */
+    private static void handleSetLessThanReg(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar,
+            boolean unsigned) {
+        regConst.remove(ins.getRd());
+        regPtrFromVar.remove(ins.getRd());
+        String lhs = unsigned ? "(uint32_t)" + regName(ins.getRs1()) : regName(ins.getRs1());
+        String rhs = unsigned ? "(uint32_t)" + regName(ins.getRs2()) : regName(ins.getRs2());
+        lines.add(
+            regName(ins.getRd()) + " = (" + lhs + " < " + rhs + ") ? 1 : 0;"
+        );
+    }
+
+    /**
+     * Handles SLTI/SLTIU immediate comparisons.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     * @param unsigned true for unsigned comparisons
+     */
+    private static void handleSetLessThanImm(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar,
+            boolean unsigned) {
+        regConst.remove(ins.getRd());
+        regPtrFromVar.remove(ins.getRd());
+        String lhs = unsigned ? "(uint32_t)" + regName(ins.getRs1()) : regName(ins.getRs1());
+        String rhs = unsigned ? "(uint32_t)" + ins.getImm() : String.valueOf(ins.getImm());
+        lines.add(
+            regName(ins.getRd()) + " = (" + lhs + " < " + rhs + ") ? 1 : 0;"
+        );
+    }
+
+    /**
+     * Handles MULH using signed operands.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     */
+    private static void handleMulHighSigned(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar) {
+        regConst.remove(ins.getRd());
+        regPtrFromVar.remove(ins.getRd());
+        lines.add(
+            regName(ins.getRd()) + " = (int32_t)(((int64_t)" + regName(ins.getRs1())
+            + " * (int64_t)" + regName(ins.getRs2()) + ") >> 32);"
+        );
+    }
+
+    /**
+     * Handles MULHSU using signed x unsigned operands.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     */
+    private static void handleMulHighSignedUnsigned(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar) {
+        regConst.remove(ins.getRd());
+        regPtrFromVar.remove(ins.getRd());
+        lines.add(
+            regName(ins.getRd()) + " = (int32_t)(((int64_t)" + regName(ins.getRs1())
+            + " * (uint64_t)(uint32_t)" + regName(ins.getRs2()) + ") >> 32);"
+        );
+    }
+
+    /**
+     * Handles MULHU using unsigned operands.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     */
+    private static void handleMulHighUnsigned(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar) {
+        regConst.remove(ins.getRd());
+        regPtrFromVar.remove(ins.getRd());
+        lines.add(
+            regName(ins.getRd()) + " = (int32_t)(((uint64_t)(uint32_t)" + regName(ins.getRs1())
+            + " * (uint64_t)(uint32_t)" + regName(ins.getRs2()) + ") >> 32);"
+        );
+    }
+
+    /**
+     * Handles DIV/DIVU/REM/REMU semantics using conditional expressions.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     * @param unsigned true for unsigned ops
+     * @param remainder true for remainder ops
+     */
+    private static void handleDivRem(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar,
+            boolean unsigned,
+            boolean remainder) {
+        regConst.remove(ins.getRd());
+        regPtrFromVar.remove(ins.getRd());
+        String rs1 = regName(ins.getRs1());
+        String rs2 = regName(ins.getRs2());
+        if (unsigned) {
+            String lhs = "(uint32_t)" + rs1;
+            String rhs = "(uint32_t)" + rs2;
+            String expr = remainder
+                    ? "(" + rhs + " == 0 ? " + rs1 + " : (" + lhs + " % " + rhs + "))"
+                    : "(" + rhs + " == 0 ? 0xffffffff : (" + lhs + " / " + rhs + "))";
+            lines.add(regName(ins.getRd()) + " = " + expr + ";");
+            return;
+        }
+        String min = hex32(Integer.MIN_VALUE);
+        String expr = remainder
+                ? "(" + rs2 + " == 0 ? " + rs1 + " : (" + rs1 + " == " + min
+                    + " && " + rs2 + " == -1 ? 0 : (" + rs1 + " % " + rs2 + ")))"
+                : "(" + rs2 + " == 0 ? -1 : (" + rs1 + " == " + min
+                    + " && " + rs2 + " == -1 ? " + min + " : (" + rs1 + " / " + rs2 + ")))";
+        lines.add(regName(ins.getRd()) + " = " + expr + ";");
+    }
+
+    /**
+     * Handles shift-immediate instructions, clearing constant tracking.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     * @param op shift operator
+     * @param logical true for logical shifts
+     */
+    private static void handleShiftImm(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar,
+            String op,
+            boolean logical) {
+        regConst.remove(ins.getRd());
+        regPtrFromVar.remove(ins.getRd());
+        String lhs = logical ? "(uint32_t)" + regName(ins.getRs1()) : regName(ins.getRs1());
+        lines.add(
+            regName(ins.getRd()) + " = "
+            + lhs + " " + op + " "
+            + ins.getImm() + ";"
+        );
+    }
+
+    /**
+     * Handles shift-register instructions, clearing constant tracking.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     * @param op shift operator
+     * @param logical true for logical shifts
+     */
+    private static void handleShiftReg(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar,
+            String op,
+            boolean logical) {
+        regConst.remove(ins.getRd());
+        regPtrFromVar.remove(ins.getRd());
+        String lhs = logical ? "(uint32_t)" + regName(ins.getRs1()) : regName(ins.getRs1());
+        lines.add(
+            regName(ins.getRd()) + " = "
+            + lhs + " " + op + " "
+            + regName(ins.getRs2()) + ";"
+        );
+    }
+
+    /**
+     * Handles logic-immediate instructions, clearing constant tracking.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     * @param op logic operator
+     */
+    private static void handleLogicImm(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar,
+            String op) {
+        regConst.remove(ins.getRd());
+        regPtrFromVar.remove(ins.getRd());
+        lines.add(
+            regName(ins.getRd()) + " = "
+            + regName(ins.getRs1()) + " " + op + " "
+            + ins.getImm() + ";"
+        );
+    }
+
+    /**
+     * Handles logic-register instructions, clearing constant tracking.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     * @param op logic operator
+     */
+    private static void handleLogicReg(
+            List<String> lines,
+            Instruction ins,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar,
+            String op) {
+        regConst.remove(ins.getRd());
+        regPtrFromVar.remove(ins.getRd());
+        lines.add(
+            regName(ins.getRd()) + " = "
+            + regName(ins.getRs1()) + " " + op + " "
+            + regName(ins.getRs2()) + ";"
         );
     }
 

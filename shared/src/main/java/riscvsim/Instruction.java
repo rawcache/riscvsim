@@ -16,6 +16,33 @@ public final class Instruction {
     public enum Op {
         /** Add immediate. */ ADDI,
         /** Load upper immediate. */ LUI,
+        /** Add upper immediate to PC. */ AUIPC,
+        /** Add registers. */ ADD,
+        /** Subtract registers. */ SUB,
+        /** Set less than (signed). */ SLT,
+        /** Set less than immediate (signed). */ SLTI,
+        /** Set less than (unsigned). */ SLTU,
+        /** Set less than immediate (unsigned). */ SLTIU,
+        /** Multiply low 32 bits. */ MUL,
+        /** Multiply high 32 bits (signed). */ MULH,
+        /** Multiply high 32 bits (signed x unsigned). */ MULHSU,
+        /** Multiply high 32 bits (unsigned). */ MULHU,
+        /** Divide (signed). */ DIV,
+        /** Divide (unsigned). */ DIVU,
+        /** Remainder (signed). */ REM,
+        /** Remainder (unsigned). */ REMU,
+        /** Shift left logical immediate. */ SLLI,
+        /** Shift right logical immediate. */ SRLI,
+        /** Shift right arithmetic immediate. */ SRAI,
+        /** Shift left logical. */ SLL,
+        /** Shift right logical. */ SRL,
+        /** Shift right arithmetic. */ SRA,
+        /** Bitwise AND. */ AND,
+        /** Bitwise OR. */ OR,
+        /** Bitwise XOR. */ XOR,
+        /** Bitwise AND immediate. */ ANDI,
+        /** Bitwise OR immediate. */ ORI,
+        /** Bitwise XOR immediate. */ XORI,
         /** Load byte (signed). */ LB,
         /** Load byte (unsigned). */ LBU,
         /** Load halfword (signed). */ LH,
@@ -87,6 +114,517 @@ public final class Instruction {
         Instruction i = new Instruction();
         i.op = Op.LUI;
         i.rd = rd;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates an AUIPC instruction.
+     *
+     * @param rd destination register
+     * @param imm upper immediate value
+     * @param srcLine source line number
+     * @return AUIPC instruction
+     */
+    public static Instruction auipc(int rd, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.AUIPC;
+        i.rd = rd;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates an ADD instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return ADD instruction
+     */
+    public static Instruction add(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.ADD;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a SUB instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return SUB instruction
+     */
+    public static Instruction sub(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.SUB;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates an SLT instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return SLT instruction
+     */
+    public static Instruction slt(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.SLT;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates an SLTI instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param imm immediate value
+     * @param srcLine source line number
+     * @return SLTI instruction
+     */
+    public static Instruction slti(int rd, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.SLTI;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates an SLTU instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return SLTU instruction
+     */
+    public static Instruction sltu(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.SLTU;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates an SLTIU instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param imm immediate value
+     * @param srcLine source line number
+     * @return SLTIU instruction
+     */
+    public static Instruction sltiu(int rd, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.SLTIU;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a MUL instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return MUL instruction
+     */
+    public static Instruction mul(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.MUL;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a MULH instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return MULH instruction
+     */
+    public static Instruction mulh(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.MULH;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a MULHSU instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return MULHSU instruction
+     */
+    public static Instruction mulhsu(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.MULHSU;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a MULHU instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return MULHU instruction
+     */
+    public static Instruction mulhu(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.MULHU;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a DIV instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return DIV instruction
+     */
+    public static Instruction div(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.DIV;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a DIVU instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return DIVU instruction
+     */
+    public static Instruction divu(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.DIVU;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a REM instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return REM instruction
+     */
+    public static Instruction rem(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.REM;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a REMU instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return REMU instruction
+     */
+    public static Instruction remu(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.REMU;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a SLLI instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param imm shift amount
+     * @param srcLine source line number
+     * @return SLLI instruction
+     */
+    public static Instruction slli(int rd, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.SLLI;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a SRLI instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param imm shift amount
+     * @param srcLine source line number
+     * @return SRLI instruction
+     */
+    public static Instruction srli(int rd, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.SRLI;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a SRAI instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param imm shift amount
+     * @param srcLine source line number
+     * @return SRAI instruction
+     */
+    public static Instruction srai(int rd, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.SRAI;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a SLL instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 shift amount register
+     * @param srcLine source line number
+     * @return SLL instruction
+     */
+    public static Instruction sll(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.SLL;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a SRL instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 shift amount register
+     * @param srcLine source line number
+     * @return SRL instruction
+     */
+    public static Instruction srl(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.SRL;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a SRA instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 shift amount register
+     * @param srcLine source line number
+     * @return SRA instruction
+     */
+    public static Instruction sra(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.SRA;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates an AND instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return AND instruction
+     */
+    public static Instruction and(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.AND;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates an OR instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return OR instruction
+     */
+    public static Instruction or(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.OR;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a XOR instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param rs2 second source register
+     * @param srcLine source line number
+     * @return XOR instruction
+     */
+    public static Instruction xor(int rd, int rs1, int rs2, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.XOR;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.rs2 = rs2;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates an ANDI instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param imm immediate value
+     * @param srcLine source line number
+     * @return ANDI instruction
+     */
+    public static Instruction andi(int rd, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.ANDI;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates an ORI instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param imm immediate value
+     * @param srcLine source line number
+     * @return ORI instruction
+     */
+    public static Instruction ori(int rd, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.ORI;
+        i.rd = rd;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a XORI instruction.
+     *
+     * @param rd destination register
+     * @param rs1 source register
+     * @param imm immediate value
+     * @param srcLine source line number
+     * @return XORI instruction
+     */
+    public static Instruction xori(int rd, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.XORI;
+        i.rd = rd;
+        i.rs1 = rs1;
         i.imm = imm;
         i.srcLine = srcLine;
         return i;

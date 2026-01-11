@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RISC-V Simulator</title>
     <meta name="description" content="Assemble, step, and inspect your RISC-V program with immediate visual feedback!" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <style>
       :root {
@@ -16,8 +17,8 @@
         --accent-2: #7ea7ff;
         --text: #e8ecf3;
         --muted: #9aa4b5;
-        --mono: "SFMono-Regular", "JetBrains Mono", "Fira Code", "Menlo", monospace;
-        --sans: "Space Grotesk", "IBM Plex Sans", "Segoe UI Variable", system-ui, sans-serif;
+        --mono: "Geist Mono", "SFMono-Regular", "JetBrains Mono", "Fira Code", "Menlo", monospace;
+        --sans: "Geist", "Space Grotesk", "IBM Plex Sans", "Segoe UI Variable", system-ui, sans-serif;
         --radius: 14px;
         --shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
       }
@@ -57,7 +58,8 @@
       }
 
       .grid {
-        display: block;
+        display: flex;
+        flex-direction: column;
         align-items: start;
         max-width: 1200px;
         margin: 0 auto;
@@ -65,6 +67,7 @@
 
       @media (min-width: 960px) {
         .grid {
+          display: block;
           column-count: 2;
           column-gap: 16px;
         }
@@ -201,11 +204,18 @@
           grid-template-columns: 1fr 1fr;
         }
       }
+
+      .panel--hero { order: 1; }
+      .panel--program { order: 2; }
+      .panel--regs { order: 3; }
+      .panel--effects { order: 4; }
+      .panel--memory { order: 5; }
+      .panel--clike { order: 6; }
     </style>
   </head>
   <body>
     <main class="grid">
-      <section class="panel">
+      <section class="panel panel--hero">
         <a href="https://github.com/sseth30/riscvsim">
           <h1>RISC-V Simulator</h1>
         </a>
@@ -216,6 +226,9 @@
           <option value="jalLwSw">jal/jalr + lw/sw</option>
           <option value="loopsUnsigned">Unsigned branches</option>
           <option value="memoryTests">Memory tests</option>
+          <option value="shifts">Shift ops</option>
+          <option value="logicOps">Logic ops</option>
+          <option value="arithOps">Arithmetic ops</option>
         </select>
         <textarea id="source" placeholder="Paste RV32 assembly here..."></textarea>
         <div class="actions">
@@ -225,23 +238,23 @@
         </div>
       </section>
 
-      <section class="panel">
+      <section class="panel panel--clike">
         <h2>C-like explanation</h2>
         <pre id="clike"></pre>
         <div id="status" style="color:var(--muted);margin-top:8px;min-height:18px;"></div>
       </section>
 
-      <section class="panel">
+      <section class="panel panel--effects">
         <h2>Last step effects</h2>
         <pre id="effects"></pre>
       </section>
 
-      <section class="panel">
+      <section class="panel panel--regs">
         <h2>Registers</h2>
         <pre id="regs"></pre>
       </section>
 
-      <section class="panel">
+      <section class="panel panel--program">
         <h2>Program</h2>
         <div class="pc-line">
           <span>PC</span>
@@ -250,7 +263,7 @@
         <pre id="disasm"></pre>
       </section>
 
-      <section class="panel">
+      <section class="panel panel--memory">
         <h2>Memory</h2>
         <div class="memory-grid">
           <div>

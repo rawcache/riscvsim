@@ -383,10 +383,35 @@ public final class Parser {
             addInst.accept(Instruction.lui(parseReg(tokens[1]), parseImm(tokens[2]), p.srcLine));
             return true;
         }
+        if (op.equals("auipc")) {
+            if (tokens.length != 3) {
+                throw new RuntimeException("Bad auipc on line " + (p.srcLine + 1));
+            }
+            addInst.accept(Instruction.auipc(parseReg(tokens[1]), parseImm(tokens[2]), p.srcLine));
+            return true;
+        }
         if (handleLoads(op, tokens, p, addInst)) {
             return true;
         }
         if (handleStores(op, tokens, p, addInst)) {
+            return true;
+        }
+        if (handleShiftImm(op, tokens, p, addInst)) {
+            return true;
+        }
+        if (handleShiftReg(op, tokens, p, addInst)) {
+            return true;
+        }
+        if (handleLogicImm(op, tokens, p, addInst)) {
+            return true;
+        }
+        if (handleLogicReg(op, tokens, p, addInst)) {
+            return true;
+        }
+        if (handleArithmeticImm(op, tokens, p, addInst)) {
+            return true;
+        }
+        if (handleArithmeticReg(op, tokens, p, addInst)) {
             return true;
         }
         if (op.equals("jal")) {
@@ -409,6 +434,281 @@ public final class Parser {
             return true;
         }
         return handleBranch(op, tokens, p, parseTargetPC, addInst);
+    }
+
+    /**
+     * Handles arithmetic-immediate instructions.
+     *
+     * @param op the operation code of the instruction
+     * @param tokens the tokens of the instruction line
+     * @param p the pending instruction with its source line
+     * @param addInst a consumer to add the parsed instruction
+     * @return true if an arithmetic-immediate instruction was parsed, false otherwise
+     */
+    private static boolean handleArithmeticImm(
+            String op,
+            String[] tokens,
+            Pending p,
+            java.util.function.Consumer<Instruction> addInst) {
+        if (!op.equals("slti") && !op.equals("sltiu")) {
+            return false;
+        }
+        if (tokens.length != 4) {
+            return false;
+        }
+        int rd = parseReg(tokens[1]);
+        int rs1 = parseReg(tokens[2]);
+        int imm = parseImm(tokens[3]);
+        return switch (op) {
+        case "slti" -> {
+            addInst.accept(Instruction.slti(rd, rs1, imm, p.srcLine));
+            yield true;
+        }
+        case "sltiu" -> {
+            addInst.accept(Instruction.sltiu(rd, rs1, imm, p.srcLine));
+            yield true;
+        }
+        default -> false;
+        };
+    }
+
+    /**
+     * Handles arithmetic-register instructions.
+     *
+     * @param op the operation code of the instruction
+     * @param tokens the tokens of the instruction line
+     * @param p the pending instruction with its source line
+     * @param addInst a consumer to add the parsed instruction
+     * @return true if an arithmetic-register instruction was parsed, false otherwise
+     */
+    private static boolean handleArithmeticReg(
+            String op,
+            String[] tokens,
+            Pending p,
+            java.util.function.Consumer<Instruction> addInst) {
+        boolean isArithmetic = switch (op) {
+        case "add", "sub", "slt", "sltu", "mul", "mulh", "mulhsu", "mulhu", "div", "divu", "rem", "remu" -> true;
+        default -> false;
+        };
+        if (!isArithmetic) {
+            return false;
+        }
+        if (tokens.length != 4) {
+            return false;
+        }
+        int rd = parseReg(tokens[1]);
+        int rs1 = parseReg(tokens[2]);
+        int rs2 = parseReg(tokens[3]);
+        return switch (op) {
+        case "add" -> {
+            addInst.accept(Instruction.add(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "sub" -> {
+            addInst.accept(Instruction.sub(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "slt" -> {
+            addInst.accept(Instruction.slt(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "sltu" -> {
+            addInst.accept(Instruction.sltu(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "mul" -> {
+            addInst.accept(Instruction.mul(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "mulh" -> {
+            addInst.accept(Instruction.mulh(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "mulhsu" -> {
+            addInst.accept(Instruction.mulhsu(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "mulhu" -> {
+            addInst.accept(Instruction.mulhu(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "div" -> {
+            addInst.accept(Instruction.div(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "divu" -> {
+            addInst.accept(Instruction.divu(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "rem" -> {
+            addInst.accept(Instruction.rem(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "remu" -> {
+            addInst.accept(Instruction.remu(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        default -> false;
+        };
+    }
+    /**
+     * Handles logic-immediate instructions.
+     *
+     * @param op the operation code of the instruction
+     * @param tokens the tokens of the instruction line
+     * @param p the pending instruction with its source line
+     * @param addInst a consumer to add the parsed instruction
+     * @return true if a logic-immediate instruction was parsed, false otherwise
+     */
+    private static boolean handleLogicImm(
+            String op,
+            String[] tokens,
+            Pending p,
+            java.util.function.Consumer<Instruction> addInst) {
+        if (!op.equals("andi") && !op.equals("ori") && !op.equals("xori")) {
+            return false;
+        }
+        if (tokens.length != 4) {
+            return false;
+        }
+        int rd = parseReg(tokens[1]);
+        int rs1 = parseReg(tokens[2]);
+        int imm = parseImm(tokens[3]);
+        return switch (op) {
+        case "andi" -> {
+            addInst.accept(Instruction.andi(rd, rs1, imm, p.srcLine));
+            yield true;
+        }
+        case "ori" -> {
+            addInst.accept(Instruction.ori(rd, rs1, imm, p.srcLine));
+            yield true;
+        }
+        case "xori" -> {
+            addInst.accept(Instruction.xori(rd, rs1, imm, p.srcLine));
+            yield true;
+        }
+        default -> false;
+        };
+    }
+
+    /**
+     * Handles logic-register instructions.
+     *
+     * @param op the operation code of the instruction
+     * @param tokens the tokens of the instruction line
+     * @param p the pending instruction with its source line
+     * @param addInst a consumer to add the parsed instruction
+     * @return true if a logic-register instruction was parsed, false otherwise
+     */
+    private static boolean handleLogicReg(
+            String op,
+            String[] tokens,
+            Pending p,
+            java.util.function.Consumer<Instruction> addInst) {
+        if (!op.equals("and") && !op.equals("or") && !op.equals("xor")) {
+            return false;
+        }
+        if (tokens.length != 4) {
+            return false;
+        }
+        int rd = parseReg(tokens[1]);
+        int rs1 = parseReg(tokens[2]);
+        int rs2 = parseReg(tokens[3]);
+        return switch (op) {
+        case "and" -> {
+            addInst.accept(Instruction.and(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "or" -> {
+            addInst.accept(Instruction.or(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "xor" -> {
+            addInst.accept(Instruction.xor(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        default -> false;
+        };
+    }
+
+    /**
+     * Handles shift-immediate instructions.
+     *
+     * @param op the operation code of the instruction
+     * @param tokens the tokens of the instruction line
+     * @param p the pending instruction with its source line
+     * @param addInst a consumer to add the parsed instruction
+     * @return true if a shift-immediate instruction was parsed, false otherwise
+     */
+    private static boolean handleShiftImm(
+            String op,
+            String[] tokens,
+            Pending p,
+            java.util.function.Consumer<Instruction> addInst) {
+        if (!op.equals("slli") && !op.equals("srli") && !op.equals("srai")) {
+            return false;
+        }
+        if (tokens.length != 4) {
+            return false;
+        }
+        int rd = parseReg(tokens[1]);
+        int rs1 = parseReg(tokens[2]);
+        int imm = parseImm(tokens[3]);
+        return switch (op) {
+        case "slli" -> {
+            addInst.accept(Instruction.slli(rd, rs1, imm, p.srcLine));
+            yield true;
+        }
+        case "srli" -> {
+            addInst.accept(Instruction.srli(rd, rs1, imm, p.srcLine));
+            yield true;
+        }
+        case "srai" -> {
+            addInst.accept(Instruction.srai(rd, rs1, imm, p.srcLine));
+            yield true;
+        }
+        default -> false;
+        };
+    }
+
+    /**
+     * Handles shift-register instructions.
+     *
+     * @param op the operation code of the instruction
+     * @param tokens the tokens of the instruction line
+     * @param p the pending instruction with its source line
+     * @param addInst a consumer to add the parsed instruction
+     * @return true if a shift-register instruction was parsed, false otherwise
+     */
+    private static boolean handleShiftReg(
+            String op,
+            String[] tokens,
+            Pending p,
+            java.util.function.Consumer<Instruction> addInst) {
+        if (!op.equals("sll") && !op.equals("srl") && !op.equals("sra")) {
+            return false;
+        }
+        if (tokens.length != 4) {
+            return false;
+        }
+        int rd = parseReg(tokens[1]);
+        int rs1 = parseReg(tokens[2]);
+        int rs2 = parseReg(tokens[3]);
+        return switch (op) {
+        case "sll" -> {
+            addInst.accept(Instruction.sll(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "srl" -> {
+            addInst.accept(Instruction.srl(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        case "sra" -> {
+            addInst.accept(Instruction.sra(rd, rs1, rs2, p.srcLine));
+            yield true;
+        }
+        default -> false;
+        };
     }
 
     /**
@@ -483,7 +783,7 @@ public final class Parser {
             return false;
         }
         if (tokens.length != 3) {
-            return false;
+            throw new RuntimeException("Bad " + op + " on line " + (p.srcLine + 1));
         }
         OffsetBase ob = parseOffsetBase(tokens[2], p.srcLine);
         return switch (op) {

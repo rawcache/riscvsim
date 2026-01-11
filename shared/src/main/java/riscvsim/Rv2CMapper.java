@@ -85,6 +85,370 @@ public final class Rv2CMapper {
     }
 
     /**
+     * Emits C lines that model an AUIPC instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst AUIPC instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void auipc(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)(pc + (" + inst.getImm() + " << 12));");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model an ADD instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst ADD instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void add(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)(x[" + inst.getRs1()
+                + "] + x[" + inst.getRs2() + "]);");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a SUB instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst SUB instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void sub(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)(x[" + inst.getRs1()
+                + "] - x[" + inst.getRs2() + "]);");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model an SLT instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst SLT instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void slt(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (x[" + inst.getRs1()
+                + "] < x[" + inst.getRs2() + "]) ? 1 : 0;");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model an SLTU instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst SLTU instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void sltu(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = ((uint32_t)x[" + inst.getRs1()
+                + "] < (uint32_t)x[" + inst.getRs2() + "]) ? 1 : 0;");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model an SLTI instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst SLTI instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void slti(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (x[" + inst.getRs1()
+                + "] < " + inst.getImm() + ") ? 1 : 0;");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model an SLTIU instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst SLTIU instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void sltiu(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = ((uint32_t)x[" + inst.getRs1()
+                + "] < (uint32_t)" + inst.getImm() + ") ? 1 : 0;");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a MUL instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst MUL instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void mul(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)((int64_t)x[" + inst.getRs1()
+                + "] * (int64_t)x[" + inst.getRs2() + "]);");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a MULH instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst MULH instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void mulh(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)(((int64_t)x[" + inst.getRs1()
+                + "] * (int64_t)x[" + inst.getRs2() + "]) >> 32);");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a MULHSU instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst MULHSU instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void mulhsu(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)(((int64_t)x[" + inst.getRs1()
+                + "] * (uint64_t)(uint32_t)x[" + inst.getRs2() + "]) >> 32);");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a MULHU instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst MULHU instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void mulhu(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)(((uint64_t)(uint32_t)x[" + inst.getRs1()
+                + "] * (uint64_t)(uint32_t)x[" + inst.getRs2() + "]) >> 32);");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a DIV instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst DIV instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void div(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        if (x[" + inst.getRs2() + "] == 0) {");
+        lines.add("          x[" + inst.getRd() + "] = -1;");
+        lines.add("        } else if (x[" + inst.getRs1() + "] == (int32_t)0x80000000"
+                + " && x[" + inst.getRs2() + "] == -1) {");
+        lines.add("          x[" + inst.getRd() + "] = (int32_t)0x80000000;");
+        lines.add("        } else {");
+        lines.add("          x[" + inst.getRd() + "] = x[" + inst.getRs1() + "] / x[" + inst.getRs2() + "];");
+        lines.add("        }");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a DIVU instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst DIVU instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void divu(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        if ((uint32_t)x[" + inst.getRs2() + "] == 0) {");
+        lines.add("          x[" + inst.getRd() + "] = -1;");
+        lines.add("        } else {");
+        lines.add("          x[" + inst.getRd() + "] = (uint32_t)x[" + inst.getRs1()
+                + "] / (uint32_t)x[" + inst.getRs2() + "];");
+        lines.add("        }");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a REM instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst REM instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void rem(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        if (x[" + inst.getRs2() + "] == 0) {");
+        lines.add("          x[" + inst.getRd() + "] = x[" + inst.getRs1() + "];");
+        lines.add("        } else if (x[" + inst.getRs1() + "] == (int32_t)0x80000000"
+                + " && x[" + inst.getRs2() + "] == -1) {");
+        lines.add("          x[" + inst.getRd() + "] = 0;");
+        lines.add("        } else {");
+        lines.add("          x[" + inst.getRd() + "] = x[" + inst.getRs1() + "] % x[" + inst.getRs2() + "];");
+        lines.add("        }");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a REMU instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst REMU instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void remu(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        if ((uint32_t)x[" + inst.getRs2() + "] == 0) {");
+        lines.add("          x[" + inst.getRd() + "] = x[" + inst.getRs1() + "];");
+        lines.add("        } else {");
+        lines.add("          x[" + inst.getRd() + "] = (uint32_t)x[" + inst.getRs1()
+                + "] % (uint32_t)x[" + inst.getRs2() + "];");
+        lines.add("        }");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a SLLI instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void slli(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)(x[" + inst.getRs1() + "] << ("
+                + inst.getImm() + " & 31));");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a SRLI instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void srli(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)((uint32_t)x[" + inst.getRs1()
+                + "] >> (" + inst.getImm() + " & 31));");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a SRAI instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void srai(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)(x[" + inst.getRs1() + "] >> ("
+                + inst.getImm() + " & 31));");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a SLL instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void sll(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)(x[" + inst.getRs1()
+                + "] << (x[" + inst.getRs2() + "] & 31));");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a SRL instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void srl(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)((uint32_t)x[" + inst.getRs1()
+                + "] >> (x[" + inst.getRs2() + "] & 31));");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a SRA instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void sra(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = (int32_t)(x[" + inst.getRs1()
+                + "] >> (x[" + inst.getRs2() + "] & 31));");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model an AND instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void andOp(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = x[" + inst.getRs1() + "] & x[" + inst.getRs2() + "];");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model an OR instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void orOp(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = x[" + inst.getRs1() + "] | x[" + inst.getRs2() + "];");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a XOR instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void xorOp(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = x[" + inst.getRs1() + "] ^ x[" + inst.getRs2() + "];");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model an ANDI instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void andi(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = x[" + inst.getRs1() + "] & " + inst.getImm() + ";");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model an ORI instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void ori(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = x[" + inst.getRs1() + "] | " + inst.getImm() + ";");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
+     * Emits C lines that model a XORI instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void xori(List<String> lines, Instruction inst, int pcVal) {
+        lines.add("        x[" + inst.getRd() + "] = x[" + inst.getRs1() + "] ^ " + inst.getImm() + ";");
+        lines.add("        pc = " + (pcVal + 4) + ";");
+    }
+
+    /**
      * Emits C lines that model an LB/LBU instruction.
      *
      * @param lines accumulator for generated C source lines
@@ -403,6 +767,33 @@ public final class Rv2CMapper {
             switch (op) {
             case ADDI -> addi(lines, inst, pcVal);
             case LUI -> lui(lines, inst, pcVal);
+            case AUIPC -> auipc(lines, inst, pcVal);
+            case ADD -> add(lines, inst, pcVal);
+            case SUB -> sub(lines, inst, pcVal);
+            case SLT -> slt(lines, inst, pcVal);
+            case SLTU -> sltu(lines, inst, pcVal);
+            case SLTI -> slti(lines, inst, pcVal);
+            case SLTIU -> sltiu(lines, inst, pcVal);
+            case MUL -> mul(lines, inst, pcVal);
+            case MULH -> mulh(lines, inst, pcVal);
+            case MULHSU -> mulhsu(lines, inst, pcVal);
+            case MULHU -> mulhu(lines, inst, pcVal);
+            case DIV -> div(lines, inst, pcVal);
+            case DIVU -> divu(lines, inst, pcVal);
+            case REM -> rem(lines, inst, pcVal);
+            case REMU -> remu(lines, inst, pcVal);
+            case SLLI -> slli(lines, inst, pcVal);
+            case SRLI -> srli(lines, inst, pcVal);
+            case SRAI -> srai(lines, inst, pcVal);
+            case SLL -> sll(lines, inst, pcVal);
+            case SRL -> srl(lines, inst, pcVal);
+            case SRA -> sra(lines, inst, pcVal);
+            case AND -> andOp(lines, inst, pcVal);
+            case OR -> orOp(lines, inst, pcVal);
+            case XOR -> xorOp(lines, inst, pcVal);
+            case ANDI -> andi(lines, inst, pcVal);
+            case ORI -> ori(lines, inst, pcVal);
+            case XORI -> xori(lines, inst, pcVal);
             case LB -> lb(lines, inst, pcVal, true);
             case LBU -> lb(lines, inst, pcVal, false);
             case LH -> lh(lines, inst, pcVal, true);
