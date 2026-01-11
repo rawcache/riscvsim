@@ -15,6 +15,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import riscvsim.Disassembler;
 import riscvsim.Effect;
 import riscvsim.Simulator;
 import riscvsim.StepResult;
@@ -190,6 +191,7 @@ public class Handler implements RequestHandler<APIGatewayProxyRequestEvent, APIG
         payload.put("effects", effects);
         payload.put("clike", sim.cLike());
         payload.put("rv2c", sim.rv2c());
+        payload.put("disasm", Disassembler.disassemble(sim.program()));
         payload.put("error", null);
         return payload;
     }
