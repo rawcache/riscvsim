@@ -30,6 +30,7 @@ public class Handler implements RequestHandler<APIGatewayProxyRequestEvent, APIG
 
     private static final Gson GSON = new GsonBuilder().serializeNulls().create();
     private static final Map<String, Simulator> SESSIONS = new ConcurrentHashMap<>();
+    private static final String BUILD_TAG = "parser-fix-2026-01-11";
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
@@ -110,6 +111,7 @@ public class Handler implements RequestHandler<APIGatewayProxyRequestEvent, APIG
         } catch (RuntimeException ex) {
             JsonObject err = new JsonObject();
             err.addProperty("error", ex.getMessage());
+            err.addProperty("build", BUILD_TAG);
             return corsResponse(400, GSON.toJson(err));
         }
     }
@@ -139,6 +141,7 @@ public class Handler implements RequestHandler<APIGatewayProxyRequestEvent, APIG
         } catch (RuntimeException ex) {
             JsonObject err = new JsonObject();
             err.addProperty("error", ex.getMessage());
+            err.addProperty("build", BUILD_TAG);
             return corsResponse(400, GSON.toJson(err));
         }
     }
@@ -169,6 +172,7 @@ public class Handler implements RequestHandler<APIGatewayProxyRequestEvent, APIG
         } catch (RuntimeException ex) {
             JsonObject err = new JsonObject();
             err.addProperty("error", ex.getMessage());
+            err.addProperty("build", BUILD_TAG);
             return corsResponse(400, GSON.toJson(err));
         }
     }
@@ -193,6 +197,7 @@ public class Handler implements RequestHandler<APIGatewayProxyRequestEvent, APIG
         payload.put("rv2c", sim.rv2c());
         payload.put("disasm", Disassembler.disassemble(sim.program()));
         payload.put("error", null);
+        payload.put("build", BUILD_TAG);
         return payload;
     }
 
