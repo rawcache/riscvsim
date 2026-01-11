@@ -288,6 +288,7 @@ public final class Server {
         r.effects = effects;
         r.clike = sim.cLike();
         r.rv2c = sim.rv2c();
+        r.disasm = Disassembler.disassemble(sim.program());
         return r;
     }
 
@@ -305,6 +306,7 @@ public final class Server {
         private String clike;
         private String rv2c;
         private String error;
+        private List<DisasmLine> disasm;
 
         /**
          * Returns the unique identifier associated with this simulator session.
@@ -372,6 +374,15 @@ public final class Server {
          */
         public String getRv2c() {
             return rv2c;
+        }
+
+        /**
+         * Returns the disassembly listing for the current program.
+         *
+         * @return disassembly lines
+         */
+        public List<DisasmLine> getDisasm() {
+            return disasm == null ? List.of() : disasm;
         }
 
         /**

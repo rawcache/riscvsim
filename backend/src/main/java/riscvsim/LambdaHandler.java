@@ -236,7 +236,8 @@ public final class LambdaHandler implements RequestHandler<APIGatewayProxyReques
                 .setEffects(effects)
                 .setTrap(trap)
                 .setClike(sim.cLike())
-                .setRv2c(sim.rv2c());
+                .setRv2c(sim.rv2c())
+                .setDisasm(Disassembler.disassemble(sim.program()));
     }
 
     /**
