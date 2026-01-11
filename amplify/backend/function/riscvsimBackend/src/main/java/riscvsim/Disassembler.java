@@ -48,27 +48,40 @@ public final class Disassembler {
 
     private static String formatInst(Instruction ins, int pc, Map<Integer, List<String>> labelsByPc) {
         String op = ins.getOp().name().toLowerCase();
-        return switch (ins.getOp()) {
-        case ADDI -> formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", " + ins.getImm();
-        case LUI -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm();
-        case LW -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
-        case SW -> formatPc(pc) + op + " x" + ins.getRs2() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
-        case JAL -> formatPc(pc) + op + " x" + ins.getRd() + ", " + formatTarget(labelsByPc, ins.getTargetPC());
-        case JALR -> formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
-        case BEQ -> formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
-                + formatTarget(labelsByPc, ins.getTargetPC());
-        case BNE -> formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
-                + formatTarget(labelsByPc, ins.getTargetPC());
-        case BLT -> formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
-                + formatTarget(labelsByPc, ins.getTargetPC());
-        case BGE -> formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
-                + formatTarget(labelsByPc, ins.getTargetPC());
-        case BLTU -> formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
-                + formatTarget(labelsByPc, ins.getTargetPC());
-        case BGEU -> formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
-                + formatTarget(labelsByPc, ins.getTargetPC());
-        default -> throw new IllegalStateException("Unhandled op: " + ins.getOp());
-        };
+        switch (ins.getOp()) {
+        case ADDI:
+            return formatPc(pc) + op + " x" + ins.getRd() + ", x" + ins.getRs1() + ", " + ins.getImm();
+        case LUI:
+            return formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm();
+        case LW:
+            return formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
+        case SW:
+            return formatPc(pc) + op + " x" + ins.getRs2() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
+        case JAL:
+            return formatPc(pc) + op + " x" + ins.getRd() + ", " + formatTarget(labelsByPc, ins.getTargetPC());
+        case JALR:
+            return formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
+        case BEQ:
+            return formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
+                    + formatTarget(labelsByPc, ins.getTargetPC());
+        case BNE:
+            return formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
+                    + formatTarget(labelsByPc, ins.getTargetPC());
+        case BLT:
+            return formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
+                    + formatTarget(labelsByPc, ins.getTargetPC());
+        case BGE:
+            return formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
+                    + formatTarget(labelsByPc, ins.getTargetPC());
+        case BLTU:
+            return formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
+                    + formatTarget(labelsByPc, ins.getTargetPC());
+        case BGEU:
+            return formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
+                    + formatTarget(labelsByPc, ins.getTargetPC());
+        default:
+            throw new IllegalStateException("Unhandled op: " + ins.getOp());
+        }
     }
 
     private static String formatTarget(Map<Integer, List<String>> labelsByPc, int pc) {
