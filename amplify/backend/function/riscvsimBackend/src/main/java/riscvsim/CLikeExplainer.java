@@ -136,7 +136,7 @@ public final class CLikeExplainer {
             int pc = i * 4;
 
             addLabels(labelMap.get(pc), lines);
-            emitInstruction(lines, ins, inv, labelMap, regConst, regPtrFromVar);
+            emitInstruction(lines, ins, pc, inv, labelMap, regConst, regPtrFromVar);
         }
 
         return String.join("\n", lines);
@@ -170,6 +170,7 @@ public final class CLikeExplainer {
     private static void emitInstruction(
             List<String> lines,
             Instruction ins,
+            int pc,
             Map<Integer, String> inv,
             Map<Integer, List<String>> labelMap,
             Map<Integer, Integer> regConst,
@@ -179,6 +180,8 @@ public final class CLikeExplainer {
         case ADDI -> handleAddi(lines, ins, regConst, regPtrFromVar);
         case LW -> handleLw(lines, ins, inv, regConst, regPtrFromVar);
         case SW -> handleSw(lines, ins, inv, regConst, regPtrFromVar);
+        case JAL -> handleJal(lines, ins, pc, labelMap, regConst, regPtrFromVar);
+        case JALR -> handleJalr(lines, ins, pc, regConst, regPtrFromVar);
         case BEQ -> handleBeq(lines, ins, labelMap);
         case BNE -> handleBranch(lines, ins, labelMap, "!=", null);
         case BLT -> handleBranch(lines, ins, labelMap, "<", null);
@@ -187,6 +190,60 @@ public final class CLikeExplainer {
         case BGEU -> handleBranch(lines, ins, labelMap, ">=", "uint32_t");
         default -> throw new IllegalStateException("Unhandled op: " + ins.getOp());
         }
+    }
+
+    /**
+     * Handles JAL, writing the return address and emitting a jump to the target.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param pc current program counter
+     * @param labelMap labels grouped by PC
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     */
+    private static void handleJal(
+            List<String> lines,
+            Instruction ins,
+            int pc,
+            Map<Integer, List<String>> labelMap,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar) {
+        int ret = pc + 4;
+        String target = formatLabel(labelMap, ins.getTargetPC());
+        if (ins.getRd() != 0) {
+            regConst.put(ins.getRd(), ret);
+            regPtrFromVar.remove(ins.getRd());
+            lines.add(regName(ins.getRd()) + " = " + hex32(ret) + "; goto " + target + ";");
+            return;
+        }
+        lines.add("goto " + target + ";");
+    }
+
+    /**
+     * Handles JALR, writing the return address and indirect jump target.
+     *
+     * @param lines output accumulator
+     * @param ins instruction to explain
+     * @param pc current program counter
+     * @param regConst known constant registers
+     * @param regPtrFromVar registers known to point at variables
+     */
+    private static void handleJalr(
+            List<String> lines,
+            Instruction ins,
+            int pc,
+            Map<Integer, Integer> regConst,
+            Map<Integer, Integer> regPtrFromVar) {
+        int ret = pc + 4;
+        String targetExpr = "goto (" + regName(ins.getRs1()) + " + " + ins.getImm() + ") & ~1;";
+        if (ins.getRd() != 0) {
+            regConst.put(ins.getRd(), ret);
+            regPtrFromVar.remove(ins.getRd());
+            lines.add(regName(ins.getRd()) + " = " + hex32(ret) + "; " + targetExpr);
+            return;
+        }
+        lines.add(targetExpr);
     }
 
     /**

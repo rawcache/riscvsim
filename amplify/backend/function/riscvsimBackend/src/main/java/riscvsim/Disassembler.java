@@ -55,6 +55,10 @@ public final class Disassembler {
             return formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
         case SW:
             return formatPc(pc) + op + " x" + ins.getRs2() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
+        case JAL:
+            return formatPc(pc) + op + " x" + ins.getRd() + ", " + formatTarget(labelsByPc, ins.getTargetPC());
+        case JALR:
+            return formatPc(pc) + op + " x" + ins.getRd() + ", " + ins.getImm() + "(x" + ins.getRs1() + ")";
         case BEQ:
             return formatPc(pc) + op + " x" + ins.getRs1() + ", x" + ins.getRs2() + ", "
                     + formatTarget(labelsByPc, ins.getTargetPC());

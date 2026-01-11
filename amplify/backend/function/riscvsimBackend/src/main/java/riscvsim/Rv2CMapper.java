@@ -60,6 +60,38 @@ public final class Rv2CMapper {
     }
 
     /**
+     * Emits C lines that model a JAL instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param labelMap map from pc to labels for human-readable comments
+     * @param inst JAL instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void jal(List<String> lines, Map<Integer, List<String>> labelMap,
+            Instruction inst, int pcVal) {
+        String targetLabel = firstLabel(labelMap, inst.getTargetPC());
+        String targetComment = " // goto " + (targetLabel != null ? targetLabel : hex(inst.getTargetPC()));
+        if (inst.getRd() != 0) {
+            lines.add("        x[" + inst.getRd() + "] = " + (pcVal + 4) + ";");
+        }
+        lines.add("        pc = " + inst.getTargetPC() + ";" + targetComment);
+    }
+
+    /**
+     * Emits C lines that model a JALR instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     * @param inst JALR instruction being translated
+     * @param pcVal byte-addressed pc value for this instruction
+     */
+    private static void jalr(List<String> lines, Instruction inst, int pcVal) {
+        if (inst.getRd() != 0) {
+            lines.add("        x[" + inst.getRd() + "] = " + (pcVal + 4) + ";");
+        }
+        lines.add("        pc = (uint32_t)((x[" + inst.getRs1() + "] + " + inst.getImm() + ") & ~1);");
+    }
+
+    /**
      * Emits C lines that model a BEQ instruction.
      *
      * @param lines    accumulator for generated C source lines
@@ -259,6 +291,8 @@ public final class Rv2CMapper {
                         + inst.getImm() + "), x[" + inst.getRs2() + "]);");
                 lines.add("        pc = " + (pcVal + 4) + ";");
             }
+            case JAL -> jal(lines, labelMap, inst, pcVal);
+            case JALR -> jalr(lines, inst, pcVal);
             case BEQ -> beq(lines, labelMap, inst, pcVal);
             case BNE -> bne(lines, labelMap, inst, pcVal);
             case BLT -> blt(lines, labelMap, inst, pcVal);

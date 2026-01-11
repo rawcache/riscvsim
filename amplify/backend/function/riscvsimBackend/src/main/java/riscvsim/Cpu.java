@@ -124,6 +124,18 @@ public final class Cpu {
             pc = pc0 + 4;
         }
 
+        case JAL -> {
+            writeReg.accept(inst.getRd(), pc0 + 4);
+            pc = inst.getTargetPC();
+        }
+
+        case JALR -> {
+            writeReg.accept(inst.getRd(), pc0 + 4);
+            int target = regs[inst.getRs1()] + inst.getImm();
+            target &= ~1;
+            pc = target;
+        }
+
         case BEQ -> {
             boolean taken =
                     regs[inst.getRs1()] == regs[inst.getRs2()];
