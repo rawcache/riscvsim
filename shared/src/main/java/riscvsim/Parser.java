@@ -425,6 +425,13 @@ public final class Parser {
             String[] tokens,
             Pending p,
             java.util.function.Consumer<Instruction> addInst) {
+        boolean isLoad = switch (op) {
+        case "lb", "lbu", "lh", "lhu", "lw" -> true;
+        default -> false;
+        };
+        if (!isLoad) {
+            return false;
+        }
         if (tokens.length != 3) {
             return false;
         }
@@ -468,6 +475,13 @@ public final class Parser {
             String[] tokens,
             Pending p,
             java.util.function.Consumer<Instruction> addInst) {
+        boolean isStore = switch (op) {
+        case "sb", "sh", "sw" -> true;
+        default -> false;
+        };
+        if (!isStore) {
+            return false;
+        }
         if (tokens.length != 3) {
             return false;
         }
