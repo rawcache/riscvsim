@@ -16,7 +16,7 @@ What’s implemented
 - ISA subset:
   - Arithmetic/compare: `addi`, `add`, `sub`, `slt`, `sltu`, `slti`, `sltiu`, `mul`, `mulh`, `mulhsu`, `mulhu`, `div`, `divu`, `rem`, `remu`
   - Shifts/logic: `slli`, `srli`, `srai`, `sll`, `srl`, `sra`, `andi`, `ori`, `xori`, `and`, `or`, `xor`
-  - Immediates/jumps/branches: `lui`, `auipc`, `jal`, `jalr`, `beq`, `bne`, `blt`, `bge`, `bltu`, `bgeu`
+  - Immediates/jumps/branches: `lui`, `auipc`, `jal`, `jalr`, `beq`, `bne`, `blt`, `bge`, `bltu`, `bgeu`, `ecall`
   - Loads/stores: `lb`, `lbu`, `lh`, `lhu`, `lw`, `sb`, `sh`, `sw`
   - Pseudos: `li`, `mv`, `nop`, `j`, `call`, `ret`
 - Parser: labels, symbols (`#sym name=value`), ABI register aliases, alignment checks (toggleable), `#` and `//` comments, instruction/size limits.
@@ -63,8 +63,9 @@ addi x3, x0, 999         # skipped
 done:
 ```
 
-Other built-in samples in the UI include a `jal/jalr + lw/sw` round trip and a memory test
-that exercises `sb`/`sh`/`sw` plus `lb`/`lbu`/`lh`/`lhu`/`lw`.
+Other built-in samples in the UI cover array summation, string length, memory copy,
+function calls (jal/jalr), temperature conversion (mul/div), XOR checksums, and a
+basic `ecall` example.
 
 Project layout
 --------------

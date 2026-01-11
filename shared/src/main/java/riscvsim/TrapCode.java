@@ -8,5 +8,6 @@ public enum TrapCode {
     /** Misaligned access or PC. */ TRAP_BAD_ALIGNMENT,
     /** Memory access outside configured bounds. */ TRAP_OOB_MEMORY,
     /** Program counter outside current program range. */ TRAP_PC_OOB,
+    /** Environment call (ecall). */ TRAP_ECALL,
     /** Step budget exceeded. */ TRAP_STEP_LIMIT
 }

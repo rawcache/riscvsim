@@ -682,6 +682,16 @@ public final class Rv2CMapper {
     }
 
     /**
+     * Emits C lines that model an ECALL instruction.
+     *
+     * @param lines accumulator for generated C source lines
+     */
+    private static void ecall(List<String> lines) {
+        lines.add("        // ecall: id in x[17], args in x[10..16]");
+        lines.add("        return 0;");
+    }
+
+    /**
      * Generates a C program that simulates the given program by switching on pc.
      *
      * @param program parsed program
@@ -804,6 +814,7 @@ public final class Rv2CMapper {
             case SW -> sw(lines, inst, pcVal);
             case JAL -> jal(lines, labelMap, inst, pcVal);
             case JALR -> jalr(lines, inst, pcVal);
+            case ECALL -> ecall(lines);
             case BEQ -> beq(lines, labelMap, inst, pcVal);
             case BNE -> bne(lines, labelMap, inst, pcVal);
             case BLT -> blt(lines, labelMap, inst, pcVal);
