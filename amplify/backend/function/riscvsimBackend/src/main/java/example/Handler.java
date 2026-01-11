@@ -210,6 +210,7 @@ public class Handler implements RequestHandler<APIGatewayProxyRequestEvent, APIG
      */
     private static APIGatewayProxyResponseEvent corsResponse(int statusCode, String body) {
         Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/json; charset=utf-8");
         headers.put("Access-Control-Allow-Origin", "*");
         headers.put("Access-Control-Allow-Methods", "POST,OPTIONS");
         headers.put("Access-Control-Allow-Headers", "Content-Type");

@@ -30,6 +30,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const memoryView = createMemoryView();
   let lastPc: number | undefined;
   let runTimer: number | null = null;
+  let assembleTimer: number | null = null;
   let runSteps = 0;
   const apiClient = createApiClient();
 
@@ -49,6 +50,13 @@ window.addEventListener("DOMContentLoaded", () => {
     runBtn.textContent = "Run";
     if (message) {
       statusEl.textContent = message;
+    }
+  }
+
+  function stopAssembleSpinner() {
+    if (assembleTimer !== null) {
+      window.clearInterval(assembleTimer);
+      assembleTimer = null;
     }
   }
 
@@ -156,6 +164,38 @@ window.addEventListener("DOMContentLoaded", () => {
     ].join("\n"),
   };
 
+  const assembleMessages = [
+    "Taking a calculated RISC…",
+    "Reducing complexity, one instruction at a time",
+    "Keeping it RISC-y, not complicated",
+    "Minimal instructions, maximum intent",
+    "Less is more. That's the RISC.",
+    "Cutting the fat from your instruction set",
+    "Decoding instructions… no shortcuts",
+    "Fetching, decoding, executing. Repeat.",
+    "One pipeline stage at a time",
+    "No microcode magic here",
+    "Straight to the silicon mindset",
+    "Designed simple, running fast",
+    "Open instructions, open future",
+    "No licensing drama detected",
+    "Freedom at the ISA level",
+    "Vendor-neutral, opinionated execution",
+    "Instruction set kept intentionally small",
+    "Architected to be understood",
+    "Aligning registers…",
+    "Stalling pipeline (just kidding)",
+    "Branch prediction feeling confident today",
+    "Cache miss avoided. Hopefully.",
+    "All zeros, no undefined behavior",
+    "Executing exactly what you wrote",
+    "This is a RISC worth taking",
+    "Complexity declined. Simplicity accepted.",
+    "Built to teach, not to confuse",
+    "You control the ISA here",
+    "Understanding hardware, not memorizing it",
+  ];
+
   function loadSample(name: string) {
     const program = samplePrograms[name] ?? "";
     sourceEl.value = program;
@@ -168,6 +208,7 @@ window.addEventListener("DOMContentLoaded", () => {
     statusEl.textContent = "";
     sessionId = undefined;
     stopRun();
+    stopAssembleSpinner();
     assembleBtn.disabled = false;
     stepBtn.disabled = true;
     stepBtn.textContent = "Step";
@@ -189,7 +230,13 @@ window.addEventListener("DOMContentLoaded", () => {
     pcEl.textContent = "";
     disasmEl.textContent = "";
     resetMemoryView();
-    statusEl.textContent = "Assembling…";
+    let assembleIndex = Math.floor(Math.random() * assembleMessages.length);
+    statusEl.textContent = assembleMessages[assembleIndex];
+    stopAssembleSpinner();
+    assembleTimer = window.setInterval(() => {
+      assembleIndex = (assembleIndex + 1) % assembleMessages.length;
+      statusEl.textContent = assembleMessages[assembleIndex];
+    }, 650);
 
     stepBtn.disabled = true;
     stepBtn.textContent = "Step";
@@ -208,6 +255,8 @@ window.addEventListener("DOMContentLoaded", () => {
       sessionId = undefined;
       statusEl.textContent = "";
       runBtn.disabled = true;
+    } finally {
+      stopAssembleSpinner();
     }
   };
 
