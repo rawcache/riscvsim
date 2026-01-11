@@ -54,7 +54,7 @@ public final class LambdaHandler implements RequestHandler<APIGatewayProxyReques
             case "/simulate" -> handleSimulate(event); // legacy
             default -> text(404, "Not Found");
             };
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             ApiError err = new ApiError();
             err.error = e.getMessage();
             return json(500, err);
@@ -292,6 +292,7 @@ public final class LambdaHandler implements RequestHandler<APIGatewayProxyReques
      * Minimal DTO to return errors in JSON.
      */
     private static final class ApiError {
+        @SuppressWarnings("unused")
         private String error;
     }
 }
