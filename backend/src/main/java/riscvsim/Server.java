@@ -377,7 +377,8 @@ public final class Server {
                 .setEffects(effects)
                 .setTrap(trap)
                 .setClike(sim.cLike())
-                .setRv2c(sim.rv2c());
+                .setRv2c(sim.rv2c())
+                .setDisasm(Disassembler.disassemble(sim.program()));
     }
 
     /**
@@ -395,6 +396,7 @@ public final class Server {
         private String rv2c;
         private Trap trap;
         private String error;
+        private List<DisasmLine> disasm;
 
         /**
          * Returns the unique identifier associated with this simulator session.
@@ -483,6 +485,15 @@ public final class Server {
         }
 
         /**
+         * Returns the disassembly listing for the current program.
+         *
+         * @return disassembly lines
+         */
+        public List<DisasmLine> getDisasm() {
+            return disasm == null ? List.of() : disasm;
+        }
+
+        /**
          * Sets the session identifier for the response.
          *
          * @param sessionId session id value
@@ -567,6 +578,17 @@ public final class Server {
          */
         ApiResponse setTrap(Trap trap) {
             this.trap = trap;
+            return this;
+        }
+
+        /**
+         * Sets the disassembly listing.
+         *
+         * @param disasm disassembly lines
+         * @return this response for chaining
+         */
+        ApiResponse setDisasm(List<DisasmLine> disasm) {
+            this.disasm = disasm;
             return this;
         }
 

@@ -46,16 +46,16 @@
       }
 
       .grid {
-        display: grid;
-        gap: 16px;
-        grid-template-columns: 1fr;
+        display: block;
+        align-items: start;
         max-width: 1200px;
         margin: 0 auto;
       }
 
       @media (min-width: 960px) {
         .grid {
-          grid-template-columns: 1.2fr 0.8fr;
+          column-count: 2;
+          column-gap: 16px;
         }
       }
 
@@ -66,6 +66,8 @@
         box-shadow: var(--shadow);
         padding: 18px;
         backdrop-filter: blur(6px);
+        margin-bottom: 16px;
+        break-inside: avoid;
       }
 
       .panel h2 {
@@ -73,6 +75,15 @@
         margin-bottom: 10px;
         font-size: 18px;
         font-weight: 600;
+      }
+
+      .panel h3 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
       }
 
       textarea,
@@ -89,14 +100,13 @@
       }
 
       textarea {
-        min-height: 260px;
+        min-height: 160px;
         resize: vertical;
       }
 
       pre {
         white-space: pre-wrap;
         word-break: break-word;
-        min-height: 120px;
       }
 
       .actions {
@@ -136,12 +146,56 @@
         display: grid;
         gap: 12px;
       }
+
+      .pc-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        letter-spacing: 0.02em;
+      }
+
+      .disasm-line {
+        display: block;
+        padding: 4px 8px;
+        border-radius: 8px;
+      }
+
+      .disasm-line.current {
+        background: rgba(255, 212, 77, 0.22);
+        border-left: 3px solid #ffd44d;
+        padding-left: 10px;
+      }
+
+      .disasm-line.prev {
+        background: rgba(255, 212, 77, 0.1);
+        border-left: 3px solid rgba(255, 212, 77, 0.5);
+        padding-left: 10px;
+      }
+
+      .disasm-line.label {
+        color: var(--accent);
+        padding-left: 6px;
+      }
+
+      .memory-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      @media (min-width: 700px) {
+        .memory-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
     </style>
   </head>
   <body>
     <main class="grid">
       <section class="panel">
-        <h1>RISC-V Lab</h1>
+        <h1>RISC-V Simulator</h1>
         <p class="lede">Assemble, step, and inspect RV32 programs with immediate visual feedback.</p>
         <label for="sampleSelect" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Samples</label>
         <select id="sampleSelect" style="width:100%;margin-bottom:10px;padding:10px;border-radius:10px;border:1px solid var(--panel-border);background:rgba(255,255,255,0.03);color:var(--text);font-family:var(--sans);">
@@ -170,6 +224,29 @@
       <section class="panel">
         <h2>Registers</h2>
         <pre id="regs"></pre>
+      </section>
+
+      <section class="panel">
+        <h2>Program</h2>
+        <div class="pc-line">
+          <span>PC</span>
+          <span id="pc"></span>
+        </div>
+        <pre id="disasm"></pre>
+      </section>
+
+      <section class="panel">
+        <h2>Memory</h2>
+        <div class="memory-grid">
+          <div>
+            <h3>Recent writes</h3>
+            <pre id="memWrites"></pre>
+          </div>
+          <div>
+            <h3>RAM window</h3>
+            <pre id="memWindow"></pre>
+          </div>
+        </div>
       </section>
     </main>
 

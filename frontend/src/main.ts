@@ -33,6 +33,12 @@ type Trap = {
   message: string;
 };
 
+type DisasmLine = {
+  pc: number;
+  text: string;
+  label?: boolean;
+};
+
 type ApiResponse = {
   sessionId?: string;
   pc?: number;
@@ -43,11 +49,21 @@ type ApiResponse = {
   rv2c?: string;
   error?: string | null;
   trap?: Trap | null;
+  disasm?: DisasmLine[];
 };
+
+const MEM_SIZE = 64 * 1024;
+const WINDOW_BYTES = 128;
+const BYTES_PER_ROW = 16;
+const MAX_RECENT_WRITES = 8;
 
 function hex32(n: number): string {
   const u = n >>> 0;
   return "0x" + u.toString(16).padStart(8, "0");
+}
+
+function hex8(n: number): string {
+  return (n & 0xff).toString(16).padStart(2, "0");
 }
 
 function fmtBytes(bytes?: number[]): string {
@@ -74,6 +90,17 @@ function fmtEffect(e: Effect): string {
   return `Effect(${e.kind})`;
 }
 
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
+}
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function renderRegs(regs?: number[]): string {
   if (!regs || regs.length !== 32) return "";
   const lines: string[] = [];
@@ -81,6 +108,29 @@ function renderRegs(regs?: number[]): string {
     lines.push(`x${i.toString().padStart(2, "0")}: ${hex32(regs[i])}`);
   }
   return lines.join("\n");
+}
+
+function renderDisasm(
+  pc: number | undefined,
+  prevPc: number | undefined,
+  disasm?: DisasmLine[]
+): string {
+  if (!disasm || disasm.length === 0) return "";
+  return disasm
+    .map((line) => {
+      const classes = ["disasm-line"];
+      if (line.label) {
+        classes.push("label");
+      } else {
+        if (pc !== undefined && line.pc === pc) {
+          classes.push("current");
+        } else if (prevPc !== undefined && line.pc === prevPc) {
+          classes.push("prev");
+        }
+      }
+      return `<span class="${classes.join(" ")}">${escapeHtml(line.text)}</span>`;
+    })
+    .join("\n");
 }
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -91,8 +141,17 @@ window.addEventListener("DOMContentLoaded", () => {
   const clikeEl = document.getElementById("clike") as HTMLElement;
   const effectsEl = document.getElementById("effects") as HTMLElement;
   const regsEl = document.getElementById("regs") as HTMLElement;
+  const pcEl = document.getElementById("pc") as HTMLElement;
+  const disasmEl = document.getElementById("disasm") as HTMLElement;
+  const memWritesEl = document.getElementById("memWrites") as HTMLElement;
+  const memWindowEl = document.getElementById("memWindow") as HTMLElement;
   const statusEl = document.getElementById("status") as HTMLElement;
   const sampleSelect = document.getElementById("sampleSelect") as HTMLSelectElement;
+
+  const memBytes = new Map<number, number>();
+  let recentWrites: string[] = [];
+  let lastMemAddr: number | undefined;
+  let lastPc: number | undefined;
 
   function nonJsonError(status: number, text: string): string {
     if (status === 404 && text.includes("<!DOCTYPE")) {
@@ -129,19 +188,83 @@ window.addEventListener("DOMContentLoaded", () => {
     return data;
   }
 
+  function resetMemoryView() {
+    memBytes.clear();
+    recentWrites = [];
+    lastMemAddr = undefined;
+    lastPc = undefined;
+    memWritesEl.textContent = "";
+    memWindowEl.textContent = "";
+  }
+
+  function formatWriteEffect(e: Effect): string {
+    const addr = e.addr ?? 0;
+    const size = e.size ?? e.afterBytes?.length ?? 0;
+    return `${hex32(addr)} (${size}b) ${fmtBytes(e.beforeBytes)} -> ${fmtBytes(e.afterBytes)}`;
+  }
+
+  function applyMemEffects(effects: Effect[]) {
+    for (const effect of effects) {
+      if (effect.kind !== "mem" || effect.addr === undefined || !effect.afterBytes) continue;
+      const base = effect.addr >>> 0;
+      effect.afterBytes.forEach((value, idx) => {
+        const addr = base + idx;
+        if (addr >= 0 && addr < MEM_SIZE) {
+          memBytes.set(addr, value & 0xff);
+        }
+      });
+      recentWrites.unshift(formatWriteEffect(effect));
+      if (recentWrites.length > MAX_RECENT_WRITES) {
+        recentWrites = recentWrites.slice(0, MAX_RECENT_WRITES);
+      }
+      lastMemAddr = base;
+    }
+  }
+
+  function updateLastPc(effects: Effect[]) {
+    const pcEffect = effects.find((effect) => effect.kind === "pc" && effect.before !== undefined);
+    if (pcEffect) {
+      lastPc = pcEffect.before;
+    }
+  }
+
+  function renderMemWindow(anchor: number): string {
+    const windowStart = clamp(anchor - Math.floor(WINDOW_BYTES / 4), 0, MEM_SIZE - WINDOW_BYTES);
+    const lines: string[] = [];
+    lines.push(`base ${hex32(windowStart)} (16 bytes/row)`);
+    for (let offset = 0; offset < WINDOW_BYTES; offset += BYTES_PER_ROW) {
+      const addr = windowStart + offset;
+      const bytes: string[] = [];
+      for (let i = 0; i < BYTES_PER_ROW; i++) {
+        const value = memBytes.get(addr + i) ?? 0;
+        bytes.push(hex8(value));
+      }
+      lines.push(`${hex32(addr)}: ${bytes.join(" ")}`);
+    }
+    return lines.join("\n");
+  }
+
   function renderAll(data: ApiResponse) {
     statusEl.textContent = "";
     clikeEl.textContent =
       data.clike && data.clike.trim().length > 0 ? data.clike : data.rv2c ?? "";
 
+    const effects = data.effects ?? [];
+    applyMemEffects(effects);
+    updateLastPc(effects);
+
     if (data.trap) {
       effectsEl.textContent = `TRAP ${data.trap.code}: ${data.trap.message}`;
     } else {
-      const effects = data.effects ?? [];
       effectsEl.textContent = effects.length ? effects.map(fmtEffect).join("\n") : "(no effects)";
     }
 
     regsEl.textContent = renderRegs(data.regs);
+    pcEl.textContent = data.pc !== undefined ? hex32(data.pc) : "";
+    disasmEl.innerHTML = renderDisasm(data.pc, lastPc, data.disasm);
+    memWritesEl.textContent = recentWrites.length ? recentWrites.join("\n") : "(no writes yet)";
+    const anchor = lastMemAddr ?? data.regs?.[2] ?? 0;
+    memWindowEl.textContent = renderMemWindow(anchor);
 
     if (data.halted) {
       stepBtn.disabled = true;
@@ -193,6 +316,9 @@ window.addEventListener("DOMContentLoaded", () => {
     effectsEl.textContent = "";
     clikeEl.textContent = "";
     regsEl.textContent = "";
+    pcEl.textContent = "";
+    disasmEl.textContent = "";
+    resetMemoryView();
     statusEl.textContent = "";
     sessionId = undefined;
     stepBtn.disabled = true;
@@ -211,6 +337,9 @@ window.addEventListener("DOMContentLoaded", () => {
     effectsEl.textContent = "";
     clikeEl.textContent = "";
     regsEl.textContent = "";
+    pcEl.textContent = "";
+    disasmEl.textContent = "";
+    resetMemoryView();
     statusEl.textContent = "Assembling…";
 
     stepBtn.disabled = true;
