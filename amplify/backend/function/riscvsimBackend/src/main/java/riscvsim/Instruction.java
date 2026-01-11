@@ -17,6 +17,8 @@ public final class Instruction {
         /** Add immediate. */ ADDI,
         /** Load word. */ LW,
         /** Store word. */ SW,
+        /** Jump and link. */ JAL,
+        /** Jump and link register. */ JALR,
         /** Branch if equal (signed). */ BEQ,
         /** Branch if not equal (signed). */ BNE,
         /** Branch if less than (signed). */ BLT,
@@ -98,6 +100,42 @@ public final class Instruction {
         Instruction i = new Instruction();
         i.op = Op.SW;
         i.rs2 = rs2;
+        i.rs1 = rs1;
+        i.imm = imm;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a JAL instruction.
+     *
+     * @param rd destination register for return address
+     * @param targetPC absolute jump target PC
+     * @param srcLine source line number
+     * @return JAL instruction
+     */
+    public static Instruction jal(int rd, int targetPC, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.JAL;
+        i.rd = rd;
+        i.targetPC = targetPC;
+        i.srcLine = srcLine;
+        return i;
+    }
+
+    /**
+     * Creates a JALR instruction.
+     *
+     * @param rd destination register for return address
+     * @param rs1 base register for target address
+     * @param imm byte offset added to {@code rs1}
+     * @param srcLine source line number
+     * @return JALR instruction
+     */
+    public static Instruction jalr(int rd, int rs1, int imm, int srcLine) {
+        Instruction i = new Instruction();
+        i.op = Op.JALR;
+        i.rd = rd;
         i.rs1 = rs1;
         i.imm = imm;
         i.srcLine = srcLine;

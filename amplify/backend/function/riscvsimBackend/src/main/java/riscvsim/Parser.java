@@ -274,6 +274,26 @@ public final class Parser {
                 continue;
             }
 
+            if (op.equals("jal")) {
+                if (tokens.length != 3) {
+                    throw new RuntimeException("Bad jal on line " + (p.srcLine + 1));
+                }
+                int rd = parseReg(tokens[1]);
+                int target = parseTargetPC.apply(tokens[2], p.srcLine);
+                instructions.add(Instruction.jal(rd, target, p.srcLine));
+                continue;
+            }
+
+            if (op.equals("jalr")) {
+                if (tokens.length != 3) {
+                    throw new RuntimeException("Bad jalr on line " + (p.srcLine + 1));
+                }
+                int rd = parseReg(tokens[1]);
+                OffsetBase ob = parseOffsetBase(tokens[2], p.srcLine);
+                instructions.add(Instruction.jalr(rd, ob.rs1(), ob.imm(), p.srcLine));
+                continue;
+            }
+
             if (op.equals("beq")) {
                 if (tokens.length != 4) {
                     throw new RuntimeException("Bad beq on line " + (p.srcLine + 1));
