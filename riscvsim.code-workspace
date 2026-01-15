@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "amplify/backend/function/riscvsimBackend"
+		}
+	],
+	"settings": {
+		"java.configuration.updateBuildConfiguration": "automatic",
+		"java.import.exclusions": [
+			"**/amplify/backend/function/**",
+			"**/amplify/#current-cloud-backend/**",
+			"**/node_modules/**"
+		],
+		"java.import.maven.enabled": true,
+		"java.import.gradle.enabled": false
+	}
+}
