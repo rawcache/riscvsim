@@ -1,15 +1,50 @@
-// ~/frontend/src/main.ts
-
-import type { ApiResponse, Effect } from "./types";
-import { createApiClient } from "./api";
+import { parseAssembly } from "./asm";
 import { renderDisasm } from "./disasm";
 import { fmtEffect, hex32, renderRegs } from "./format";
 import { createMemoryView } from "./memory";
+import type { ApiResponse, Effect, Trap, WasmEffectDelta, WasmStateDelta } from "./types";
+import { WasmRuntime } from "./wasm-runtime";
 
 let sessionId: string | undefined;
 
 const RUN_DELAY_MS = 80;
 const MAX_RUN_STEPS = 2000;
+const LOCAL_SIM_SESSION = "local-wasm";
+
+function mapWasmEffects(effects: WasmEffectDelta[]): Effect[] {
+  return effects.map((e) => {
+    if (e.kind === "reg") {
+      return {
+        kind: "reg",
+        reg: e.reg,
+        before: e.before,
+        after: e.after,
+      };
+    }
+    if (e.kind === "pc") {
+      return {
+        kind: "pc",
+        before: e.before,
+        after: e.after,
+      };
+    }
+    return {
+      kind: "mem",
+      addr: e.addr,
+      size: e.size,
+      beforeBytes: e.before,
+      afterBytes: e.after,
+    };
+  });
+}
+
+function mapTrap(delta?: WasmStateDelta): Trap | null {
+  if (!delta?.trap) return null;
+  return {
+    code: delta.trap.code,
+    message: delta.trap.message,
+  };
+}
 
 window.addEventListener("DOMContentLoaded", () => {
   const assembleBtn = document.getElementById("assemble") as HTMLButtonElement;
@@ -35,7 +70,9 @@ window.addEventListener("DOMContentLoaded", () => {
   let runSteps = 0;
   let history: ApiResponse[] = [];
   let historyIndex = -1;
-  const apiClient = createApiClient();
+  let disasmLines: ApiResponse["disasm"] = [];
+  let clikeProgram = "";
+  let runtime: WasmRuntime | null = null;
 
   function resetMemoryView() {
     memoryView.reset();
@@ -98,10 +135,107 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function isPcStalled(effects: Effect[]): boolean {
     const pcEffect = effects.find(
-      (effect) =>
-        effect.kind === "pc" && effect.before !== undefined && effect.after !== undefined
+      (effect) => effect.kind === "pc" && effect.before !== undefined && effect.after !== undefined
     );
     return pcEffect ? pcEffect.before === pcEffect.after : false;
+  }
+
+  function translateRiscvToClike(instText: string): string {
+    const normalized = instText.trim().replace(/\s+/g, " ");
+    const tokens = normalized.replace(/,/g, " ").split(/\s+/);
+    const op = (tokens[0] || "").toLowerCase();
+    const a = tokens[1];
+    const b = tokens[2];
+    const c = tokens[3];
+
+    const binOp = (symbol: string) => `${a} = ${b} ${symbol} ${c};`;
+    const immOp = (symbol: string) => `${a} = ${b} ${symbol} ${c};`;
+
+    if (op === "addi") return immOp("+");
+    if (op === "add") return binOp("+");
+    if (op === "sub") return binOp("-");
+    if (op === "and") return binOp("&");
+    if (op === "or") return binOp("|");
+    if (op === "xor") return binOp("^");
+    if (op === "sll") return binOp("<<");
+    if (op === "srl") return `${a} = ((unsigned)${b}) >> ${c};`;
+    if (op === "sra") return `${a} = ((int)${b}) >> ${c};`;
+    if (op === "mul") return binOp("*");
+    if (op === "div") return `${a} = ((int)${b}) / ((int)${c});`;
+    if (op === "divu") return `${a} = ${b} / ${c};`;
+    if (op === "rem") return `${a} = ((int)${b}) % ((int)${c});`;
+    if (op === "remu") return `${a} = ${b} % ${c};`;
+    if (op === "slti") return `${a} = ((int)${b} < ${c}) ? 1 : 0;`;
+    if (op === "slt") return `${a} = ((int)${b} < (int)${c}) ? 1 : 0;`;
+    if (op === "sltu") return `${a} = (${b} < ${c}) ? 1 : 0;`;
+
+    const loadMatch = normalized.match(/^(\w+)\s+(\w+)\s*,\s*([^)]+)\((\w+)\)$/i);
+    if (loadMatch) {
+      const loadOp = loadMatch[1].toLowerCase();
+      const rd = loadMatch[2];
+      const imm = loadMatch[3];
+      const rs1 = loadMatch[4];
+      if (loadOp === "lw") return `${rd} = *(u32*)(${rs1} + ${imm});`;
+      if (loadOp === "lh") return `${rd} = *(i16*)(${rs1} + ${imm});`;
+      if (loadOp === "lhu") return `${rd} = *(u16*)(${rs1} + ${imm});`;
+      if (loadOp === "lb") return `${rd} = *(i8*)(${rs1} + ${imm});`;
+      if (loadOp === "lbu") return `${rd} = *(u8*)(${rs1} + ${imm});`;
+      if (loadOp === "jalr") return `tmp = pc + 4; pc = (${rs1} + ${imm}) & ~1; ${rd} = tmp;`;
+    }
+
+    const storeMatch = normalized.match(/^(\w+)\s+(\w+)\s*,\s*([^)]+)\((\w+)\)$/i);
+    if (storeMatch) {
+      const storeOp = storeMatch[1].toLowerCase();
+      const rs2 = storeMatch[2];
+      const imm = storeMatch[3];
+      const rs1 = storeMatch[4];
+      if (storeOp === "sw") return `*(u32*)(${rs1} + ${imm}) = ${rs2};`;
+      if (storeOp === "sh") return `*(u16*)(${rs1} + ${imm}) = ${rs2};`;
+      if (storeOp === "sb") return `*(u8*)(${rs1} + ${imm}) = ${rs2};`;
+    }
+
+    if (op === "beq") return `if (${a} == ${b}) pc = ${c}; else pc += 4;`;
+    if (op === "bne") return `if (${a} != ${b}) pc = ${c}; else pc += 4;`;
+    if (op === "blt") return `if ((int)${a} < (int)${b}) pc = ${c}; else pc += 4;`;
+    if (op === "bge") return `if ((int)${a} >= (int)${b}) pc = ${c}; else pc += 4;`;
+    if (op === "bltu") return `if (${a} < ${b}) pc = ${c}; else pc += 4;`;
+    if (op === "bgeu") return `if (${a} >= ${b}) pc = ${c}; else pc += 4;`;
+    if (op === "jal") return `tmp = pc + 4; pc = ${c ?? b}; ${a ?? "x1"} = tmp;`;
+    if (op === "lui") return `${a} = ${b} << 12;`;
+    if (op === "auipc") return `${a} = pc + (${b} << 12);`;
+    if (op === "ecall") return "trap_ecall();";
+
+    return normalized;
+  }
+
+  function buildClikeProgram(disasm: ApiResponse["disasm"]): string {
+    if (!disasm || disasm.length === 0) {
+      return "";
+    }
+    return disasm
+      .filter((line) => !line.label)
+      .map((line) => translateRiscvToClike(line.text))
+      .join("\n");
+  }
+
+  function buildSnapshot(delta?: WasmStateDelta): ApiResponse {
+    if (!runtime) {
+      throw new Error("WASM simulator not initialized.");
+    }
+    const effects = delta ? mapWasmEffects(delta.effects) : [];
+    const trap = mapTrap(delta);
+    const response: ApiResponse = {
+      sessionId: LOCAL_SIM_SESSION,
+      pc: runtime.pc(),
+      regs: runtime.readRegisters(),
+      halted: delta?.halted ?? false,
+      effects,
+      trap,
+      clike: clikeProgram,
+      rv2c: "",
+      disasm: disasmLines,
+    };
+    return response;
   }
 
   function renderAll(data: ApiResponse) {
@@ -322,11 +456,13 @@ window.addEventListener("DOMContentLoaded", () => {
     resetMemoryView();
     statusEl.textContent = "";
     sessionId = undefined;
+    disasmLines = [];
+    clikeProgram = "";
     history = [];
     historyIndex = -1;
     stopRun();
     stopAssembleSpinner();
-    assembleBtn.disabled = false;
+    assembleBtn.disabled = runtime === null;
     stepBtn.disabled = true;
     stepBtn.textContent = "Step";
     runBtn.disabled = true;
@@ -341,7 +477,26 @@ window.addEventListener("DOMContentLoaded", () => {
   // Load default sample on first render
   loadSample(sampleSelect.value || "arraySum");
 
+  statusEl.textContent = "Initializing Rust/WASM simulator…";
+  assembleBtn.disabled = true;
+  WasmRuntime.create()
+    .then((rt) => {
+      runtime = rt;
+      rt.setAlignmentChecks(true);
+      statusEl.textContent = "Rust/WASM simulator ready.";
+      assembleBtn.disabled = false;
+    })
+    .catch((err) => {
+      statusEl.textContent = `Failed to initialize WASM: ${(err as Error).message}`;
+      assembleBtn.disabled = true;
+    });
+
   assembleBtn.onclick = async () => {
+    if (!runtime) {
+      effectsEl.textContent = "Error: WASM module not initialized yet.";
+      return;
+    }
+
     stopAssembleSpinner();
     const baseMessage = assembleMessages[Math.floor(Math.random() * assembleMessages.length)].replace(
       /[.]+$/g,
@@ -361,17 +516,24 @@ window.addEventListener("DOMContentLoaded", () => {
     stopRun();
 
     try {
-      const programText = sourceEl.value;
-      const data = await apiClient.postJson("/api/session", { source: programText });
-      sessionId = data.sessionId;
+      const parsed = parseAssembly(sourceEl.value);
+      disasmLines = parsed.disasm;
+      clikeProgram = buildClikeProgram(disasmLines);
+      runtime.loadProgram(parsed.instructions);
+      runtime.reset();
+
+      sessionId = LOCAL_SIM_SESSION;
       resetMemoryView();
-      setHistory(data);
-      renderAll(data);
+      const initial = buildSnapshot();
+      setHistory(initial);
+      renderAll(initial);
       stepBtn.disabled = !sessionId;
       runBtn.disabled = !sessionId;
     } catch (err) {
       effectsEl.textContent = `Error: ${(err as Error).message}`;
       sessionId = undefined;
+      disasmLines = [];
+      clikeProgram = "";
       history = [];
       historyIndex = -1;
       statusEl.textContent = "";
@@ -392,8 +554,12 @@ window.addEventListener("DOMContentLoaded", () => {
   };
 
   stepBtn.onclick = async () => {
+    if (!runtime) {
+      effectsEl.textContent = "Error: WASM module not initialized yet.";
+      return;
+    }
     if (!sessionId) {
-      effectsEl.textContent = "Error: no sessionId. Click Assemble first.";
+      effectsEl.textContent = "Error: no local session. Click Assemble first.";
       return;
     }
 
@@ -404,7 +570,8 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const data = await apiClient.postJson("/api/step", { sessionId });
+      const delta = runtime.step();
+      const data = buildSnapshot(delta);
       pushHistory(data);
       renderAll(data);
     } catch (err) {
@@ -413,8 +580,13 @@ window.addEventListener("DOMContentLoaded", () => {
   };
 
   runBtn.onclick = async () => {
+    if (!runtime) {
+      effectsEl.textContent = "Error: WASM module not initialized yet.";
+      return;
+    }
+    const activeRuntime = runtime;
     if (!sessionId) {
-      effectsEl.textContent = "Error: no sessionId. Click Assemble first.";
+      effectsEl.textContent = "Error: no local session. Click Assemble first.";
       return;
     }
     if (historyIndex < history.length - 1) {
@@ -433,10 +605,10 @@ window.addEventListener("DOMContentLoaded", () => {
     assembleBtn.disabled = true;
     stepBtn.disabled = true;
     runBtn.textContent = "Stop";
-    statusEl.textContent = "Running…";
+    statusEl.textContent = "Running locally (WASM)…";
     runSteps = 0;
 
-    runTimer = window.setInterval(async () => {
+    runTimer = window.setInterval(() => {
       if (!sessionId) {
         stopRun();
         assembleBtn.disabled = false;
@@ -453,7 +625,9 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       runSteps += 1;
       try {
-        const data = await apiClient.postJson("/api/step", { sessionId });
+        const delta = activeRuntime.step();
+        const data = buildSnapshot(delta);
+        pushHistory(data);
         renderAll(data);
         if (data.halted) {
           stopRun("Program halted.");
