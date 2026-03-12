@@ -1,20 +1,39 @@
 {
-	"folders": [
-		{
-			"path": "."
-		},
-		{
-			"path": "amplify/backend/function/riscvsimBackend"
-		}
-	],
-	"settings": {
-		"java.configuration.updateBuildConfiguration": "automatic",
-		"java.import.exclusions": [
-			"**/amplify/backend/function/**",
-			"**/amplify/#current-cloud-backend/**",
-			"**/node_modules/**"
-		],
-		"java.import.maven.enabled": true,
-		"java.import.gradle.enabled": false
-	}
+  "folders": [
+    { "path": "frontend" },
+    { "path": "rust-core" },
+    { "path": "amplify" }
+  ],
+  "settings": {
+    "files.watcherExclude": {
+      "**/node_modules/**": true,
+      "**/target/**": true,
+      "**/build/**": true,
+      "**/dist/**": true
+    },
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/target": true,
+      "**/build": true,
+      "**/.amplify": true,
+      "**/node_modules/**": true,
+      "**/target/**": true,
+      "**/build/**": true,
+      "**/dist/**": true,
+      "**/.gradle/**": true,
+      "amplify/#current-cloud-backend/**": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/target": true,
+      "**/build": true,
+      "**/node_modules/**": true,
+      "frontend/node_modules/**": true,
+      "**/target/**": true,
+      "**/build/**": true,
+      "**/dist/**": true,
+      "amplify/#current-cloud-backend/**": true
+    },
+    "typescript.tsserver.experimental.enableProjectDiagnostics": true
+  }
 }

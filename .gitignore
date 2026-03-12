@@ -1,55 +1,18 @@
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Gradle
-.gradle/
-**/.gradle/
-build/
+# Build Artifacts
+**/target/
 **/build/
-
-# Frontend
-frontend/node_modules/
-frontend/dist/
 **/dist/
-*.local
+**/bin/
+*.class
+*.jar
+*.zip
 
-# Backend
-backend/target/
-
-# Editor / OS
-.vscode/*
-!.vscode/extensions.json
-.idea
+# IDE & OS
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+.vscode/
+!.vscode/settings.json
+!riscvsim.code-workspace
 
-#amplify-do-not-edit-begin
-amplify/\#current-cloud-backend
-amplify/.config/local-*
-amplify/logs
-amplify/mock-data
-amplify/mock-api-resources
-amplify/backend/amplify-meta.json
-amplify/backend/.temp
-build/
-dist/
+# Dependencies
 node_modules/
-aws-exports.js
-awsconfiguration.json
-amplifyconfiguration.json
-amplifyconfiguration.dart
-amplify-build-config.json
-amplify-gradle-config.json
-amplifytools.xcconfig
-.secret-*
-**.sample
-#amplify-do-not-edit-end
+.amplify/
