@@ -34,20 +34,43 @@ type LoadedWasm = {
 };
 
 let wasmModulePromise: Promise<LoadedWasm> | null = null;
+const generatedWasmModules = import.meta.glob<WasmModule>("./pkg/*.js");
+
+type WasmModuleLoader = {
+  label: string;
+  load: () => Promise<WasmModule>;
+};
 
 async function loadWasmModule(): Promise<LoadedWasm> {
   if (!wasmModulePromise) {
     wasmModulePromise = (async () => {
       const configuredPath = import.meta.env.VITE_WASM_MODULE as string | undefined;
-      const candidates = configuredPath ? [configuredPath] : ["./pkg/riscvsim", "./pkg/riscvsim_core"];
+      const generatedCandidates = ["./pkg/riscvsim.js", "./pkg/riscvsim_core.js"]
+        .filter((path) => path in generatedWasmModules)
+        .map(
+          (path) =>
+            ({
+              label: path,
+              load: async () => (await generatedWasmModules[path]!()) as WasmModule
+            }) satisfies WasmModuleLoader
+        );
+      const candidates: WasmModuleLoader[] = configuredPath
+        ? [
+            {
+              label: configuredPath,
+              load: async () =>
+                ((await import(
+                  /* @vite-ignore */
+                  configuredPath
+                )) as unknown as WasmModule)
+            }
+          ]
+        : generatedCandidates;
       let lastError: unknown = null;
 
       for (const candidate of candidates) {
         try {
-          const mod = (await import(
-            /* @vite-ignore */
-            candidate
-          )) as unknown as WasmModule;
+          const mod = await candidate.load();
           const wasmInstance = await mod.default();
           return { module: mod, wasmInstance };
         } catch (err) {
@@ -58,7 +81,7 @@ async function loadWasmModule(): Promise<LoadedWasm> {
       const details =
         lastError instanceof Error ? lastError.message : `Unknown error: ${String(lastError)}`;
       throw new Error(
-        `Unable to initialize WASM module. Tried ${candidates.join(", ")}. ${details}`
+        `Unable to initialize WASM module. Tried ${candidates.map((candidate) => candidate.label).join(", ")}. ${details}`
       );
     })();
   }

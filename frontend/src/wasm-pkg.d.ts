@@ -16,3 +16,24 @@ declare module "../../rust-core/pkg/riscvsim_core.js" {
 
   export const memory: WebAssembly.Memory;
 }
+
+declare module "./pkg/*.js" {
+  export default function init(input?: unknown): Promise<unknown>;
+
+  export class Simulator {
+    constructor(memorySize: number);
+    reset(): void;
+    load_program(program: Uint8Array): void;
+    step(): unknown;
+    get_registers(): Uint32Array;
+    get_register(index: number): number;
+    memory_ptr(): number;
+    memory_len(): number;
+    registers_ptr(): number;
+    registers_len(): number;
+    pc(): number;
+    halted(): boolean;
+  }
+
+  export const memory: WebAssembly.Memory;
+}
