@@ -66,6 +66,15 @@ async function loadWasmModule(): Promise<LoadedWasm> {
             }
           ]
         : generatedCandidates;
+
+      if (candidates.length === 0) {
+        throw new Error(
+          configuredPath
+            ? `Unable to initialize WASM module. VITE_WASM_MODULE is set to "${configuredPath}", but it could not be loaded.`
+            : 'Unable to initialize WASM module. No generated WASM entrypoints were found in "./pkg". Run `npm run wasm:build` from `frontend` or use `npm run dev`/`npm run build` so the pre-script generates them.'
+        );
+      }
+
       let lastError: unknown = null;
 
       for (const candidate of candidates) {
