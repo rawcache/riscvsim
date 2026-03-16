@@ -1,99 +1,173 @@
-RISC-V Simulator (RV32 Teaching Tool)
-=====================================
-GO TO: <https://studyriscv.com>
+# RISC-V Simulator
 
-A lightweight RV32 learning rig: assemble a small subset of RISC-V in the browser, single-step it on a Java backend, and see registers/memory/branches come alive with C-like explanations and an auto-generated C “switch(pc)” mapping.
+Browser-based RISC-V simulator for learning, demos, and lightweight instruction-set experimentation.
 
-Why this exists
----------------
-- Fast, zero-install emulator for the classroom or self-study.
-- Visualize effects: every step reports register writes, memory writes, and PC movement.
-- Understand control flow: see both a humanized C-like explanation and a faithful RV→C mapping.
-- Extendable: the codebase is small, typed, and easy to grow (currently implements BEQ/BNE/BLT/BGE and unsigned variants).
+This project assembles a focused RV32 subset in TypeScript, encodes it into machine code, executes it in a Rust WebAssembly runtime, and renders register, memory, control-flow, and pseudo-C views in the browser. Local development is frontend-only. No Java or Amplify backend is required.
 
-What’s implemented
-------------------
-- ISA subset:
-  - Arithmetic/compare: `addi`, `add`, `sub`, `slt`, `sltu`, `slti`, `sltiu`, `mul`, `mulh`, `mulhsu`, `mulhu`, `div`, `divu`, `rem`, `remu`
-  - Shifts/logic: `slli`, `srli`, `srai`, `sll`, `srl`, `sra`, `andi`, `ori`, `xori`, `and`, `or`, `xor`
-  - Immediates/jumps/branches: `lui`, `auipc`, `jal`, `jalr`, `beq`, `bne`, `blt`, `bge`, `bltu`, `bgeu`, `ecall`
-  - Loads/stores: `lb`, `lbu`, `lh`, `lhu`, `lw`, `sb`, `sh`, `sw`
-  - Pseudos: `li`, `mv`, `nop`, `j`, `call`, `ret`
-- Parser: labels, symbols (`#sym name=value`), ABI register aliases, alignment checks (toggleable), `#` and `//` comments, instruction/size limits.
-- CPU: 32 regs, 64 KB memory, per-step interpreter with effect tracking and traps (`TRAP_*` codes for alignment/memory/PC faults).
-- Views:
-  - C-like explainer (semantic, human friendly).
-  - RV→C mapper (mechanical switch-on-pc rendering).
-- HTTP API (localhost:8080): `/api/session`, `/api/assemble`, `/api/step`, `/api/reset` with CORS.
-- Frontend: Vite/TS UI with textarea + stepping, register/effect rendering helpers.
+## Highlights
 
-Quick start
------------
-Prereqs: Java 17+, Node 18+, npm.
+- Rust/WASM execution in the browser
+- Step, run, and step-back debugging flow
+- Register diffs, memory write tracking, and PC tracing
+- Inline disassembly and C-like translation for each program
+- Built-in sample programs for loops, memory access, function calls, arithmetic, and `ecall`
+- Static production build with Vite
 
-Backend
+## Stack
+
+- Frontend: Vite, TypeScript
+- Runtime: Rust, `wasm-bindgen`, `wasm-pack`
+- Build: `rolldown-vite`, `vite-plugin-wasm`, `vite-plugin-top-level-await`
+
+## Architecture
+
+1. [`frontend/src/asm.ts`](frontend/src/asm.ts) parses source text, resolves labels and symbols, and expands pseudos.
+2. [`frontend/src/wasm-runtime.ts`](frontend/src/wasm-runtime.ts) encodes parsed instructions into RV32 machine code and loads the generated WASM module.
+3. [`rust-core/src/lib.rs`](rust-core/src/lib.rs) executes the program and returns compact state deltas.
+4. [`frontend/src/main.ts`](frontend/src/main.ts) renders program state, effects, memory windows, and sample programs in the UI.
+
+## Supported ISA Subset
+
+Arithmetic and compare:
+- `addi`, `add`, `sub`
+- `slt`, `sltu`, `slti`, `sltiu`
+- `mul`, `mulh`, `mulhsu`, `mulhu`
+- `div`, `divu`, `rem`, `remu`
+
+Bitwise and shifts:
+- `andi`, `ori`, `xori`, `and`, `or`, `xor`
+- `slli`, `srli`, `srai`, `sll`, `srl`, `sra`
+
+Control flow:
+- `lui`, `auipc`
+- `jal`, `jalr`
+- `beq`, `bne`, `blt`, `bge`, `bltu`, `bgeu`
+- `ecall`
+
+Loads and stores:
+- `lb`, `lbu`, `lh`, `lhu`, `lw`
+- `sb`, `sh`, `sw`
+
+Pseudoinstructions:
+- `li`, `mv`, `nop`, `j`, `call`, `ret`
+
+Assembler features:
+- labels
+- `#sym name=value` symbol definitions
+- ABI register aliases such as `a0`, `sp`, `ra`
+- `#` and `//` comments
+
+## Local Development
+
+### Prerequisites
+
+- Node.js 18+
+- npm
+- Rust toolchain
+- `wasm32-unknown-unknown` target
+- `wasm-pack`
+
+If you do not already have the Rust target and `wasm-pack` installed:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo install wasm-pack
 ```
-cd backend
-mvn clean package
-./run.sh   # or: java -jar target/riscvsim-backend-0.1.0.jar
+
+### Start the app
+
+Option 1:
+
+```bash
+./run.sh
 ```
 
-Frontend (in another shell)
-```
+Option 2:
+
+```bash
 cd frontend
-npm install
-npm run dev   # Vite dev server, proxies /api to backend
+npm ci
+npm run dev
 ```
 
-Usage
------
-1) Paste RV32 assembly (subset above) into the frontend textarea.
-2) Click “Assemble” to create a session.
-3) Click “Step” to execute one instruction at a time; see effects, registers, C-like view, and RV→C mapping.
+What happens:
 
-Sample program (signed/unsigned branches)
-```
-addi x1, x0, -1      # 0xffffffff
-addi x2, x0, 1
-bltu x1, x2, not_taken   # unsigned: false
-addi x3, x0, 123         # executes
-not_taken:
-bgeu x1, x2, done        # unsigned: true
-addi x3, x0, 999         # skipped
-done:
+- `npm run dev` triggers `predev`
+- `predev` runs `npm run wasm:build`
+- `wasm:build` runs `wasm-pack` in [`rust-core/`](rust-core) and writes the generated package to `frontend/src/pkg`
+- Vite starts the dev server after the WASM package is generated
+
+The default dev server URL is:
+
+```text
+http://localhost:5173
 ```
 
-Other built-in samples in the UI cover array summation, string length, memory copy,
-function calls (jal/jalr), temperature conversion (mul/div), XOR checksums, and a
-basic `ecall` example.
+## Production Build
 
-Project layout
---------------
-- `backend/`: Java simulator, server, and explainers.
-  - `Server.java`: HTTP API + session management.
-  - `Simulator.java`, `Cpu.java`, `Memory.java`: execution engine.
-  - `Parser.java`, `Instruction.java`: assembler/IR.
-  - `CLikeExplainer.java`, `Rv2CMapper.java`: textual views.
-- `frontend/`: Vite/TypeScript UI; proxy configured to backend.
+```bash
+cd frontend
+npm run build
+```
 
-API (quick sketch)
-------------------
-- `POST /api/session` `{ source }` → `{ sessionId, regs, pc, clike, rv2c, effects }`
-- `POST /api/assemble` `{ sessionId, source }` → same shape
-- `POST /api/step` `{ sessionId }` → next step snapshot
-- `POST /api/reset` `{ sessionId }` → reset CPU with current program
+This generates:
 
-Extending the ISA
------------------
-Add a new op in five spots:
-1) `Instruction.Op` enum + factory.
-2) `Parser` opcode branch.
-3) `Cpu` execution switch (+ unsigned handling as needed).
-4) `CLikeExplainer` case.
-5) `Rv2CMapper` case + helper for C output.
+- `frontend/src/pkg/`: generated JS/WASM bridge from `wasm-pack`
+- `frontend/dist/`: production-ready static site from Vite
 
-Contributing / notes
---------------------
-- Keep methods short (parser/explainer already split for checkstyle).
-- Use unsigned masks (`& 0xffffffffL`) for BLTU/BGEU in the CPU.
-- Tests are not yet formalized; use the sample programs in the README and step through the UI.
+## Project Structure
+
+```text
+.
+├── frontend/      # Vite + TypeScript UI
+├── rust-core/     # Rust simulator compiled to WebAssembly
+├── run.sh         # Root-level local dev launcher
+├── amplify.yml    # Static hosting build recipe
+└── README.md
+```
+
+Key files:
+
+- [`frontend/src/main.ts`](frontend/src/main.ts): UI orchestration and sample programs
+- [`frontend/src/disasm.ts`](frontend/src/disasm.ts): instruction rendering
+- [`frontend/src/memory.ts`](frontend/src/memory.ts): memory window and write visualization
+- [`frontend/src/types.ts`](frontend/src/types.ts): shared frontend runtime types
+- [`rust-core/src/lib.rs`](rust-core/src/lib.rs): simulator core
+
+## Built-In Sample Programs
+
+The UI includes sample programs for:
+
+- array summation
+- string length
+- memory copy
+- function calls with `jal` and `jalr`
+- temperature conversion with multiply and divide
+- XOR checksum
+- `ecall`
+
+## Deployment Notes
+
+- [`amplify.yml`](amplify.yml) builds the Rust WASM package first, then runs the frontend production build.
+- The app is designed to be deployed as a static site once `frontend/dist` has been generated.
+
+## Troubleshooting
+
+If the app fails to initialize the WASM runtime:
+
+- confirm `wasm-pack --version` works
+- confirm `rustup target list --installed` includes `wasm32-unknown-unknown`
+- rerun:
+
+```bash
+cd frontend
+npm run wasm:build
+```
+
+If you see a message about missing generated WASM entrypoints in `./pkg`, it means `frontend/src/pkg` has not been generated yet.
+
+## Development Notes
+
+- The simulator enforces alignment checks in the Rust runtime.
+- `frontend/src/pkg` is generated code and should be treated as build output.
+- `rust-core/target` and `frontend/dist` are disposable build artifacts and can be regenerated at any time.
