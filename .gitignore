@@ -1,18 +1,23 @@
-# Build Artifacts
-**/target/
-**/build/
-**/dist/
-**/bin/
-*.class
-*.jar
-*.zip
+# Rust build output
+rust-core/target/
 
-# IDE & OS
+# Frontend build output
+frontend/dist/
+
+# Node modules
+frontend/node_modules/
+infra/node_modules/
+
+# wasm-pack output (regenerated at build time)
+frontend/src/pkg/
+infra/dist/
+infra/cdk.out/
+frontend/.env
+
+# OS
 .DS_Store
-.vscode/
-!.vscode/settings.json
-!riscvsim.code-workspace
+Thumbs.db
 
-# Dependencies
-node_modules/
-.amplify/
+# Editor
+.vscode/settings.json
+.idea/
