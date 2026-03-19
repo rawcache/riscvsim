@@ -114,7 +114,7 @@ function configErrorMessage(config: AuthConfig): string {
   if (!hasPlaceholderConfig(config)) {
     return "";
   }
-  return "Authentication is not configured here yet. Missing Cognito env vars. For local dev, add frontend/.env and restart Vite. For Amplify, set VITE_COGNITO_USER_POOL_ID, VITE_COGNITO_CLIENT_ID, and VITE_COGNITO_DOMAIN, then redeploy.";
+  return "This page was built without Cognito config. If you're on localhost, stop and restart `npm run dev`. If you're on Amplify, set VITE_COGNITO_USER_POOL_ID, VITE_COGNITO_CLIENT_ID, and VITE_COGNITO_DOMAIN, then redeploy.";
 }
 
 async function cognitoRequest(target: string, body: Record<string, unknown>): Promise<CognitoResponse> {
