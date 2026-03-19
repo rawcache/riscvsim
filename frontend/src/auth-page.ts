@@ -69,6 +69,15 @@ function cleanErrorMessage(message: string): string {
   if (!message) {
     return "Something went wrong. Try again.";
   }
+  if (message.includes("PLACEHOLDER")) {
+    return "Authentication is not configured for this deployment. Add the Cognito Vite env vars and rebuild the frontend.";
+  }
+  if (message.includes("User pool client") && message.includes("does not exist")) {
+    return "Authentication is misconfigured for this deployment. The Cognito app client ID is missing or invalid.";
+  }
+  if (message.includes("NetworkError") || message.includes("Failed to fetch")) {
+    return "Couldn't reach Cognito. Check your connection and try again.";
+  }
   if (message === "Incorrect username or password.") {
     return message;
   }
@@ -91,6 +100,21 @@ function cleanErrorMessage(message: string): string {
     return "Password does not meet the requirements.";
   }
   return "Something went wrong. Try again.";
+}
+
+function hasPlaceholderConfig(config: AuthConfig): boolean {
+  return (
+    config.clientId.includes("PLACEHOLDER") ||
+    config.userPoolId.includes("PLACEHOLDER") ||
+    config.hostedUiDomain.includes("PLACEHOLDER")
+  );
+}
+
+function configErrorMessage(config: AuthConfig): string {
+  if (!hasPlaceholderConfig(config)) {
+    return "";
+  }
+  return "Authentication is not configured here yet. Missing Cognito env vars. For local dev, add frontend/.env and restart Vite. For Amplify, set VITE_COGNITO_USER_POOL_ID, VITE_COGNITO_CLIENT_ID, and VITE_COGNITO_DOMAIN, then redeploy.";
 }
 
 async function cognitoRequest(target: string, body: Record<string, unknown>): Promise<CognitoResponse> {
@@ -224,6 +248,9 @@ function render(): void {
     return;
   }
 
+  const configError = configErrorMessage(state.config);
+  const submitDisabled = state.loading || Boolean(configError);
+
   overlayEl.innerHTML = `
     <div class="auth-modal__backdrop"></div>
     <div class="auth-modal__card" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
@@ -237,8 +264,9 @@ function render(): void {
       <form class="auth-modal__form" data-auth-action="submit">
         ${renderFields()}
         ${infoLine() ? `<div class="auth-modal__info">${infoLine()}</div>` : ""}
+        ${configError ? `<div class="auth-modal__error">${escapeHtml(configError)}</div>` : ""}
         ${state.error ? `<div class="auth-modal__error">${escapeHtml(state.error)}</div>` : ""}
-        <button class="auth-modal__primary" type="submit" ${state.loading ? "disabled" : ""}>
+        <button class="auth-modal__primary" type="submit" ${submitDisabled ? "disabled" : ""}>
           ${state.loading ? '<span class="auth-modal__spinner" aria-hidden="true"></span>' : ""}
           <span>${escapeHtml(actionLabel())}</span>
         </button>
@@ -434,6 +462,13 @@ async function resendConfirmationCode(): Promise<void> {
 }
 
 async function submit(): Promise<void> {
+  const configError = configErrorMessage(state.config);
+  if (configError) {
+    state = { ...state, loading: false, error: configError };
+    render();
+    return;
+  }
+
   state = { ...state, loading: true, error: "" };
   render();
 
