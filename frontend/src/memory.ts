@@ -1,13 +1,13 @@
 import type { Effect } from "./types";
-import { clamp, fmtBytes, hex32, hex8 } from "./format";
+import { fmtBytes, hex32, hex8 } from "./format";
 
-const MEM_SIZE = 64 * 1024;
-const WINDOW_BYTES = 128;
-const BYTES_PER_ROW = 16;
+const WINDOW_BYTES = 32;
+const BYTES_PER_ROW = 8;
 const MAX_RECENT_WRITES = 8;
 
 type MemoryView = {
   reset: () => void;
+  seedBytes: (start: number, bytes: Uint8Array) => void;
   applyEffects: (effects: Effect[]) => void;
   renderWindow: (anchor: number) => string;
   getRecentWrites: () => string[];
@@ -18,55 +18,113 @@ export function createMemoryView(): MemoryView {
   const memBytes = new Map<number, number>();
   let recentWrites: string[] = [];
   let lastMemAddr: number | undefined;
+  let currentWriteAddrs = new Set<number>();
+  let previousWriteAddrs = new Set<number>();
 
-  function formatWriteEffect(e: Effect): string {
-    const addr = e.addr ?? 0;
-    const size = e.size ?? e.afterBytes?.length ?? 0;
-    return `${hex32(addr)} (${size}b) ${fmtBytes(e.beforeBytes)} -> ${fmtBytes(e.afterBytes)}`;
+  function isMemEffect(effect: Effect): effect is Extract<Effect, { kind: "mem" }> {
+    return effect.kind === "mem";
+  }
+
+  function formatWriteEffects(effects: Extract<Effect, { kind: "mem" }>[]): string {
+    if (effects.length === 0) return "";
+
+    const sorted = [...effects].sort((a, b) => a.addr - b.addr);
+    const segments: Extract<Effect, { kind: "mem" }>[][] = [];
+    for (const effect of sorted) {
+      const current = segments[segments.length - 1];
+      if (!current || effect.addr !== current[current.length - 1].addr + 1) {
+        segments.push([effect]);
+      } else {
+        current.push(effect);
+      }
+    }
+
+    return segments
+      .map((segment) => {
+        const addr = segment[0].addr;
+        const beforeBytes = segment.map((effect) => effect.before);
+        const afterBytes = segment.map((effect) => effect.after);
+        return `mem[${hex32(addr)}] ${fmtBytes(beforeBytes)} → ${fmtBytes(afterBytes)}`;
+      })
+      .join(" · ");
   }
 
   function applyEffects(effects: Effect[]) {
-    for (const effect of effects) {
-      if (effect.kind !== "mem" || effect.addr === undefined || !effect.afterBytes) continue;
-      const base = effect.addr >>> 0;
-      effect.afterBytes.forEach((value, idx) => {
-        const addr = base + idx;
-        if (addr >= 0 && addr < MEM_SIZE) {
-          memBytes.set(addr, value & 0xff);
-        }
-      });
-      recentWrites.unshift(formatWriteEffect(effect));
+    const memEffects = effects.filter(isMemEffect);
+    previousWriteAddrs = currentWriteAddrs;
+    currentWriteAddrs = new Set<number>();
+
+    for (const effect of memEffects) {
+      const addr = effect.addr >>> 0;
+      memBytes.set(addr, effect.after & 0xff);
+      currentWriteAddrs.add(addr);
+    }
+
+    if (memEffects.length > 0) {
+      const sorted = [...memEffects].sort((a, b) => a.addr - b.addr);
+      recentWrites.unshift(formatWriteEffects(sorted));
       if (recentWrites.length > MAX_RECENT_WRITES) {
         recentWrites = recentWrites.slice(0, MAX_RECENT_WRITES);
       }
-      lastMemAddr = base;
+      lastMemAddr = sorted[0].addr >>> 0;
+    }
+  }
+
+  function seedBytes(start: number, bytes: Uint8Array) {
+    const base = start >>> 0;
+    for (let index = 0; index < bytes.length; index++) {
+      memBytes.set((base + index) >>> 0, bytes[index] & 0xff);
     }
   }
 
   function renderWindow(anchor: number): string {
-    const windowStart = clamp(anchor - Math.floor(WINDOW_BYTES / 4), 0, MEM_SIZE - WINDOW_BYTES);
-    const lines: string[] = [];
-    lines.push(`base ${hex32(windowStart)} (16 bytes/row)`);
-    for (let offset = 0; offset < WINDOW_BYTES; offset += BYTES_PER_ROW) {
-      const addr = windowStart + offset;
-      const bytes: string[] = [];
-      for (let i = 0; i < BYTES_PER_ROW; i++) {
-        const value = memBytes.get(addr + i) ?? 0;
-        bytes.push(hex8(value));
+    const normalizedAnchor = anchor >>> 0;
+    const windowStart = normalizedAnchor > WINDOW_BYTES / 2 ? normalizedAnchor - WINDOW_BYTES / 2 : 0;
+    const rows: string[] = [];
+
+    for (let rowOffset = 0; rowOffset < WINDOW_BYTES; rowOffset += BYTES_PER_ROW) {
+      const rowAddr = (windowStart + rowOffset) >>> 0;
+      const cells: string[] = [];
+      for (let column = 0; column < BYTES_PER_ROW; column++) {
+        const addr = (rowAddr + column) >>> 0;
+        const value = memBytes.get(addr);
+        const classes = ["memory-byte"];
+        const display = value === undefined ? "--" : hex8(value);
+        if (value === undefined) {
+          classes.push("memory-byte--empty");
+        }
+        if (currentWriteAddrs.has(addr)) {
+          classes.push("memory-byte--current");
+        } else if (previousWriteAddrs.has(addr)) {
+          classes.push("memory-byte--prev");
+        }
+        cells.push(
+          `<span class="${classes.join(" ")}" data-byte-addr="${addr}" title="${hex32(addr)} = ${value === undefined ? "uninitialized" : `0x${hex8(value)}`}">${display}</span>`
+        );
       }
-      lines.push(`${hex32(addr)}: ${bytes.join(" ")}`);
+
+      rows.push(`
+        <div class="memory-row">
+          <span class="memory-row__addr">${hex32(rowAddr)}</span>
+          <div class="memory-row__bytes">${cells.join("")}</div>
+        </div>
+      `);
     }
-    return lines.join("\n");
+
+    return rows.join("");
   }
 
   function reset() {
     memBytes.clear();
     recentWrites = [];
     lastMemAddr = undefined;
+    currentWriteAddrs = new Set<number>();
+    previousWriteAddrs = new Set<number>();
   }
 
   return {
     reset,
+    seedBytes,
     applyEffects,
     renderWindow,
     getRecentWrites: () => recentWrites,

@@ -1,17 +1,13 @@
-export type Effect = {
-  kind: string; // "reg" | "mem" | "pc"
-  reg?: number;
-  addr?: number;
-  size?: number;
-  before?: number;
-  after?: number;
-  beforeBytes?: number[];
-  afterBytes?: number[];
-};
+export type Effect =
+  | { kind: "reg"; reg: number; before: number; after: number }
+  | { kind: "mem"; addr: number; before: number; after: number }
+  | { kind: "pc"; before: number; after: number };
 
 export type Trap = {
-  code: string;
+  cause: string;
+  mode: string;
   message: string;
+  tval?: number | null;
 };
 
 export type DisasmLine = {
@@ -30,21 +26,11 @@ export type InstructionWire = {
   src_line?: number;
 };
 
-export type WasmEffectDelta =
-  | { kind: "reg"; reg: number; before: number; after: number }
-  | { kind: "pc"; before: number; after: number }
-  | { kind: "mem"; addr: number; size: number; before: number[]; after: number[] };
-
-export type WasmTrapDelta = {
-  code: string;
-  message: string;
-};
-
 export type WasmStateDelta = {
   pc: number;
   halted: boolean;
-  trap?: WasmTrapDelta | null;
-  effects: WasmEffectDelta[];
+  trap?: Trap | null;
+  effects: Effect[];
 };
 
 export type ApiResponse = {

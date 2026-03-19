@@ -1,345 +1,201 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RISC-V Simulator</title>
-    <meta name="description" content="Assemble, step, and inspect your RISC-V program with immediate visual feedback!" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <style>
-      :root {
-        --bg: #05060b;
-        --panel: rgba(20, 24, 33, 0.8);
-        --panel-border: rgba(255, 255, 255, 0.06);
-        --accent: #4af2c5;
-        --accent-2: #7ea7ff;
-        --text: #e8ecf3;
-        --muted: #9aa4b5;
-        --mono: "Geist Mono", "SFMono-Regular", "JetBrains Mono", "Fira Code", "Menlo", monospace;
-        --sans: "Geist", "Space Grotesk", "IBM Plex Sans", "Segoe UI Variable", system-ui, sans-serif;
-        --radius: 14px;
-        --shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
-      }
-
-      * { box-sizing: border-box; }
-
-      body {
-        margin: 0;
-        padding: 32px 16px 48px;
-        min-height: 100vh;
-        font-family: var(--sans);
-        color: var(--text);
-        background: radial-gradient(circle at 15% 20%, rgba(74, 242, 197, 0.08), transparent 25%),
-          radial-gradient(circle at 85% 10%, rgba(126, 167, 255, 0.08), transparent 20%),
-          radial-gradient(circle at 70% 80%, rgba(74, 242, 197, 0.04), transparent 20%),
-          var(--bg);
-      }
-
-      h1 {
-        letter-spacing: 0.02em;
-        font-weight: 600;
-        margin: 0 0 6px;
-      }
-
-      a {
-        text-decoration: none;
-        color: inherit;
-      }
-
-      a:hover {
-        color: var(--accent);  
-      }
-
-      .lede {
-        color: var(--muted);
-        margin: 0 0 24px;
-      }
-
-      .grid {
-        display: flex;
-        flex-direction: column;
-        align-items: start;
-        max-width: 1200px;
-        margin: 0 auto;
-      }
-
-      @media (min-width: 960px) {
-        .grid {
-          display: block;
-          column-count: 2;
-          column-gap: 16px;
+    <title>StudyRISC-V Simulator</title>
+    <meta
+      name="description"
+      content="Assemble, step, and inspect RISC-V programs in a local-first browser simulator."
+    />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore storage access failures and fall back to the default theme.
         }
-      }
-
-      .panel {
-        background: var(--panel);
-        border: 1px solid var(--panel-border);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        padding: 18px;
-        backdrop-filter: blur(6px);
-        margin-bottom: 16px;
-        break-inside: avoid;
-      }
-
-      .panel h2 {
-        margin-top: 0;
-        margin-bottom: 10px;
-        font-size: 18px;
-        font-weight: 600;
-      }
-
-      .panel h3 {
-        margin: 0 0 8px;
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--muted);
-        letter-spacing: 0.02em;
-        text-transform: uppercase;
-      }
-
-      textarea,
-      pre {
-        width: 100%;
-        border-radius: var(--radius);
-        border: 1px solid var(--panel-border);
-        background: rgba(255, 255, 255, 0.02);
-        color: var(--text);
-        font-family: var(--mono);
-        font-size: 14px;
-        padding: 14px;
-        line-height: 1.4;
-      }
-
-      textarea {
-        min-height: 160px;
-        resize: vertical;
-      }
-
-      pre {
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 12px;
-      }
-
-      details {
-        margin-top: 14px;
-      }
-
-      details summary {
-        cursor: pointer;
-        color: var(--muted);
-        font-weight: 600;
-        letter-spacing: 0.02em;
-        text-transform: uppercase;
-        font-size: 12px;
-      }
-
-      .reg-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 10px;
-        font-size: 12px;
-      }
-
-      .reg-table th,
-      .reg-table td {
-        border: 1px solid var(--panel-border);
-        padding: 8px 10px;
-        text-align: left;
-        vertical-align: top;
-      }
-
-      .reg-table th {
-        color: var(--muted);
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.02em;
-      }
-
-      button {
-        cursor: pointer;
-        padding: 10px 16px;
-        border: 1px solid var(--panel-border);
-        border-radius: 10px;
-        background: linear-gradient(135deg, rgba(74, 242, 197, 0.16), rgba(126, 167, 255, 0.2));
-        color: var(--text);
-        font-weight: 600;
-        letter-spacing: 0.01em;
-        transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-      }
-
-      button:hover {
-        transform: translateY(-1px);
-        border-color: rgba(74, 242, 197, 0.5);
-        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
-      }
-
-      button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-      }
-
-      .metrics {
-        display: grid;
-        gap: 12px;
-      }
-
-      .pc-line {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        margin-bottom: 10px;
-        color: var(--muted);
-        font-size: 13px;
-        letter-spacing: 0.02em;
-      }
-
-      .disasm-line {
-        display: block;
-        padding: 4px 8px;
-        border-radius: 8px;
-      }
-
-      .disasm-line.current {
-        background: rgba(255, 212, 77, 0.22);
-        border-left: 3px solid #ffd44d;
-        padding-left: 10px;
-      }
-
-      .disasm-line.prev {
-        background: rgba(255, 212, 77, 0.1);
-        border-left: 3px solid rgba(255, 212, 77, 0.5);
-        padding-left: 10px;
-      }
-
-      .disasm-line.label {
-        color: var(--accent);
-        padding-left: 6px;
-      }
-
-      .memory-grid {
-        display: grid;
-        gap: 12px;
-      }
-
-      @media (min-width: 700px) {
-        .memory-grid {
-          grid-template-columns: 1fr 1fr;
-        }
-      }
-
-      .panel--hero { order: 1; }
-      .panel--program { order: 2; }
-      .panel--regs { order: 3; }
-      .panel--effects { order: 4; }
-      .panel--memory { order: 5; }
-      .panel--clike { order: 6; }
-    </style>
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Inter:wght@400;500;700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css"
+    />
+    <link rel="stylesheet" href="./src/styles/tokens.css" />
+    <link rel="stylesheet" href="./src/styles/simulator.css" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
   </head>
-  <body>
-    <main class="grid">
-      <section class="panel panel--hero">
-        <a href="https://github.com/sseth30/riscvsim">
-          <h1>RISC-V Simulator</h1>
-        </a>
-        <p class="lede">Assemble, step, and inspect your RISC-V program with immediate visual feedback!</p>
-        <label for="sampleSelect" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Samples</label>
-        <select id="sampleSelect" style="width:100%;margin-bottom:10px;padding:10px;border-radius:10px;border:1px solid var(--panel-border);background:rgba(255,255,255,0.03);color:var(--text);font-family:var(--sans);">
-          <option value="arraySum">Array sum (sensor readings)</option>
-          <option value="stringLength">String length</option>
-          <option value="memoryCopy">Memory copy</option>
-          <option value="functionCall">Function call (jal/jalr)</option>
-          <option value="tempConvert">Temp conversion (mul/div)</option>
-          <option value="checksum">XOR checksum</option>
-          <option value="syscall">Syscall (ecall)</option>
-        </select>
-        <textarea id="source" placeholder="Paste RV32 assembly here..."></textarea>
-        <div class="actions">
-          <button id="assemble">Assemble</button>
-          <button id="step" disabled>Step</button>
-          <button id="stepBack" disabled>Step back</button>
-          <button id="run" disabled>Run</button>
+  <body class="simulator-page">
+    <div id="assembleProgress" class="assemble-progress" aria-hidden="true"></div>
+    <nav class="sim-nav" aria-label="Simulator navigation">
+      <div class="sim-nav__inner">
+        <a class="sim-brand" href="./landing.html">StudyRISC-V</a>
+        <div class="sim-nav__actions">
+          <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+          <button id="simThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+            <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path>
+              </svg>
+            </span>
+            <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
+              </svg>
+            </span>
+          </button>
         </div>
-        <details>
-          <summary>Register guide</summary>
-          <table class="reg-table">
-            <thead>
-              <tr>
-                <th>Register</th>
-                <th>Mnemonic</th>
-                <th>Use</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>x0</td><td>zero</td><td>Constant value 0</td></tr>
-              <tr><td>x1</td><td>ra</td><td>Return address</td></tr>
-              <tr><td>x2</td><td>sp</td><td>Stack pointer</td></tr>
-              <tr><td>x3</td><td>gp</td><td>Global pointer</td></tr>
-              <tr><td>x4</td><td>tp</td><td>Thread pointer</td></tr>
-              <tr><td>x5-x7</td><td>t0-t2</td><td>Temporaries</td></tr>
-              <tr><td>x8</td><td>s0/fp</td><td>Saved register/frame pointer</td></tr>
-              <tr><td>x9</td><td>s1</td><td>Saved register</td></tr>
-              <tr><td>x10-x11</td><td>a0-a1</td><td>Function args/return values</td></tr>
-              <tr><td>x12-x17</td><td>a2-a7</td><td>Function arguments</td></tr>
-              <tr><td>x18-x27</td><td>s2-s11</td><td>Saved registers</td></tr>
-              <tr><td>x28-x31</td><td>t3-t6</td><td>Temporaries</td></tr>
-            </tbody>
-          </table>
-        </details>
-      </section>
+      </div>
+    </nav>
 
-      <section class="panel panel--clike">
-        <h2>C-like explanation</h2>
-        <pre id="clike"></pre>
-        <div id="status" style="color:var(--muted);margin-top:8px;min-height:18px;"></div>
-      </section>
+    <main class="simulator-app">
+      <div class="simulator-layout">
+        <div class="sim-column sim-column--left">
+          <section class="sim-panel sim-panel--editor">
+            <div class="panel-header">
+              <span>Program Input</span>
+              <button
+                id="copySource"
+                class="panel-icon-button"
+                type="button"
+                aria-label="Copy assembly source"
+                title="Copy assembly source"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <rect x="9" y="9" width="10" height="10" rx="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="panel-body">
+              <label class="field-label" for="sampleSelect">Sample Program</label>
+              <select id="sampleSelect" class="sim-select">
+                <option value="arraySum">Array sum (sensor readings)</option>
+                <option value="stringLength">String length</option>
+                <option value="memoryCopy">Memory copy</option>
+                <option value="functionCall">Function call (jal/jalr)</option>
+                <option value="tempConvert">Temp conversion (mul/div)</option>
+                <option value="checksum">XOR checksum</option>
+                <option value="bubbleSortData">Bubble sort (data segment)</option>
+                <option value="stringCopyData">String copy (data + .asciz)</option>
+                <option value="syscall">Syscall (ecall)</option>
+              </select>
 
-      <section class="panel panel--effects">
-        <h2>Last step effects</h2>
-        <pre id="effects"></pre>
-      </section>
+              <div class="control-row control-row--editor">
+                <button id="assemble" class="sim-button sim-button--primary" type="button">Assemble</button>
+                <button id="step" class="sim-button sim-button--outline" type="button" disabled>Step</button>
+                <button id="stepBack" class="sim-button sim-button--outline" type="button" disabled>Step Back</button>
+                <button id="run" class="sim-button sim-button--outline" type="button" disabled>Run</button>
+                <button id="reset" class="sim-button sim-button--danger" type="button" disabled>Reset</button>
+              </div>
+              <p class="shortcut-hint">Enter: Assemble · ↓: Step · Shift+↓: Step Back · R: Run</p>
 
-      <section class="panel panel--regs">
-        <h2>Registers</h2>
-        <pre id="regs"></pre>
-      </section>
+              <label class="field-label" for="source">Assembly Source</label>
+              <div class="editor-shell">
+                <!-- main.ts line-number scroll sync targets #sourceLines and #source -->
+                <div id="sourceLines" class="source-lines" aria-hidden="true"></div>
+                <textarea
+                  id="source"
+                  class="sim-source"
+                  placeholder="Paste RV32 assembly here..."
+                  spellcheck="false"
+                ></textarea>
+              </div>
 
-      <section class="panel panel--program">
-        <h2>Program</h2>
-        <div class="pc-line">
-          <span>PC</span>
-          <span id="pc"></span>
+              <div id="status" class="status-line" aria-live="polite"></div>
+
+              <details class="reg-guide">
+                <summary>Register Guide</summary>
+                <table class="reg-guide__table">
+                  <thead>
+                    <tr>
+                      <th>Register</th>
+                      <th>Mnemonic</th>
+                      <th>Use</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>x0</td><td>zero</td><td>Constant value 0</td></tr>
+                    <tr><td>x1</td><td>ra</td><td>Return address</td></tr>
+                    <tr><td>x2</td><td>sp</td><td>Stack pointer</td></tr>
+                    <tr><td>x3</td><td>gp</td><td>Global pointer</td></tr>
+                    <tr><td>x4</td><td>tp</td><td>Thread pointer</td></tr>
+                    <tr><td>x5-x7</td><td>t0-t2</td><td>Temporaries</td></tr>
+                    <tr><td>x8</td><td>s0/fp</td><td>Saved register / frame pointer</td></tr>
+                    <tr><td>x9</td><td>s1</td><td>Saved register</td></tr>
+                    <tr><td>x10-x11</td><td>a0-a1</td><td>Function args / return values</td></tr>
+                    <tr><td>x12-x17</td><td>a2-a7</td><td>Function arguments</td></tr>
+                    <tr><td>x18-x27</td><td>s2-s11</td><td>Saved registers</td></tr>
+                    <tr><td>x28-x31</td><td>t3-t6</td><td>Temporaries</td></tr>
+                  </tbody>
+                </table>
+              </details>
+            </div>
+          </section>
         </div>
-        <pre id="disasm"></pre>
-      </section>
 
-      <section class="panel panel--memory">
-        <h2>Memory</h2>
-        <div class="memory-grid">
-          <div>
-            <h3>Recent writes</h3>
-            <pre id="memWrites"></pre>
-          </div>
-          <div>
-            <h3>RAM window</h3>
-            <pre id="memWindow"></pre>
-          </div>
+        <div class="sim-column sim-column--center">
+          <section class="sim-panel sim-panel--disasm">
+            <div class="panel-header">
+              <span>Disassembly</span>
+              <span id="pc" class="pc-pill"></span>
+            </div>
+            <div class="panel-body panel-body--compact">
+              <div id="disasm" class="disasm-view" aria-live="polite"></div>
+              <div id="clikeCard" class="clike-card">
+                <div class="clike-label">Pseudo-C</div>
+                <div id="clike" class="clike-view"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="sim-panel sim-panel--effects">
+            <div class="panel-header">Effect Log</div>
+            <div class="panel-body">
+              <div id="effects" class="effects-view" aria-live="polite"></div>
+            </div>
+          </section>
         </div>
-      </section>
+
+        <div class="sim-column sim-column--right">
+          <section class="sim-panel sim-panel--regs">
+            <div class="panel-header">Register File</div>
+            <div class="panel-body">
+              <div id="regs" class="regs-view"></div>
+            </div>
+          </section>
+
+          <section class="sim-panel sim-panel--memory">
+            <div class="panel-header">Memory</div>
+            <div class="panel-body">
+              <div class="memory-stack">
+                <div class="memory-section">
+                  <span class="memory-section__label">Recent Writes</span>
+                  <div id="memWrites" class="memory-writes"></div>
+                </div>
+                <div class="memory-section">
+                  <span class="memory-section__label">Window</span>
+                  <div id="memWindow" class="memory-window"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
     </main>
 
-    <script type="module" src="/src/main.ts"></script>
+    <div id="copyToast" class="copy-toast" role="status" aria-live="polite">Copied!</div>
+    <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

@@ -1,57 +1,37 @@
 import { parseAssembly } from "./asm";
+import { animateStep, resetAnimator, setAnimationsEnabled } from "./animator";
 import { renderDisasm } from "./disasm";
-import { fmtEffect, hex32, renderRegs } from "./format";
+import {
+  escapeHtml,
+  formatClikeExpression,
+  fmtTrap,
+  hex8,
+  hex32,
+  renderClikeExpression,
+  renderRegs,
+} from "./format";
+import { DATA_BASE } from "./memory-map";
 import { createMemoryView } from "./memory";
-import type { ApiResponse, Effect, Trap, WasmEffectDelta, WasmStateDelta } from "./types";
+import type { ApiResponse, Effect, WasmStateDelta } from "./types";
 import { WasmRuntime } from "./wasm-runtime";
 
 let sessionId: string | undefined;
 
-const RUN_DELAY_MS = 80;
 const MAX_RUN_STEPS = 2000;
 const LOCAL_SIM_SESSION = "local-wasm";
-
-function mapWasmEffects(effects: WasmEffectDelta[]): Effect[] {
-  return effects.map((e) => {
-    if (e.kind === "reg") {
-      return {
-        kind: "reg",
-        reg: e.reg,
-        before: e.before,
-        after: e.after,
-      };
-    }
-    if (e.kind === "pc") {
-      return {
-        kind: "pc",
-        before: e.before,
-        after: e.after,
-      };
-    }
-    return {
-      kind: "mem",
-      addr: e.addr,
-      size: e.size,
-      beforeBytes: e.before,
-      afterBytes: e.after,
-    };
-  });
-}
-
-function mapTrap(delta?: WasmStateDelta): Trap | null {
-  if (!delta?.trap) return null;
-  return {
-    code: delta.trap.code,
-    message: delta.trap.message,
-  };
-}
+const THEME_KEY = "studyriscv-theme";
 
 window.addEventListener("DOMContentLoaded", () => {
+  const assembleProgressEl = document.getElementById("assembleProgress") as HTMLElement | null;
   const assembleBtn = document.getElementById("assemble") as HTMLButtonElement;
   const stepBtn = document.getElementById("step") as HTMLButtonElement;
   const stepBackBtn = document.getElementById("stepBack") as HTMLButtonElement;
   const runBtn = document.getElementById("run") as HTMLButtonElement;
+  const resetBtn = document.getElementById("reset") as HTMLButtonElement;
+  const copySourceBtn = document.getElementById("copySource") as HTMLButtonElement | null;
+  const copyToastEl = document.getElementById("copyToast") as HTMLElement | null;
   const sourceEl = document.getElementById("source") as HTMLTextAreaElement;
+  const sourceLinesEl = document.getElementById("sourceLines") as HTMLElement | null;
 
   const clikeEl = document.getElementById("clike") as HTMLElement;
   const effectsEl = document.getElementById("effects") as HTMLElement;
@@ -62,31 +42,142 @@ window.addEventListener("DOMContentLoaded", () => {
   const memWindowEl = document.getElementById("memWindow") as HTMLElement;
   const statusEl = document.getElementById("status") as HTMLElement;
   const sampleSelect = document.getElementById("sampleSelect") as HTMLSelectElement;
+  const themeToggle = document.getElementById("simThemeToggle") as HTMLButtonElement | null;
 
   const memoryView = createMemoryView();
   let lastPc: number | undefined;
-  let runTimer: number | null = null;
   let assembleTimer: number | null = null;
-  let runSteps = 0;
   let history: ApiResponse[] = [];
   let historyIndex = -1;
   let disasmLines: ApiResponse["disasm"] = [];
-  let clikeProgram = "";
+  let clikeByPc = new Map<number, string>();
+  let disasmEncodings = new Map<number, string>();
   let runtime: WasmRuntime | null = null;
+  let copyToastTimer: number | null = null;
+  let assembleProgressStartedAt = 0;
+  let assembleProgressResetTimer: number | null = null;
+  let programDataBytes = new Uint8Array();
+  let defaultMemoryAnchor = 0;
+  const sampleOptionLabels = new Map<string, string>(
+    Array.from(sampleSelect.options).map((option) => [option.value, option.textContent ?? option.value])
+  );
+
+  function applyThemeIcon() {
+    if (!themeToggle) return;
+    const isDark = document.documentElement.dataset.theme === "dark";
+    themeToggle.setAttribute("aria-pressed", String(isDark));
+    themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+  }
+
+  function updateSourceLineNumbers() {
+    if (!sourceLinesEl) return;
+    const lineCount = Math.max(1, sourceEl.value.split(/\r?\n/).length);
+    sourceLinesEl.innerHTML = Array.from({ length: lineCount }, (_, index) => {
+      return `<span class="source-line-number">${index + 1}</span>`;
+    }).join("");
+    sourceLinesEl.style.transform = `translateY(${-sourceEl.scrollTop}px)`;
+  }
+
+  function syncSampleOptionLabels(selectedName: string) {
+    for (const option of Array.from(sampleSelect.options)) {
+      const baseLabel = sampleOptionLabels.get(option.value) ?? option.value;
+      option.textContent = option.value === selectedName ? `✓ ${baseLabel}` : baseLabel;
+    }
+  }
+
+  function startAssembleProgress() {
+    if (!assembleProgressEl) return;
+    if (assembleProgressResetTimer !== null) {
+      window.clearTimeout(assembleProgressResetTimer);
+      assembleProgressResetTimer = null;
+    }
+    assembleProgressStartedAt = performance.now();
+    assembleProgressEl.classList.remove("assembling");
+    void assembleProgressEl.offsetWidth;
+    assembleProgressEl.classList.add("assembling");
+  }
+
+  function stopAssembleProgress() {
+    if (!assembleProgressEl) return;
+    const elapsed = performance.now() - assembleProgressStartedAt;
+    const remaining = Math.max(0, 400 - elapsed);
+    assembleProgressResetTimer = window.setTimeout(() => {
+      assembleProgressEl.classList.remove("assembling");
+      assembleProgressResetTimer = null;
+    }, remaining);
+  }
+
+  function showCopyToast() {
+    if (!copyToastEl) return;
+    if (copyToastTimer !== null) {
+      window.clearTimeout(copyToastTimer);
+    }
+    copyToastEl.classList.remove("is-visible");
+    void copyToastEl.offsetWidth;
+    copyToastEl.classList.add("is-visible");
+    copyToastTimer = window.setTimeout(() => {
+      copyToastEl.classList.remove("is-visible");
+      copyToastTimer = null;
+    }, 1650);
+  }
+
+  async function copySourceToClipboard() {
+    const text = sourceEl.value;
+    if (!text.trim()) {
+      return;
+    }
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        sourceEl.select();
+        document.execCommand("copy");
+        sourceEl.setSelectionRange(sourceEl.value.length, sourceEl.value.length);
+      }
+      showCopyToast();
+    } catch {
+      setPanelMessage(effectsEl, "Copy failed. Your browser blocked clipboard access.", "danger");
+    }
+  }
+
+  function effectEmptyState(): string {
+    return `
+      <div class="effect-empty">
+        <div class="effect-empty__example">x5  0x00000000 → 0x0000000C</div>
+        <div class="empty-state empty-state--note"><em>Effects will appear here as you step.</em></div>
+      </div>
+    `;
+  }
+
+  function setPanelMessage(element: HTMLElement, message: string, variant: "default" | "danger" = "default") {
+    const classes = ["empty-state"];
+    if (variant === "danger") {
+      classes.push("empty-state--danger");
+    }
+    element.innerHTML = `<div class="${classes.join(" ")}">${escapeHtml(message)}</div>`;
+  }
 
   function resetMemoryView() {
     memoryView.reset();
+    if (programDataBytes.length > 0) {
+      memoryView.seedBytes(DATA_BASE, programDataBytes);
+    }
     lastPc = undefined;
-    memWritesEl.textContent = "";
-    memWindowEl.textContent = "";
+    setPanelMessage(memWritesEl, "No memory writes yet.");
+    memWindowEl.innerHTML = memoryView.renderWindow(defaultMemoryAnchor);
+  }
+
+  function clearPanels() {
+    clikeEl.innerHTML = renderClikeExpression(null);
+    effectsEl.innerHTML = effectEmptyState();
+    regsEl.innerHTML = renderRegs();
+    pcEl.textContent = "";
+    disasmEl.innerHTML = renderDisasm(undefined, undefined, []);
+    resetMemoryView();
+    resetAnimator();
   }
 
   function stopRun(message?: string) {
-    if (runTimer !== null) {
-      window.clearInterval(runTimer);
-      runTimer = null;
-    }
-    runSteps = 0;
     runBtn.textContent = "Run";
     if (message) {
       statusEl.textContent = message;
@@ -107,6 +198,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const hasSession = Boolean(sessionId);
     const atHistoryEnd = historyIndex >= history.length - 1;
     stepBackBtn.disabled = !hasSession || historyIndex <= 0;
+    resetBtn.disabled = !hasSession;
     if (!hasSession) {
       stepBtn.disabled = true;
       runBtn.disabled = true;
@@ -127,16 +219,14 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateLastPc(effects: Effect[]) {
-    const pcEffect = effects.find((effect) => effect.kind === "pc" && effect.before !== undefined);
+    const pcEffect = effects.find((effect) => effect.kind === "pc");
     if (pcEffect) {
       lastPc = pcEffect.before;
     }
   }
 
   function isPcStalled(effects: Effect[]): boolean {
-    const pcEffect = effects.find(
-      (effect) => effect.kind === "pc" && effect.before !== undefined && effect.after !== undefined
-    );
+    const pcEffect = effects.find((effect) => effect.kind === "pc");
     return pcEffect ? pcEffect.before === pcEffect.after : false;
   }
 
@@ -208,58 +298,148 @@ window.addEventListener("DOMContentLoaded", () => {
     return normalized;
   }
 
-  function buildClikeProgram(disasm: ApiResponse["disasm"]): string {
-    if (!disasm || disasm.length === 0) {
-      return "";
+  function buildClikeMap(disasm: ApiResponse["disasm"]): Map<number, string> {
+    const map = new Map<number, string>();
+    for (const line of disasm ?? []) {
+      if (!line.label) {
+        map.set(line.pc, translateRiscvToClike(line.text));
+      }
     }
-    return disasm
-      .filter((line) => !line.label)
-      .map((line) => translateRiscvToClike(line.text))
-      .join("\n");
+    return map;
+  }
+
+  function currentClikeForPc(pc: number | undefined): string {
+    if (pc !== undefined && clikeByPc.has(pc)) {
+      return clikeByPc.get(pc) ?? "";
+    }
+    const first = clikeByPc.values().next();
+    return first.done ? "" : first.value;
+  }
+
+  function buildDisasmEncodings(lines: ApiResponse["disasm"]): Map<number, string> {
+    const encodings = new Map<number, string>();
+    if (!runtime) return encodings;
+
+    for (const line of lines ?? []) {
+      if (line.label) continue;
+      const bytes = runtime.memorySlice(line.pc, 4);
+      if (bytes.length !== 4) continue;
+      const word = new DataView(bytes.buffer, bytes.byteOffset, 4).getUint32(0, true);
+      encodings.set(line.pc, word.toString(16).padStart(8, "0"));
+    }
+
+    return encodings;
   }
 
   function buildSnapshot(delta?: WasmStateDelta): ApiResponse {
     if (!runtime) {
       throw new Error("WASM simulator not initialized.");
     }
-    const effects = delta ? mapWasmEffects(delta.effects) : [];
-    const trap = mapTrap(delta);
-    const response: ApiResponse = {
+    const pc = delta?.pc ?? runtime.pc();
+    return {
       sessionId: LOCAL_SIM_SESSION,
-      pc: runtime.pc(),
+      pc,
       regs: runtime.readRegisters(),
       halted: delta?.halted ?? false,
-      effects,
-      trap,
-      clike: clikeProgram,
+      effects: delta?.effects ?? [],
+      trap: delta?.trap ?? null,
+      clike: currentClikeForPc(pc),
       rv2c: "",
       disasm: disasmLines,
     };
-    return response;
+  }
+
+  function collectChangedRegs(effects: Effect[]): Set<number> {
+    const registers = new Set<number>();
+    for (const effect of effects) {
+      if (effect.kind === "reg") {
+        registers.add(effect.reg);
+      }
+    }
+    return registers;
+  }
+
+  function effectEntryClasses(baseClass: string, isLatest: boolean): string {
+    return isLatest ? `${baseClass} effect-entry--latest` : baseClass;
+  }
+
+  function renderEffectEntry(effect: Effect, isLatest: boolean): string {
+    switch (effect.kind) {
+      case "reg":
+        return `
+          <div class="${effectEntryClasses("effect-entry effect-entry--reg", isLatest)}">
+            <span class="effect-entry__label">x${effect.reg}</span>
+            <span class="effect-entry__before">${hex32(effect.before)}</span>
+            <span class="effect-entry__arrow">→</span>
+            <span class="effect-entry__after">${hex32(effect.after)}</span>
+          </div>
+        `;
+      case "mem":
+        return `
+          <div class="${effectEntryClasses("effect-entry effect-entry--mem", isLatest)}">
+            <span class="effect-entry__label effect-entry__label--mem">${hex32(effect.addr)}</span>
+            <span class="effect-entry__before">0x${hex8(effect.before)}</span>
+            <span class="effect-entry__arrow">→</span>
+            <span class="effect-entry__after">0x${hex8(effect.after)}</span>
+          </div>
+        `;
+      case "pc":
+        return `
+          <div class="${effectEntryClasses("effect-entry effect-entry--pc", isLatest)}">
+            <span class="effect-entry__label">PC</span>
+            <span class="effect-entry__before">${hex32(effect.before)}</span>
+            <span class="effect-entry__arrow">→</span>
+            <span class="effect-entry__after">${hex32(effect.after)}</span>
+          </div>
+        `;
+    }
+  }
+
+  function buildEffectLog(): string {
+    const entries: string[] = [];
+    let newestEntry = true;
+
+    for (let index = historyIndex; index >= 0 && entries.length < 32; index--) {
+      const snapshot = history[index];
+      if (snapshot.trap) {
+        entries.push(
+          `<div class="${effectEntryClasses("effect-entry effect-entry--trap", newestEntry)}"><span class="effect-entry__trap">${escapeHtml(fmtTrap(snapshot.trap))}</span></div>`
+        );
+        newestEntry = false;
+      }
+      const effects = [...(snapshot.effects ?? [])].reverse();
+      for (const effect of effects) {
+        if (entries.length >= 32) break;
+        entries.push(renderEffectEntry(effect, newestEntry));
+        newestEntry = false;
+      }
+    }
+
+    return entries.length > 0 ? entries.join("") : effectEmptyState();
   }
 
   function renderAll(data: ApiResponse) {
-    statusEl.textContent = "";
-    clikeEl.textContent =
-      data.clike && data.clike.trim().length > 0 ? data.clike : data.rv2c ?? "";
-
     const effects = data.effects ?? [];
     memoryView.applyEffects(effects);
     updateLastPc(effects);
 
-    if (data.trap) {
-      effectsEl.textContent = `TRAP ${data.trap.code}: ${data.trap.message}`;
-    } else {
-      effectsEl.textContent = effects.length ? effects.map(fmtEffect).join("\n") : "(no effects)";
-    }
-
-    regsEl.textContent = renderRegs(data.regs);
+    const previousEffects = historyIndex > 0 ? history[historyIndex - 1].effects ?? [] : [];
+    const clikeExpression = data.clike && data.clike.trim().length > 0 ? data.clike : data.rv2c ?? "";
+    clikeEl.innerHTML = renderClikeExpression(formatClikeExpression(clikeExpression));
+    effectsEl.innerHTML = buildEffectLog();
+    regsEl.innerHTML = renderRegs(data.regs, collectChangedRegs(effects), collectChangedRegs(previousEffects));
     pcEl.textContent = data.pc !== undefined ? hex32(data.pc) : "";
-    disasmEl.innerHTML = renderDisasm(data.pc, lastPc, data.disasm);
+    disasmEl.innerHTML = renderDisasm(data.pc, lastPc, data.disasm, disasmEncodings);
+
     const recentWrites = memoryView.getRecentWrites();
-    memWritesEl.textContent = recentWrites.length ? recentWrites.join("\n") : "(no writes yet)";
-    const anchor = memoryView.getLastAddr() ?? data.regs?.[2] ?? 0;
-    memWindowEl.textContent = memoryView.renderWindow(anchor);
+    memWritesEl.innerHTML = recentWrites.length
+      ? recentWrites
+          .map((write) => `<div class="memory-write-item">${escapeHtml(write)}</div>`)
+          .join("")
+      : '<div class="empty-state">No memory writes yet.</div>';
+
+    const anchor = memoryView.getLastAddr() ?? defaultMemoryAnchor;
+    memWindowEl.innerHTML = memoryView.renderWindow(anchor);
 
     const halted = data.halted === true;
     const stalled = isPcStalled(effects);
@@ -283,6 +463,116 @@ window.addEventListener("DOMContentLoaded", () => {
       memoryView.applyEffects(history[i].effects ?? []);
     }
     renderAll(history[index]);
+  }
+
+  async function assembleCurrentSource(showSpinner: boolean, successMessage: string) {
+    if (!runtime) {
+      setPanelMessage(effectsEl, "WASM module not initialized yet.", "danger");
+      return;
+    }
+
+    stopAssembleSpinner();
+    if (showSpinner) {
+      startAssembleProgress();
+    }
+    if (showSpinner) {
+      const assembleMessages = [
+        "Taking a calculated RISC",
+        "Reducing complexity, one instruction at a time",
+        "Keeping it RISC-y, not complicated",
+        "Minimal instructions, maximum intent",
+        "Less is more. That's the RISC",
+        "Cutting the fat from your instruction set",
+        "Decoding instructions, no shortcuts",
+        "Fetching, decoding, executing. Repeat",
+        "One pipeline stage at a time",
+        "No microcode magic here",
+        "Straight to the silicon mindset",
+        "Designed simple, running fast",
+        "Open instructions, open future",
+        "No licensing drama detected",
+        "Freedom at the ISA level",
+        "Vendor-neutral, opinionated execution",
+        "Instruction set kept intentionally small",
+        "Architected to be understood",
+        "Aligning registers",
+        "Stalling pipeline (just kidding)",
+        "Branch prediction feeling confident today",
+        "Cache miss avoided. Hopefully",
+        "All zeros, no undefined behavior",
+        "Executing exactly what you wrote",
+        "This is a RISC worth taking",
+        "Complexity declined. Simplicity accepted",
+        "Built to teach, not to confuse",
+        "You control the ISA here",
+        "Understanding hardware, not memorizing it",
+      ];
+      const baseMessage = assembleMessages[Math.floor(Math.random() * assembleMessages.length)].replace(
+        /[.]+$/g,
+        ""
+      );
+      let dots = 1;
+      const renderAssembleStatus = () => {
+        statusEl.textContent = `${baseMessage}${".".repeat(dots)}`;
+        dots = dots === 3 ? 1 : dots + 1;
+      };
+      renderAssembleStatus();
+      assembleTimer = window.setInterval(renderAssembleStatus, 500);
+    } else {
+      statusEl.textContent = "Resetting program…";
+    }
+
+    stepBtn.disabled = true;
+    stepBtn.textContent = "Step";
+    runBtn.disabled = true;
+    stopRun();
+
+    try {
+      const parsed = parseAssembly(sourceEl.value);
+      disasmLines = parsed.disasm;
+      clikeByPc = buildClikeMap(disasmLines);
+      programDataBytes = parsed.data instanceof Uint8Array ? Uint8Array.from(parsed.data) : new Uint8Array();
+      defaultMemoryAnchor = programDataBytes.length > 0 ? DATA_BASE : 0;
+      runtime.loadProgram(parsed.instructions);
+      runtime.reset();
+      disasmEncodings = buildDisasmEncodings(disasmLines);
+
+      sessionId = LOCAL_SIM_SESSION;
+      resetMemoryView();
+      const initial = buildSnapshot();
+      setHistory(initial);
+      renderAll(initial);
+      setAnimationsEnabled(true);
+      resetAnimator();
+      stepBtn.disabled = !sessionId;
+      runBtn.disabled = !sessionId;
+      resetBtn.disabled = !sessionId;
+      statusEl.textContent = successMessage;
+    } catch (err) {
+      const message = (err as Error).message;
+      setPanelMessage(effectsEl, `Error: ${message}`, "danger");
+      sessionId = undefined;
+      disasmLines = [];
+      clikeByPc = new Map<number, string>();
+      disasmEncodings = new Map<number, string>();
+      programDataBytes = new Uint8Array();
+      defaultMemoryAnchor = 0;
+      history = [];
+      historyIndex = -1;
+      runBtn.disabled = true;
+      resetBtn.disabled = true;
+      stepBackBtn.disabled = true;
+      statusEl.textContent = "";
+      pcEl.textContent = "";
+      disasmEl.innerHTML = renderDisasm(undefined, undefined, []);
+      clikeEl.innerHTML = renderClikeExpression(null);
+      resetAnimator();
+    } finally {
+      stopAssembleSpinner();
+      if (showSpinner) {
+        stopAssembleProgress();
+      }
+    }
   }
 
   const samplePrograms: Record<string, string> = {
@@ -403,6 +693,57 @@ window.addEventListener("DOMContentLoaded", () => {
       "done:",
       "beq x0, x0, done",
     ].join("\n"),
+    bubbleSortData: [
+      "# Sample: bubble sort over a .data array",
+      "# Watch the data segment in the memory panel as adjacent words swap into order.",
+      ".data",
+      "arr:",
+      "  .word 5, 2, 8, 1, 4",
+      ".text",
+      "la   x1, arr",
+      "addi x2, x0, 4        # outer passes",
+      "outer:",
+      "beq  x2, x0, done",
+      "addi x3, x0, 0        # i",
+      "inner:",
+      "beq  x3, x2, next_pass",
+      "slli x4, x3, 2",
+      "add  x5, x1, x4",
+      "lw   x6, 0(x5)",
+      "lw   x7, 4(x5)",
+      "bge  x7, x6, no_swap",
+      "sw   x7, 0(x5)",
+      "sw   x6, 4(x5)",
+      "no_swap:",
+      "addi x3, x3, 1",
+      "beq  x0, x0, inner",
+      "next_pass:",
+      "addi x2, x2, -1",
+      "beq  x0, x0, outer",
+      "done:",
+      "ecall",
+    ].join("\n"),
+    stringCopyData: [
+      "# Sample: copy a null-terminated .data string into a destination buffer",
+      "# Watch bytes appear in the destination buffer in the memory panel.",
+      ".data",
+      "src:",
+      '  .asciz "Hello, RISC-V!"',
+      "dst:",
+      "  .space 32",
+      ".text",
+      "la   x1, src",
+      "la   x2, dst",
+      "copy_loop:",
+      "lb   x3, 0(x1)",
+      "sb   x3, 0(x2)",
+      "beq  x3, x0, done",
+      "addi x1, x1, 1",
+      "addi x2, x2, 1",
+      "beq  x0, x0, copy_loop",
+      "done:",
+      "ecall",
+    ].join("\n"),
     syscall: [
       "# Sample: ecall with ID in a7 (a0-a6 are args)",
       "addi a0, x0, 42",
@@ -413,56 +754,26 @@ window.addEventListener("DOMContentLoaded", () => {
     ].join("\n"),
   };
 
-  const assembleMessages = [
-    "Taking a calculated RISC",
-    "Reducing complexity, one instruction at a time",
-    "Keeping it RISC-y, not complicated",
-    "Minimal instructions, maximum intent",
-    "Less is more. That's the RISC",
-    "Cutting the fat from your instruction set",
-    "Decoding instructions, no shortcuts",
-    "Fetching, decoding, executing. Repeat",
-    "One pipeline stage at a time",
-    "No microcode magic here",
-    "Straight to the silicon mindset",
-    "Designed simple, running fast",
-    "Open instructions, open future",
-    "No licensing drama detected",
-    "Freedom at the ISA level",
-    "Vendor-neutral, opinionated execution",
-    "Instruction set kept intentionally small",
-    "Architected to be understood",
-    "Aligning registers",
-    "Stalling pipeline (just kidding)",
-    "Branch prediction feeling confident today",
-    "Cache miss avoided. Hopefully",
-    "All zeros, no undefined behavior",
-    "Executing exactly what you wrote",
-    "This is a RISC worth taking",
-    "Complexity declined. Simplicity accepted",
-    "Built to teach, not to confuse",
-    "You control the ISA here",
-    "Understanding hardware, not memorizing it",
-  ];
-
   function loadSample(name: string) {
-    const program = samplePrograms[name] ?? "";
-    sourceEl.value = program;
-    effectsEl.textContent = "";
-    clikeEl.textContent = "";
-    regsEl.textContent = "";
-    pcEl.textContent = "";
-    disasmEl.textContent = "";
-    resetMemoryView();
-    statusEl.textContent = "";
+    syncSampleOptionLabels(name);
+    sourceEl.value = samplePrograms[name] ?? "";
+    programDataBytes = new Uint8Array();
+    defaultMemoryAnchor = 0;
+    updateSourceLineNumbers();
+    clearPanels();
     sessionId = undefined;
     disasmLines = [];
-    clikeProgram = "";
+    clikeByPc = new Map<number, string>();
+    disasmEncodings = new Map<number, string>();
     history = [];
     historyIndex = -1;
     stopRun();
     stopAssembleSpinner();
+    setAnimationsEnabled(true);
+    resetAnimator();
+    statusEl.textContent = runtime ? "" : "Initializing Rust/WASM simulator…";
     assembleBtn.disabled = runtime === null;
+    resetBtn.disabled = true;
     stepBtn.disabled = true;
     stepBtn.textContent = "Step";
     runBtn.disabled = true;
@@ -470,11 +781,30 @@ window.addEventListener("DOMContentLoaded", () => {
     sourceEl.focus();
   }
 
+  themeToggle?.addEventListener("click", () => {
+    const isDark = document.documentElement.dataset.theme === "dark";
+    if (isDark) {
+      document.documentElement.removeAttribute("data-theme");
+      window.localStorage.setItem(THEME_KEY, "light");
+    } else {
+      document.documentElement.dataset.theme = "dark";
+      window.localStorage.setItem(THEME_KEY, "dark");
+    }
+    applyThemeIcon();
+  });
+  applyThemeIcon();
+
+  sourceEl.addEventListener("input", updateSourceLineNumbers);
+  sourceEl.addEventListener("scroll", updateSourceLineNumbers);
+
   sampleSelect.onchange = () => {
     loadSample(sampleSelect.value || "arraySum");
   };
 
-  // Load default sample on first render
+  copySourceBtn?.addEventListener("click", () => {
+    void copySourceToClipboard();
+  });
+
   loadSample(sampleSelect.value || "arraySum");
 
   statusEl.textContent = "Initializing Rust/WASM simulator…";
@@ -492,56 +822,11 @@ window.addEventListener("DOMContentLoaded", () => {
     });
 
   assembleBtn.onclick = async () => {
-    if (!runtime) {
-      effectsEl.textContent = "Error: WASM module not initialized yet.";
-      return;
-    }
+    await assembleCurrentSource(true, "Program assembled. Ready to step.");
+  };
 
-    stopAssembleSpinner();
-    const baseMessage = assembleMessages[Math.floor(Math.random() * assembleMessages.length)].replace(
-      /[.]+$/g,
-      ""
-    );
-    let dots = 1;
-    const renderAssembleStatus = () => {
-      statusEl.textContent = `${baseMessage}${".".repeat(dots)}`;
-      dots = dots === 3 ? 1 : dots + 1;
-    };
-    renderAssembleStatus();
-    assembleTimer = window.setInterval(renderAssembleStatus, 500);
-
-    stepBtn.disabled = true;
-    stepBtn.textContent = "Step";
-    runBtn.disabled = true;
-    stopRun();
-
-    try {
-      const parsed = parseAssembly(sourceEl.value);
-      disasmLines = parsed.disasm;
-      clikeProgram = buildClikeProgram(disasmLines);
-      runtime.loadProgram(parsed.instructions);
-      runtime.reset();
-
-      sessionId = LOCAL_SIM_SESSION;
-      resetMemoryView();
-      const initial = buildSnapshot();
-      setHistory(initial);
-      renderAll(initial);
-      stepBtn.disabled = !sessionId;
-      runBtn.disabled = !sessionId;
-    } catch (err) {
-      effectsEl.textContent = `Error: ${(err as Error).message}`;
-      sessionId = undefined;
-      disasmLines = [];
-      clikeProgram = "";
-      history = [];
-      historyIndex = -1;
-      statusEl.textContent = "";
-      runBtn.disabled = true;
-      stepBackBtn.disabled = true;
-    } finally {
-      stopAssembleSpinner();
-    }
+  resetBtn.onclick = async () => {
+    await assembleCurrentSource(false, "Program reset.");
   };
 
   stepBackBtn.onclick = () => {
@@ -551,21 +836,24 @@ window.addEventListener("DOMContentLoaded", () => {
     stopRun();
     historyIndex -= 1;
     renderFromHistory(historyIndex);
+    resetAnimator();
+    statusEl.textContent = "Viewing previous state.";
   };
 
   stepBtn.onclick = async () => {
     if (!runtime) {
-      effectsEl.textContent = "Error: WASM module not initialized yet.";
+      setPanelMessage(effectsEl, "WASM module not initialized yet.", "danger");
       return;
     }
     if (!sessionId) {
-      effectsEl.textContent = "Error: no local session. Click Assemble first.";
+      setPanelMessage(effectsEl, "No local session. Click Assemble first.", "danger");
       return;
     }
 
     if (historyIndex < history.length - 1) {
       historyIndex += 1;
       renderFromHistory(historyIndex);
+      statusEl.textContent = "Viewing recorded state.";
       return;
     }
 
@@ -574,73 +862,146 @@ window.addEventListener("DOMContentLoaded", () => {
       const data = buildSnapshot(delta);
       pushHistory(data);
       renderAll(data);
+      animateStep(delta);
+      if (!data.halted && !data.trap) {
+        statusEl.textContent = "Step completed.";
+      }
     } catch (err) {
-      effectsEl.textContent = `Error: ${(err as Error).message}`;
+      setPanelMessage(effectsEl, `Error: ${(err as Error).message}`, "danger");
     }
   };
 
   runBtn.onclick = async () => {
     if (!runtime) {
-      effectsEl.textContent = "Error: WASM module not initialized yet.";
+      setPanelMessage(effectsEl, "WASM module not initialized yet.", "danger");
       return;
     }
     const activeRuntime = runtime;
     if (!sessionId) {
-      effectsEl.textContent = "Error: no local session. Click Assemble first.";
+      setPanelMessage(effectsEl, "No local session. Click Assemble first.", "danger");
       return;
     }
     if (historyIndex < history.length - 1) {
-      effectsEl.textContent = "Error: step forward to the latest state before running.";
+      setPanelMessage(effectsEl, "Step forward to the latest state before running.", "danger");
       return;
     }
 
-    if (runTimer !== null) {
-      stopRun("Run stopped.");
+    assembleBtn.disabled = true;
+    stepBtn.disabled = true;
+    runBtn.disabled = true;
+    runBtn.textContent = "Running…";
+    statusEl.textContent = "Running locally (WASM)…";
+    setAnimationsEnabled(false);
+
+    await new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => resolve());
+    });
+
+    let lastDelta: WasmStateDelta | null = null;
+    let finalMessage = `Run stopped after ${MAX_RUN_STEPS} steps.`;
+
+    try {
+      for (let stepIndex = 0; stepIndex < MAX_RUN_STEPS; stepIndex++) {
+        const delta = activeRuntime.step();
+        lastDelta = delta;
+        const data = buildSnapshot(delta);
+        pushHistory(data);
+
+        if (data.trap) {
+          finalMessage = fmtTrap(data.trap);
+          break;
+        }
+        if (data.halted) {
+          finalMessage = "Program halted.";
+          break;
+        }
+        if (isPcStalled(data.effects ?? [])) {
+          finalMessage = "Halt loop detected.";
+          break;
+        }
+      }
+
+      stopRun();
+      if (historyIndex >= 0) {
+        renderFromHistory(historyIndex);
+      }
+      statusEl.textContent = finalMessage;
+      setAnimationsEnabled(true);
+      if (lastDelta) {
+        animateStep(lastDelta);
+      } else {
+        resetAnimator();
+      }
+    } catch (err) {
+      setAnimationsEnabled(true);
+      stopRun(`Error: ${(err as Error).message}`);
       assembleBtn.disabled = false;
       stepBtn.disabled = !sessionId;
       runBtn.disabled = !sessionId;
       return;
     }
 
-    assembleBtn.disabled = true;
-    stepBtn.disabled = true;
-    runBtn.textContent = "Stop";
-    statusEl.textContent = "Running locally (WASM)…";
-    runSteps = 0;
-
-    runTimer = window.setInterval(() => {
-      if (!sessionId) {
-        stopRun();
-        assembleBtn.disabled = false;
-        stepBtn.disabled = !sessionId;
-        runBtn.disabled = !sessionId;
-        return;
-      }
-      if (runSteps >= MAX_RUN_STEPS) {
-        stopRun(`Run stopped after ${MAX_RUN_STEPS} steps.`);
-        assembleBtn.disabled = false;
-        stepBtn.disabled = !sessionId;
-        runBtn.disabled = !sessionId;
-        return;
-      }
-      runSteps += 1;
-      try {
-        const delta = activeRuntime.step();
-        const data = buildSnapshot(delta);
-        pushHistory(data);
-        renderAll(data);
-        if (data.halted) {
-          stopRun("Program halted.");
-          assembleBtn.disabled = false;
-          stepBtn.disabled = true;
-          runBtn.disabled = true;
-        }
-      } catch (err) {
-        stopRun(`Error: ${(err as Error).message}`);
-        assembleBtn.disabled = false;
-        stepBtn.disabled = !sessionId;
-        runBtn.disabled = !sessionId;
-      }
-    }, RUN_DELAY_MS);
+    assembleBtn.disabled = false;
   };
+
+  function isEditableTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof Element)) {
+      return false;
+    }
+    if (target === sourceEl) {
+      return true;
+    }
+    return Boolean(target.closest("textarea, input, select, button, [contenteditable='true']"));
+  }
+
+  function confirmResetIfNeeded(): boolean {
+    if (!sessionId) {
+      return false;
+    }
+    return window.confirm("Reset the assembled program and clear the current execution state?");
+  }
+
+  // UI keyboard shortcuts
+  document.addEventListener("keydown", (event) => {
+    if (event.defaultPrevented) {
+      return;
+    }
+
+    const targetIsEditable = isEditableTarget(event.target);
+
+    if (event.key === "Enter" && !targetIsEditable) {
+      event.preventDefault();
+      if (!assembleBtn.disabled) {
+        void assembleBtn.click();
+      }
+      return;
+    }
+
+    if (event.key === "ArrowDown" && !targetIsEditable) {
+      event.preventDefault();
+      if (event.shiftKey) {
+        if (!stepBackBtn.disabled) {
+          stepBackBtn.click();
+        }
+      } else if (!stepBtn.disabled) {
+        void stepBtn.click();
+      }
+      return;
+    }
+
+    if (event.code === "KeyR" && !targetIsEditable) {
+      event.preventDefault();
+      if (!runBtn.disabled) {
+        void runBtn.click();
+      }
+      return;
+    }
+
+    if (event.key === "Escape" && !targetIsEditable) {
+      event.preventDefault();
+      if (!resetBtn.disabled && confirmResetIfNeeded()) {
+        void resetBtn.click();
+      }
+    }
+  });
 });
