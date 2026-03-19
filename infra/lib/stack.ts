@@ -57,7 +57,7 @@ export class StudyRiscvStack extends Stack {
       generateSecret: false,
       authFlows: {
         userSrp: true,
-        userPassword: false,
+        userPassword: true,
       },
       oAuth: {
         flows: {
