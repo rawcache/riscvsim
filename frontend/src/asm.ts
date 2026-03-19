@@ -1,16 +1,55 @@
+import { DATA_BASE, TEXT_BASE } from "./memory-map";
+import { encodeInstructionProgram } from "./riscv-encode";
 import type { DisasmLine, InstructionWire } from "./types";
 
-type ParsedProgram = {
-  instructions: InstructionWire[];
+type Section = "text" | "data";
+
+type ProgramImage = {
+  text: Uint8Array;
+  data: Uint8Array;
+};
+
+type InstructionListWithSegments = InstructionWire[] & ProgramImage;
+
+type ParsedProgram = ProgramImage & {
+  instructions: InstructionListWithSegments;
   disasm: DisasmLine[];
 };
 
-type PendingEntry = {
+type LabelInfo = {
+  address: number;
+  section: Section;
+};
+
+type PendingTextEntry = {
+  kind: "text";
   labels: string[];
   text: string | null;
   srcLine: number;
   pc: number;
 };
+
+type PendingDataEntry = {
+  kind: "data";
+  directive: DataDirective;
+  srcLine: number;
+  addr: number;
+};
+
+type PendingEntry = PendingTextEntry | PendingDataEntry;
+
+type ValueRef =
+  | { kind: "number"; value: number }
+  | { kind: "symbol"; name: string };
+
+type DataDirective =
+  | { kind: "word"; values: ValueRef[] }
+  | { kind: "half"; values: ValueRef[] }
+  | { kind: "byte"; values: ValueRef[] }
+  | { kind: "ascii"; bytes: Uint8Array }
+  | { kind: "asciz"; bytes: Uint8Array }
+  | { kind: "space"; size: number }
+  | { kind: "align"; power: number };
 
 const REG_ALIASES: Record<string, number> = {
   zero: 0,
@@ -57,17 +96,33 @@ function fail(srcLine: number, msg: string): never {
 }
 
 function stripComment(line: string): string {
-  const hash = line.indexOf("#");
-  const slash = line.indexOf("//");
-  let cut = -1;
-  if (hash >= 0 && slash >= 0) {
-    cut = Math.min(hash, slash);
-  } else if (hash >= 0) {
-    cut = hash;
-  } else if (slash >= 0) {
-    cut = slash;
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (ch === "\"") {
+      inString = !inString;
+      continue;
+    }
+    if (inString) {
+      continue;
+    }
+    if (ch === "#") {
+      return line.slice(0, i).trim();
+    }
+    if (ch === "/" && line[i + 1] === "/") {
+      return line.slice(0, i).trim();
+    }
   }
-  return (cut >= 0 ? line.slice(0, cut) : line).trim();
+  return line.trim();
 }
 
 function parseReg(tok: string, srcLine: number): number {
@@ -94,6 +149,30 @@ function parseImm(tok: string, srcLine: number): number {
   }
   const val = negative ? -parsed : parsed;
   return val | 0;
+}
+
+function parseNonNegativeImm(tok: string, srcLine: number, name: string): number {
+  const value = parseImm(tok, srcLine);
+  if (value < 0) {
+    fail(srcLine, `${name} expects a non-negative value`);
+  }
+  return value;
+}
+
+export function isValidImm12(n: number): boolean {
+  return n >= -2048 && n <= 2047;
+}
+
+function assertValidImm12(op: string, imm: number, srcLine: number): void {
+  if (!isValidImm12(imm)) {
+    fail(srcLine, `${op} immediate ${imm} out of range (valid range: -2048 to 2047)`);
+  }
+}
+
+function splitPcRelativeOffset(offset: number): { hi: number; lo: number } {
+  const hi = (offset + 0x800) >> 12;
+  const lo = offset - (hi << 12);
+  return { hi, lo };
 }
 
 function parseOffsetBase(expr: string, srcLine: number): { imm: number; rs1: number } {
@@ -125,7 +204,12 @@ function estimateWords(text: string, srcLine: number): number {
   if (op === "li") {
     if (tokens.length !== 3) fail(srcLine, "Bad li");
     const imm = parseImm(tokens[2], srcLine);
-    return imm >= -2048 && imm <= 2047 ? 1 : 2;
+    return isValidImm12(imm) ? 1 : 2;
+  }
+  if (op === "call" || op === "la") {
+    if (op === "call" && tokens.length !== 2) fail(srcLine, "Bad call");
+    if (op === "la" && tokens.length !== 3) fail(srcLine, "Bad la");
+    return 2;
   }
   return 1;
 }
@@ -133,6 +217,7 @@ function estimateWords(text: string, srcLine: number): number {
 function formatInstruction(inst: InstructionWire): string {
   const op = inst.op;
   if (op === "ecall") return "ecall";
+  if (op === "ebreak") return "ebreak";
   if (op === "lui" || op === "auipc") return `${op} x${inst.rd}, ${inst.imm}`;
   if (op === "jal") return `${op} x${inst.rd}, ${inst.target_pc}`;
   if (op === "jalr") return `${op} x${inst.rd}, ${inst.imm}(x${inst.rs1})`;
@@ -165,11 +250,11 @@ function formatInstruction(inst: InstructionWire): string {
 
 function decodeTarget(
   tok: string,
-  labels: Map<string, number>,
+  labels: Map<string, LabelInfo>,
   symbols: Map<string, number>,
   srcLine: number
 ): number {
-  if (labels.has(tok)) return labels.get(tok) as number;
+  if (labels.has(tok)) return labels.get(tok)?.address as number;
   if (symbols.has(tok)) return symbols.get(tok) as number;
   if (SYMBOL_RE.test(tok)) {
     fail(srcLine, `Unknown label "${tok}"`);
@@ -181,9 +266,39 @@ function decodeTarget(
   return target;
 }
 
-function parseEntry(
-  entry: PendingEntry,
-  labels: Map<string, number>,
+function resolveDataLabel(name: string, labels: Map<string, LabelInfo>, srcLine: number): number {
+  const label = labels.get(name);
+  if (!label) {
+    fail(srcLine, `Undefined label "${name}"`);
+  }
+  if (label.section !== "data") {
+    fail(srcLine, `la target "${name}" must be defined in .data`);
+  }
+  return label.address;
+}
+
+function resolveValueRef(
+  value: ValueRef,
+  labels: Map<string, LabelInfo>,
+  symbols: Map<string, number>
+): number {
+  if (value.kind === "number") {
+    return value.value;
+  }
+  const label = labels.get(value.name);
+  if (label) {
+    return label.address;
+  }
+  const symbol = symbols.get(value.name);
+  if (symbol !== undefined) {
+    return symbol;
+  }
+  throw new Error(`undefined:${value.name}`);
+}
+
+function parseTextEntry(
+  entry: PendingTextEntry,
+  labels: Map<string, LabelInfo>,
   symbols: Map<string, number>
 ): InstructionWire[] {
   if (!entry.text) return [];
@@ -206,7 +321,23 @@ function parseEntry(
   }
   if (op === "call") {
     if (tokens.length !== 2) fail(src_line, "Bad call");
-    return [{ op: "jal", rd: 1, target_pc: targetOf(tokens[1]), src_line }];
+    const offset = targetOf(tokens[1]) - entry.pc;
+    const { hi, lo } = splitPcRelativeOffset(offset);
+    return [
+      { op: "auipc", rd: 1, imm: hi, src_line },
+      { op: "jalr", rd: 1, rs1: 1, imm: lo, src_line },
+    ];
+  }
+  if (op === "la") {
+    if (tokens.length !== 3) fail(src_line, "Bad la");
+    const rd = parseReg(tokens[1], src_line);
+    const target = resolveDataLabel(tokens[2], labels, src_line);
+    const offset = target - entry.pc;
+    const { hi, lo } = splitPcRelativeOffset(offset);
+    return [
+      { op: "auipc", rd, imm: hi, src_line },
+      { op: "addi", rd, rs1: rd, imm: lo, src_line },
+    ];
   }
   if (op === "ret") {
     if (tokens.length !== 1) fail(src_line, "Bad ret");
@@ -216,11 +347,10 @@ function parseEntry(
     if (tokens.length !== 3) fail(src_line, "Bad li");
     const rd = parseReg(tokens[1], src_line);
     const imm = parseImm(tokens[2], src_line);
-    if (imm >= -2048 && imm <= 2047) {
+    if (isValidImm12(imm)) {
       return [{ op: "addi", rd, rs1: 0, imm, src_line }];
     }
-    const hi = (imm + 0x800) >> 12;
-    const lo = imm - (hi << 12);
+    const { hi, lo } = splitPcRelativeOffset(imm);
     return [
       { op: "lui", rd, imm: hi, src_line },
       { op: "addi", rd, rs1: rd, imm: lo, src_line },
@@ -261,11 +391,13 @@ function parseEntry(
   const regRegImm = new Set(["addi", "slti", "sltiu", "andi", "ori", "xori", "slli", "srli", "srai"]);
   if (regRegImm.has(op)) {
     if (tokens.length !== 4) fail(src_line, `Bad ${op}`);
+    const imm = parseImm(tokens[3], src_line);
+    assertValidImm12(op, imm, src_line);
     return [{
       op,
       rd: parseReg(tokens[1], src_line),
       rs1: parseReg(tokens[2], src_line),
-      imm: parseImm(tokens[3], src_line),
+      imm,
       src_line,
     }];
   }
@@ -285,6 +417,11 @@ function parseEntry(
     return [{ op, src_line }];
   }
 
+  if (op === "ebreak") {
+    if (tokens.length !== 1) fail(src_line, "Bad ebreak");
+    return [{ op, src_line }];
+  }
+
   if (op === "jal") {
     if (tokens.length !== 2 && tokens.length !== 3) fail(src_line, "Bad jal");
     const rd = tokens.length === 3 ? parseReg(tokens[1], src_line) : 1;
@@ -296,6 +433,7 @@ function parseEntry(
     if (tokens.length !== 2 && tokens.length !== 3) fail(src_line, "Bad jalr");
     const rd = tokens.length === 3 ? parseReg(tokens[1], src_line) : 1;
     const { imm, rs1 } = parseOffsetBase(tokens[tokens.length - 1], src_line);
+    assertValidImm12(op, imm, src_line);
     return [{ op, rd, rs1, imm, src_line }];
   }
 
@@ -303,6 +441,7 @@ function parseEntry(
   if (loadOps.has(op)) {
     if (tokens.length !== 3) fail(src_line, `Bad ${op}`);
     const { imm, rs1 } = parseOffsetBase(tokens[2], src_line);
+    assertValidImm12(op, imm, src_line);
     return [{ op, rd: parseReg(tokens[1], src_line), rs1, imm, src_line }];
   }
 
@@ -310,6 +449,7 @@ function parseEntry(
   if (storeOps.has(op)) {
     if (tokens.length !== 3) fail(src_line, `Bad ${op}`);
     const { imm, rs1 } = parseOffsetBase(tokens[2], src_line);
+    assertValidImm12(op, imm, src_line);
     return [{ op, rs2: parseReg(tokens[1], src_line), rs1, imm, src_line }];
   }
 
@@ -328,13 +468,211 @@ function parseEntry(
   fail(src_line, `Unsupported instruction "${op}"`);
 }
 
+function parseValueRefList(text: string, srcLine: number, directive: string): ValueRef[] {
+  const values = text
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  if (values.length === 0) {
+    fail(srcLine, `${directive} requires at least one value`);
+  }
+  return values.map((value) =>
+    SYMBOL_RE.test(value) ? { kind: "symbol", name: value } : { kind: "number", value: parseImm(value, srcLine) }
+  );
+}
+
+function parseStringLiteral(raw: string, srcLine: number, directive: string): Uint8Array {
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith("\"")) {
+    fail(srcLine, `${directive} requires a string literal`);
+  }
+  const bytes: number[] = [];
+  let escaped = false;
+  for (let i = 1; i < trimmed.length; i++) {
+    const ch = trimmed[i];
+    if (escaped) {
+      switch (ch) {
+        case "n":
+          bytes.push(0x0a);
+          break;
+        case "r":
+          bytes.push(0x0d);
+          break;
+        case "t":
+          bytes.push(0x09);
+          break;
+        case "0":
+          bytes.push(0x00);
+          break;
+        case "\"":
+          bytes.push(0x22);
+          break;
+        case "\\":
+          bytes.push(0x5c);
+          break;
+        default:
+          bytes.push(ch.charCodeAt(0));
+          break;
+      }
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (ch === "\"") {
+      const trailing = trimmed.slice(i + 1).trim();
+      if (trailing.length > 0) {
+        fail(srcLine, `${directive} has unexpected trailing text`);
+      }
+      return Uint8Array.from(bytes);
+    }
+    bytes.push(ch.charCodeAt(0));
+  }
+  fail(srcLine, `${directive} has an unterminated string literal`);
+}
+
+function parseDataDirective(text: string, srcLine: number, section: Section): DataDirective {
+  const match = /^(\.\w+)\b(.*)$/.exec(text.trim());
+  if (!match) {
+    fail(srcLine, `Unsupported directive "${text}"`);
+  }
+  const directive = match[1].toLowerCase();
+  const rest = match[2].trim();
+
+  if (section !== "data" && [".word", ".half", ".byte", ".ascii", ".asciz", ".string", ".space", ".align"].includes(directive)) {
+    fail(srcLine, `${directive} is only valid in .data`);
+  }
+
+  if (directive === ".word") {
+    return { kind: "word", values: parseValueRefList(rest, srcLine, ".word") };
+  }
+  if (directive === ".half") {
+    return { kind: "half", values: parseValueRefList(rest, srcLine, ".half") };
+  }
+  if (directive === ".byte") {
+    return { kind: "byte", values: parseValueRefList(rest, srcLine, ".byte") };
+  }
+  if (directive === ".ascii") {
+    return { kind: "ascii", bytes: parseStringLiteral(rest, srcLine, ".ascii") };
+  }
+  if (directive === ".asciz" || directive === ".string") {
+    return { kind: "asciz", bytes: parseStringLiteral(rest, srcLine, directive) };
+  }
+  if (directive === ".space") {
+    return { kind: "space", size: parseNonNegativeImm(rest, srcLine, ".space") };
+  }
+  if (directive === ".align") {
+    const power = parseNonNegativeImm(rest, srcLine, ".align");
+    if (power > 12) {
+      fail(srcLine, ".align value must be <= 12");
+    }
+    return { kind: "align", power };
+  }
+  fail(srcLine, `Unsupported directive "${directive}"`);
+}
+
+function alignPadding(offset: number, power: number): number {
+  const align = 1 << power;
+  return (align - (offset % align)) % align;
+}
+
+function directiveSize(directive: DataDirective, offset: number): number {
+  switch (directive.kind) {
+    case "word":
+      return directive.values.length * 4;
+    case "half":
+      return directive.values.length * 2;
+    case "byte":
+      return directive.values.length;
+    case "ascii":
+      return directive.bytes.length;
+    case "asciz":
+      return directive.bytes.length + 1;
+    case "space":
+      return directive.size;
+    case "align":
+      return alignPadding(offset, directive.power);
+  }
+}
+
+function pushScalar(bytes: number[], value: number, width: 1 | 2 | 4): void {
+  if (width === 1) {
+    bytes.push(value & 0xff);
+    return;
+  }
+  if (width === 2) {
+    bytes.push(value & 0xff, (value >>> 8) & 0xff);
+    return;
+  }
+  bytes.push(value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff);
+}
+
+function emitDataDirective(
+  directive: DataDirective,
+  labels: Map<string, LabelInfo>,
+  symbols: Map<string, number>,
+  srcLine: number,
+  offset: number,
+  bytes: number[]
+): void {
+  const resolveOrFail = (value: ValueRef, directiveName: string): number => {
+    try {
+      return resolveValueRef(value, labels, symbols);
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("undefined:")) {
+        const name = error.message.slice("undefined:".length);
+        fail(srcLine, `${directiveName} references undefined label "${name}"`);
+      }
+      throw error;
+    }
+  };
+
+  switch (directive.kind) {
+    case "word":
+      for (const value of directive.values) {
+        pushScalar(bytes, resolveOrFail(value, ".word"), 4);
+      }
+      return;
+    case "half":
+      for (const value of directive.values) {
+        pushScalar(bytes, resolveOrFail(value, ".half"), 2);
+      }
+      return;
+    case "byte":
+      for (const value of directive.values) {
+        pushScalar(bytes, resolveOrFail(value, ".byte"), 1);
+      }
+      return;
+    case "ascii":
+      bytes.push(...directive.bytes);
+      return;
+    case "asciz":
+      bytes.push(...directive.bytes, 0);
+      return;
+    case "space":
+      for (let i = 0; i < directive.size; i++) {
+        bytes.push(0);
+      }
+      return;
+    case "align":
+      for (let i = 0; i < alignPadding(offset, directive.power); i++) {
+        bytes.push(0);
+      }
+      return;
+  }
+}
+
 export function parseAssembly(source: string): ParsedProgram {
   const lines = source.split(/\r?\n/);
   const symbols = new Map<string, number>();
-  const labels = new Map<string, number>();
+  const labels = new Map<string, LabelInfo>();
   const pending: PendingEntry[] = [];
 
-  let pc = 0;
+  let section: Section = "text";
+  let textPc = TEXT_BASE;
+  let dataPc = DATA_BASE;
   for (let srcLine = 0; srcLine < lines.length; srcLine++) {
     const raw = lines[srcLine];
     const rawTrim = raw.trim();
@@ -355,42 +693,98 @@ export function parseAssembly(source: string): ParsedProgram {
       if (labels.has(m[1])) {
         fail(srcLine, `Duplicate label "${m[1]}"`);
       }
-      labels.set(m[1], pc);
+      const address = section === "text" ? textPc : dataPc;
+      labels.set(m[1], { address, section });
       lineLabels.push(m[1]);
       rest = m[2].trim();
     }
 
     if (!rest) {
-      pending.push({ labels: lineLabels, text: null, srcLine, pc });
+      if (section === "text") {
+        pending.push({ kind: "text", labels: lineLabels, text: null, srcLine, pc: textPc });
+      }
       continue;
     }
 
-    pending.push({ labels: lineLabels, text: rest, srcLine, pc });
-    pc += estimateWords(rest, srcLine) * 4;
+    const lowerRest = rest.toLowerCase();
+    if (lowerRest === ".text") {
+      if (lineLabels.length > 0) {
+        fail(srcLine, "Labels cannot appear on the same line as .text");
+      }
+      section = "text";
+      continue;
+    }
+    if (lowerRest === ".data") {
+      if (lineLabels.length > 0) {
+        fail(srcLine, "Labels cannot appear on the same line as .data");
+      }
+      section = "data";
+      continue;
+    }
+
+    if (section === "text") {
+      if (rest.startsWith(".")) {
+        fail(srcLine, `Unsupported directive "${rest}"`);
+      }
+      pending.push({ kind: "text", labels: lineLabels, text: rest, srcLine, pc: textPc });
+      textPc += estimateWords(rest, srcLine) * 4;
+      continue;
+    }
+
+    if (!rest.startsWith(".")) {
+      fail(srcLine, `Instructions are only valid in .text, found "${rest}" in .data`);
+    }
+    const directive = parseDataDirective(rest, srcLine, section);
+    pending.push({ kind: "data", directive, srcLine, addr: dataPc });
+    dataPc += directiveSize(directive, dataPc - DATA_BASE);
   }
 
   const instructions: InstructionWire[] = [];
   const disasm: DisasmLine[] = [];
+  const dataBytes: number[] = [];
 
   for (const entry of pending) {
-    for (const label of entry.labels) {
-      disasm.push({
-        pc: entry.pc >>> 0,
-        text: `${label}:`,
-        label: true,
-      });
+    if (entry.kind === "text") {
+      for (const label of entry.labels) {
+        disasm.push({
+          pc: entry.pc >>> 0,
+          text: `${label}:`,
+          label: true,
+        });
+      }
+      const emitted = parseTextEntry(entry, labels, symbols);
+      let linePc = entry.pc;
+      for (const inst of emitted) {
+        instructions.push(inst);
+        disasm.push({
+          pc: linePc >>> 0,
+          text: formatInstruction(inst),
+        });
+        linePc += 4;
+      }
+      continue;
     }
-    const emitted = parseEntry(entry, labels, symbols);
-    let linePc = entry.pc;
-    for (const inst of emitted) {
-      instructions.push(inst);
-      disasm.push({
-        pc: linePc >>> 0,
-        text: formatInstruction(inst),
-      });
-      linePc += 4;
-    }
+    emitDataDirective(
+      entry.directive,
+      labels,
+      symbols,
+      entry.srcLine,
+      entry.addr - DATA_BASE,
+      dataBytes
+    );
   }
 
-  return { instructions, disasm };
+  const text = encodeInstructionProgram(instructions, TEXT_BASE);
+  const data = Uint8Array.from(dataBytes);
+  Object.defineProperties(instructions, {
+    text: { value: text, enumerable: false },
+    data: { value: data, enumerable: false },
+  });
+
+  return {
+    instructions: instructions as InstructionListWithSegments,
+    disasm,
+    text,
+    data,
+  };
 }
