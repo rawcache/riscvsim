@@ -608,6 +608,11 @@ body.loaded .hero__visual {
   font-size: 14px;
 }
 
+.landing-footer a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
 @media (max-width: 960px) {
   .hero {
     grid-template-columns: 1fr;
