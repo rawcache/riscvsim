@@ -54,7 +54,7 @@ body.simulator-page {
 .sim-nav__actions {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 10px;
   color: var(--text-secondary);
   font-size: 0.88rem;
 }
@@ -64,6 +64,11 @@ body.simulator-page {
   position: relative;
   display: flex;
   align-items: center;
+}
+
+.auth-user-btn[hidden],
+.auth-dropdown[hidden] {
+  display: none !important;
 }
 
 .auth-signin-btn,
@@ -517,6 +522,10 @@ body.simulator-page {
   background: var(--bg-base);
   font-size: 12px;
   line-height: 1.6;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+  tab-size: 2;
 }
 
 .sim-source:focus,
@@ -666,6 +675,10 @@ body.simulator-page {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.effect-empty {
+  padding: 8px 0 10px;
 }
 
 .disasm-line {
@@ -869,6 +882,14 @@ body.simulator-page {
   align-items: center;
   color: color-mix(in srgb, var(--text-primary) 44%, transparent);
   font-size: 11px;
+}
+
+.effect-empty__note {
+  padding: 0 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.4;
 }
 
 .empty-state {
@@ -1360,7 +1381,7 @@ body.simulator-page {
 
 @media (min-width: 1200px) {
   .simulator-layout {
-    grid-template-columns: 300px minmax(0, 1fr) 360px;
+    grid-template-columns: minmax(380px, 430px) minmax(0, 1fr) 330px;
   }
 }
 
