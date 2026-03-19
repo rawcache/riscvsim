@@ -29,6 +29,7 @@ type CognitoResponse = {
     RefreshToken?: string;
     ExpiresIn?: number;
   };
+  UserConfirmed?: boolean;
   message?: string;
   __type?: string;
 };
@@ -337,12 +338,17 @@ async function signIn(): Promise<void> {
 }
 
 async function signUp(): Promise<void> {
-  await cognitoRequest("SignUp", {
+  const payload = await cognitoRequest("SignUp", {
     ClientId: state.config.clientId,
     Username: state.email.trim(),
     Password: state.password,
     UserAttributes: [{ Name: "email", Value: state.email.trim() }],
   });
+
+  if (payload.UserConfirmed) {
+    await signIn();
+    return;
+  }
 
   state = {
     ...state,
