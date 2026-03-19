@@ -16,8 +16,14 @@ import {
 import { Construct } from "constructs";
 
 const DOMAIN_PREFIX = "studyriscv";
-const CALLBACK_URLS = ["http://localhost:5173", "http://localhost:5174", "https://studyriscv.com"];
-const LOGOUT_URLS = ["http://localhost:5173", "http://localhost:5174", "https://studyriscv.com"];
+const SITE_ORIGINS = ["http://localhost:5173", "http://localhost:5174", "https://studyriscv.com"];
+const CALLBACK_URLS = [
+  ...SITE_ORIGINS,
+  "http://localhost:5173/simulator/",
+  "http://localhost:5174/simulator/",
+  "https://studyriscv.com/simulator/",
+];
+const LOGOUT_URLS = [...CALLBACK_URLS];
 
 function inlineLambdaSource(fileName: string): string {
   return fs.readFileSync(path.join(__dirname, "..", "lambda", fileName), "utf8");
@@ -107,7 +113,7 @@ export class StudyRiscvStack extends Stack {
     const httpApi = new apigatewayv2.HttpApi(this, "ProgramsApi", {
       apiName: "studyriscv-api",
       corsPreflight: {
-        allowOrigins: CALLBACK_URLS,
+        allowOrigins: SITE_ORIGINS,
         allowMethods: [
           apigatewayv2.CorsHttpMethod.GET,
           apigatewayv2.CorsHttpMethod.POST,

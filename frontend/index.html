@@ -3,11 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>StudyRISC-V Simulator</title>
+    <title>StudyRISC-V</title>
     <meta
       name="description"
-      content="Assemble, step, and inspect RISC-V programs in a local-first browser simulator."
+      content="StudyRISC-V is a browser-based RISC-V simulator with step execution, register inspection, and pseudo-C translation."
     />
+    <link rel="canonical" href="https://studyriscv.com/" />
+    <script>
+      (() => {
+        const { hash, origin, pathname } = window.location;
+        if (hash.startsWith("#p=")) {
+          const target = new URL("/simulator/", origin);
+          target.hash = hash;
+          window.location.replace(target.toString());
+          return;
+        }
+
+        if (pathname === "/index.html" || pathname === "/landing.html") {
+          window.location.replace(new URL("/", origin).toString());
+        }
+      })();
+    </script>
     <script>
       (() => {
         try {
@@ -33,17 +49,16 @@
     />
     <link rel="stylesheet" href="./src/styles/tokens.css" />
     <link rel="stylesheet" href="./src/styles/auth.css" />
-    <link rel="stylesheet" href="./src/styles/simulator.css" />
+    <link rel="stylesheet" href="./src/styles/landing.css" />
     <link rel="icon" type="image/png" href="./favicon.png" />
   </head>
-  <body class="simulator-page">
-    <div id="assembleProgress" class="assemble-progress" aria-hidden="true"></div>
-    <nav class="sim-nav" aria-label="Simulator navigation">
-      <div class="sim-nav__inner">
-        <a class="sim-brand" href="./landing.html">StudyRISC-V</a>
-        <div class="sim-nav__actions">
+  <body class="landing-page">
+    <header id="landingNav" class="landing-nav" aria-label="Main navigation">
+      <div class="landing-nav__inner">
+        <a class="landing-brand" href="/">StudyRISC-V</a>
+        <nav class="landing-nav__links">
+          <a href="/simulator/">Simulator</a>
           <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
-          <span id="statusBadge" class="status-badge status-badge--ready">Ready</span>
           <div class="auth-nav">
             <button id="auth-signin-btn" class="auth-signin-btn" type="button">Sign in</button>
             <div class="auth-menu">
@@ -56,7 +71,7 @@
               </div>
             </div>
           </div>
-          <button id="simThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+          <button id="landingThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
             <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
                 <circle cx="12" cy="12" r="4"></circle>
@@ -69,185 +84,356 @@
               </svg>
             </span>
           </button>
-        </div>
+        </nav>
       </div>
-    </nav>
+    </header>
 
-    <main class="simulator-app">
-      <div class="simulator-layout">
-        <div class="sim-column sim-column--left">
-          <section class="sim-panel sim-panel--editor">
-            <div class="panel-header">
-              <span>Program Input</span>
-              <div class="panel-header__actions">
-                <button
-                  id="shareSource"
-                  class="panel-icon-button"
-                  type="button"
-                  aria-label="Copy shareable link"
-                  title="Copy shareable link"
-                >
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <path d="M10 13a5 5 0 0 0 7.54.54l2.46-2.46a5 5 0 0 0-7.07-7.07L11.5 5.43"></path>
-                    <path d="M14 11a5 5 0 0 0-7.54-.54L4 12.92a5 5 0 0 0 7.07 7.07l1.43-1.43"></path>
-                  </svg>
-                </button>
-                <button
-                  id="copySource"
-                  class="panel-icon-button"
-                  type="button"
-                  aria-label="Copy assembly source"
-                  title="Copy assembly source"
-                >
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <rect x="9" y="9" width="10" height="10" rx="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div id="sharedLinkBanner" class="shared-link-banner" hidden>
-              <span>Loaded from shared link · Edit to make it yours</span>
-              <button id="dismissSharedBanner" class="shared-link-banner__dismiss" type="button" aria-label="Dismiss shared link banner">
-                ×
-              </button>
-            </div>
-            <div class="panel-body">
-              <label class="field-label" for="sampleSelect">Sample Program</label>
-              <select id="sampleSelect" class="sim-select">
-                <option value="arraySum">Array sum (sensor readings)</option>
-                <option value="stringLength">String length</option>
-                <option value="memoryCopy">Memory copy</option>
-                <option value="functionCall">Function call (jal/jalr)</option>
-                <option value="tempConvert">Temp conversion (mul/div)</option>
-                <option value="checksum">XOR checksum</option>
-                <option value="bubbleSortData">Bubble sort (data segment)</option>
-                <option value="stringCopyData">String copy (data + .asciz)</option>
-                <option value="syscall">Syscall (ecall)</option>
-              </select>
-
-              <div class="control-row control-row--editor">
-                <button id="assemble" class="sim-button sim-button--primary" type="button">Assemble</button>
-                <button id="step" class="sim-button sim-button--outline" type="button" disabled>Step</button>
-                <button id="stepBack" class="sim-button sim-button--outline" type="button" disabled>Step Back</button>
-                <button id="run" class="sim-button sim-button--outline" type="button" disabled>Run</button>
-                <button id="reset" class="sim-button sim-button--danger" type="button" disabled>Reset</button>
-              </div>
-              <p class="shortcut-hint">Enter: Assemble · ↓: Step · Shift+↓: Step Back · R: Run</p>
-
-              <label class="field-label" for="source">Assembly Source</label>
-              <div class="editor-shell">
-                <!-- main.ts line-number scroll sync targets #sourceLines and #source -->
-                <div id="sourceLines" class="source-lines" aria-hidden="true"></div>
-                <textarea
-                  id="source"
-                  class="sim-source"
-                  placeholder="Paste RV32 assembly here..."
-                  wrap="off"
-                  spellcheck="false"
-                ></textarea>
-              </div>
-
-              <div id="status" class="status-line" aria-live="polite"></div>
-
-              <details class="reg-guide">
-                <summary>Register Guide</summary>
-                <table class="reg-guide__table">
-                  <thead>
-                    <tr>
-                      <th>Register</th>
-                      <th>Mnemonic</th>
-                      <th>Use</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr><td>x0</td><td>zero</td><td>Constant value 0</td></tr>
-                    <tr><td>x1</td><td>ra</td><td>Return address</td></tr>
-                    <tr><td>x2</td><td>sp</td><td>Stack pointer</td></tr>
-                    <tr><td>x3</td><td>gp</td><td>Global pointer</td></tr>
-                    <tr><td>x4</td><td>tp</td><td>Thread pointer</td></tr>
-                    <tr><td>x5-x7</td><td>t0-t2</td><td>Temporaries</td></tr>
-                    <tr><td>x8</td><td>s0/fp</td><td>Saved register / frame pointer</td></tr>
-                    <tr><td>x9</td><td>s1</td><td>Saved register</td></tr>
-                    <tr><td>x10-x11</td><td>a0-a1</td><td>Function args / return values</td></tr>
-                    <tr><td>x12-x17</td><td>a2-a7</td><td>Function arguments</td></tr>
-                    <tr><td>x18-x27</td><td>s2-s11</td><td>Saved registers</td></tr>
-                    <tr><td>x28-x31</td><td>t3-t6</td><td>Temporaries</td></tr>
-                  </tbody>
-                </table>
-              </details>
-            </div>
-          </section>
+    <main>
+      <section class="hero">
+        <div class="hero__copy">
+          <h1 class="hero__title">
+            <span class="hero__title-line" style="--hero-delay: 0ms">Understand RISC-V.</span>
+            <span class="hero__title-line hero__title-line--accent" style="--hero-delay: 120ms">
+              One instruction at a time.
+            </span>
+          </h1>
+          <p class="hero__subhead" style="--hero-delay: 240ms">
+            A browser-based simulator with step execution, register inspection, and pseudo-C
+            translation. No install required.
+          </p>
+          <div class="hero__actions" style="--hero-delay: 360ms">
+            <a class="cta cta--primary" href="/simulator/">Open Simulator →</a>
+            <a class="cta cta--secondary" href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">
+              View on GitHub
+            </a>
+          </div>
+          <div class="hero__signals">
+            <span>Local-first · Rust + WebAssembly</span>
+            <span>RV32IM + M extension</span>
+            <span>Free for Georgia Tech students</span>
+          </div>
         </div>
 
-        <div class="sim-column sim-column--center">
-          <section class="sim-panel sim-panel--disasm">
-            <div class="panel-header">
-              <span>Disassembly</span>
-              <span id="pc" class="pc-pill"></span>
-            </div>
-            <div class="panel-body panel-body--compact">
-              <div id="disasm" class="disasm-view" aria-live="polite"></div>
-              <div id="clikeCard" class="clike-card">
-                <div class="clike-label">Pseudo-C</div>
-                <div id="clike" class="clike-view"></div>
+        <div class="hero__visual" style="--hero-delay: 420ms">
+          <div class="hero-code" aria-hidden="true">
+            <div class="hero-code__bar">
+              <div class="hero-code__dots">
+                <span class="hero-code__dot"></span>
+                <span class="hero-code__dot"></span>
+                <span class="hero-code__dot"></span>
               </div>
+              <span class="hero-code__label">sum_loop.s</span>
+              <span class="hero-code__bar-spacer" aria-hidden="true"></span>
             </div>
-          </section>
-
-          <section class="sim-panel sim-panel--effects">
-            <div class="panel-header">Effect Log</div>
-            <div class="effect-filter-bar" aria-label="Effect log filters">
-              <button id="effectFilterReg" class="effect-filter-button" type="button" aria-pressed="true">REG</button>
-              <button id="effectFilterMem" class="effect-filter-button" type="button" aria-pressed="true">MEM</button>
-              <button id="effectFilterPc" class="effect-filter-button" type="button" aria-pressed="true">PC</button>
-            </div>
-            <div class="panel-body">
-              <div id="effects" class="effects-view" aria-live="polite"></div>
-            </div>
-          </section>
+            <pre><code id="heroCode"></code></pre>
+          </div>
         </div>
+      </section>
 
-        <div class="sim-column sim-column--right">
-          <section class="sim-panel sim-panel--regs">
-            <div class="panel-header">Register File</div>
-            <div class="panel-body">
-              <div id="regs" class="regs-view"></div>
+      <section class="section">
+        <div class="feature-grid">
+          <article class="feature-card js-reveal">
+            <div class="feature-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M4 12h11"></path>
+                <path d="m11 5 7 7-7 7"></path>
+                <path d="M4 5v14"></path>
+              </svg>
             </div>
-          </section>
+            <h2 class="feature-card__title">Step Execution</h2>
+            <p class="feature-card__body">
+              Step through every instruction and watch register and memory state update in real
+              time. Step backward too.
+            </p>
+          </article>
 
-          <section class="sim-panel sim-panel--memory">
-            <div class="panel-header panel-header--memory">
-              <span>Memory</span>
-              <div class="memory-header-controls">
-                <input id="memAddressInput" class="memory-address-input" type="text" inputmode="text" placeholder="0x00000000" />
-                <select id="memFollowSelect" class="memory-follow-select" aria-label="Memory follow register">
-                  <option value="none">follow: none</option>
-                  <option value="sp">follow: sp (x2)</option>
-                  <option value="a0">follow: a0 (x10)</option>
-                  <option value="a1">follow: a1 (x11)</option>
-                  <option value="ra">follow: x1 / ra</option>
-                </select>
-              </div>
+          <article class="feature-card js-reveal">
+            <div class="feature-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M8 8 4 12l4 4"></path>
+                <path d="m16 8 4 4-4 4"></path>
+                <path d="M11 19h2"></path>
+                <path d="M10 5h4"></path>
+              </svg>
             </div>
-            <div class="panel-body">
-              <div class="memory-stack">
-                <div class="memory-section">
-                  <span class="memory-section__label">Recent Writes</span>
-                  <div id="memWrites" class="memory-writes"></div>
-                </div>
-                <div class="memory-section">
-                  <span class="memory-section__label">Window</span>
-                  <div id="memWindow" class="memory-window"></div>
-                </div>
-              </div>
+            <h2 class="feature-card__title">Pseudo-C Explainer</h2>
+            <p class="feature-card__body">
+              Every instruction renders as a readable C-like expression so you can connect assembly
+              syntax to what it actually computes.
+            </p>
+          </article>
+
+          <article class="feature-card js-reveal">
+            <div class="feature-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                <path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"></path>
+              </svg>
             </div>
-          </section>
+            <h2 class="feature-card__title">Local-First</h2>
+            <p class="feature-card__body">
+              Runs entirely in the browser via Rust compiled to WebAssembly. No server, no latency,
+              no account required to start.
+            </p>
+          </article>
         </div>
-      </div>
+      </section>
+
+      <section class="section social-proof-strip" aria-label="Platform details">
+        <div class="social-proof-item">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 3v18"></path>
+            <path d="M6 8h12"></path>
+            <path d="M7 16h10"></path>
+          </svg>
+          <span>Built on Rust + WebAssembly — runs at native speed in your browser</span>
+        </div>
+        <div class="social-proof-item">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 6h16"></path>
+            <path d="M4 12h16"></path>
+            <path d="M4 18h10"></path>
+          </svg>
+          <span>Covers the full RV32IM subset taught in ECE 2035 at Georgia Tech</span>
+        </div>
+      </section>
+
+      <section class="section coverage-strip" aria-label="Supported instruction groups">
+        <span class="coverage-badge js-pill">ALU</span>
+        <span class="coverage-badge js-pill">Shifts</span>
+        <span class="coverage-badge js-pill">Branches</span>
+        <span class="coverage-badge js-pill">Loads/Stores</span>
+        <span class="coverage-badge js-pill">JAL/JALR</span>
+        <span class="coverage-badge js-pill">LUI/AUIPC</span>
+        <span class="coverage-badge js-pill">M Extension</span>
+        <span class="coverage-badge js-pill">Pseudos</span>
+      </section>
+
+      <section class="section landing-cta">
+        <h2 class="landing-cta__title">Ready to step through your first program?</h2>
+        <a class="cta cta--primary landing-cta__button" href="/simulator/">Open the Simulator →</a>
+      </section>
     </main>
 
-    <div id="copyToast" class="copy-toast" role="status" aria-live="polite">Copied!</div>
-    <script type="module" src="./src/main.ts"></script>
+    <footer class="landing-footer">
+      StudyRISC-V · Built by <a href="https://github.com/rawcache">Satchit Seth</a> · Free for GT students
+    </footer>
+
+    <script>
+      (() => {
+        const themeKey = "studyriscv-theme";
+        const root = document.documentElement;
+        const body = document.body;
+        const nav = document.getElementById("landingNav");
+        const themeToggle = document.getElementById("landingThemeToggle");
+        const heroCode = document.getElementById("heroCode");
+        const heroProgram = [
+          "addi x1, x0, 8    # limit",
+          "addi x2, x0, 0    # i",
+          "addi x3, x0, 0    # sum",
+          "loop:",
+          "  add  x3, x3, x2",
+          "  addi x2, x2, 1",
+          "  blt  x2, x1, loop",
+        ];
+        const heroText = heroProgram.join("\n");
+        const mnemonics = new Set(["addi", "add", "blt"]);
+        const registerPattern =
+          /^(?:x(?:[0-9]|[12][0-9]|3[01])|zero|ra|sp|gp|tp|t[0-6]|s(?:[0-9]|1[01])|fp|a[0-7])$/;
+        const numberPattern = /^-?(?:0x[0-9a-f]+|\d+)$/i;
+        let typedCharacters = 0;
+        let deleting = false;
+        let heroTypingTimer = 0;
+
+        function escapeHtml(value) {
+          return value
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        function syncThemeToggle() {
+          if (!themeToggle) return;
+          const isDark = root.dataset.theme === "dark";
+          themeToggle.setAttribute("aria-pressed", String(isDark));
+          themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+        }
+
+        function handleScroll() {
+          if (!nav) return;
+          nav.classList.toggle("is-scrolled", window.scrollY > 8);
+        }
+
+        function highlightInline(text) {
+          const tokenPattern =
+            /\b(?:x(?:[0-9]|[12][0-9]|3[01])|zero|ra|sp|gp|tp|t[0-6]|s(?:[0-9]|1[01])|fp|a[0-7])\b|-?(?:0x[0-9a-f]+|\d+)/gi;
+          let cursor = 0;
+          let html = "";
+          for (const match of text.matchAll(tokenPattern)) {
+            const index = match.index ?? 0;
+            const token = match[0];
+            html += escapeHtml(text.slice(cursor, index));
+            if (registerPattern.test(token)) {
+              html += `<span class="hero-code__register">${escapeHtml(token)}</span>`;
+            } else if (numberPattern.test(token)) {
+              html += `<span class="hero-code__number">${escapeHtml(token)}</span>`;
+            } else {
+              html += escapeHtml(token);
+            }
+            cursor = index + token.length;
+          }
+          html += escapeHtml(text.slice(cursor));
+          return html;
+        }
+
+        function renderHeroLine(line, showCursor) {
+          const commentIndex = line.indexOf("#");
+          const codePart = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
+          const commentPart = commentIndex >= 0 ? line.slice(commentIndex) : "";
+          const leading = codePart.match(/^\s*/)?.[0] ?? "";
+          let remainder = codePart.slice(leading.length);
+          let labelHtml = "";
+          let mnemonicHtml = "";
+
+          const labelMatch = remainder.match(/^([A-Za-z_.$][\w.$]*:)(\s*)/);
+          if (labelMatch) {
+            labelHtml = `<span class="hero-code__label-ref">${escapeHtml(labelMatch[1])}</span>${escapeHtml(labelMatch[2])}`;
+            remainder = remainder.slice(labelMatch[0].length);
+          }
+
+          const mnemonicMatch = remainder.match(/^([A-Za-z.]+)(\s*)/);
+          if (mnemonicMatch && mnemonics.has(mnemonicMatch[1].toLowerCase())) {
+            mnemonicHtml = `<span class="hero-code__mnemonic">${escapeHtml(mnemonicMatch[1])}</span>${escapeHtml(mnemonicMatch[2])}`;
+            remainder = remainder.slice(mnemonicMatch[0].length);
+          }
+
+          const commentHtml = commentPart
+            ? `<span class="hero-code__comment">${escapeHtml(commentPart)}</span>`
+            : "";
+          const cursorHtml = showCursor ? '<span class="hero-code__cursor" aria-hidden="true"></span>' : "";
+
+          return `<span class="hero-code__line">${escapeHtml(leading)}${labelHtml}${mnemonicHtml}${highlightInline(
+            remainder
+          )}${commentHtml}${cursorHtml}</span>`;
+        }
+
+        function renderHeroCode(visibleCharacters) {
+          if (!heroCode) return;
+          const visibleText = heroText.slice(0, visibleCharacters);
+          const lines = visibleText.split("\n");
+          if (visibleText.endsWith("\n")) {
+            lines.push("");
+          }
+          if (lines.length === 0) {
+            lines.push("");
+          }
+
+          heroCode.innerHTML = lines
+            .map((line, index) => renderHeroLine(line, index === lines.length - 1))
+            .join("");
+        }
+
+        function scheduleHeroTyping(delay) {
+          window.clearTimeout(heroTypingTimer);
+          heroTypingTimer = window.setTimeout(stepHeroTyping, delay);
+        }
+
+        function stepHeroTyping() {
+          renderHeroCode(typedCharacters);
+
+          if (!deleting) {
+            if (typedCharacters >= heroText.length) {
+              deleting = true;
+              scheduleHeroTyping(1300);
+              return;
+            }
+
+            const nextChar = heroText.charAt(typedCharacters);
+            typedCharacters += 1;
+            scheduleHeroTyping(nextChar === "\n" ? 170 : 42);
+            return;
+          }
+
+          if (typedCharacters <= 0) {
+            deleting = false;
+            scheduleHeroTyping(500);
+            return;
+          }
+
+          typedCharacters -= 1;
+          const previousChar = heroText.charAt(typedCharacters);
+          scheduleHeroTyping(previousChar === "\n" ? 85 : 20);
+        }
+
+        themeToggle?.addEventListener("click", () => {
+          const isDark = root.dataset.theme === "dark";
+          if (isDark) {
+            root.removeAttribute("data-theme");
+            window.localStorage.setItem(themeKey, "light");
+          } else {
+            root.dataset.theme = "dark";
+            window.localStorage.setItem(themeKey, "dark");
+          }
+          syncThemeToggle();
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+          body.classList.add("loaded");
+          renderHeroCode(typedCharacters);
+          scheduleHeroTyping(320);
+          syncThemeToggle();
+          handleScroll();
+          window.addEventListener("scroll", handleScroll, { passive: true });
+
+          const cards = document.querySelectorAll(".js-reveal");
+          const observer = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                  entry.target.classList.add("is-visible");
+                  observer.unobserve(entry.target);
+                }
+              });
+            },
+            { threshold: 0.2 }
+          );
+
+          cards.forEach((card, index) => {
+            card.style.setProperty("--reveal-delay", `${index * 80}ms`);
+            observer.observe(card);
+          });
+
+          const coverageStrip = document.querySelector(".coverage-strip");
+          const pills = document.querySelectorAll(".js-pill");
+          pills.forEach((pill, index) => {
+            pill.style.setProperty("--pill-delay", `${index * 40}ms`);
+          });
+
+          if (coverageStrip && pills.length > 0) {
+            const pillObserver = new IntersectionObserver(
+              (entries) => {
+                entries.forEach((entry) => {
+                  if (!entry.isIntersecting) return;
+                  pills.forEach((pill) => pill.classList.add("is-visible"));
+                  pillObserver.unobserve(entry.target);
+                });
+              },
+              { threshold: 0.3 }
+            );
+            pillObserver.observe(coverageStrip);
+          }
+        });
+      })();
+    </script>
+    <script type="module">
+      import "./src/auth-page.ts";
+      import { initAuthUi } from "./src/auth-ui.ts";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        void initAuthUi();
+      });
+    </script>
   </body>
 </html>

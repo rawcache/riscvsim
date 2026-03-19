@@ -35,8 +35,10 @@ body.landing-page {
 .landing-nav__inner {
   width: min(1120px, calc(100% - 2 * var(--space-6)));
   margin: 0 auto;
-  min-height: 44px;
+  min-height: 56px;
+  padding: var(--space-3) 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
@@ -53,7 +55,10 @@ body.landing-page {
 .landing-nav__links {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--space-4);
+  row-gap: var(--space-2);
   color: var(--text-secondary);
   font-size: 0.95rem;
 }
@@ -338,13 +343,21 @@ body.loaded .hero__visual {
 .hero__signals {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin-top: var(--space-6);
   color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
+.hero__signals span {
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--border));
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--bg-surface) 82%, transparent);
+}
+
 .hero__visual {
+  min-width: 0;
   justify-self: stretch;
 }
 
@@ -407,6 +420,7 @@ body.loaded .hero__visual {
 .hero-code pre {
   margin: 0;
   padding: var(--space-5);
+  min-height: 14.5em;
   color: var(--text-primary);
   font-family: var(--font-mono);
   font-size: 0.95rem;
@@ -416,6 +430,7 @@ body.loaded .hero__visual {
 
 .hero-code__line {
   display: block;
+  min-height: 1.75em;
 }
 
 .hero-code__comment {
@@ -473,7 +488,7 @@ body.loaded .hero__visual {
 .feature-card {
   opacity: 0;
   transform: translateY(16px);
-  padding: 20px;
+  padding: 24px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
@@ -530,7 +545,7 @@ body.loaded .hero__visual {
 
 .social-proof-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   color: var(--text-secondary);
   font-family: var(--font-display);
@@ -631,11 +646,18 @@ body.loaded .hero__visual {
   }
 
   .landing-nav__inner {
-    min-height: 44px;
+    align-items: flex-start;
   }
 
   .landing-nav__links {
+    width: 100%;
+    justify-content: flex-start;
     gap: var(--space-3);
+  }
+
+  .hero__actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .hero__signals {
@@ -645,6 +667,11 @@ body.loaded .hero__visual {
 
   .cta {
     width: 100%;
+  }
+
+  .hero-code pre {
+    min-height: 13.25em;
+    padding: var(--space-4);
   }
 
   .social-proof-strip {
