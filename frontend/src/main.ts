@@ -1,4 +1,5 @@
 import { parseAssembly } from "./asm";
+import "./auth-page";
 import type { UserSession } from "./auth";
 import { initAuthUi } from "./auth-ui";
 import { animateStep, resetAnimator, setAnimationsEnabled } from "./animator";
@@ -83,7 +84,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   const memFollowSelect = document.getElementById("memFollowSelect") as HTMLSelectElement | null;
   const statusEl = document.getElementById("status") as HTMLElement;
   const statusBadgeEl = document.getElementById("statusBadge") as HTMLElement | null;
-  const gtPillEl = document.getElementById("gtStudentPill") as HTMLElement | null;
   const sampleSelect = document.getElementById("sampleSelect") as HTMLSelectElement;
   const themeToggle = document.getElementById("simThemeToggle") as HTMLButtonElement | null;
 
@@ -1036,7 +1036,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   applyThemeIcon();
   setStatus("ready");
   currentUserSession = await initAuthUi({
-    gtPillEl,
     onSession(session) {
       currentUserSession = session;
     },

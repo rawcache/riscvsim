@@ -24,7 +24,6 @@ type BufferLike = {
 
 type NodeRequire = (moduleName: string) => {
   randomBytes?: (size: number) => Uint8Array;
-  createHash?: (algorithm: string) => { update(data: Uint8Array): { digest(): Uint8Array } };
 };
 
 type TokenResponse = {
@@ -34,11 +33,17 @@ type TokenResponse = {
   expires_in?: number;
 };
 
+type SessionTokenInput = {
+  idToken: string;
+  accessToken: string;
+  refreshToken?: string;
+  expiresIn: number;
+};
+
 const ID_TOKEN_KEY = "studyriscv_id_token";
 const ACCESS_TOKEN_KEY = "studyriscv_access_token";
 const EXPIRES_AT_KEY = "studyriscv_expires_at";
 const REFRESH_TOKEN_KEY = "studyriscv_refresh_token";
-const PKCE_VERIFIER_KEY = "pkce_verifier";
 
 function hasWindow(): boolean {
   return typeof window !== "undefined";
@@ -226,23 +231,6 @@ function getRandomBytes(length: number): Uint8Array {
   throw new Error("No secure random source available.");
 }
 
-async function generateCodeChallenge(verifier: string): Promise<string> {
-  const encoded = new TextEncoder().encode(verifier);
-  if (globalThis.crypto?.subtle) {
-    const digest = await globalThis.crypto.subtle.digest("SHA-256", encoded);
-    return base64UrlEncode(new Uint8Array(digest));
-  }
-
-  const nodeRequire = getNodeRequire();
-  const nodeCrypto = nodeRequire?.("node:crypto");
-  if (nodeCrypto?.createHash) {
-    const digest = nodeCrypto.createHash("sha256").update(encoded).digest();
-    return base64UrlEncode(Uint8Array.from(digest));
-  }
-
-  throw new Error("No SHA-256 implementation available.");
-}
-
 export function decodeJwtPayload(token: string): Record<string, unknown> {
   const parts = token.split(".");
   if (parts.length < 2) {
@@ -255,6 +243,18 @@ export function decodeJwtPayload(token: string): Record<string, unknown> {
 
 export function generateCodeVerifier(): string {
   return base64UrlEncode(getRandomBytes(96));
+}
+
+export function storeSessionTokens(tokens: SessionTokenInput): UserSession | null {
+  return persistTokens(
+    {
+      id_token: tokens.idToken,
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
+      expires_in: tokens.expiresIn,
+    },
+    tokens.expiresIn
+  );
 }
 
 export async function getSession(): Promise<UserSession | null> {
@@ -283,66 +283,9 @@ export function login(config: AuthConfig): void {
     return;
   }
 
-  void (async () => {
-    const sessionStorageRef = getSessionStorage();
-    if (!sessionStorageRef) {
-      return;
-    }
-
-    const verifier = generateCodeVerifier();
-    const challenge = await generateCodeChallenge(verifier);
-    sessionStorageRef.setItem(PKCE_VERIFIER_KEY, verifier);
-
-    const params = new URLSearchParams({
-      response_type: "code",
-      client_id: config.clientId,
-      redirect_uri: config.redirectUri,
-      scope: "email openid profile",
-      code_challenge: challenge,
-      code_challenge_method: "S256",
-    });
-
-    window.location.assign(hostedUiUrl(config.hostedUiDomain, `/oauth2/authorize?${params.toString()}`));
-  })();
-}
-
-export async function handleCallback(config: AuthConfig): Promise<UserSession | null> {
-  if (!hasWindow()) {
-    return null;
-  }
-
-  const sessionStorageRef = getSessionStorage();
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get("code");
-  const verifier = sessionStorageRef?.getItem(PKCE_VERIFIER_KEY);
-
-  if (!code || !verifier || !sessionStorageRef) {
-    return null;
-  }
-
-  try {
-    const tokens = await tokenRequest(
-      config,
-      new URLSearchParams({
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: config.redirectUri,
-        client_id: config.clientId,
-        code_verifier: verifier,
-      })
-    );
-
-    if (!tokens?.id_token || !tokens.access_token || typeof tokens.expires_in !== "number") {
-      return null;
-    }
-
-    const session = persistTokens(tokens, tokens.expires_in);
-    sessionStorageRef.removeItem(PKCE_VERIFIER_KEY);
-    window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
-    return session;
-  } catch {
-    return null;
-  }
+  void import("./auth-page").then(({ show }) => {
+    show({ config });
+  });
 }
 
 export function logout(config: AuthConfig): void {

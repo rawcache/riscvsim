@@ -32,6 +32,7 @@
       href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css"
     />
     <link rel="stylesheet" href="./src/styles/tokens.css" />
+    <link rel="stylesheet" href="./src/styles/auth.css" />
     <link rel="stylesheet" href="./src/styles/landing.css" />
     <link rel="icon" type="image/png" href="./favicon.png" />
   </head>
@@ -367,6 +368,7 @@
       })();
     </script>
     <script type="module">
+      import "./src/auth-page.ts";
       import { initAuthUi } from "./src/auth-ui.ts";
 
       document.addEventListener("DOMContentLoaded", () => {
