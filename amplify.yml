@@ -1,0 +1,21 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - source $HOME/.cargo/env
+        - curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        - cd frontend && npm ci
+    build:
+      commands:
+        - cd rust-core && wasm-pack build --target web --out-dir ../frontend/src/pkg
+        - cd frontend && npm run build
+  artifacts:
+    baseDirectory: frontend/dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - frontend/node_modules/**/*
+      - ~/.cargo/**/*
+      - rust-core/target/**/*
