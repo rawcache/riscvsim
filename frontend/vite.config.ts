@@ -8,8 +8,9 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: resolve(__dirname, "index.html"),
-        landing: resolve(__dirname, "landing.html")
+        landing: resolve(__dirname, "index.html"),
+        simulator: resolve(__dirname, "simulator/index.html"),
+        legacyLanding: resolve(__dirname, "landing.html"),
       }
     }
   },

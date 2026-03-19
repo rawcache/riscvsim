@@ -37,8 +37,10 @@ body.simulator-page {
 .sim-nav__inner {
   width: min(1440px, calc(100% - 2 * var(--space-5)));
   margin: 0 auto;
-  min-height: 48px;
+  min-height: 56px;
+  padding: 10px 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
@@ -54,7 +56,10 @@ body.simulator-page {
 .sim-nav__actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
+  row-gap: 8px;
   color: var(--text-secondary);
   font-size: 0.88rem;
 }
@@ -319,7 +324,7 @@ body.simulator-page {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   color: var(--text-muted);
   font-family: var(--font-display);
@@ -354,7 +359,7 @@ body.simulator-page {
 }
 
 .panel-body {
-  padding: var(--space-3);
+  padding: var(--space-4);
 }
 
 .panel-body--compact {
@@ -373,7 +378,7 @@ body.simulator-page {
   flex: 1;
   min-height: 0;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .sim-panel--regs .panel-body {
@@ -445,7 +450,7 @@ body.simulator-page {
 
 .control-row {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .control-row--editor {
@@ -468,6 +473,7 @@ body.simulator-page {
   margin: 0;
   color: var(--text-muted);
   font-size: 10px;
+  line-height: 1.5;
   text-align: center;
 }
 
@@ -1047,6 +1053,8 @@ body.simulator-page {
 .memory-header-controls {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
 }
 
@@ -1064,7 +1072,7 @@ body.simulator-page {
 }
 
 .memory-address-input {
-  width: 100px;
+  width: 112px;
   padding: 0 6px;
 }
 
@@ -1430,7 +1438,9 @@ body.simulator-page {
   }
 
   .sim-nav__actions {
+    width: 100%;
     gap: var(--space-2);
+    justify-content: flex-start;
   }
 
   .control-row--editor {
@@ -1481,6 +1491,11 @@ body.simulator-page {
 
   .memory-row__bytes {
     grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
+  .panel-header--memory {
+    align-items: flex-start;
+    flex-wrap: wrap;
   }
 }
 

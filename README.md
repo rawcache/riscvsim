@@ -74,15 +74,17 @@ VITE_COGNITO_DOMAIN=<CognitoHostedUiDomain output>
 
 ### Local dev without auth
 
-Leave `frontend/.env` absent or use placeholder values. The signin button will redirect to Cognito but return to `localhost:5173`. The simulator works fully without completing auth.
+Leave `frontend/.env` absent or use placeholder values. The auth UI will still render on localhost, and Cognito sign-out will return to the current page. The simulator works fully without completing auth.
 
 ## Project Structure
 
 ```text
 riscvsim/
 ├── frontend/
-│   ├── index.html          # Simulator app
-│   ├── landing.html        # Marketing landing page
+│   ├── index.html          # Marketing landing page at /
+│   ├── landing.html        # Legacy redirect to /
+│   ├── simulator/
+│   │   └── index.html      # Simulator app at /simulator/
 │   └── src/
 │       ├── asm.ts          # Two-pass assembler with pseudo expansion
 │       ├── auth.ts         # Cognito session handling + PKCE helpers
