@@ -2,7 +2,7 @@
 
 A browser-based RV32IM simulator with step execution, pseudo-C translation, and a full two-pass assembler. Runs entirely in the browser via Rust + WebAssembly.
 
-[Live demo](https://studyriscv.com)
+[Check it out here](https://studyriscv.com)
 
 ## Features
 
