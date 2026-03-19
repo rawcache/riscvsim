@@ -1,0 +1,369 @@
+import { AUTH_CONFIG } from "./auth-config";
+
+export interface AuthConfig {
+  userPoolId: string;
+  clientId: string;
+  hostedUiDomain: string;
+  redirectUri: string;
+}
+
+export interface UserSession {
+  userId: string;
+  email: string;
+  isGtStudent: boolean;
+  idToken: string;
+  accessToken: string;
+  expiresAt: number;
+}
+
+type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+type BufferLike = {
+  from(input: Uint8Array | string, encoding?: string): { toString(encoding: string): string } | Uint8Array;
+};
+
+type NodeRequire = (moduleName: string) => {
+  randomBytes?: (size: number) => Uint8Array;
+  createHash?: (algorithm: string) => { update(data: Uint8Array): { digest(): Uint8Array } };
+};
+
+type TokenResponse = {
+  id_token?: string;
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+};
+
+const ID_TOKEN_KEY = "studyriscv_id_token";
+const ACCESS_TOKEN_KEY = "studyriscv_access_token";
+const EXPIRES_AT_KEY = "studyriscv_expires_at";
+const REFRESH_TOKEN_KEY = "studyriscv_refresh_token";
+const PKCE_VERIFIER_KEY = "pkce_verifier";
+
+function hasWindow(): boolean {
+  return typeof window !== "undefined";
+}
+
+function getLocalStorage(): StorageLike | null {
+  return hasWindow() ? window.localStorage : null;
+}
+
+function getSessionStorage(): StorageLike | null {
+  return hasWindow() ? window.sessionStorage : null;
+}
+
+function getBufferLike(): BufferLike | null {
+  return ((globalThis as typeof globalThis & { Buffer?: BufferLike }).Buffer ?? null) as BufferLike | null;
+}
+
+function getNodeRequire(): NodeRequire | null {
+  const nodeProcess = (globalThis as typeof globalThis & {
+    process?: { versions?: { node?: string } };
+  }).process;
+  if (!nodeProcess?.versions?.node) {
+    return null;
+  }
+
+  try {
+    return Function("return typeof require !== 'undefined' ? require : null")() as NodeRequire | null;
+  } catch {
+    return null;
+  }
+}
+
+function encodeBase64(bytes: Uint8Array): string {
+  const bufferLike = getBufferLike();
+  if (bufferLike) {
+    return (bufferLike.from(bytes) as { toString(encoding: string): string }).toString("base64");
+  }
+
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+function decodeBase64(base64: string): Uint8Array {
+  const bufferLike = getBufferLike();
+  if (bufferLike) {
+    return Uint8Array.from(bufferLike.from(base64, "base64") as Uint8Array);
+  }
+
+  const binary = atob(base64);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  return encodeBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function base64UrlDecode(input: string): Uint8Array {
+  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+  return decodeBase64(normalized + padding);
+}
+
+function normalizeHostedUiDomain(hostedUiDomain: string): string {
+  return hostedUiDomain.replace(/^https?:\/\//i, "").replace(/\/+$/g, "");
+}
+
+function hostedUiUrl(hostedUiDomain: string, path: string): string {
+  return `https://${normalizeHostedUiDomain(hostedUiDomain)}${path}`;
+}
+
+function clearStoredTokens(): void {
+  const localStorageRef = getLocalStorage();
+  const sessionStorageRef = getSessionStorage();
+  localStorageRef?.removeItem(ID_TOKEN_KEY);
+  localStorageRef?.removeItem(ACCESS_TOKEN_KEY);
+  localStorageRef?.removeItem(EXPIRES_AT_KEY);
+  sessionStorageRef?.removeItem(REFRESH_TOKEN_KEY);
+}
+
+function buildSession(idToken: string, accessToken: string, expiresAt: number): UserSession | null {
+  try {
+    const payload = decodeJwtPayload(idToken);
+    const userId = typeof payload.sub === "string" ? payload.sub : "";
+    const email = typeof payload.email === "string" ? payload.email : "";
+    if (!userId || !email) {
+      return null;
+    }
+
+    return {
+      userId,
+      email,
+      isGtStudent: email.toLowerCase().endsWith("@gatech.edu"),
+      idToken,
+      accessToken,
+      expiresAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function tokenRequest(config: AuthConfig, params: URLSearchParams): Promise<TokenResponse | null> {
+  const response = await fetch(hostedUiUrl(config.hostedUiDomain, "/oauth2/token"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return (await response.json()) as TokenResponse;
+}
+
+function persistTokens(tokens: TokenResponse, expiresIn: number): UserSession | null {
+  const localStorageRef = getLocalStorage();
+  const sessionStorageRef = getSessionStorage();
+  if (!localStorageRef || !sessionStorageRef || !tokens.id_token || !tokens.access_token) {
+    return null;
+  }
+
+  const expiresAt = Date.now() + expiresIn * 1000;
+  localStorageRef.setItem(ID_TOKEN_KEY, tokens.id_token);
+  localStorageRef.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
+  localStorageRef.setItem(EXPIRES_AT_KEY, String(expiresAt));
+  if (tokens.refresh_token) {
+    sessionStorageRef.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+  }
+
+  return buildSession(tokens.id_token, tokens.access_token, expiresAt);
+}
+
+async function refreshSession(config: AuthConfig = AUTH_CONFIG): Promise<UserSession | null> {
+  const sessionStorageRef = getSessionStorage();
+  if (!sessionStorageRef) {
+    return null;
+  }
+
+  const refreshToken = sessionStorageRef.getItem(REFRESH_TOKEN_KEY);
+  if (!refreshToken) {
+    return null;
+  }
+
+  try {
+    const tokens = await tokenRequest(
+      config,
+      new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        client_id: config.clientId,
+      })
+    );
+
+    if (!tokens?.id_token || !tokens.access_token || typeof tokens.expires_in !== "number") {
+      clearStoredTokens();
+      return null;
+    }
+
+    return persistTokens(tokens, tokens.expires_in);
+  } catch {
+    clearStoredTokens();
+    return null;
+  }
+}
+
+function getRandomBytes(length: number): Uint8Array {
+  const bytes = new Uint8Array(length);
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+    return bytes;
+  }
+
+  const nodeRequire = getNodeRequire();
+  const nodeCrypto = nodeRequire?.("node:crypto");
+  if (nodeCrypto?.randomBytes) {
+    return Uint8Array.from(nodeCrypto.randomBytes(length));
+  }
+
+  throw new Error("No secure random source available.");
+}
+
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const encoded = new TextEncoder().encode(verifier);
+  if (globalThis.crypto?.subtle) {
+    const digest = await globalThis.crypto.subtle.digest("SHA-256", encoded);
+    return base64UrlEncode(new Uint8Array(digest));
+  }
+
+  const nodeRequire = getNodeRequire();
+  const nodeCrypto = nodeRequire?.("node:crypto");
+  if (nodeCrypto?.createHash) {
+    const digest = nodeCrypto.createHash("sha256").update(encoded).digest();
+    return base64UrlEncode(Uint8Array.from(digest));
+  }
+
+  throw new Error("No SHA-256 implementation available.");
+}
+
+export function decodeJwtPayload(token: string): Record<string, unknown> {
+  const parts = token.split(".");
+  if (parts.length < 2) {
+    throw new Error("Invalid JWT.");
+  }
+
+  const json = new TextDecoder().decode(base64UrlDecode(parts[1]));
+  return JSON.parse(json) as Record<string, unknown>;
+}
+
+export function generateCodeVerifier(): string {
+  return base64UrlEncode(getRandomBytes(96));
+}
+
+export async function getSession(): Promise<UserSession | null> {
+  const localStorageRef = getLocalStorage();
+  if (!localStorageRef) {
+    return null;
+  }
+
+  const idToken = localStorageRef.getItem(ID_TOKEN_KEY);
+  const accessToken = localStorageRef.getItem(ACCESS_TOKEN_KEY);
+  const expiresAt = Number(localStorageRef.getItem(EXPIRES_AT_KEY));
+
+  if (!idToken || !accessToken || !Number.isFinite(expiresAt)) {
+    return null;
+  }
+
+  if (expiresAt < Date.now() + 60_000) {
+    return refreshSession();
+  }
+
+  return buildSession(idToken, accessToken, expiresAt);
+}
+
+export function login(config: AuthConfig): void {
+  if (!hasWindow()) {
+    return;
+  }
+
+  void (async () => {
+    const sessionStorageRef = getSessionStorage();
+    if (!sessionStorageRef) {
+      return;
+    }
+
+    const verifier = generateCodeVerifier();
+    const challenge = await generateCodeChallenge(verifier);
+    sessionStorageRef.setItem(PKCE_VERIFIER_KEY, verifier);
+
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: config.clientId,
+      redirect_uri: config.redirectUri,
+      scope: "email openid profile",
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+    });
+
+    window.location.assign(hostedUiUrl(config.hostedUiDomain, `/oauth2/authorize?${params.toString()}`));
+  })();
+}
+
+export async function handleCallback(config: AuthConfig): Promise<UserSession | null> {
+  if (!hasWindow()) {
+    return null;
+  }
+
+  const sessionStorageRef = getSessionStorage();
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+  const verifier = sessionStorageRef?.getItem(PKCE_VERIFIER_KEY);
+
+  if (!code || !verifier || !sessionStorageRef) {
+    return null;
+  }
+
+  try {
+    const tokens = await tokenRequest(
+      config,
+      new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: config.redirectUri,
+        client_id: config.clientId,
+        code_verifier: verifier,
+      })
+    );
+
+    if (!tokens?.id_token || !tokens.access_token || typeof tokens.expires_in !== "number") {
+      return null;
+    }
+
+    const session = persistTokens(tokens, tokens.expires_in);
+    sessionStorageRef.removeItem(PKCE_VERIFIER_KEY);
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+export function logout(config: AuthConfig): void {
+  clearStoredTokens();
+  if (!hasWindow()) {
+    return;
+  }
+
+  const params = new URLSearchParams({
+    client_id: config.clientId,
+    logout_uri: config.redirectUri,
+  });
+  window.location.assign(hostedUiUrl(config.hostedUiDomain, `/logout?${params.toString()}`));
+}
+
+export function isLoggedIn(): boolean {
+  const localStorageRef = getLocalStorage();
+  if (!localStorageRef) {
+    return false;
+  }
+
+  const expiresAt = Number(localStorageRef.getItem(EXPIRES_AT_KEY));
+  return Number.isFinite(expiresAt) && expiresAt > Date.now();
+}
