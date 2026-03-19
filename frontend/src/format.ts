@@ -52,6 +52,20 @@ const TRAP_LABELS: Record<string, string> = {
   breakpoint: "ebreak",
 };
 
+const REGISTER_GROUPS = {
+  left: [
+    { label: "special", indices: [0, 1, 2, 3, 4] },
+    { label: "temporaries", indices: [5, 6, 7] },
+    { label: "saved", indices: [8, 9] },
+    { label: "args / return", indices: [10, 11, 12, 13, 14, 15] },
+  ],
+  right: [
+    { label: "continue args", indices: [16, 17] },
+    { label: "saved (cont)", indices: [18, 19, 20, 21, 22, 23, 24, 25, 26, 27] },
+    { label: "temporaries (cont)", indices: [28, 29, 30, 31] },
+  ],
+} as const;
+
 export type ClikeExpressionParts = {
   dest: string;
   op: string;
@@ -118,34 +132,49 @@ export function renderRegs(
   changedPrev: ReadonlySet<number> = new Set<number>()
 ): string {
   const safeRegs = regs && regs.length === 32 ? regs : Array.from({ length: 32 }, () => 0);
-  const renderColumn = (start: number) =>
-    Array.from({ length: 16 }, (_, offset) => start + offset)
-      .map((index) => {
-        const value = safeRegs[index] >>> 0;
-        const signedValue = value | 0;
-        const classes = ["reg-cell"];
-        if (index === 0) {
-          classes.push("reg-cell--zero");
-        } else if (changedNow.has(index)) {
-          classes.push("reg-changed-now");
-        } else if (changedPrev.has(index)) {
-          classes.push("reg-changed-prev");
+  const renderCell = (index: number) => {
+    const value = safeRegs[index] >>> 0;
+    const signedValue = value | 0;
+    const classes = ["reg-cell"];
+    if (index === 0) {
+      classes.push("reg-cell--zero");
+    } else if (changedNow.has(index)) {
+      classes.push("reg-changed-now");
+    } else if (changedPrev.has(index)) {
+      classes.push("reg-changed-prev");
+    }
+    return `
+      <div class="${classes.join(" ")}" data-reg-index="${index}" data-tooltip="dec: ${signedValue}  udec: ${value}">
+        <span class="reg-meta">
+          <span class="reg-abi">${ABI_NAMES[index]}</span>
+          <span class="reg-name">x${index}</span>
+        </span>
+        <span class="reg-value">${hex32(value)}</span>
+      </div>
+    `;
+  };
+
+  const renderColumn = (
+    groups: ReadonlyArray<{ label: string; indices: readonly number[] }>
+  ) =>
+    groups
+      .map((group, groupIndex) => {
+        const labelClasses = ["regs-group-label"];
+        if (groupIndex === 0) {
+          labelClasses.push("regs-group-label--first");
         }
         return `
-          <div class="${classes.join(" ")}" data-reg-index="${index}" data-tooltip="dec: ${signedValue}  udec: ${value}">
-            <span class="reg-meta">
-              <span class="reg-abi">${ABI_NAMES[index]}</span>
-              <span class="reg-name">x${index}</span>
-            </span>
-            <span class="reg-value">${hex32(value)}</span>
+          <div class="regs-group">
+            <div class="${labelClasses.join(" ")}">${group.label}</div>
+            <div class="regs-group__cells">${group.indices.map((index) => renderCell(index)).join("")}</div>
           </div>
         `;
       })
       .join("");
 
   return `
-    <div class="regs-column regs-column--left">${renderColumn(0)}</div>
-    <div class="regs-column regs-column--right">${renderColumn(16)}</div>
+    <div class="regs-column regs-column--left">${renderColumn(REGISTER_GROUPS.left)}</div>
+    <div class="regs-column regs-column--right">${renderColumn(REGISTER_GROUPS.right)}</div>
   `;
 }
 

@@ -42,6 +42,18 @@
         <nav class="landing-nav__links">
           <a href="./index.html">Simulator</a>
           <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+          <div class="auth-nav">
+            <button id="auth-signin-btn" class="auth-signin-btn" type="button">Sign in</button>
+            <div class="auth-menu">
+              <button id="auth-user-btn" class="auth-user-btn" type="button" hidden></button>
+              <div id="auth-dropdown" class="auth-dropdown" hidden>
+                <div id="auth-email" class="auth-dropdown__email"></div>
+                <div id="auth-tier" class="auth-dropdown__tier"></div>
+                <div class="auth-dropdown__divider"></div>
+                <button id="auth-signout-btn" class="auth-dropdown__signout" type="button">Sign out</button>
+              </div>
+            </div>
+          </div>
           <button id="landingThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
             <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -353,6 +365,13 @@
           }
         });
       })();
+    </script>
+    <script type="module">
+      import { initAuthUi } from "./src/auth-ui.ts";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        void initAuthUi();
+      });
     </script>
   </body>
 </html>

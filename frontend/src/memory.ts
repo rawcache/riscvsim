@@ -9,7 +9,7 @@ type MemoryView = {
   reset: () => void;
   seedBytes: (start: number, bytes: Uint8Array) => void;
   applyEffects: (effects: Effect[]) => void;
-  renderWindow: (anchor: number) => string;
+  renderWindow: (base: number) => string;
   getRecentWrites: () => string[];
   getLastAddr: () => number | undefined;
 };
@@ -77,9 +77,8 @@ export function createMemoryView(): MemoryView {
     }
   }
 
-  function renderWindow(anchor: number): string {
-    const normalizedAnchor = anchor >>> 0;
-    const windowStart = normalizedAnchor > WINDOW_BYTES / 2 ? normalizedAnchor - WINDOW_BYTES / 2 : 0;
+  function renderWindow(base: number): string {
+    const windowStart = (base >>> 0) & ~0x7;
     const rows: string[] = [];
 
     for (let rowOffset = 0; rowOffset < WINDOW_BYTES; rowOffset += BYTES_PER_ROW) {

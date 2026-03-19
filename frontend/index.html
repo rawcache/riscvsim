@@ -42,6 +42,20 @@
         <a class="sim-brand" href="./landing.html">StudyRISC-V</a>
         <div class="sim-nav__actions">
           <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+          <span id="statusBadge" class="status-badge status-badge--ready">Ready</span>
+          <span id="gtStudentPill" class="gt-pill" hidden>GT</span>
+          <div class="auth-nav">
+            <button id="auth-signin-btn" class="auth-signin-btn" type="button">Sign in</button>
+            <div class="auth-menu">
+              <button id="auth-user-btn" class="auth-user-btn" type="button" hidden></button>
+              <div id="auth-dropdown" class="auth-dropdown" hidden>
+                <div id="auth-email" class="auth-dropdown__email"></div>
+                <div id="auth-tier" class="auth-dropdown__tier"></div>
+                <div class="auth-dropdown__divider"></div>
+                <button id="auth-signout-btn" class="auth-dropdown__signout" type="button">Sign out</button>
+              </div>
+            </div>
+          </div>
           <button id="simThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
             <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -65,17 +79,37 @@
           <section class="sim-panel sim-panel--editor">
             <div class="panel-header">
               <span>Program Input</span>
-              <button
-                id="copySource"
-                class="panel-icon-button"
-                type="button"
-                aria-label="Copy assembly source"
-                title="Copy assembly source"
-              >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <rect x="9" y="9" width="10" height="10" rx="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"></path>
-                </svg>
+              <div class="panel-header__actions">
+                <button
+                  id="shareSource"
+                  class="panel-icon-button"
+                  type="button"
+                  aria-label="Copy shareable link"
+                  title="Copy shareable link"
+                >
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l2.46-2.46a5 5 0 0 0-7.07-7.07L11.5 5.43"></path>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54L4 12.92a5 5 0 0 0 7.07 7.07l1.43-1.43"></path>
+                  </svg>
+                </button>
+                <button
+                  id="copySource"
+                  class="panel-icon-button"
+                  type="button"
+                  aria-label="Copy assembly source"
+                  title="Copy assembly source"
+                >
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <rect x="9" y="9" width="10" height="10" rx="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div id="sharedLinkBanner" class="shared-link-banner" hidden>
+              <span>Loaded from shared link · Edit to make it yours</span>
+              <button id="dismissSharedBanner" class="shared-link-banner__dismiss" type="button" aria-label="Dismiss shared link banner">
+                ×
               </button>
             </div>
             <div class="panel-body">
@@ -162,6 +196,11 @@
 
           <section class="sim-panel sim-panel--effects">
             <div class="panel-header">Effect Log</div>
+            <div class="effect-filter-bar" aria-label="Effect log filters">
+              <button id="effectFilterReg" class="effect-filter-button" type="button" aria-pressed="true">REG</button>
+              <button id="effectFilterMem" class="effect-filter-button" type="button" aria-pressed="true">MEM</button>
+              <button id="effectFilterPc" class="effect-filter-button" type="button" aria-pressed="true">PC</button>
+            </div>
             <div class="panel-body">
               <div id="effects" class="effects-view" aria-live="polite"></div>
             </div>
@@ -177,7 +216,19 @@
           </section>
 
           <section class="sim-panel sim-panel--memory">
-            <div class="panel-header">Memory</div>
+            <div class="panel-header panel-header--memory">
+              <span>Memory</span>
+              <div class="memory-header-controls">
+                <input id="memAddressInput" class="memory-address-input" type="text" inputmode="text" placeholder="0x00000000" />
+                <select id="memFollowSelect" class="memory-follow-select" aria-label="Memory follow register">
+                  <option value="none">follow: none</option>
+                  <option value="sp">follow: sp (x2)</option>
+                  <option value="a0">follow: a0 (x10)</option>
+                  <option value="a1">follow: a1 (x11)</option>
+                  <option value="ra">follow: x1 / ra</option>
+                </select>
+              </div>
+            </div>
             <div class="panel-body">
               <div class="memory-stack">
                 <div class="memory-section">

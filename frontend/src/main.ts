@@ -1,4 +1,6 @@
 import { parseAssembly } from "./asm";
+import type { UserSession } from "./auth";
+import { initAuthUi } from "./auth-ui";
 import { animateStep, resetAnimator, setAnimationsEnabled } from "./animator";
 import { renderDisasm } from "./disasm";
 import {
@@ -12,35 +14,76 @@ import {
 } from "./format";
 import { DATA_BASE } from "./memory-map";
 import { createMemoryView } from "./memory";
+import { pushToUrl, readFromUrl } from "./permalink";
 import type { ApiResponse, Effect, WasmStateDelta } from "./types";
 import { WasmRuntime } from "./wasm-runtime";
 
 let sessionId: string | undefined;
+export let currentUserSession: UserSession | null = null;
 
 const MAX_RUN_STEPS = 2000;
 const LOCAL_SIM_SESSION = "local-wasm";
 const THEME_KEY = "studyriscv-theme";
 
-window.addEventListener("DOMContentLoaded", () => {
+type EffectLogFilters = {
+  reg: boolean;
+  mem: boolean;
+  pc: boolean;
+};
+
+type EffectLogEntry =
+  | { kind: "trap"; trap: NonNullable<ApiResponse["trap"]> }
+  | { kind: "reg"; effect: Extract<Effect, { kind: "reg" }> }
+  | { kind: "mem"; effect: Extract<Effect, { kind: "mem" }> }
+  | { kind: "pc"; effect: Extract<Effect, { kind: "pc" }> };
+
+type MemoryFollowMode = "none" | "sp" | "a0" | "a1" | "ra";
+
+type StatusState = "ready" | "assembled" | "stepping" | "running" | "halted" | "trap";
+
+const DEFAULT_EFFECT_FILTERS: EffectLogFilters = {
+  reg: true,
+  mem: true,
+  pc: true,
+};
+
+const FOLLOW_REGISTER_MAP: Record<Exclude<MemoryFollowMode, "none">, number> = {
+  sp: 2,
+  a0: 10,
+  a1: 11,
+  ra: 1,
+};
+
+window.addEventListener("DOMContentLoaded", async () => {
   const assembleProgressEl = document.getElementById("assembleProgress") as HTMLElement | null;
   const assembleBtn = document.getElementById("assemble") as HTMLButtonElement;
   const stepBtn = document.getElementById("step") as HTMLButtonElement;
   const stepBackBtn = document.getElementById("stepBack") as HTMLButtonElement;
   const runBtn = document.getElementById("run") as HTMLButtonElement;
   const resetBtn = document.getElementById("reset") as HTMLButtonElement;
+  const shareSourceBtn = document.getElementById("shareSource") as HTMLButtonElement | null;
   const copySourceBtn = document.getElementById("copySource") as HTMLButtonElement | null;
   const copyToastEl = document.getElementById("copyToast") as HTMLElement | null;
+  const sharedLinkBannerEl = document.getElementById("sharedLinkBanner") as HTMLElement | null;
+  const dismissSharedBannerBtn = document.getElementById("dismissSharedBanner") as HTMLButtonElement | null;
   const sourceEl = document.getElementById("source") as HTMLTextAreaElement;
   const sourceLinesEl = document.getElementById("sourceLines") as HTMLElement | null;
 
   const clikeEl = document.getElementById("clike") as HTMLElement;
   const effectsEl = document.getElementById("effects") as HTMLElement;
+  const effectFilterRegBtn = document.getElementById("effectFilterReg") as HTMLButtonElement | null;
+  const effectFilterMemBtn = document.getElementById("effectFilterMem") as HTMLButtonElement | null;
+  const effectFilterPcBtn = document.getElementById("effectFilterPc") as HTMLButtonElement | null;
   const regsEl = document.getElementById("regs") as HTMLElement;
   const pcEl = document.getElementById("pc") as HTMLElement;
   const disasmEl = document.getElementById("disasm") as HTMLElement;
   const memWritesEl = document.getElementById("memWrites") as HTMLElement;
   const memWindowEl = document.getElementById("memWindow") as HTMLElement;
+  const memAddressInput = document.getElementById("memAddressInput") as HTMLInputElement | null;
+  const memFollowSelect = document.getElementById("memFollowSelect") as HTMLSelectElement | null;
   const statusEl = document.getElementById("status") as HTMLElement;
+  const statusBadgeEl = document.getElementById("statusBadge") as HTMLElement | null;
+  const gtPillEl = document.getElementById("gtStudentPill") as HTMLElement | null;
   const sampleSelect = document.getElementById("sampleSelect") as HTMLSelectElement;
   const themeToggle = document.getElementById("simThemeToggle") as HTMLButtonElement | null;
 
@@ -57,7 +100,10 @@ window.addEventListener("DOMContentLoaded", () => {
   let assembleProgressStartedAt = 0;
   let assembleProgressResetTimer: number | null = null;
   let programDataBytes = new Uint8Array();
-  let defaultMemoryAnchor = 0;
+  let manualMemoryBase = 0;
+  let memoryFollowMode: MemoryFollowMode = "none";
+  let effectFilters: EffectLogFilters = { ...DEFAULT_EFFECT_FILTERS };
+  let memoryInputInvalidTimer: number | null = null;
   const sampleOptionLabels = new Map<string, string>(
     Array.from(sampleSelect.options).map((option) => [option.value, option.textContent ?? option.value])
   );
@@ -85,6 +131,160 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function setStatus(state: StatusState, label?: string) {
+    if (!statusBadgeEl) return;
+    statusBadgeEl.className = `status-badge status-badge--${state}`;
+    statusBadgeEl.textContent =
+      label ??
+      {
+        ready: "Ready",
+        assembled: "Assembled",
+        stepping: "Stepping",
+        running: "Running",
+        halted: "Halted",
+        trap: "Trap",
+      }[state];
+  }
+
+  function trapStatusLabel(trap: NonNullable<ApiResponse["trap"]>): string {
+    switch (trap.cause) {
+      case "environment_call":
+        return "TRAP ecall";
+      case "breakpoint":
+        return "TRAP ebreak";
+      default:
+        if (trap.cause.includes("misaligned")) {
+          return "TRAP align";
+        }
+        return `TRAP ${trap.cause.replace(/_/g, " ")}`;
+    }
+  }
+
+  function alignMemoryBase(address: number): number {
+    return (address >>> 0) & ~0x7;
+  }
+
+  function currentSnapshot(): ApiResponse | undefined {
+    return historyIndex >= 0 ? history[historyIndex] : undefined;
+  }
+
+  function resolveMemoryWindowBase(regs?: number[]): number {
+    if (memoryFollowMode === "none") {
+      return manualMemoryBase;
+    }
+
+    const registerIndex = FOLLOW_REGISTER_MAP[memoryFollowMode];
+    const registerValue = regs?.[registerIndex] ?? manualMemoryBase;
+    return alignMemoryBase(registerValue);
+  }
+
+  function syncMemoryControls(regs?: number[]) {
+    if (!memAddressInput || !memFollowSelect) {
+      return;
+    }
+
+    const base = resolveMemoryWindowBase(regs);
+    const readonly = memoryFollowMode !== "none";
+    memAddressInput.readOnly = readonly;
+    memAddressInput.classList.toggle("memory-address-input--readonly", readonly);
+    memFollowSelect.value = memoryFollowMode;
+
+    if (readonly || document.activeElement !== memAddressInput) {
+      memAddressInput.value = hex32(base);
+    }
+  }
+
+  function updateMemoryWindow(regs?: number[]) {
+    const base = resolveMemoryWindowBase(regs);
+    memWindowEl.innerHTML = memoryView.renderWindow(base);
+    syncMemoryControls(regs);
+  }
+
+  function resetMemoryControls(base = 0) {
+    memoryFollowMode = "none";
+    manualMemoryBase = alignMemoryBase(base);
+    syncMemoryControls(currentSnapshot()?.regs);
+  }
+
+  function flashMemoryInputInvalid() {
+    if (!memAddressInput) return;
+    if (memoryInputInvalidTimer !== null) {
+      window.clearTimeout(memoryInputInvalidTimer);
+    }
+    memAddressInput.classList.add("memory-address-input--invalid");
+    memoryInputInvalidTimer = window.setTimeout(() => {
+      memAddressInput.classList.remove("memory-address-input--invalid");
+      memoryInputInvalidTimer = null;
+    }, 400);
+  }
+
+  function commitMemoryAddressInput() {
+    if (!memAddressInput || memoryFollowMode !== "none") {
+      syncMemoryControls(currentSnapshot()?.regs);
+      return;
+    }
+
+    const raw = memAddressInput.value.trim();
+    const normalized = raw.startsWith("0x") || raw.startsWith("0X") ? raw.slice(2) : raw;
+    if (!/^[0-9a-fA-F]+$/.test(normalized)) {
+      flashMemoryInputInvalid();
+      syncMemoryControls(currentSnapshot()?.regs);
+      return;
+    }
+
+    const parsed = Number.parseInt(normalized, 16);
+    if (!Number.isFinite(parsed)) {
+      flashMemoryInputInvalid();
+      syncMemoryControls(currentSnapshot()?.regs);
+      return;
+    }
+
+    manualMemoryBase = alignMemoryBase(parsed);
+    updateMemoryWindow(currentSnapshot()?.regs);
+  }
+
+  function resetEffectFilters() {
+    effectFilters = { ...DEFAULT_EFFECT_FILTERS };
+    updateEffectFilterButtons();
+  }
+
+  function updateEffectFilterButtons() {
+    const buttons: Array<[HTMLButtonElement | null, keyof EffectLogFilters]> = [
+      [effectFilterRegBtn, "reg"],
+      [effectFilterMemBtn, "mem"],
+      [effectFilterPcBtn, "pc"],
+    ];
+
+    for (const [button, key] of buttons) {
+      if (!button) continue;
+      const active = effectFilters[key];
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
+    }
+  }
+
+  function filterLog(entries: EffectLogEntry[], filters: EffectLogFilters): EffectLogEntry[] {
+    return entries.filter((entry) => {
+      if (entry.kind === "trap") {
+        return true;
+      }
+      return filters[entry.kind];
+    });
+  }
+
+  function setSharedBannerVisible(visible: boolean) {
+    if (!sharedLinkBannerEl) return;
+    sharedLinkBannerEl.hidden = !visible;
+    sharedLinkBannerEl.style.display = visible ? "flex" : "none";
+  }
+
+  function clearSharedLinkHash() {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+  }
+
   function startAssembleProgress() {
     if (!assembleProgressEl) return;
     if (assembleProgressResetTimer !== null) {
@@ -107,8 +307,9 @@ window.addEventListener("DOMContentLoaded", () => {
     }, remaining);
   }
 
-  function showCopyToast() {
+  function showCopyToast(message = "Copied!") {
     if (!copyToastEl) return;
+    copyToastEl.textContent = message;
     if (copyToastTimer !== null) {
       window.clearTimeout(copyToastTimer);
     }
@@ -121,8 +322,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }, 1650);
   }
 
-  async function copySourceToClipboard() {
-    const text = sourceEl.value;
+  async function copyTextToClipboard(text: string, toastMessage = "Copied!") {
     if (!text.trim()) {
       return;
     }
@@ -130,14 +330,24 @@ window.addEventListener("DOMContentLoaded", () => {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
       } else {
-        sourceEl.select();
+        const tempEl = document.createElement("textarea");
+        tempEl.value = text;
+        tempEl.setAttribute("readonly", "true");
+        tempEl.style.position = "absolute";
+        tempEl.style.left = "-9999px";
+        document.body.appendChild(tempEl);
+        tempEl.select();
         document.execCommand("copy");
-        sourceEl.setSelectionRange(sourceEl.value.length, sourceEl.value.length);
+        document.body.removeChild(tempEl);
       }
-      showCopyToast();
+      showCopyToast(toastMessage);
     } catch {
       setPanelMessage(effectsEl, "Copy failed. Your browser blocked clipboard access.", "danger");
     }
+  }
+
+  async function copySourceToClipboard() {
+    await copyTextToClipboard(sourceEl.value, "Copied!");
   }
 
   function effectEmptyState(): string {
@@ -164,7 +374,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     lastPc = undefined;
     setPanelMessage(memWritesEl, "No memory writes yet.");
-    memWindowEl.innerHTML = memoryView.renderWindow(defaultMemoryAnchor);
+    updateMemoryWindow(currentSnapshot()?.regs);
   }
 
   function clearPanels() {
@@ -395,27 +605,46 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function buildEffectLog(): string {
-    const entries: string[] = [];
-    let newestEntry = true;
+  function buildEffectEntries(): EffectLogEntry[] {
+    const entries: EffectLogEntry[] = [];
 
     for (let index = historyIndex; index >= 0 && entries.length < 32; index--) {
       const snapshot = history[index];
       if (snapshot.trap) {
-        entries.push(
-          `<div class="${effectEntryClasses("effect-entry effect-entry--trap", newestEntry)}"><span class="effect-entry__trap">${escapeHtml(fmtTrap(snapshot.trap))}</span></div>`
-        );
-        newestEntry = false;
+        entries.push({ kind: "trap", trap: snapshot.trap });
       }
       const effects = [...(snapshot.effects ?? [])].reverse();
       for (const effect of effects) {
         if (entries.length >= 32) break;
-        entries.push(renderEffectEntry(effect, newestEntry));
-        newestEntry = false;
+        if (effect.kind === "reg") {
+          entries.push({ kind: "reg", effect });
+        } else if (effect.kind === "mem") {
+          entries.push({ kind: "mem", effect });
+        } else {
+          entries.push({ kind: "pc", effect });
+        }
       }
     }
 
-    return entries.length > 0 ? entries.join("") : effectEmptyState();
+    return entries;
+  }
+
+  function renderEffectLog(): string {
+    const entries = filterLog(buildEffectEntries(), effectFilters);
+    if (entries.length === 0) {
+      return historyIndex >= 0
+        ? '<div class="empty-state">No effect entries match the current filters.</div>'
+        : effectEmptyState();
+    }
+
+    return entries
+      .map((entry, index) => {
+        if (entry.kind === "trap") {
+          return `<div class="${effectEntryClasses("effect-entry effect-entry--trap", index === 0)}"><span class="effect-entry__trap">${escapeHtml(fmtTrap(entry.trap))}</span></div>`;
+        }
+        return renderEffectEntry(entry.effect, index === 0);
+      })
+      .join("");
   }
 
   function renderAll(data: ApiResponse) {
@@ -426,7 +655,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const previousEffects = historyIndex > 0 ? history[historyIndex - 1].effects ?? [] : [];
     const clikeExpression = data.clike && data.clike.trim().length > 0 ? data.clike : data.rv2c ?? "";
     clikeEl.innerHTML = renderClikeExpression(formatClikeExpression(clikeExpression));
-    effectsEl.innerHTML = buildEffectLog();
+    effectsEl.innerHTML = renderEffectLog();
     regsEl.innerHTML = renderRegs(data.regs, collectChangedRegs(effects), collectChangedRegs(previousEffects));
     pcEl.textContent = data.pc !== undefined ? hex32(data.pc) : "";
     disasmEl.innerHTML = renderDisasm(data.pc, lastPc, data.disasm, disasmEncodings);
@@ -438,21 +667,27 @@ window.addEventListener("DOMContentLoaded", () => {
           .join("")
       : '<div class="empty-state">No memory writes yet.</div>';
 
-    const anchor = memoryView.getLastAddr() ?? defaultMemoryAnchor;
-    memWindowEl.innerHTML = memoryView.renderWindow(anchor);
+    updateMemoryWindow(data.regs);
 
     const halted = data.halted === true;
     const stalled = isPcStalled(effects);
-    if (halted || stalled) {
+    if (data.trap) {
+      stepBtn.disabled = true;
+      stepBtn.textContent = "Trapped";
+      runBtn.disabled = true;
+      assembleBtn.disabled = false;
+      setStatus("trap", trapStatusLabel(data.trap));
+    } else if (halted || stalled) {
       stepBtn.disabled = true;
       stepBtn.textContent = "Halted";
       stopRun(stalled && !halted ? "Halt loop detected." : "Program halted.");
       statusEl.textContent = stalled && !halted ? "Halt loop detected." : "Program halted.";
       assembleBtn.disabled = false;
+      setStatus("halted");
     } else {
       stepBtn.textContent = "Step";
     }
-    runBtn.disabled = !sessionId || halted || stalled;
+    runBtn.disabled = !sessionId || halted || stalled || Boolean(data.trap);
     syncHistoryControls();
   }
 
@@ -471,6 +706,7 @@ window.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    resetEffectFilters();
     stopAssembleSpinner();
     if (showSpinner) {
       startAssembleProgress();
@@ -532,7 +768,7 @@ window.addEventListener("DOMContentLoaded", () => {
       disasmLines = parsed.disasm;
       clikeByPc = buildClikeMap(disasmLines);
       programDataBytes = parsed.data instanceof Uint8Array ? Uint8Array.from(parsed.data) : new Uint8Array();
-      defaultMemoryAnchor = programDataBytes.length > 0 ? DATA_BASE : 0;
+      resetMemoryControls(programDataBytes.length > 0 ? DATA_BASE : 0);
       runtime.loadProgram(parsed.instructions);
       runtime.reset();
       disasmEncodings = buildDisasmEncodings(disasmLines);
@@ -548,6 +784,7 @@ window.addEventListener("DOMContentLoaded", () => {
       runBtn.disabled = !sessionId;
       resetBtn.disabled = !sessionId;
       statusEl.textContent = successMessage;
+      setStatus("assembled");
     } catch (err) {
       const message = (err as Error).message;
       setPanelMessage(effectsEl, `Error: ${message}`, "danger");
@@ -556,7 +793,7 @@ window.addEventListener("DOMContentLoaded", () => {
       clikeByPc = new Map<number, string>();
       disasmEncodings = new Map<number, string>();
       programDataBytes = new Uint8Array();
-      defaultMemoryAnchor = 0;
+      resetMemoryControls(0);
       history = [];
       historyIndex = -1;
       runBtn.disabled = true;
@@ -567,6 +804,7 @@ window.addEventListener("DOMContentLoaded", () => {
       disasmEl.innerHTML = renderDisasm(undefined, undefined, []);
       clikeEl.innerHTML = renderClikeExpression(null);
       resetAnimator();
+      setStatus("ready");
     } finally {
       stopAssembleSpinner();
       if (showSpinner) {
@@ -758,7 +996,9 @@ window.addEventListener("DOMContentLoaded", () => {
     syncSampleOptionLabels(name);
     sourceEl.value = samplePrograms[name] ?? "";
     programDataBytes = new Uint8Array();
-    defaultMemoryAnchor = 0;
+    resetMemoryControls(0);
+    resetEffectFilters();
+    setSharedBannerVisible(false);
     updateSourceLineNumbers();
     clearPanels();
     sessionId = undefined;
@@ -779,6 +1019,7 @@ window.addEventListener("DOMContentLoaded", () => {
     runBtn.disabled = true;
     stepBackBtn.disabled = true;
     sourceEl.focus();
+    setStatus("ready");
   }
 
   themeToggle?.addEventListener("click", () => {
@@ -793,6 +1034,13 @@ window.addEventListener("DOMContentLoaded", () => {
     applyThemeIcon();
   });
   applyThemeIcon();
+  setStatus("ready");
+  currentUserSession = await initAuthUi({
+    gtPillEl,
+    onSession(session) {
+      currentUserSession = session;
+    },
+  });
 
   sourceEl.addEventListener("input", updateSourceLineNumbers);
   sourceEl.addEventListener("scroll", updateSourceLineNumbers);
@@ -801,24 +1049,89 @@ window.addEventListener("DOMContentLoaded", () => {
     loadSample(sampleSelect.value || "arraySum");
   };
 
+  effectFilterRegBtn?.addEventListener("click", () => {
+    effectFilters = { ...effectFilters, reg: !effectFilters.reg };
+    updateEffectFilterButtons();
+    effectsEl.innerHTML = renderEffectLog();
+  });
+
+  effectFilterMemBtn?.addEventListener("click", () => {
+    effectFilters = { ...effectFilters, mem: !effectFilters.mem };
+    updateEffectFilterButtons();
+    effectsEl.innerHTML = renderEffectLog();
+  });
+
+  effectFilterPcBtn?.addEventListener("click", () => {
+    effectFilters = { ...effectFilters, pc: !effectFilters.pc };
+    updateEffectFilterButtons();
+    effectsEl.innerHTML = renderEffectLog();
+  });
+
+  memAddressInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitMemoryAddressInput();
+      sourceEl.focus();
+    }
+  });
+
+  memAddressInput?.addEventListener("blur", () => {
+    commitMemoryAddressInput();
+  });
+
+  memFollowSelect?.addEventListener("change", () => {
+    memoryFollowMode = (memFollowSelect.value as MemoryFollowMode) || "none";
+    updateMemoryWindow(currentSnapshot()?.regs);
+  });
+
+  dismissSharedBannerBtn?.addEventListener("click", () => {
+    if (sharedLinkBannerEl) {
+      sharedLinkBannerEl.style.display = "none";
+      sharedLinkBannerEl.hidden = true;
+    }
+    clearSharedLinkHash();
+  });
+
   copySourceBtn?.addEventListener("click", () => {
     void copySourceToClipboard();
   });
 
-  loadSample(sampleSelect.value || "arraySum");
+  shareSourceBtn?.addEventListener("click", async () => {
+    await pushToUrl(sourceEl.value);
+    await copyTextToClipboard(window.location.href, "Link copied!");
+  });
+
+  const sharedProgram = await readFromUrl();
+  if (sharedProgram) {
+    setSharedBannerVisible(true);
+    syncSampleOptionLabels("__shared__");
+    sourceEl.value = sharedProgram;
+    updateSourceLineNumbers();
+    clearPanels();
+  } else {
+    setSharedBannerVisible(false);
+    loadSample(sampleSelect.value || "arraySum");
+  }
+
+  resetEffectFilters();
+  resetMemoryControls(0);
 
   statusEl.textContent = "Initializing Rust/WASM simulator…";
   assembleBtn.disabled = true;
   WasmRuntime.create()
-    .then((rt) => {
+    .then(async (rt) => {
       runtime = rt;
       rt.setAlignmentChecks(true);
       statusEl.textContent = "Rust/WASM simulator ready.";
       assembleBtn.disabled = false;
+      if (sharedProgram) {
+        await assembleCurrentSource(true, "Loaded from shared link.");
+      }
     })
     .catch((err) => {
       statusEl.textContent = `Failed to initialize WASM: ${(err as Error).message}`;
       assembleBtn.disabled = true;
+      setStatus("ready");
     });
 
   assembleBtn.onclick = async () => {
@@ -854,10 +1167,12 @@ window.addEventListener("DOMContentLoaded", () => {
       historyIndex += 1;
       renderFromHistory(historyIndex);
       statusEl.textContent = "Viewing recorded state.";
+      setStatus("assembled");
       return;
     }
 
     try {
+      setStatus("stepping");
       const delta = runtime.step();
       const data = buildSnapshot(delta);
       pushHistory(data);
@@ -865,9 +1180,11 @@ window.addEventListener("DOMContentLoaded", () => {
       animateStep(delta);
       if (!data.halted && !data.trap) {
         statusEl.textContent = "Step completed.";
+        setStatus("stepping");
       }
     } catch (err) {
       setPanelMessage(effectsEl, `Error: ${(err as Error).message}`, "danger");
+      setStatus("ready");
     }
   };
 
@@ -891,6 +1208,7 @@ window.addEventListener("DOMContentLoaded", () => {
     runBtn.disabled = true;
     runBtn.textContent = "Running…";
     statusEl.textContent = "Running locally (WASM)…";
+    setStatus("running");
     setAnimationsEnabled(false);
 
     await new Promise<void>((resolve) => {
@@ -929,8 +1247,12 @@ window.addEventListener("DOMContentLoaded", () => {
       setAnimationsEnabled(true);
       if (lastDelta) {
         animateStep(lastDelta);
+        if (!lastDelta.halted && !lastDelta.trap && !isPcStalled(lastDelta.effects ?? [])) {
+          setStatus("assembled");
+        }
       } else {
         resetAnimator();
+        setStatus("assembled");
       }
     } catch (err) {
       setAnimationsEnabled(true);
@@ -938,6 +1260,7 @@ window.addEventListener("DOMContentLoaded", () => {
       assembleBtn.disabled = false;
       stepBtn.disabled = !sessionId;
       runBtn.disabled = !sessionId;
+      setStatus("ready");
       return;
     }
 
