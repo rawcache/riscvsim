@@ -62,14 +62,20 @@ body.simulator-page {
 .auth-nav,
 .auth-menu {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .auth-signin-btn,
 .auth-user-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 28px;
   padding: 0 12px;
   border-radius: var(--radius-md);
   font-family: var(--font-mono);
+  line-height: 1;
   white-space: nowrap;
   cursor: pointer;
   transition: border-color var(--transition), background-color var(--transition), color var(--transition);
@@ -92,10 +98,33 @@ body.simulator-page {
   background: var(--bg-elevated);
   color: var(--text-primary);
   font-size: 11px;
+  gap: 8px;
 }
 
 .auth-user-btn:hover {
   border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
+}
+
+.auth-user-btn__badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: var(--radius-xl);
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.auth-user-btn__label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.auth-user-btn__chevron {
+  color: var(--text-muted);
 }
 
 .auth-dropdown {
@@ -120,9 +149,16 @@ body.simulator-page {
 
 .auth-dropdown__tier {
   padding: 0 12px 8px;
-  color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 10px;
+}
+
+.auth-dropdown__tier--pro {
+  color: var(--accent);
+}
+
+.auth-dropdown__tier--free {
+  color: var(--text-muted);
 }
 
 .auth-dropdown__divider {
@@ -190,18 +226,6 @@ body.simulator-page {
 
 .status-badge--trap {
   color: var(--danger);
-}
-
-.gt-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 18px;
-  padding: 0 6px;
-  border: 1px solid var(--success);
-  border-radius: var(--radius-xl);
-  color: var(--success);
-  font-family: var(--font-mono);
-  font-size: 10px;
 }
 
 .sim-nav__actions a:hover {
