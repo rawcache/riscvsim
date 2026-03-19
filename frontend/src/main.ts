@@ -354,7 +354,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     return `
       <div class="effect-empty">
         <div class="effect-empty__example">x5  0x00000000 → 0x0000000C</div>
-        <div class="empty-state empty-state--note"><em>Effects will appear here as you step.</em></div>
+        <div class="effect-empty__note">Effects will appear here as you step.</div>
       </div>
     `;
   }
