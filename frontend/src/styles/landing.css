@@ -63,6 +63,17 @@ body.landing-page {
   position: relative;
   display: flex;
   align-items: center;
+  min-width: 0;
+}
+
+.auth-nav {
+  gap: 8px;
+}
+
+.auth-signin-btn[hidden],
+.auth-user-btn[hidden],
+.auth-dropdown[hidden] {
+  display: none !important;
 }
 
 .auth-signin-btn,
@@ -98,6 +109,8 @@ body.landing-page {
   color: var(--text-primary);
   font-size: 11px;
   gap: 8px;
+  max-width: min(220px, 32vw);
+  padding-inline: 10px;
 }
 
 .auth-user-btn:hover {
@@ -120,6 +133,9 @@ body.landing-page {
 .auth-user-btn__label {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .auth-user-btn__chevron {
