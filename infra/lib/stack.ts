@@ -16,8 +16,8 @@ import {
 import { Construct } from "constructs";
 
 const DOMAIN_PREFIX = "studyriscv";
-const CALLBACK_URLS = ["http://localhost:5173", "https://studyriscv.com"];
-const LOGOUT_URLS = ["http://localhost:5173", "https://studyriscv.com"];
+const CALLBACK_URLS = ["http://localhost:5173", "http://localhost:5174", "https://studyriscv.com"];
+const LOGOUT_URLS = ["http://localhost:5173", "http://localhost:5174", "https://studyriscv.com"];
 
 function inlineLambdaSource(fileName: string): string {
   return fs.readFileSync(path.join(__dirname, "..", "lambda", fileName), "utf8");
