@@ -3,7 +3,7 @@ frontend:
   phases:
     preBuild:
       commands:
-        - cd frontend && npm ci
+        - cd $CODEBUILD_SRC_DIR/riscvsim/frontend && npm ci
     build:
       commands:
         - export VITE_COGNITO_USER_POOL_ID=us-east-1_l7sOznZYZ
@@ -17,4 +17,4 @@ frontend:
       - '**/*'
   cache:
     paths:
-      - frontend/node_modules/**/*
+      - $CODEBUILD_SRC_DIR/riscvsim/frontend/node_modules/**/*
