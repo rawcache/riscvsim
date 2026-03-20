@@ -10,44 +10,44 @@
     </linearGradient>
   </defs>
 
-  <g fill="none" stroke="#4f80ff" stroke-width="3.2" stroke-linecap="round">
-    <path d="M18 10V4" />
-    <path d="M25 10V4" />
-    <path d="M32 10V4" />
-    <path d="M39 10V4" />
-    <path d="M46 10V4" />
+  <g fill="none" stroke="#4f80ff" stroke-width="3.4" stroke-linecap="round">
+    <path d="M16 9V2.5" />
+    <path d="M24 9V2.5" />
+    <path d="M32 9V2.5" />
+    <path d="M40 9V2.5" />
+    <path d="M48 9V2.5" />
 
-    <path d="M18 60v-6" />
-    <path d="M25 60v-6" />
-    <path d="M32 60v-6" />
-    <path d="M39 60v-6" />
-    <path d="M46 60v-6" />
+    <path d="M16 61.5V55" />
+    <path d="M24 61.5V55" />
+    <path d="M32 61.5V55" />
+    <path d="M40 61.5V55" />
+    <path d="M48 61.5V55" />
 
-    <path d="M10 18H4" />
-    <path d="M10 25H4" />
-    <path d="M10 32H4" />
-    <path d="M10 39H4" />
-    <path d="M10 46H4" />
+    <path d="M9 16H2.5" />
+    <path d="M9 24H2.5" />
+    <path d="M9 32H2.5" />
+    <path d="M9 40H2.5" />
+    <path d="M9 48H2.5" />
 
-    <path d="M60 18h-6" />
-    <path d="M60 25h-6" />
-    <path d="M60 32h-6" />
-    <path d="M60 39h-6" />
-    <path d="M60 46h-6" />
+    <path d="M61.5 16H55" />
+    <path d="M61.5 24H55" />
+    <path d="M61.5 32H55" />
+    <path d="M61.5 40H55" />
+    <path d="M61.5 48H55" />
   </g>
 
-  <rect x="10" y="10" width="44" height="44" rx="8" fill="url(#chipBody)" stroke="#4f80ff" stroke-width="2.8" />
-  <rect x="19" y="19" width="26" height="26" rx="5" fill="url(#chipDie)" stroke="#6b96ff" stroke-width="1.8" />
+  <rect x="9" y="9" width="46" height="46" rx="9" fill="url(#chipBody)" stroke="#4f80ff" stroke-width="3" />
+  <rect x="18.5" y="18.5" width="27" height="27" rx="5.5" fill="url(#chipDie)" stroke="#6b96ff" stroke-width="1.9" />
 
   <g fill="#eef4ff" opacity="0.95">
-    <rect x="24" y="24" width="12" height="2.8" rx="1.4" />
-    <rect x="24" y="30.6" width="16" height="2.8" rx="1.4" />
-    <rect x="24" y="37.2" width="9" height="2.8" rx="1.4" />
+    <rect x="23.5" y="23.5" width="12.5" height="3" rx="1.5" />
+    <rect x="23.5" y="31" width="17" height="3" rx="1.5" />
+    <rect x="23.5" y="38.5" width="9.5" height="3" rx="1.5" />
   </g>
 
   <g fill="none" stroke="#cfdcff" stroke-width="1.6" stroke-linecap="round" opacity="0.9">
-    <path d="M39.5 24v9.4" />
-    <path d="M33 38.6h6.5" />
-    <path d="M21.8 30.6h2.2" />
+    <path d="M40.5 23.5V34" />
+    <path d="M33.5 40h7" />
+    <path d="M21.5 31h2.5" />
   </g>
 </svg>
