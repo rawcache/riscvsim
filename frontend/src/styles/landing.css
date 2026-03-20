@@ -982,11 +982,11 @@ body.loaded .hero__visual {
 #chip-wrapper {
   --chip-jump: 0px;
   position: fixed;
-  right: 32px;
-  bottom: 32px;
+  right: 26px;
+  bottom: 24px;
   z-index: 0;
-  width: 64px;
-  height: 64px;
+  width: 78px;
+  height: 78px;
   opacity: 0;
   transform: translateY(80px);
   transition:
@@ -1063,7 +1063,7 @@ body.loaded .hero__visual {
 #chip-bubble {
   position: absolute;
   right: 0;
-  bottom: 70px;
+  bottom: 84px;
   max-width: 120px;
   padding: 4px 10px;
   border: 1px solid var(--border);
@@ -1100,28 +1100,34 @@ body.loaded .hero__visual {
 @keyframes chip-bob {
   0%,
   100% {
-    transform: translateY(0);
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(-3px, -2px) rotate(-2deg);
   }
   50% {
-    transform: translateY(-3px);
+    transform: translate(2px, -6px) rotate(1deg);
+  }
+  75% {
+    transform: translate(4px, -1px) rotate(2deg);
   }
 }
 
 @keyframes chip-peek {
   0% {
-    transform: translateY(0) rotate(0deg);
+    transform: translate(0, 0) rotate(0deg);
   }
   20% {
-    transform: translateY(-4px) rotate(-8deg);
+    transform: translate(-5px, -4px) rotate(-8deg);
   }
   50% {
-    transform: translateY(-6px) rotate(6deg);
+    transform: translate(4px, -8px) rotate(6deg);
   }
   80% {
-    transform: translateY(-4px) rotate(-4deg);
+    transform: translate(-2px, -5px) rotate(-4deg);
   }
   100% {
-    transform: translateY(0) rotate(0deg);
+    transform: translate(0, 0) rotate(0deg);
   }
 }
 

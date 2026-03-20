@@ -263,20 +263,20 @@
                 <circle class="cpu-pet__pin-dot" cx="34" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
             </g>
             <rect x="16" y="16" width="32" height="32" rx="4" ry="4" fill="var(--accent)" />
-            <rect x="22" y="22" width="20" height="20" rx="2" fill="var(--bg-base)" />
+            <rect x="22" y="22" width="20" height="20" rx="2" fill="var(--bg-surface)" />
             <rect x="24" y="24" width="6" height="2" fill="var(--accent)" opacity="0.6" />
             <rect x="24" y="28" width="10" height="2" fill="var(--accent)" opacity="0.6" />
             <rect x="24" y="32" width="8" height="2" fill="var(--accent)" opacity="0.6" />
             <rect x="24" y="36" width="5" height="2" fill="var(--accent)" opacity="0.6" />
             <g class="cpu-pet__eye cpu-pet__eye--left">
-              <circle cx="27" cy="30" r="2" fill="var(--accent)" />
-              <circle id="chipLeftPupil" cx="27" cy="30" r="0.8" fill="var(--bg-base)" />
+              <circle cx="27" cy="30" r="2.4" fill="var(--text-primary)" />
+              <circle id="chipLeftPupil" cx="27" cy="30" r="1" fill="var(--accent)" />
             </g>
             <g class="cpu-pet__eye cpu-pet__eye--right">
-              <circle cx="37" cy="30" r="2" fill="var(--accent)" />
-              <circle id="chipRightPupil" cx="37" cy="30" r="0.8" fill="var(--bg-base)" />
+              <circle cx="37" cy="30" r="2.4" fill="var(--text-primary)" />
+              <circle id="chipRightPupil" cx="37" cy="30" r="1" fill="var(--accent)" />
             </g>
-            <path d="M 27 35 Q 32 38 37 35" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linecap="round" />
+            <path d="M 27 35 Q 32 38.5 37 35" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
           </svg>
         </div>
       </div>
@@ -478,8 +478,8 @@
 
           function updateEyes(cursorX, cursorY) {
             const rect = chipWrapper.getBoundingClientRect();
-            const chipCX = rect.left + 32;
-            const chipCY = rect.top + 32;
+            const chipCX = rect.left + rect.width / 2;
+            const chipCY = rect.top + rect.height / 2;
             const angle = Math.atan2(cursorY - chipCY, cursorX - chipCX);
             const distance = Math.hypot(cursorX - chipCX, cursorY - chipCY);
             const offset = Math.min(distance / 200, 1) * 1.5;
@@ -547,8 +547,8 @@
           function angleToElement(element) {
             const rect = element.getBoundingClientRect();
             const chipRect = chipWrapper.getBoundingClientRect();
-            const chipCX = chipRect.left + 32;
-            const chipCY = chipRect.top + 32;
+            const chipCX = chipRect.left + chipRect.width / 2;
+            const chipCY = chipRect.top + chipRect.height / 2;
             const targetX = rect.left + rect.width / 2;
             const targetY = rect.top + rect.height / 2;
             return Math.atan2(targetY - chipCY, targetX - chipCX);
