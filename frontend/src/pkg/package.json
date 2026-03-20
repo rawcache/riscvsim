@@ -1,0 +1,15 @@
+{
+  "name": "riscvsim-core",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "riscvsim_core_bg.wasm",
+    "riscvsim_core.js",
+    "riscvsim_core.d.ts"
+  ],
+  "main": "riscvsim_core.js",
+  "types": "riscvsim_core.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
