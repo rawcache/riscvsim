@@ -216,13 +216,18 @@
     </main>
 
     <footer class="landing-footer">
-      StudyRISC-V · Built by <a href="https://github.com/rawcache">Satchit Seth</a> · Free for GT students
+      <div class="landing-footer__links">
+        <a href="/terms-of-use/">Terms of service</a>
+        <a href="/privacy-policy/">Privacy policy</a>
+        <a href="/do-not-sell/">Do not sell my personal information</a>
+      </div>
+      <p class="landing-footer__copyright">
+        © 2026 StudyRISC-V. StudyRISC-V is an educational simulator built by
+        <a href="https://github.com/rawcache">Satchit Seth</a>.
+      </p>
     </footer>
 
     <div id="chip-wrapper" aria-hidden="true">
-      <div id="chip-bubble" aria-hidden="true">
-        <span id="chip-bubble-text"></span>
-      </div>
       <div id="chip-reactor">
         <div id="chip-stage">
           <svg class="cpu-pet__svg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -276,7 +281,8 @@
               <circle cx="37" cy="30" r="2.4" fill="var(--text-primary)" />
               <circle id="chipRightPupil" cx="37" cy="30" r="1" fill="var(--accent)" />
             </g>
-            <path d="M 27 35 Q 32 38.5 37 35" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
+            <path class="cpu-pet__mouth cpu-pet__mouth--neutral" d="M 27 35 Q 32 38.5 37 35" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
+            <path class="cpu-pet__mouth cpu-pet__mouth--happy" d="M 26 34.5 Q 32 40 38 34.5" stroke="var(--text-primary)" stroke-width="1.9" fill="none" stroke-linecap="round" />
           </svg>
         </div>
       </div>
@@ -295,8 +301,6 @@
         const chipStage = document.getElementById("chip-stage");
         const chipLeftPupil = document.getElementById("chipLeftPupil");
         const chipRightPupil = document.getElementById("chipRightPupil");
-        const chipBubble = document.getElementById("chip-bubble");
-        const chipBubbleText = document.getElementById("chip-bubble-text");
         const heroProgram = [
           "addi x1, x0, 8    # limit",
           "addi x2, x0, 0    # i",
@@ -443,9 +447,7 @@
             !(chipReactor instanceof HTMLElement) ||
             !(chipStage instanceof HTMLElement) ||
             !(chipLeftPupil instanceof SVGCircleElement) ||
-            !(chipRightPupil instanceof SVGCircleElement) ||
-            !(chipBubble instanceof HTMLElement) ||
-            !(chipBubbleText instanceof HTMLElement)
+            !(chipRightPupil instanceof SVGCircleElement)
           ) {
             return;
           }
@@ -455,7 +457,6 @@
           }
 
           const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-          const bubbleMessages = ["01001010!", "RISC-V!", "Hello!", ":D", "x0 = 0", "beq!"];
           let lastPointerX = window.innerWidth - 32;
           let lastPointerY = window.innerHeight - 32;
           let lastEyeUpdate = 0;
@@ -464,8 +465,7 @@
           let blinkTimer = 0;
           let blinkClassTimer = 0;
           let peekTimer = 0;
-          let bubbleTimer = 0;
-          let excitedTimer = 0;
+          let chipperTimer = 0;
           let jumpTimer = 0;
           let fastPinsTimer = 0;
 
@@ -484,17 +484,6 @@
             const distance = Math.hypot(cursorX - chipCX, cursorY - chipCY);
             const offset = Math.min(distance / 200, 1) * 1.5;
             setPupils(angle, offset);
-          }
-
-          function showBubble(message) {
-            chipBubbleText.textContent = message;
-            chipBubble.classList.remove("visible");
-            void chipBubble.offsetWidth;
-            chipBubble.classList.add("visible");
-            window.clearTimeout(bubbleTimer);
-            bubbleTimer = window.setTimeout(() => {
-              chipBubble.classList.remove("visible");
-            }, 1800);
           }
 
           function triggerBlink() {
@@ -562,24 +551,25 @@
             }, 1000);
           }
 
-          function playExcitedReaction(message, options = {}) {
+          function playChipperReaction(options = {}) {
             const { jump = false, rapidPins = false } = options;
 
-            chipWrapper.classList.add("is-excited");
+            chipWrapper.classList.add("is-chipper");
             if (jump && !reducedMotion) {
               chipWrapper.classList.add("is-jumping");
             }
             if (rapidPins) {
               setFastPins();
             }
+            triggerBlink();
+            window.setTimeout(() => {
+              triggerBlink();
+            }, 140);
 
-            lockEyes(-Math.PI / 4, 300);
-            showBubble(message);
-
-            window.clearTimeout(excitedTimer);
-            excitedTimer = window.setTimeout(() => {
-              chipWrapper.classList.remove("is-excited");
-            }, 300);
+            window.clearTimeout(chipperTimer);
+            chipperTimer = window.setTimeout(() => {
+              chipWrapper.classList.remove("is-chipper");
+            }, 420);
 
             window.clearTimeout(jumpTimer);
             jumpTimer = window.setTimeout(() => {
@@ -588,16 +578,15 @@
           }
 
           function handleChipClick() {
-            const message = bubbleMessages[Math.floor(Math.random() * bubbleMessages.length)];
-            playExcitedReaction(message);
+            playChipperReaction();
           }
 
           function handleCtaClick() {
-            playExcitedReaction("Let's go!", { jump: true, rapidPins: true });
+            playChipperReaction({ jump: true, rapidPins: true });
           }
 
           function handleSignInClick() {
-            playExcitedReaction("Welcome!");
+            playChipperReaction({ jump: true });
           }
 
           function handleGenericButtonClick(target) {

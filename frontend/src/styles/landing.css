@@ -967,11 +967,23 @@ body.loaded .hero__visual {
 }
 
 .landing-footer {
-  padding: 24px 0 var(--space-10);
-  border-top: 1px solid var(--border);
-  text-align: center;
+  display: grid;
+  gap: 10px;
+  padding: 28px 0 var(--space-10);
+  text-align: left;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 13px;
+}
+
+.landing-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.landing-footer__copyright {
+  margin: 0;
+  line-height: 1.6;
 }
 
 .landing-footer a {
@@ -1008,9 +1020,9 @@ body.loaded .hero__visual {
   transition: transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-#chip-wrapper.is-excited #chip-reactor {
-  transform: translateY(var(--chip-jump)) scale(1.4) rotate(15deg);
-  transition-duration: 150ms;
+#chip-wrapper.is-chipper #chip-reactor {
+  transform: translateY(var(--chip-jump)) scale(1.1) rotate(-8deg);
+  transition-duration: 180ms;
 }
 
 #chip-wrapper.is-jumping {
@@ -1028,7 +1040,7 @@ body.loaded .hero__visual {
   animation: chip-peek 1.8s ease-in-out forwards;
 }
 
-#chip-wrapper.is-excited #chip-stage {
+#chip-wrapper.is-chipper #chip-stage {
   animation: none;
 }
 
@@ -1047,8 +1059,28 @@ body.loaded .hero__visual {
   transform-origin: center;
 }
 
+#chip-wrapper.is-chipper .cpu-pet__eye {
+  animation: chip-blink 200ms ease-in-out 2;
+}
+
 #chip-wrapper.is-blinking .cpu-pet__eye {
   animation: chip-blink 200ms ease-in-out;
+}
+
+.cpu-pet__mouth {
+  transition: opacity 160ms ease;
+}
+
+.cpu-pet__mouth--happy {
+  opacity: 0;
+}
+
+#chip-wrapper.is-chipper .cpu-pet__mouth--neutral {
+  opacity: 0;
+}
+
+#chip-wrapper.is-chipper .cpu-pet__mouth--happy {
+  opacity: 1;
 }
 
 .cpu-pet__pin-dot {
@@ -1058,43 +1090,6 @@ body.loaded .hero__visual {
 
 #chip-wrapper.chip-pins-fast .cpu-pet__pin-dot {
   animation-duration: 0.3s;
-}
-
-#chip-bubble {
-  position: absolute;
-  left: 50%;
-  bottom: 84px;
-  max-width: 120px;
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px 12px 2px 12px;
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  line-height: 1.3;
-  white-space: nowrap;
-  opacity: 0;
-  transform: translateX(-62%) translateY(4px);
-  transition: opacity 200ms ease-out, transform 200ms ease-out;
-  pointer-events: none;
-}
-
-#chip-bubble::after {
-  content: "";
-  position: absolute;
-  left: calc(50% + 12px);
-  bottom: -6px;
-  width: 0;
-  height: 0;
-  border-left: 6px solid transparent;
-  border-top: 6px solid var(--bg-surface);
-}
-
-#chip-bubble.visible {
-  opacity: 1;
-  transform: translateX(-62%) translateY(0);
 }
 
 @keyframes chip-bob {
@@ -1220,6 +1215,15 @@ body.loaded .hero__visual {
   .landing-cta {
     padding-inline: var(--space-4);
   }
+
+  .landing-footer {
+    gap: 12px;
+  }
+
+  .landing-footer__links {
+    flex-direction: column;
+    gap: 6px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1229,8 +1233,7 @@ body.loaded .hero__visual {
     transition: none;
   }
 
-  #chip-reactor,
-  #chip-bubble {
+  #chip-reactor {
     transition: none;
   }
 

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy · StudyRISC-V</title>
+    <meta
+      name="description"
+      content="Privacy Policy for StudyRISC-V, the browser-based RISC-V simulator."
+    />
+    <link rel="canonical" href="https://studyriscv.com/privacy-policy/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore storage access failures and fall back to the default theme.
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Inter:wght@400;500;700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css"
+    />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/legal.css" />
+    <link rel="icon" type="image/png" href="../favicon.png" />
+  </head>
+  <body class="legal-page">
+    <header class="legal-nav" aria-label="Legal navigation">
+      <div class="legal-nav__inner">
+        <a class="legal-brand" href="/">StudyRISC-V</a>
+        <nav class="legal-nav__links">
+          <a href="/">Home</a>
+          <a href="/simulator/">Simulator</a>
+          <a href="/terms-of-use/">Terms of Service</a>
+          <a href="/do-not-sell/">Do Not Sell</a>
+          <button id="legalThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+            <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path>
+              </svg>
+            </span>
+            <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
+              </svg>
+            </span>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="legal-shell">
+      <div class="legal-hero">
+        <p class="legal-kicker">Legal</p>
+        <h1 class="legal-title">Privacy Policy</h1>
+        <p class="legal-summary">
+          Last updated March 20, 2026. This Privacy Policy explains how StudyRISC-V
+          collects, uses, stores, and discloses information when you use the landing page,
+          simulator, authentication flows, and saved-program features.
+        </p>
+      </div>
+
+      <article class="legal-card legal-copy">
+        <section>
+          <h2>1. Scope</h2>
+          <p>
+            This Privacy Policy applies to StudyRISC-V, including the public website,
+            simulator, account sign-in experience, saved-program API, and related
+            documentation. It does not apply to third-party services that may be linked
+            from StudyRISC-V, such as GitHub or Amazon Web Services websites.
+          </p>
+        </section>
+
+        <section>
+          <h2>2. Information We Collect</h2>
+          <p>
+            StudyRISC-V is designed to be usable without an account for core simulator
+            features. When you choose to sign in or save programs, the service may process
+            the following categories of information:
+          </p>
+          <ul>
+            <li>
+              <strong>Account information:</strong> email address, account identifier, and
+              authentication metadata provided through Amazon Cognito.
+            </li>
+            <li>
+              <strong>Saved program content:</strong> assembly source code, program names,
+              timestamps, and related metadata you choose to save.
+            </li>
+            <li>
+              <strong>Local device data:</strong> theme preference, recent simulator history,
+              and other local-only settings stored in your browser.
+            </li>
+            <li>
+              <strong>Operational data:</strong> standard request, error, and infrastructure
+              logs that may be generated by hosting, API, or security systems.
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>3. How We Use Information</h2>
+          <p>StudyRISC-V uses information only to operate and improve the service, including to:</p>
+          <ul>
+            <li>authenticate users and protect account access;</li>
+            <li>store, retrieve, update, and delete saved assembly programs;</li>
+            <li>determine whether an account qualifies for Georgia Tech Pro features;</li>
+            <li>remember local preferences such as theme selection and local history;</li>
+            <li>monitor reliability, investigate bugs, and prevent abuse; and</li>
+            <li>comply with legal obligations when required.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>4. What We Do Not Do</h2>
+          <p>
+            StudyRISC-V does not sell personal information. StudyRISC-V does not use your
+            saved programs or account information for third-party advertising, targeted
+            advertising, or data brokerage. The project is an educational tool, not an ad
+            network or marketing platform.
+          </p>
+        </section>
+
+        <section>
+          <h2>5. Where Data Is Stored</h2>
+          <p>
+            Account sign-in is handled through Amazon Cognito. Saved programs are stored in
+            Amazon DynamoDB. Depending on how the service is hosted, standard infrastructure
+            components may also store logs or cache data needed to run the product securely
+            and reliably.
+          </p>
+          <p>
+            Local-only history and theme state are stored in your own browser and are not
+            synced to the cloud unless you explicitly save a program to your account.
+          </p>
+        </section>
+
+        <section>
+          <h2>6. Legal Bases and User Choices</h2>
+          <p>
+            Where applicable, StudyRISC-V processes personal information based on your
+            consent, the need to provide the service you requested, and legitimate interests
+            in operating a secure educational product. You may stop using the service at any
+            time, avoid signing in, or delete saved programs from your account interface.
+          </p>
+        </section>
+
+        <section>
+          <h2>7. Data Retention</h2>
+          <p>
+            Saved programs remain associated with your account until you delete them, your
+            account is removed, or the operator removes data for operational, legal, or abuse
+            reasons. Local browser data remains on your device until you clear it or your
+            browser removes it.
+          </p>
+        </section>
+
+        <section>
+          <h2>8. Sharing and Disclosure</h2>
+          <p>
+            StudyRISC-V may share information only in limited circumstances: with service
+            providers that host the product, when required by law, to enforce the Terms of
+            Use, or to protect the rights, safety, and integrity of the service and its
+            users. Personal information is not shared with data brokers.
+          </p>
+        </section>
+
+        <section>
+          <h2>9. International and Regional Rights</h2>
+          <p>
+            Depending on where you live, you may have rights to access, correct, delete, or
+            object to certain uses of your personal information. California residents may
+            have rights under the California Consumer Privacy Act, including the right to
+            know and the right to request deletion, subject to applicable exceptions. If you
+            are located in the European Economic Area, United Kingdom, or another region with
+            privacy laws, you may have additional rights under local law.
+          </p>
+        </section>
+
+        <section>
+          <h2>10. Children’s Privacy</h2>
+          <p>
+            StudyRISC-V is intended for students and other learners, but it is not directed
+            to children under 13. If you believe personal information from a child under 13
+            has been provided inappropriately, contact the project operator so the issue can
+            be reviewed.
+          </p>
+        </section>
+
+        <section>
+          <h2>11. Security</h2>
+          <p>
+            StudyRISC-V uses reasonable technical and organizational measures appropriate for
+            a small educational web application, including managed authentication and cloud
+            storage controls. No internet service can guarantee absolute security, so you
+            should avoid storing secrets or highly sensitive personal information in saved
+            programs.
+          </p>
+        </section>
+
+        <section>
+          <h2>12. Changes to This Policy</h2>
+          <p>
+            This Privacy Policy may be updated as StudyRISC-V evolves. Material changes will
+            be reflected by updating the “Last updated” date on this page. Continued use of
+            the service after changes take effect means you accept the revised policy.
+          </p>
+        </section>
+
+        <section>
+          <h2>13. Contact</h2>
+          <p>
+            Questions or privacy requests may be directed through the StudyRISC-V GitHub
+            repository at
+            <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">github.com/sseth30/riscvsim</a>.
+            Do not post passwords, tokens, or other sensitive information in a public issue.
+          </p>
+        </section>
+      </article>
+    </main>
+
+    <footer class="legal-footer">
+      <div class="legal-footer__links">
+        <a href="/terms-of-use/">Terms of service</a>
+        <a href="/privacy-policy/">Privacy policy</a>
+        <a href="/do-not-sell/">Do not sell my personal information</a>
+      </div>
+      <p class="legal-footer__copy">
+        © 2026 StudyRISC-V. StudyRISC-V is an educational simulator built by Satchit Seth.
+      </p>
+    </footer>
+
+    <script>
+      (() => {
+        const themeToggle = document.getElementById("legalThemeToggle");
+
+        function syncThemeToggle() {
+          if (!(themeToggle instanceof HTMLButtonElement)) return;
+          const isDark = document.documentElement.dataset.theme === "dark";
+          themeToggle.setAttribute("aria-pressed", String(isDark));
+          themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+        }
+
+        themeToggle?.addEventListener("click", () => {
+          const isDark = document.documentElement.dataset.theme === "dark";
+          if (isDark) {
+            document.documentElement.removeAttribute("data-theme");
+            window.localStorage.setItem("studyriscv-theme", "light");
+          } else {
+            document.documentElement.dataset.theme = "dark";
+            window.localStorage.setItem("studyriscv-theme", "dark");
+          }
+          syncThemeToggle();
+        });
+
+        syncThemeToggle();
+      })();
+    </script>
+  </body>
+</html>

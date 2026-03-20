@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Do Not Sell or Share My Personal Information · StudyRISC-V</title>
+    <meta
+      name="description"
+      content="CCPA and privacy disclosure page for StudyRISC-V."
+    />
+    <link rel="canonical" href="https://studyriscv.com/do-not-sell/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore storage access failures and fall back to the default theme.
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Inter:wght@400;500;700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css"
+    />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/legal.css" />
+    <link rel="icon" type="image/png" href="../favicon.png" />
+  </head>
+  <body class="legal-page">
+    <header class="legal-nav" aria-label="Legal navigation">
+      <div class="legal-nav__inner">
+        <a class="legal-brand" href="/">StudyRISC-V</a>
+        <nav class="legal-nav__links">
+          <a href="/">Home</a>
+          <a href="/simulator/">Simulator</a>
+          <a href="/terms-of-use/">Terms of Service</a>
+          <a href="/privacy-policy/">Privacy Policy</a>
+          <button id="legalThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+            <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path>
+              </svg>
+            </span>
+            <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
+              </svg>
+            </span>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="legal-shell">
+      <div class="legal-hero">
+        <p class="legal-kicker">Privacy Choices</p>
+        <h1 class="legal-title">Do Not Sell or Share My Personal Information</h1>
+        <p class="legal-summary">
+          Last updated March 20, 2026. This page explains StudyRISC-V’s current practices
+          regarding “sale” and “sharing” of personal information under California privacy law
+          and describes how to make related requests.
+        </p>
+      </div>
+
+      <article class="legal-card legal-copy">
+        <section>
+          <h2>1. StudyRISC-V’s Current Position</h2>
+          <p>
+            StudyRISC-V does not sell personal information for money. StudyRISC-V also does
+            not knowingly share personal information with third parties for cross-context
+            behavioral advertising. The service is an educational simulator, and account or
+            saved-program data is used to operate the product rather than to power an
+            advertising business.
+          </p>
+        </section>
+
+        <section>
+          <h2>2. What Information May Be In Scope</h2>
+          <p>
+            If you create an account or use saved-program features, the information associated
+            with your account may include your email address, account identifier, saved
+            assembly programs, and timestamps. Standard hosting, API, and security logs may
+            also exist as part of operating the service.
+          </p>
+        </section>
+
+        <section>
+          <h2>3. How Requests Work</h2>
+          <p>
+            Because StudyRISC-V does not currently sell or share personal information in the
+            CCPA sense, there is no advertising-data sale to opt out of. If you still want to
+            submit a California privacy request, including a request to know or delete
+            information associated with your account, you may contact the project operator
+            through the StudyRISC-V GitHub repository.
+          </p>
+          <p>
+            Requests may require enough information to verify that the request relates to your
+            account and to prevent unauthorized disclosure or deletion of another user’s data.
+          </p>
+        </section>
+
+        <section>
+          <h2>4. How to Minimize Data Use</h2>
+          <ul>
+            <li>Use the simulator without signing in if you do not need cloud saves.</li>
+            <li>Delete saved programs you no longer want stored.</li>
+            <li>Clear local browser storage if you want to remove local history and preferences.</li>
+            <li>Avoid placing secrets or sensitive personal data inside saved program text.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>5. No Discrimination</h2>
+          <p>
+            StudyRISC-V will not deny core simulator access, charge a different price, or
+            provide a different quality of core service because you exercised a privacy right.
+            Some account-based features may be unavailable if the data needed to operate them
+            is deleted, but the simulator itself remains available without login.
+          </p>
+        </section>
+
+        <section>
+          <h2>6. Related Documents</h2>
+          <p>
+            For a fuller description of StudyRISC-V’s practices, see the
+            <a href="/privacy-policy/">Privacy Policy</a> and
+            <a href="/terms-of-use/">Terms of Use</a>.
+          </p>
+        </section>
+
+        <section>
+          <h2>7. Contact for Requests</h2>
+          <p>
+            Privacy requests and questions may be directed through the StudyRISC-V GitHub
+            repository at
+            <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">github.com/sseth30/riscvsim</a>.
+            Do not post passwords, tokens, or other sensitive personal information in a public
+            issue.
+          </p>
+        </section>
+      </article>
+    </main>
+
+    <footer class="legal-footer">
+      <div class="legal-footer__links">
+        <a href="/terms-of-use/">Terms of service</a>
+        <a href="/privacy-policy/">Privacy policy</a>
+        <a href="/do-not-sell/">Do not sell my personal information</a>
+      </div>
+      <p class="legal-footer__copy">
+        © 2026 StudyRISC-V. StudyRISC-V is an educational simulator built by Satchit Seth.
+      </p>
+    </footer>
+
+    <script>
+      (() => {
+        const themeToggle = document.getElementById("legalThemeToggle");
+
+        function syncThemeToggle() {
+          if (!(themeToggle instanceof HTMLButtonElement)) return;
+          const isDark = document.documentElement.dataset.theme === "dark";
+          themeToggle.setAttribute("aria-pressed", String(isDark));
+          themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+        }
+
+        themeToggle?.addEventListener("click", () => {
+          const isDark = document.documentElement.dataset.theme === "dark";
+          if (isDark) {
+            document.documentElement.removeAttribute("data-theme");
+            window.localStorage.setItem("studyriscv-theme", "light");
+          } else {
+            document.documentElement.dataset.theme = "dark";
+            window.localStorage.setItem("studyriscv-theme", "dark");
+          }
+          syncThemeToggle();
+        });
+
+        syncThemeToggle();
+      })();
+    </script>
+  </body>
+</html>
