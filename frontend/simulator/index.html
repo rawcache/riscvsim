@@ -153,8 +153,10 @@
                 <option value="syscall">Syscall (ecall)</option>
               </select>
 
-              <div class="control-row control-row--editor">
+              <div class="control-row control-row--editor-primary">
                 <button id="assemble" class="sim-button sim-button--primary" type="button">Assemble</button>
+              </div>
+              <div class="control-row control-row--editor-secondary">
                 <button id="step" class="sim-button sim-button--outline" type="button" disabled>Step</button>
                 <button id="stepBack" class="sim-button sim-button--outline" type="button" disabled>Step Back</button>
                 <button id="run" class="sim-button sim-button--outline" type="button" disabled>Run</button>
@@ -162,20 +164,21 @@
               </div>
               <p class="shortcut-hint">Enter: Assemble · ↓: Step · Shift+↓: Step Back · R: Run</p>
 
-              <label class="field-label" for="source-input">Assembly Source</label>
               <div class="editor-container">
-                <div class="line-numbers" id="line-numbers" aria-hidden="true">
-                  <span>1</span>
+                <div class="line-numbers" id="line-numbers" aria-hidden="true"></div>
+                <div class="editor-inner">
+                  <div class="highlight-display" id="highlight-display" aria-hidden="true"></div>
+                  <textarea
+                    id="source-input"
+                    class="source-textarea"
+                    placeholder="Paste RV32 assembly here..."
+                    wrap="off"
+                    spellcheck="false"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    autocomplete="off"
+                  ></textarea>
                 </div>
-                <textarea
-                  id="source-input"
-                  class="source-textarea"
-                  placeholder="Paste RV32 assembly here..."
-                  wrap="off"
-                  spellcheck="false"
-                  autocorrect="off"
-                  autocapitalize="off"
-                ></textarea>
               </div>
 
               <div id="status" class="status-line" aria-live="polite"></div>

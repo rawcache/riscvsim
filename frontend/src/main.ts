@@ -84,6 +84,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   const dismissSharedBannerBtn = document.getElementById("dismissSharedBanner") as HTMLButtonElement | null;
   const sourceEl = document.getElementById("source-input") as HTMLTextAreaElement;
   const sourceLinesEl = document.getElementById("line-numbers") as HTMLElement | null;
+  const highlightDisplayEl = document.getElementById("highlight-display") as HTMLElement | null;
 
   const clikeEl = document.getElementById("clike") as HTMLElement;
   const effectsEl = document.getElementById("effects") as HTMLElement;
@@ -129,12 +130,213 @@ window.addEventListener("DOMContentLoaded", async () => {
   const sampleOptionLabels = new Map<string, string>(
     Array.from(sampleSelect.options).map((option) => [option.value, option.textContent ?? option.value])
   );
+  const asmMnemonics = new Set([
+    "add",
+    "addi",
+    "sub",
+    "and",
+    "andi",
+    "or",
+    "ori",
+    "xor",
+    "xori",
+    "sll",
+    "slli",
+    "srl",
+    "srli",
+    "sra",
+    "srai",
+    "slt",
+    "slti",
+    "sltu",
+    "sltiu",
+    "mul",
+    "mulh",
+    "mulhu",
+    "mulhsu",
+    "div",
+    "divu",
+    "rem",
+    "remu",
+    "lui",
+    "auipc",
+    "jal",
+    "jalr",
+    "beq",
+    "bne",
+    "blt",
+    "bge",
+    "bltu",
+    "bgeu",
+    "lw",
+    "lh",
+    "lb",
+    "lhu",
+    "lbu",
+    "sw",
+    "sh",
+    "sb",
+    "li",
+    "mv",
+    "nop",
+    "j",
+    "ret",
+    "call",
+    "la",
+    "ecall",
+    "ebreak",
+  ]);
+  const asmRegisters = new Set([
+    "zero",
+    "ra",
+    "sp",
+    "gp",
+    "tp",
+    "t0",
+    "t1",
+    "t2",
+    "t3",
+    "t4",
+    "t5",
+    "t6",
+    "s0",
+    "s1",
+    "s2",
+    "s3",
+    "s4",
+    "s5",
+    "s6",
+    "s7",
+    "s8",
+    "s9",
+    "s10",
+    "s11",
+    "a0",
+    "a1",
+    "a2",
+    "a3",
+    "a4",
+    "a5",
+    "a6",
+    "a7",
+    "fp",
+    ...Array.from({ length: 32 }, (_, index) => `x${index}`),
+  ]);
+  const asmTokenPattern =
+    /(?:-?0x[0-9a-fA-F]+|-?\d+|\bx(?:[0-9]|[12][0-9]|3[01])\b|\b(?:zero|ra|sp|gp|tp|t[0-6]|s(?:[0-9]|1[01])|a[0-7]|fp)\b|\b[A-Za-z_.$][\w.$]*\b)/g;
+  const asmLabelPattern = /^\s*([A-Za-z_.$][\w.$]*):/;
 
   function applyThemeIcon() {
     if (!themeToggle) return;
     const isDark = document.documentElement.dataset.theme === "dark";
     themeToggle.setAttribute("aria-pressed", String(isDark));
     themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+  }
+
+  function syncHighlightScroll() {
+    if (!highlightDisplayEl) return;
+    highlightDisplayEl.scrollTop = sourceEl.scrollTop;
+    highlightDisplayEl.scrollLeft = sourceEl.scrollLeft;
+  }
+
+  function highlightToken(token: string, labels: ReadonlySet<string>): string {
+    const lower = token.toLowerCase();
+    if (asmRegisters.has(lower)) {
+      return `<span class="asm-register">${escapeHtml(token)}</span>`;
+    }
+    if (/^-?(?:0x[0-9a-fA-F]+|\d+)$/.test(token)) {
+      return `<span class="asm-immediate">${escapeHtml(token)}</span>`;
+    }
+    if (labels.has(token)) {
+      return `<span class="asm-label-ref">${escapeHtml(token)}</span>`;
+    }
+    return escapeHtml(token);
+  }
+
+  function highlightTrailingSegment(segment: string, labels: ReadonlySet<string>): string {
+    if (!segment) return "";
+    let html = "";
+    let lastIndex = 0;
+    asmTokenPattern.lastIndex = 0;
+
+    for (const match of segment.matchAll(asmTokenPattern)) {
+      const index = match.index ?? 0;
+      const token = match[0];
+      html += escapeHtml(segment.slice(lastIndex, index));
+      html += highlightToken(token, labels);
+      lastIndex = index + token.length;
+    }
+
+    html += escapeHtml(segment.slice(lastIndex));
+    return html;
+  }
+
+  function highlightCodeSegment(line: string, labels: ReadonlySet<string>): string {
+    if (!line) return "";
+
+    let remainder = line;
+    let highlighted = "";
+    const labelMatch = remainder.match(asmLabelPattern);
+
+    if (labelMatch) {
+      const [fullMatch, labelName] = labelMatch;
+      const prefixLength = fullMatch.indexOf(labelName);
+      const suffixStart = prefixLength + labelName.length + 1;
+      highlighted += escapeHtml(fullMatch.slice(0, prefixLength));
+      highlighted += `<span class="asm-label">${escapeHtml(`${labelName}:`)}</span>`;
+      highlighted += escapeHtml(fullMatch.slice(suffixStart));
+      remainder = remainder.slice(fullMatch.length);
+    }
+
+    const instructionMatch = remainder.match(/^(\s*)(\S+)([\s\S]*)$/);
+    if (!instructionMatch) {
+      return highlighted + escapeHtml(remainder);
+    }
+
+    const [, leadingWhitespace, firstToken, rest] = instructionMatch;
+    highlighted += escapeHtml(leadingWhitespace);
+    if (asmMnemonics.has(firstToken.toLowerCase())) {
+      highlighted += `<span class="asm-mnemonic">${escapeHtml(firstToken)}</span>`;
+    } else {
+      highlighted += highlightToken(firstToken, labels);
+    }
+    highlighted += highlightTrailingSegment(rest, labels);
+    return highlighted;
+  }
+
+  function highlightAssembly(source: string): string {
+    const lines = source.split("\n");
+    const labels = new Set<string>();
+
+    for (const line of lines) {
+      const labelMatch = line.match(asmLabelPattern);
+      if (labelMatch) {
+        labels.add(labelMatch[1]);
+      }
+    }
+
+    return lines
+      .map((line) => {
+        if (/^\s*#/.test(line)) {
+          return `<span class="asm-comment">${escapeHtml(line)}</span>`;
+        }
+
+        const commentIndex = line.indexOf("#");
+        if (commentIndex < 0) {
+          return highlightCodeSegment(line, labels);
+        }
+
+        const code = line.slice(0, commentIndex);
+        const comment = line.slice(commentIndex);
+        return `${highlightCodeSegment(code, labels)}<span class="asm-comment">${escapeHtml(comment)}</span>`;
+      })
+      .join("\n");
+  }
+
+  function renderHighlightedSource() {
+    if (!highlightDisplayEl) return;
+    highlightDisplayEl.innerHTML = highlightAssembly(sourceEl.value);
+    syncHighlightScroll();
   }
 
   function updateLineNumbers() {
@@ -154,6 +356,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
 
   function handleSourceInput() {
+    renderHighlightedSource();
     updateLineNumbers();
     if (!currentProgram.isDirty) {
       updateCurrentProgramState({ isDirty: true });
@@ -895,10 +1098,13 @@ window.addEventListener("DOMContentLoaded", async () => {
   ) {
     syncSampleOptionLabels(options.sampleName ?? "__custom__");
     sourceEl.value = source;
+    sourceEl.scrollTop = 0;
+    sourceEl.scrollLeft = 0;
     programDataBytes = new Uint8Array();
     resetMemoryControls(0);
     resetEffectFilters();
     setSharedBannerVisible(options.keepSharedBanner === true);
+    renderHighlightedSource();
     updateLineNumbers();
     clearPanels();
     sessionId = undefined;
@@ -1193,7 +1399,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   sourceEl.addEventListener("input", handleSourceInput);
   sourceEl.addEventListener("keyup", updateLineNumbers);
   sourceEl.addEventListener("click", updateLineNumbers);
-  sourceEl.addEventListener("scroll", updateLineNumbers);
+  sourceEl.addEventListener("scroll", () => {
+    updateLineNumbers();
+    syncHighlightScroll();
+  });
   sourceEl.addEventListener("focus", updateLineNumbers);
   sourceEl.addEventListener("keydown", (event) => {
     if (event.key !== "Tab") {
@@ -1304,6 +1513,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     resetCurrentProgramState();
     await assembleCurrentSource(false, "Program reset.");
     updateLineNumbers();
+    syncHighlightScroll();
   };
 
   stepBackBtn.onclick = () => {
