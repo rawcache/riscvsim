@@ -7,7 +7,6 @@
     "wasm:build": "cd ../rust-core && wasm-pack build --target web --out-dir ../frontend/src/pkg",
     "predev": "npm run wasm:build",
     "dev": "vite",
-    "prebuild": "npm run wasm:build",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "pretest": "npm run wasm:build",
