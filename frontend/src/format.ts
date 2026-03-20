@@ -60,9 +60,9 @@ const REGISTER_GROUPS = {
     { label: "args / return", indices: [10, 11, 12, 13, 14, 15] },
   ],
   right: [
-    { label: "continue args", indices: [16, 17] },
+    { label: "args (cont)", indices: [16, 17] },
     { label: "saved (cont)", indices: [18, 19, 20, 21, 22, 23, 24, 25, 26, 27] },
-    { label: "temporaries (cont)", indices: [28, 29, 30, 31] },
+    { label: "temp (cont)", indices: [28, 29, 30, 31] },
   ],
 } as const;
 

@@ -58,7 +58,7 @@ body.simulator-page {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
   row-gap: 8px;
   color: var(--text-secondary);
   font-size: 0.88rem;
@@ -205,25 +205,29 @@ body.simulator-page {
 .status-badge {
   display: inline-flex;
   align-items: center;
-  min-height: 20px;
-  padding: 0 8px;
-  border-radius: var(--radius-xl);
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0;
   text-transform: none;
   transition: color 200ms ease, background-color 200ms ease;
+  white-space: nowrap;
 }
 
 .status-badge--ready {
   color: var(--text-muted);
   background: transparent;
+  min-height: 0;
+  padding: 0;
 }
 
 .status-badge--assembled,
 .status-badge--stepping,
 .status-badge--running,
+.status-badge--halted,
 .status-badge--trap {
+  min-height: 20px;
+  padding: 0 8px;
+  border-radius: var(--radius-xl);
   background: var(--accent-subtle);
 }
 
@@ -292,13 +296,13 @@ body.simulator-page {
 
 .simulator-layout {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .sim-column {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -324,7 +328,7 @@ body.simulator-page {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: 10px 14px;
+  padding: 6px 10px;
   border-bottom: 1px solid var(--border);
   color: var(--text-muted);
   font-family: var(--font-display);
@@ -388,13 +392,13 @@ body.simulator-page {
 }
 
 .panel-body {
-  padding: var(--space-4);
+  padding: 10px;
 }
 
 .panel-body--compact {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .sim-panel--editor {
@@ -407,7 +411,7 @@ body.simulator-page {
   flex: 1;
   min-height: 0;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .sim-panel--regs .panel-body {
@@ -415,11 +419,16 @@ body.simulator-page {
 }
 
 .sim-panel--memory .panel-body {
-  padding: var(--space-3);
+  padding: 10px;
 }
 
 .sim-panel--effects .panel-body {
   padding: 0;
+}
+
+.sim-panel--disasm .panel-body {
+  padding: 0;
+  gap: 8px;
 }
 
 .field-label,
@@ -462,8 +471,7 @@ body.simulator-page {
   font-family: var(--font-mono);
 }
 
-.sim-select,
-.source-textarea {
+.sim-select {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -478,24 +486,27 @@ body.simulator-page {
 }
 
 .control-row {
-  display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
-.control-row--editor {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.control-row--editor-primary {
+  display: flex;
 }
 
-.control-row--editor #assemble {
-  grid-column: 1 / -1;
+.control-row--editor-secondary {
+  display: flex;
+  gap: 6px;
+}
+
+.control-row--editor-primary #assemble {
+  width: 100%;
+  min-height: 36px;
+}
+
+.control-row--editor-secondary .sim-button {
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 32px;
-}
-
-.control-row--editor #step,
-.control-row--editor #stepBack,
-.control-row--editor #run,
-.control-row--editor #reset {
-  min-height: 28px;
 }
 
 .shortcut-hint {
@@ -793,25 +804,25 @@ body.simulator-page {
   min-height: 340px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--bg-elevated);
+  background: var(--bg-base);
   overflow: hidden;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 
 .editor-container:focus-within {
   border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .line-numbers {
   display: flex;
   flex-direction: column;
   padding: 12px 0;
-  min-width: 48px;
-  width: 48px;
+  min-width: 40px;
+  width: 40px;
   flex-shrink: 0;
   border-right: 0;
-  background: color-mix(in srgb, var(--bg-elevated) 90%, var(--bg-base));
+  background: color-mix(in srgb, var(--bg-base) 92%, var(--bg-elevated));
   user-select: none;
   overflow: hidden;
   scrollbar-width: none;
@@ -829,30 +840,89 @@ body.simulator-page {
   font-size: 12px;
   color: var(--text-muted);
   text-align: right;
-  padding-right: 12px;
-  padding-left: 8px;
+  padding-right: 10px;
+  padding-left: 6px;
 }
 
 .line-numbers span.current-line {
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
 
-.source-textarea {
+.editor-inner {
+  position: relative;
   flex: 1;
-  min-height: 340px;
-  padding: 12px 16px 12px 6px;
-  border: 0;
-  outline: none;
-  resize: none;
+  min-width: 0;
+  overflow: hidden;
   background: var(--bg-base);
+}
+
+.highlight-display {
+  position: absolute;
+  inset: 0;
+  padding: 12px 12px 12px 10px;
   color: var(--text-primary);
   font-family: "DM Mono", monospace;
   font-size: 12px;
   line-height: 1.6;
-  overflow-y: auto;
-  overflow-x: auto;
+  white-space: pre;
+  word-wrap: normal;
+  overflow: hidden;
+  pointer-events: none;
+  tab-size: 2;
+  scrollbar-width: none;
+}
+
+.source-textarea {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-height: 340px;
+  padding: 12px 12px 12px 10px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--accent);
+  -webkit-text-fill-color: transparent;
+  font-family: "DM Mono", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow: auto;
   white-space: pre;
   tab-size: 2;
+  z-index: 1;
+}
+
+.source-textarea::selection {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.asm-comment {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.asm-mnemonic {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.asm-register {
+  color: var(--success);
+}
+
+.asm-immediate {
+  color: #f5a623;
+}
+
+.asm-label {
+  color: var(--warning);
+}
+
+.asm-label-ref {
+  color: var(--warning);
+  opacity: 0.8;
 }
 
 .source-textarea:focus,
@@ -872,7 +942,7 @@ body.simulator-page {
 }
 
 .sim-button {
-  min-height: 28px;
+  min-height: 32px;
   padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -880,6 +950,10 @@ body.simulator-page {
   color: var(--text-primary);
   font-family: var(--font-display);
   font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   cursor: pointer;
   transition: border-color var(--transition), background-color var(--transition), color var(--transition), box-shadow var(--transition);
 }
@@ -971,7 +1045,7 @@ body.simulator-page {
   overflow: auto;
   display: flex;
   flex-direction: column;
-  padding: 4px 0;
+  padding: 0;
 }
 
 .effect-filter-bar {
@@ -1005,11 +1079,40 @@ body.simulator-page {
 .effect-empty {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
+}
+
+.disasm-empty {
+  min-height: 120px;
+  align-items: center;
+  justify-content: center;
+}
+
+.disasm-empty > .disasm-line--placeholder {
+  display: none;
+}
+
+.disasm-empty .empty-state--note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  margin: 0;
+  padding: 0 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .effect-empty {
-  padding: 8px 0 10px;
+  min-height: 80px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  text-align: center;
 }
 
 .disasm-line {
@@ -1091,15 +1194,17 @@ body.simulator-page {
 }
 
 .clike-card {
-  min-height: 72px;
+  min-height: 64px;
+  height: auto;
   border: 1px solid var(--border);
   border-left: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent-subtle) 18%, var(--bg-surface));
-  padding: 10px 12px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  margin: 0 10px 10px;
 }
 
 .clike-card.explainer-updated {
@@ -1107,11 +1212,11 @@ body.simulator-page {
 }
 
 .clike-label {
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .clike-view {
-  min-height: 36px;
+  min-height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1207,17 +1312,20 @@ body.simulator-page {
 }
 
 .effect-empty__example {
-  min-height: 22px;
-  padding: 0 12px;
-  display: flex;
-  align-items: center;
-  color: color-mix(in srgb, var(--text-primary) 44%, transparent);
-  font-size: 11px;
+  display: none;
 }
 
 .effect-empty__note {
-  padding: 0 12px;
+  padding: 0;
+  color: transparent;
+  font-size: 0;
+  line-height: 1;
+}
+
+.effect-empty__note::before {
+  content: "No effects yet. Assemble and step to begin.";
   color: var(--text-muted);
+  font-family: var(--font-mono);
   font-size: 12px;
   font-style: italic;
   line-height: 1.4;
@@ -1357,7 +1465,7 @@ body.simulator-page {
 .memory-stack {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .panel-header--memory {
@@ -1527,6 +1635,7 @@ body.simulator-page {
 }
 
 .source-textarea,
+.highlight-display,
 .disasm-view,
 .effects-view,
 .memory-writes,
@@ -1542,6 +1651,10 @@ body.simulator-page {
 .memory-window::-webkit-scrollbar {
   width: 6px;
   height: 6px;
+}
+
+.highlight-display::-webkit-scrollbar {
+  display: none;
 }
 
 .source-textarea::-webkit-scrollbar-track,
@@ -1748,7 +1861,7 @@ body.simulator-page {
   }
 
   .sim-column {
-    gap: 10px;
+    gap: 8px;
   }
 
   .sim-nav__actions {
@@ -1757,21 +1870,24 @@ body.simulator-page {
     justify-content: flex-start;
   }
 
-  .control-row--editor {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .control-row--editor-secondary {
+    flex-wrap: wrap;
   }
 
-  .control-row--editor #assemble {
-    grid-column: 1 / -1;
+  .control-row--editor-secondary .sim-button {
+    flex: 1 1 calc(50% - 3px);
   }
 
   .editor-container,
+  .editor-inner,
+  .highlight-display,
   .source-textarea {
     min-height: 240px;
   }
 
   .clike-card {
     order: -1;
+    margin: 0;
   }
 
   .clike-view {
