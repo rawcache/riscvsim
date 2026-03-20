@@ -3,19 +3,13 @@ frontend:
   phases:
     preBuild:
       commands:
-        - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-        - source $HOME/.cargo/env
-        - rustup target add wasm32-unknown-unknown
-        - curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
         - cd frontend && npm ci
     build:
       commands:
-        - source $HOME/.cargo/env
         - export VITE_COGNITO_USER_POOL_ID=us-east-1_l7sOznZYZ
         - export VITE_COGNITO_CLIENT_ID=5rpv8jp09pq566dajslno6c9rr
         - export VITE_COGNITO_DOMAIN=studyriscv.auth.us-east-1.amazoncognito.com
         - export VITE_API_ENDPOINT=https://hsyyxozom8.execute-api.us-east-1.amazonaws.com
-        - cd $CODEBUILD_SRC_DIR/riscvsim/rust-core && wasm-pack build --target web --out-dir ../frontend/src/pkg
         - cd $CODEBUILD_SRC_DIR/riscvsim/frontend && npm run build
   artifacts:
     baseDirectory: frontend/dist
@@ -24,5 +18,3 @@ frontend:
   cache:
     paths:
       - frontend/node_modules/**/*
-      - ~/.cargo/**/*
-      - rust-core/target/**/*
