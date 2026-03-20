@@ -6,8 +6,11 @@
     "cdk": "cdk"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.910.0",
+    "@aws-sdk/lib-dynamodb": "^3.910.0",
     "aws-cdk-lib": "^2.190.0",
-    "constructs": "^10.4.2"
+    "constructs": "^10.4.2",
+    "nanoid": "^5.1.6"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",

@@ -52,7 +52,16 @@ cd frontend && npm run build
 
 ## Authentication
 
-StudyRISC-V uses AWS Cognito for auth. The simulator is fully usable without an account. Signing in with a `@gatech.edu` email unlocks saved programs (coming soon).
+StudyRISC-V uses AWS Cognito for auth. The simulator is fully usable without an account. Signing in with a `@gatech.edu` email unlocks the Pro tier.
+
+## Saved Programs
+
+Signed-in users can save assembly programs to their account.
+
+Free accounts: up to 3 saved programs
+Pro accounts (`@gatech.edu`): unlimited saved programs + history
+
+Programs are stored in DynamoDB via a JWT-authenticated API Gateway endpoint. The API is in `infra/lambda/programs.ts`.
 
 ### Deploying the auth infrastructure
 
@@ -74,7 +83,7 @@ VITE_COGNITO_DOMAIN=<CognitoHostedUiDomain output>
 
 ### Local dev without auth
 
-Leave `frontend/.env` absent or use placeholder values. The auth UI will still render on localhost, and Cognito sign-out will return to the current page. The simulator works fully without completing auth.
+Leave `frontend/.env` absent or use placeholder values. The auth UI will still render on localhost, and Cognito sign-out will return to the landing page. The simulator works fully without completing auth.
 
 ## Project Structure
 

@@ -358,6 +358,35 @@ body.simulator-page {
   border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
 }
 
+.program-save__dirty {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 999px;
+  background: var(--warning);
+}
+
+.panel-toggle {
+  inline-size: 22px;
+  block-size: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color var(--transition), transform var(--transition);
+}
+
+.panel-toggle:hover {
+  color: var(--text-primary);
+}
+
+.panel-toggle.is-collapsed svg {
+  transform: rotate(-90deg);
+}
+
 .panel-body {
   padding: var(--space-4);
 }
@@ -499,6 +528,261 @@ body.simulator-page {
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
+}
+
+.programs-panel__body {
+  padding: 0;
+}
+
+.programs-panel__count,
+.programs-panel__empty {
+  font-family: var(--font-mono);
+}
+
+.programs-panel__count {
+  padding: 10px 12px 8px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.programs-panel__empty {
+  padding: 16px 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.programs-list,
+.programs-history {
+  max-height: 240px;
+  overflow: auto;
+}
+
+.programs-list__item,
+.programs-history__item {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+}
+
+.programs-list__item:not(:last-child),
+.programs-history__item:not(:last-child) {
+  border-bottom: 1px solid var(--border);
+}
+
+.programs-list__item.is-active {
+  background: var(--accent-subtle);
+}
+
+.programs-list__name,
+.programs-history__name,
+.programs-history__time,
+.programs-list__confirm,
+.programs-list__confirm-button,
+.programs-modal__title,
+.programs-modal__label,
+.programs-modal__input,
+.programs-modal__message,
+.programs-modal__link,
+.programs-modal__error {
+  font-family: var(--font-mono);
+}
+
+.programs-list__name,
+.programs-history__name {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.programs-list__actions,
+.programs-list__confirm {
+  flex: 0 0 auto;
+}
+
+.programs-list__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition);
+}
+
+.programs-list__item:hover .programs-list__actions,
+.programs-list__item.is-active .programs-list__actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.programs-list__icon {
+  inline-size: 20px;
+  block-size: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color var(--transition);
+}
+
+.programs-list__icon:hover {
+  color: var(--text-primary);
+}
+
+.programs-list__confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.programs-list__confirm-button {
+  min-height: 20px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--danger) 24%, var(--border));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  color: var(--danger);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.programs-list__confirm-button--secondary {
+  border-color: var(--border);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.programs-history__item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  justify-content: space-between;
+  cursor: pointer;
+  text-align: left;
+}
+
+.programs-history__item:hover {
+  background: var(--bg-surface);
+}
+
+.programs-history__time {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.programs-history__footer {
+  padding: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.programs-history__clear {
+  width: 100%;
+}
+
+.programs-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+.programs-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg-base) 70%, transparent);
+}
+
+.programs-modal__card {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: min(360px, calc(100% - 2 * var(--space-4)));
+  transform: translate(-50%, -50%);
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.programs-modal__title {
+  margin-bottom: 14px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.programs-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.programs-modal__label {
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.programs-modal__input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.programs-modal__input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  outline-offset: 0;
+}
+
+.programs-modal__message,
+.programs-modal__error {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.programs-modal__message--secondary {
+  margin-top: 8px;
+}
+
+.programs-modal__error {
+  margin-top: 12px;
+  color: var(--danger);
+}
+
+.programs-modal__link {
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.programs-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 .editor-shell {
@@ -1496,6 +1780,16 @@ body.simulator-page {
   .panel-header--memory {
     align-items: flex-start;
     flex-wrap: wrap;
+  }
+
+  .programs-list__actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .programs-list__item,
+  .programs-history__item {
+    padding-inline: 10px;
   }
 }
 
