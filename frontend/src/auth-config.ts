@@ -2,10 +2,10 @@ import type { AuthConfig } from "./auth";
 
 function normalizedRedirectUri(): string {
   if (typeof window === "undefined") {
-    return "http://localhost:5173";
+    return "http://localhost:5173/simulator/";
   }
 
-  return new URL("/", window.location.origin).toString();
+  return `${window.location.origin}/simulator/`;
 }
 
 export const AUTH_CONFIG: AuthConfig = {

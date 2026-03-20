@@ -85,13 +85,26 @@ VITE_COGNITO_DOMAIN=<CognitoHostedUiDomain output>
 
 Leave `frontend/.env` absent or use placeholder values. The auth UI will still render on localhost, and Cognito sign-out will return to the landing page. The simulator works fully without completing auth.
 
+### Amplify rewrites
+
+After deploying, add these Amplify Console rewrite rules under Rewrites and redirects so the simulator is served cleanly from `/simulator/`:
+
+```text
+Source: /simulator
+Target: /simulator/index.html
+Type:   200 (rewrite)
+
+Source: /simulator/
+Target: /simulator/index.html
+Type:   200 (rewrite)
+```
+
 ## Project Structure
 
 ```text
 riscvsim/
 ├── frontend/
-│   ├── index.html          # Marketing landing page at /
-│   ├── landing.html        # Legacy redirect to /
+│   ├── landing.html        # Marketing landing page source for /
 │   ├── simulator/
 │   │   └── index.html      # Simulator app at /simulator/
 │   └── src/

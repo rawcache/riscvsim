@@ -12,9 +12,8 @@
     <script>
       (() => {
         const { hash, origin, pathname, search } = window.location;
-        if (pathname === "/simulator" || pathname.endsWith("/index.html")) {
-          const cleanPath = pathname === "/simulator" ? "/simulator/" : pathname.slice(0, -10);
-          const target = new URL(cleanPath || "/", origin);
+        if (pathname === "/simulator") {
+          const target = new URL("/simulator/", origin);
           target.search = search;
           target.hash = hash;
           window.location.replace(target.toString());
