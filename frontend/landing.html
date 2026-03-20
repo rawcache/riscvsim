@@ -115,17 +115,19 @@
         </div>
 
         <div class="hero__visual" style="--hero-delay: 420ms">
-          <div class="hero-code" aria-hidden="true">
+          <div id="heroCodeWindow" class="hero-code" aria-hidden="true">
             <div class="hero-code__bar">
-              <div class="hero-code__dots">
-                <span class="hero-code__dot"></span>
-                <span class="hero-code__dot"></span>
-                <span class="hero-code__dot"></span>
+              <div class="hero-code__dots" role="group" aria-label="Terminal controls">
+                <button id="heroCodeClose" class="hero-code__window-btn hero-code__window-btn--close" type="button" aria-label="Close terminal"></button>
+                <button id="heroCodeNext" class="hero-code__window-btn hero-code__window-btn--minimize" type="button" aria-label="Show next program"></button>
+                <button id="heroCodePulse" class="hero-code__window-btn hero-code__window-btn--maximize" type="button" aria-label="Pulse terminal"></button>
               </div>
-              <span class="hero-code__label">sum_loop.s</span>
+              <span id="heroCodeLabel" class="hero-code__label">sum_loop.s</span>
               <span class="hero-code__bar-spacer" aria-hidden="true"></span>
             </div>
-            <pre><code id="heroCode"></code></pre>
+            <div class="hero-code__body">
+              <div id="heroCode" class="hero-code__content"></div>
+            </div>
           </div>
         </div>
       </section>
@@ -299,30 +301,159 @@
         const body = document.body;
         const nav = document.getElementById("landingNav");
         const themeToggle = document.getElementById("landingThemeToggle");
+        const heroCodeWindow = document.getElementById("heroCodeWindow");
         const heroCode = document.getElementById("heroCode");
+        const heroCodeLabel = document.getElementById("heroCodeLabel");
+        const heroCodeClose = document.getElementById("heroCodeClose");
+        const heroCodeNext = document.getElementById("heroCodeNext");
+        const heroCodePulse = document.getElementById("heroCodePulse");
         const chipWrapper = document.getElementById("chip-wrapper");
         const chipReactor = document.getElementById("chip-reactor");
         const chipStage = document.getElementById("chip-stage");
         const chipSvg = document.getElementById("chipSvg");
         const chipLeftPupil = document.getElementById("chipLeftPupil");
         const chipRightPupil = document.getElementById("chipRightPupil");
-        const heroProgram = [
-          "addi x1, x0, 8    # limit",
-          "addi x2, x0, 0    # i",
-          "addi x3, x0, 0    # sum",
-          "loop:",
-          "  add  x3, x3, x2",
-          "  addi x2, x2, 1",
-          "  blt  x2, x1, loop",
+        const HERO_PROGRAMS = [
+          {
+            filename: "sum_loop.s",
+            lines: [
+              "# compute sum of array",
+              "la   x1, arr",
+              "addi x2, x0, 5    # count",
+              "addi x3, x0, 0    # sum",
+              "loop:",
+              "  lw   x4, 0(x1)",
+              "  add  x3, x3, x4",
+              "  addi x1, x1, 4",
+              "  addi x2, x2, -1",
+              "  bne  x2, x0, loop",
+            ],
+          },
+          {
+            filename: "factorial.s",
+            lines: [
+              "# factorial of 5",
+              "addi x1, x0, 5    # n",
+              "addi x2, x0, 1    # result",
+              "fact:",
+              "  mul  x2, x2, x1",
+              "  addi x1, x1, -1",
+              "  bne  x1, x0, fact",
+            ],
+          },
+          {
+            filename: "strlen.s",
+            lines: [
+              "# string length",
+              "la   x1, str",
+              "addi x2, x0, 0    # len",
+              "count:",
+              "  lb   x3, 0(x1)",
+              "  beq  x3, x0, done",
+              "  addi x1, x1, 1",
+              "  addi x2, x2, 1",
+              "  j    count",
+              "done:",
+            ],
+          },
+          {
+            filename: "fib.s",
+            lines: [
+              "# fibonacci sequence",
+              "addi x1, x0, 0    # a",
+              "addi x2, x0, 1    # b",
+              "addi x3, x0, 8    # count",
+              "fib:",
+              "  add  x4, x1, x2",
+              "  mv   x1, x2",
+              "  mv   x2, x4",
+              "  addi x3, x3, -1",
+              "  bne  x3, x0, fib",
+            ],
+          },
+          {
+            filename: "swap.s",
+            lines: [
+              "# swap two values",
+              "addi x1, x0, 42   # a",
+              "addi x2, x0, 17   # b",
+              "xor  x1, x1, x2",
+              "xor  x2, x1, x2",
+              "xor  x1, x1, x2   # swapped",
+            ],
+          },
         ];
-        const heroText = heroProgram.join("\n");
-        const mnemonics = new Set(["addi", "add", "blt"]);
+        const HERO_MNEMONICS = new Set([
+          "addi",
+          "add",
+          "sub",
+          "mul",
+          "la",
+          "lw",
+          "sw",
+          "lb",
+          "sb",
+          "mv",
+          "j",
+          "bne",
+          "beq",
+          "blt",
+          "bge",
+          "jal",
+          "jalr",
+          "xor",
+          "and",
+          "or",
+          "slli",
+          "srli",
+          "srai",
+          "lui",
+          "auipc",
+          "ret",
+          "call",
+        ]);
+        const HERO_NEIGHBOR_KEYS = {
+          a: ["s", "q"],
+          d: ["f", "s"],
+          i: ["o", "u"],
+          x: ["z", "c"],
+          l: ["k", ";"],
+          w: ["e", "q"],
+          b: ["v", "n"],
+          0: ["9", "o"],
+          ",": [".", "m"],
+        };
+        const BASE_TYPE_SPEED = 55;
+        const SPEED_VARIANCE = 20;
+        const PAUSE_AFTER_LINE = 180;
+        const PAUSE_AFTER_HASH = 120;
+        const DELETE_SPEED = 40;
+        const TYPO_PAUSE = 300;
+        const TYPO_PROBABILITY = 0.008;
         const registerPattern =
           /^(?:x(?:[0-9]|[12][0-9]|3[01])|zero|ra|sp|gp|tp|t[0-6]|s(?:[0-9]|1[01])|fp|a[0-7])$/;
         const numberPattern = /^-?(?:0x[0-9a-f]+|\d+)$/i;
-        let typedCharacters = 0;
-        let deleting = false;
-        let heroTypingTimer = 0;
+        const heroReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const heroTypingScale = window.matchMedia("(max-width: 768px)").matches ? 1 / 1.5 : 1;
+        const heroTimers = {
+          typing: 0,
+          autoCycle: 0,
+          fade: 0,
+          switchProgram: 0,
+          reopen: 0,
+          labelSwap: 0,
+          labelFade: 0,
+          pulse: 0,
+        };
+        const heroState = {
+          programIndex: 0,
+          lineIndex: 0,
+          charIndex: 0,
+          completedLines: [],
+          currentLineText: "",
+          currentLineTypoUsed: false,
+          isTransitioning: false,
+        };
 
         function escapeHtml(value) {
           return value
@@ -343,6 +474,54 @@
         function handleScroll() {
           if (!nav) return;
           nav.classList.toggle("is-scrolled", window.scrollY > 8);
+        }
+
+        function clearHeroTimers() {
+          Object.keys(heroTimers).forEach((key) => {
+            window.clearTimeout(heroTimers[key]);
+            heroTimers[key] = 0;
+          });
+        }
+
+        function heroProgram() {
+          return HERO_PROGRAMS[heroState.programIndex];
+        }
+
+        function heroTypingDelay(duration) {
+          if (heroReducedMotion) {
+            return 0;
+          }
+          return Math.max(0, Math.round(duration * heroTypingScale));
+        }
+
+        function scheduleHeroTyping(callback, delay) {
+          window.clearTimeout(heroTimers.typing);
+          heroTimers.typing = window.setTimeout(callback, delay);
+        }
+
+        function setHeroFilename(filename) {
+          if (heroCodeLabel instanceof HTMLElement) {
+            heroCodeLabel.textContent = filename;
+          }
+        }
+
+        function crossfadeHeroFilename(filename) {
+          if (!(heroCodeLabel instanceof HTMLElement)) {
+            return;
+          }
+          if (heroReducedMotion) {
+            heroCodeLabel.textContent = filename;
+            return;
+          }
+          window.clearTimeout(heroTimers.labelSwap);
+          window.clearTimeout(heroTimers.labelFade);
+          heroCodeLabel.classList.add("is-fading");
+          heroTimers.labelSwap = window.setTimeout(() => {
+            heroCodeLabel.textContent = filename;
+          }, 150);
+          heroTimers.labelFade = window.setTimeout(() => {
+            heroCodeLabel.classList.remove("is-fading");
+          }, 300);
         }
 
         function highlightInline(text) {
@@ -383,7 +562,7 @@
           }
 
           const mnemonicMatch = remainder.match(/^([A-Za-z.]+)(\s*)/);
-          if (mnemonicMatch && mnemonics.has(mnemonicMatch[1].toLowerCase())) {
+          if (mnemonicMatch && HERO_MNEMONICS.has(mnemonicMatch[1].toLowerCase())) {
             mnemonicHtml = `<span class="hero-code__mnemonic">${escapeHtml(mnemonicMatch[1])}</span>${escapeHtml(mnemonicMatch[2])}`;
             remainder = remainder.slice(mnemonicMatch[0].length);
           }
@@ -393,57 +572,265 @@
             : "";
           const cursorHtml = showCursor ? '<span class="hero-code__cursor" aria-hidden="true"></span>' : "";
 
-          return `<span class="hero-code__line">${escapeHtml(leading)}${labelHtml}${mnemonicHtml}${highlightInline(
+          return `<div class="hero-code__line">${escapeHtml(leading)}${labelHtml}${mnemonicHtml}${highlightInline(
             remainder
-          )}${commentHtml}${cursorHtml}</span>`;
+          )}${commentHtml}${cursorHtml}</div>`;
         }
 
-        function renderHeroCode(visibleCharacters) {
-          if (!heroCode) return;
-          const visibleText = heroText.slice(0, visibleCharacters);
-          const lines = visibleText.split("\n");
-          if (visibleText.endsWith("\n")) {
-            lines.push("");
-          }
-          if (lines.length === 0) {
-            lines.push("");
+        function renderHeroCode(showCursor = true) {
+          if (!(heroCode instanceof HTMLElement)) {
+            return;
           }
 
-          heroCode.innerHTML = lines
-            .map((line, index) => renderHeroLine(line, index === lines.length - 1))
+          const currentLines = heroState.completedLines
+            .map((line) => renderHeroLine(line, false))
             .join("");
+          const shouldRenderCurrentLine =
+            heroState.lineIndex < heroProgram().lines.length ||
+            heroState.currentLineText.length > 0 ||
+            heroState.completedLines.length === 0;
+          const currentLineHtml = shouldRenderCurrentLine
+            ? renderHeroLine(heroState.currentLineText, showCursor)
+            : "";
+
+          heroCode.innerHTML = `${currentLines}${currentLineHtml}`;
+          heroCode.scrollTop = heroCode.scrollHeight;
         }
 
-        function scheduleHeroTyping(delay) {
-          window.clearTimeout(heroTypingTimer);
-          heroTypingTimer = window.setTimeout(stepHeroTyping, delay);
+        function resetHeroProgram(programIndex) {
+          heroState.programIndex = programIndex;
+          heroState.lineIndex = 0;
+          heroState.charIndex = 0;
+          heroState.completedLines = [];
+          heroState.currentLineText = "";
+          heroState.currentLineTypoUsed = false;
+        }
+
+        function renderFullHeroProgram(programIndex) {
+          resetHeroProgram(programIndex);
+          heroState.completedLines = HERO_PROGRAMS[programIndex].lines.slice();
+          heroState.lineIndex = HERO_PROGRAMS[programIndex].lines.length;
+          heroState.currentLineText = "";
+          renderHeroCode(false);
+        }
+
+        function heroNeighborKey(char) {
+          const options = HERO_NEIGHBOR_KEYS[char.toLowerCase()] ?? ["s", "d", "f"];
+          const replacement = options[Math.floor(Math.random() * options.length)];
+          return char === char.toUpperCase() ? replacement.toUpperCase() : replacement;
+        }
+
+        function buildTypoText(line) {
+          const typoLength = Math.min(Math.random() < 0.55 ? 1 : 2, line.length - heroState.charIndex - 1);
+          let typoText = "";
+          for (let index = 0; index < typoLength; index += 1) {
+            typoText += heroNeighborKey(line.charAt(heroState.charIndex + index) || line.charAt(heroState.charIndex));
+          }
+          return typoText;
+        }
+
+        function deleteHeroTypo(prefix, typoText) {
+          heroState.currentLineText = prefix + typoText;
+          renderHeroCode(true);
+
+          if (typoText.length === 0) {
+            scheduleHeroTyping(stepHeroTyping, heroTypingDelay(DELETE_SPEED));
+            return;
+          }
+
+          scheduleHeroTyping(() => {
+            deleteHeroTypo(prefix, typoText.slice(0, -1));
+          }, heroTypingDelay(DELETE_SPEED));
+        }
+
+        function maybeTypeTypo(line) {
+          const trimmedLine = line.trimStart();
+          const commentIndex = line.indexOf("#");
+          const eligible =
+            !trimmedLine.startsWith("#") &&
+            !heroState.currentLineTypoUsed &&
+            heroState.charIndex >= 3 &&
+            heroState.charIndex < line.length - 1 &&
+            (commentIndex === -1 || heroState.charIndex < commentIndex);
+
+          if (!eligible || Math.random() >= TYPO_PROBABILITY) {
+            return false;
+          }
+
+          const prefix = line.slice(0, heroState.charIndex);
+          const typoText = buildTypoText(line);
+          heroState.currentLineTypoUsed = true;
+          heroState.currentLineText = prefix + typoText;
+          renderHeroCode(true);
+          scheduleHeroTyping(() => {
+            deleteHeroTypo(prefix, typoText);
+          }, heroTypingDelay(TYPO_PAUSE));
+          return true;
+        }
+
+        function finalizeHeroLine() {
+          const currentLine = heroProgram().lines[heroState.lineIndex];
+          heroState.completedLines.push(currentLine);
+          heroState.lineIndex += 1;
+          heroState.charIndex = 0;
+          heroState.currentLineText = "";
+          heroState.currentLineTypoUsed = false;
+
+          if (heroState.lineIndex >= heroProgram().lines.length) {
+            renderFullHeroProgram(heroState.programIndex);
+            if (!heroReducedMotion) {
+              heroTimers.autoCycle = window.setTimeout(() => {
+                transitionHeroProgram((heroState.programIndex + 1) % HERO_PROGRAMS.length, {
+                  preFadeDelay: 0,
+                  fadeDuration: 300,
+                });
+              }, 2400);
+            }
+            return;
+          }
+
+          renderHeroCode(true);
+          scheduleHeroTyping(stepHeroTyping, 0);
         }
 
         function stepHeroTyping() {
-          renderHeroCode(typedCharacters);
+          if (heroReducedMotion || heroState.isTransitioning) {
+            return;
+          }
 
-          if (!deleting) {
-            if (typedCharacters >= heroText.length) {
-              deleting = true;
-              scheduleHeroTyping(1300);
-              return;
+          const line = heroProgram().lines[heroState.lineIndex];
+          if (typeof line !== "string") {
+            return;
+          }
+
+          if (maybeTypeTypo(line)) {
+            return;
+          }
+
+          heroState.charIndex += 1;
+          heroState.currentLineText = line.slice(0, heroState.charIndex);
+          renderHeroCode(true);
+
+          if (heroState.charIndex >= line.length) {
+            scheduleHeroTyping(finalizeHeroLine, heroTypingDelay(PAUSE_AFTER_LINE));
+            return;
+          }
+
+          const typedCharacter = line.charAt(heroState.charIndex - 1);
+          const characterDelay =
+            BASE_TYPE_SPEED +
+            Math.round((Math.random() * 2 - 1) * SPEED_VARIANCE) +
+            (typedCharacter === "#" ? PAUSE_AFTER_HASH : 0);
+          scheduleHeroTyping(stepHeroTyping, heroTypingDelay(characterDelay));
+        }
+
+        function startHeroProgram(programIndex) {
+          clearHeroTimers();
+          heroState.isTransitioning = false;
+          resetHeroProgram(programIndex);
+          setHeroFilename(HERO_PROGRAMS[programIndex].filename);
+
+          if (heroCodeWindow instanceof HTMLElement) {
+            heroCodeWindow.classList.remove("is-content-hidden", "is-collapsed");
+          }
+
+          if (heroReducedMotion) {
+            renderFullHeroProgram(programIndex);
+            return;
+          }
+
+          renderHeroCode(true);
+          scheduleHeroTyping(stepHeroTyping, heroTypingDelay(220));
+        }
+
+        function transitionHeroProgram(nextProgramIndex, options = {}) {
+          if (!(heroCodeWindow instanceof HTMLElement)) {
+            return;
+          }
+
+          const { preFadeDelay = 0, fadeDuration = 300, showCurrentProgram = false } = options;
+          clearHeroTimers();
+          heroState.isTransitioning = true;
+
+          if (showCurrentProgram) {
+            renderFullHeroProgram(heroState.programIndex);
+          }
+
+          crossfadeHeroFilename(HERO_PROGRAMS[nextProgramIndex].filename);
+
+          heroTimers.fade = window.setTimeout(() => {
+            heroCodeWindow.classList.add("is-content-hidden");
+          }, preFadeDelay);
+
+          heroTimers.switchProgram = window.setTimeout(() => {
+            resetHeroProgram(nextProgramIndex);
+            if (heroReducedMotion) {
+              renderFullHeroProgram(nextProgramIndex);
+            } else {
+              renderHeroCode(true);
             }
+            heroCodeWindow.classList.remove("is-content-hidden");
+            heroState.programIndex = nextProgramIndex;
+            heroState.isTransitioning = false;
+            if (!heroReducedMotion) {
+              scheduleHeroTyping(stepHeroTyping, heroTypingDelay(180));
+            }
+          }, preFadeDelay + fadeDuration);
+        }
 
-            const nextChar = heroText.charAt(typedCharacters);
-            typedCharacters += 1;
-            scheduleHeroTyping(nextChar === "\n" ? 170 : 42);
+        function closeHeroTerminal() {
+          if (!(heroCodeWindow instanceof HTMLElement) || heroState.isTransitioning) {
             return;
           }
 
-          if (typedCharacters <= 0) {
-            deleting = false;
-            scheduleHeroTyping(500);
+          clearHeroTimers();
+          heroState.isTransitioning = true;
+          heroCodeWindow.classList.add("is-content-hidden");
+
+          heroTimers.fade = window.setTimeout(() => {
+            heroCodeWindow.classList.add("is-collapsed");
+          }, 200);
+
+          heroTimers.reopen = window.setTimeout(() => {
+            heroCodeWindow.classList.remove("is-collapsed");
+            resetHeroProgram(heroState.programIndex);
+            if (heroReducedMotion) {
+              renderFullHeroProgram(heroState.programIndex);
+            } else {
+              renderHeroCode(true);
+            }
+            heroCodeWindow.classList.remove("is-content-hidden");
+            heroState.isTransitioning = false;
+            if (!heroReducedMotion) {
+              scheduleHeroTyping(stepHeroTyping, heroTypingDelay(180));
+            }
+          }, 1700);
+        }
+
+        function showNextHeroProgram() {
+          if (heroState.isTransitioning) {
             return;
           }
 
-          typedCharacters -= 1;
-          const previousChar = heroText.charAt(typedCharacters);
-          scheduleHeroTyping(previousChar === "\n" ? 85 : 20);
+          renderFullHeroProgram(heroState.programIndex);
+          transitionHeroProgram((heroState.programIndex + 1) % HERO_PROGRAMS.length, {
+            preFadeDelay: 150,
+            fadeDuration: 200,
+            showCurrentProgram: false,
+          });
+        }
+
+        function pulseHeroTerminal() {
+          if (!(heroCodeWindow instanceof HTMLElement)) {
+            return;
+          }
+          heroCodeWindow.classList.remove("is-pulsing");
+          void heroCodeWindow.offsetWidth;
+          heroCodeWindow.classList.add("is-pulsing");
+          window.clearTimeout(heroTimers.pulse);
+          heroTimers.pulse = window.setTimeout(() => {
+            heroCodeWindow.classList.remove("is-pulsing");
+          }, 400);
         }
 
         function initChipPet() {
@@ -697,10 +1084,24 @@
           syncThemeToggle();
         });
 
+        heroCodeClose?.addEventListener("click", (event) => {
+          event.preventDefault();
+          closeHeroTerminal();
+        });
+
+        heroCodeNext?.addEventListener("click", (event) => {
+          event.preventDefault();
+          showNextHeroProgram();
+        });
+
+        heroCodePulse?.addEventListener("click", (event) => {
+          event.preventDefault();
+          pulseHeroTerminal();
+        });
+
         document.addEventListener("DOMContentLoaded", () => {
           body.classList.add("loaded");
-          renderHeroCode(typedCharacters);
-          scheduleHeroTyping(320);
+          startHeroProgram(0);
           syncThemeToggle();
           handleScroll();
           initChipPet();
