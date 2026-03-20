@@ -93,6 +93,21 @@
             <div class="panel-header">
               <span>Program Input</span>
               <div class="panel-header__actions">
+                <span id="saveProgramDirtyIndicator" class="program-save__dirty" hidden></span>
+                <button
+                  id="save-program-btn"
+                  class="panel-icon-button"
+                  type="button"
+                  aria-label="Save program"
+                  title="Save program"
+                  hidden
+                >
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M5 4h11l3 3v13H5z"></path>
+                    <path d="M8 4v6h8"></path>
+                    <path d="M9 18h6"></path>
+                  </svg>
+                </button>
                 <button
                   id="shareSource"
                   class="panel-icon-button"
@@ -190,6 +205,44 @@
                 </table>
               </details>
             </div>
+          </section>
+
+          <section id="savedProgramsPanel" class="sim-panel programs-panel" hidden>
+            <div class="panel-header panel-header--collapsible">
+              <span>SAVED PROGRAMS</span>
+              <button
+                id="savedProgramsToggle"
+                class="panel-toggle"
+                type="button"
+                aria-expanded="true"
+                aria-controls="savedProgramsBody"
+                title="Collapse saved programs"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="m6 9 6 6 6-6"></path>
+                </svg>
+              </button>
+            </div>
+            <div id="savedProgramsBody" class="panel-body programs-panel__body"></div>
+          </section>
+
+          <section id="historyPanel" class="sim-panel programs-panel" hidden>
+            <div class="panel-header panel-header--collapsible">
+              <span>HISTORY</span>
+              <button
+                id="historyToggle"
+                class="panel-toggle"
+                type="button"
+                aria-expanded="true"
+                aria-controls="historyBody"
+                title="Collapse history"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="m6 9 6 6 6-6"></path>
+                </svg>
+              </button>
+            </div>
+            <div id="historyBody" class="panel-body programs-panel__body"></div>
           </section>
         </div>
 

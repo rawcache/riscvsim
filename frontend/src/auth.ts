@@ -278,7 +278,7 @@ export async function getSession(): Promise<UserSession | null> {
   return buildSession(idToken, accessToken, expiresAt);
 }
 
-export function login(config: AuthConfig): void {
+export function login(config: AuthConfig = AUTH_CONFIG): void {
   if (!hasWindow()) {
     return;
   }
@@ -294,9 +294,10 @@ export function logout(config: AuthConfig): void {
     return;
   }
 
+  const logoutUri = config.redirectUri?.trim() || new URL("/", window.location.origin).toString();
   const params = new URLSearchParams({
     client_id: config.clientId,
-    logout_uri: config.redirectUri,
+    logout_uri: logoutUri,
   });
   window.location.assign(hostedUiUrl(config.hostedUiDomain, `/logout?${params.toString()}`));
 }

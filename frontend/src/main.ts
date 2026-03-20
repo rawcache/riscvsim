@@ -16,11 +16,24 @@ import {
 import { DATA_BASE } from "./memory-map";
 import { createMemoryView } from "./memory";
 import { pushToUrl, readFromUrl } from "./permalink";
+import { createProgramsUi, type ProgramsUiController } from "./programs-ui";
 import type { ApiResponse, Effect, WasmStateDelta } from "./types";
 import { WasmRuntime } from "./wasm-runtime";
 
 let sessionId: string | undefined;
 export let currentUserSession: UserSession | null = null;
+
+interface CurrentProgramState {
+  programId: string | null;
+  name: string | null;
+  isDirty: boolean;
+}
+
+let currentProgram: CurrentProgramState = {
+  programId: null,
+  name: null,
+  isDirty: false,
+};
 
 const MAX_RUN_STEPS = 2000;
 const LOCAL_SIM_SESSION = "local-wasm";
@@ -62,6 +75,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   const stepBackBtn = document.getElementById("stepBack") as HTMLButtonElement;
   const runBtn = document.getElementById("run") as HTMLButtonElement;
   const resetBtn = document.getElementById("reset") as HTMLButtonElement;
+  const saveProgramBtn = document.getElementById("save-program-btn") as HTMLButtonElement | null;
+  const saveProgramDirtyIndicator = document.getElementById("saveProgramDirtyIndicator") as HTMLElement | null;
   const shareSourceBtn = document.getElementById("shareSource") as HTMLButtonElement | null;
   const copySourceBtn = document.getElementById("copySource") as HTMLButtonElement | null;
   const copyToastEl = document.getElementById("copyToast") as HTMLElement | null;
@@ -86,6 +101,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   const statusBadgeEl = document.getElementById("statusBadge") as HTMLElement | null;
   const sampleSelect = document.getElementById("sampleSelect") as HTMLSelectElement;
   const themeToggle = document.getElementById("simThemeToggle") as HTMLButtonElement | null;
+  const savedProgramsPanel = document.getElementById("savedProgramsPanel") as HTMLElement | null;
+  const savedProgramsBody = document.getElementById("savedProgramsBody") as HTMLElement | null;
+  const savedProgramsToggle = document.getElementById("savedProgramsToggle") as HTMLButtonElement | null;
+  const historyPanel = document.getElementById("historyPanel") as HTMLElement | null;
+  const historyBody = document.getElementById("historyBody") as HTMLElement | null;
+  const historyToggle = document.getElementById("historyToggle") as HTMLButtonElement | null;
 
   const memoryView = createMemoryView();
   let lastPc: number | undefined;
@@ -96,6 +117,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   let clikeByPc = new Map<number, string>();
   let disasmEncodings = new Map<number, string>();
   let runtime: WasmRuntime | null = null;
+  let programsUi: ProgramsUiController | null = null;
   let copyToastTimer: number | null = null;
   let assembleProgressStartedAt = 0;
   let assembleProgressResetTimer: number | null = null;
@@ -124,11 +146,40 @@ window.addEventListener("DOMContentLoaded", async () => {
     sourceLinesEl.style.transform = `translateY(${-sourceEl.scrollTop}px)`;
   }
 
+  function handleSourceInput() {
+    updateSourceLineNumbers();
+    if (!currentProgram.isDirty) {
+      updateCurrentProgramState({ isDirty: true });
+    }
+  }
+
   function syncSampleOptionLabels(selectedName: string) {
     for (const option of Array.from(sampleSelect.options)) {
       const baseLabel = sampleOptionLabels.get(option.value) ?? option.value;
       option.textContent = option.value === selectedName ? `✓ ${baseLabel}` : baseLabel;
     }
+  }
+
+  function syncCurrentProgramUi() {
+    programsUi?.setCurrentProgram(currentProgram);
+  }
+
+  function setCurrentProgramState(nextState: CurrentProgramState) {
+    currentProgram = nextState;
+    syncCurrentProgramUi();
+  }
+
+  function updateCurrentProgramState(nextState: Partial<CurrentProgramState>) {
+    currentProgram = { ...currentProgram, ...nextState };
+    syncCurrentProgramUi();
+  }
+
+  function resetCurrentProgramState() {
+    setCurrentProgramState({
+      programId: null,
+      name: null,
+      isDirty: false,
+    });
   }
 
   function setStatus(state: StatusState, label?: string) {
@@ -307,7 +358,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     }, remaining);
   }
 
-  function showCopyToast(message = "Copied!") {
+  function showToast(message = "Copied!") {
     if (!copyToastEl) return;
     copyToastEl.textContent = message;
     if (copyToastTimer !== null) {
@@ -340,7 +391,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         document.execCommand("copy");
         document.body.removeChild(tempEl);
       }
-      showCopyToast(toastMessage);
+      showToast(toastMessage);
     } catch {
       setPanelMessage(effectsEl, "Copy failed. Your browser blocked clipboard access.", "danger");
     }
@@ -700,12 +751,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     renderAll(history[index]);
   }
 
-  async function assembleCurrentSource(showSpinner: boolean, successMessage: string) {
+  async function assembleCurrentSource(showSpinner: boolean, successMessage: string): Promise<boolean> {
     if (!runtime) {
       setPanelMessage(effectsEl, "WASM module not initialized yet.", "danger");
-      return;
+      return false;
     }
 
+    let succeeded = false;
     resetEffectFilters();
     stopAssembleSpinner();
     if (showSpinner) {
@@ -785,6 +837,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       resetBtn.disabled = !sessionId;
       statusEl.textContent = successMessage;
       setStatus("assembled");
+      succeeded = true;
     } catch (err) {
       const message = (err as Error).message;
       setPanelMessage(effectsEl, `Error: ${message}`, "danger");
@@ -811,6 +864,55 @@ window.addEventListener("DOMContentLoaded", async () => {
         stopAssembleProgress();
       }
     }
+
+    return succeeded;
+  }
+
+  function applyEditorSource(
+    source: string,
+    options: {
+      sampleName?: string;
+      programId?: string | null;
+      name?: string | null;
+      statusMessage?: string;
+      focus?: boolean;
+      keepSharedBanner?: boolean;
+    } = {}
+  ) {
+    syncSampleOptionLabels(options.sampleName ?? "__custom__");
+    sourceEl.value = source;
+    programDataBytes = new Uint8Array();
+    resetMemoryControls(0);
+    resetEffectFilters();
+    setSharedBannerVisible(options.keepSharedBanner === true);
+    updateSourceLineNumbers();
+    clearPanels();
+    sessionId = undefined;
+    disasmLines = [];
+    clikeByPc = new Map<number, string>();
+    disasmEncodings = new Map<number, string>();
+    history = [];
+    historyIndex = -1;
+    stopRun();
+    stopAssembleSpinner();
+    setAnimationsEnabled(true);
+    resetAnimator();
+    statusEl.textContent = runtime ? options.statusMessage ?? "" : "Initializing Rust/WASM simulator…";
+    assembleBtn.disabled = runtime === null;
+    resetBtn.disabled = true;
+    stepBtn.disabled = true;
+    stepBtn.textContent = "Step";
+    runBtn.disabled = true;
+    stepBackBtn.disabled = true;
+    setCurrentProgramState({
+      programId: options.programId ?? null,
+      name: options.name ?? null,
+      isDirty: false,
+    });
+    if (options.focus !== false) {
+      sourceEl.focus();
+    }
+    setStatus("ready");
   }
 
   const samplePrograms: Record<string, string> = {
@@ -993,34 +1095,65 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   function loadSample(name: string) {
-    syncSampleOptionLabels(name);
-    sourceEl.value = samplePrograms[name] ?? "";
-    programDataBytes = new Uint8Array();
-    resetMemoryControls(0);
-    resetEffectFilters();
-    setSharedBannerVisible(false);
-    updateSourceLineNumbers();
-    clearPanels();
-    sessionId = undefined;
-    disasmLines = [];
-    clikeByPc = new Map<number, string>();
-    disasmEncodings = new Map<number, string>();
-    history = [];
-    historyIndex = -1;
-    stopRun();
-    stopAssembleSpinner();
-    setAnimationsEnabled(true);
-    resetAnimator();
-    statusEl.textContent = runtime ? "" : "Initializing Rust/WASM simulator…";
-    assembleBtn.disabled = runtime === null;
-    resetBtn.disabled = true;
-    stepBtn.disabled = true;
-    stepBtn.textContent = "Step";
-    runBtn.disabled = true;
-    stepBackBtn.disabled = true;
-    sourceEl.focus();
-    setStatus("ready");
+    applyEditorSource(samplePrograms[name] ?? "", {
+      sampleName: name,
+      statusMessage: "",
+    });
   }
+
+  if (
+    !saveProgramBtn ||
+    !saveProgramDirtyIndicator ||
+    !savedProgramsPanel ||
+    !savedProgramsBody ||
+    !savedProgramsToggle ||
+    !historyPanel ||
+    !historyBody ||
+    !historyToggle
+  ) {
+    throw new Error("Saved programs UI is missing required elements.");
+  }
+
+  programsUi = createProgramsUi({
+    saveButton: saveProgramBtn,
+    dirtyIndicator: saveProgramDirtyIndicator,
+    savedPanel: savedProgramsPanel,
+    savedBody: savedProgramsBody,
+    savedToggle: savedProgramsToggle,
+    historyPanel,
+    historyBody,
+    historyToggle,
+    getSource() {
+      return sourceEl.value;
+    },
+    onLoadProgram(payload) {
+      applyEditorSource(payload.source, {
+        programId: payload.programId,
+        name: payload.name,
+        statusMessage: payload.programId ? "Saved program loaded." : "History entry loaded.",
+      });
+    },
+    onProgramPersisted(program) {
+      setCurrentProgramState({
+        programId: program.programId,
+        name: program.name,
+        isDirty: false,
+      });
+    },
+    onProgramDeleted(programId) {
+      if (currentProgram.programId === programId) {
+        resetCurrentProgramState();
+      }
+    },
+    onToast(message) {
+      showToast(message);
+    },
+    onMessage(message) {
+      statusEl.textContent = message;
+      showToast(message);
+    },
+  });
+  syncCurrentProgramUi();
 
   themeToggle?.addEventListener("click", () => {
     const isDark = document.documentElement.dataset.theme === "dark";
@@ -1038,10 +1171,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   currentUserSession = await initAuthUi({
     onSession(session) {
       currentUserSession = session;
+      void programsUi?.setSession(session);
     },
   });
+  await programsUi?.setSession(currentUserSession);
 
-  sourceEl.addEventListener("input", updateSourceLineNumbers);
+  sourceEl.addEventListener("input", handleSourceInput);
   sourceEl.addEventListener("scroll", updateSourceLineNumbers);
 
   sampleSelect.onchange = () => {
@@ -1103,10 +1238,11 @@ window.addEventListener("DOMContentLoaded", async () => {
   const sharedProgram = await readFromUrl();
   if (sharedProgram) {
     setSharedBannerVisible(true);
-    syncSampleOptionLabels("__shared__");
-    sourceEl.value = sharedProgram;
-    updateSourceLineNumbers();
-    clearPanels();
+    applyEditorSource(sharedProgram, {
+      keepSharedBanner: true,
+      statusMessage: "",
+      focus: false,
+    });
   } else {
     setSharedBannerVisible(false);
     loadSample(sampleSelect.value || "arraySum");
@@ -1134,10 +1270,14 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
 
   assembleBtn.onclick = async () => {
-    await assembleCurrentSource(true, "Program assembled. Ready to step.");
+    const assembled = await assembleCurrentSource(true, "Program assembled. Ready to step.");
+    if (assembled && currentUserSession?.isGtStudent) {
+      programsUi?.recordHistory(sourceEl.value);
+    }
   };
 
   resetBtn.onclick = async () => {
+    resetCurrentProgramState();
     await assembleCurrentSource(false, "Program reset.");
   };
 
