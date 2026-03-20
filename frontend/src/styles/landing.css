@@ -658,74 +658,139 @@ body.loaded .hero__visual {
 
 .hero-code {
   position: relative;
+  display: grid;
+  grid-template-rows: 36px auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
   overflow: hidden;
+  transform: scale(1);
+  transition: border-color 400ms ease;
+}
+
+.hero-code.is-pulsing {
+  animation: hero-code-pulse 350ms ease;
+  border-color: var(--accent);
+}
+
+.hero-code.is-content-hidden .hero-code__content {
+  opacity: 0;
+}
+
+.hero-code.is-collapsed .hero-code__body {
+  height: 0;
 }
 
 .hero-code__bar {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: var(--space-3) var(--space-4);
+  min-height: 36px;
+  padding: 0 12px;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
 }
 
 .hero-code__dots {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
 }
 
-.hero-code__dot {
-  inline-size: 10px;
-  block-size: 10px;
-  border-radius: 999px;
-  background: var(--border);
+.hero-code__window-btn {
+  inline-size: 12px;
+  block-size: 12px;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: background 150ms ease;
 }
 
-.hero-code__dot:first-child {
+.hero-code__window-btn--close {
   background: #ff5f57;
 }
 
-.hero-code__dot:nth-child(2) {
-  background: #febc2e;
+.hero-code__window-btn--close:hover {
+  background: #ff3b30;
 }
 
-.hero-code__dot:nth-child(3) {
+.hero-code__window-btn--minimize {
+  background: #ffbd2e;
+}
+
+.hero-code__window-btn--minimize:hover {
+  background: #ff9500;
+}
+
+.hero-code__window-btn--maximize {
   background: #28c840;
 }
 
+.hero-code__window-btn--maximize:hover {
+  background: #34c759;
+}
+
 .hero-code__label {
+  opacity: 1;
   color: var(--text-secondary);
-  font-family: var(--font-display);
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
   text-transform: none;
   letter-spacing: 0;
+  transition: opacity 150ms ease;
+}
+
+.hero-code__label.is-fading {
+  opacity: 0;
 }
 
 .hero-code__bar-spacer {
   justify-self: end;
-  inline-size: 46px;
+  inline-size: 48px;
 }
 
-.hero-code pre {
-  margin: 0;
-  padding: var(--space-5);
-  min-height: 16em;
+.hero-code__body {
+  height: 232px;
+  min-height: 220px;
+  max-height: 320px;
+  overflow: hidden;
+  transition: height 300ms ease-in-out;
+}
+
+.hero-code__content {
+  height: 100%;
+  padding: 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg-base);
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 0.95rem;
-  line-height: 1.75;
-  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.7;
+  opacity: 1;
+  transition: opacity 200ms ease;
+}
+
+.hero-code__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hero-code__content::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.hero-code__content::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .hero-code__line {
   display: block;
-  min-height: 1.75em;
+  min-height: 1.7em;
+  white-space: pre-wrap;
 }
 
 .hero-code__comment {
@@ -751,22 +816,33 @@ body.loaded .hero__visual {
 
 .hero-code__cursor {
   display: inline-block;
-  inline-size: 0.55ch;
-  block-size: 1.2em;
-  margin-left: 0.15ch;
+  width: 2px;
+  height: 1em;
   vertical-align: text-bottom;
   background: var(--accent);
-  animation: hero-cursor 1.2s steps(1, end) infinite;
+  margin-left: 1px;
+  animation: cursor-blink 1s step-end infinite;
 }
 
-@keyframes hero-cursor {
+@keyframes cursor-blink {
   0%,
-  45% {
+  100% {
     opacity: 1;
   }
-  50%,
-  100% {
+  50% {
     opacity: 0;
+  }
+}
+
+@keyframes hero-code-pulse {
+  0% {
+    transform: scale(1);
+  }
+  55% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 
@@ -1257,8 +1333,11 @@ body.loaded .hero__visual {
     width: 100%;
   }
 
-  .hero-code pre {
-    min-height: 13.25em;
+  .hero-code__body {
+    height: 220px;
+  }
+
+  .hero-code__content {
     padding: var(--space-4);
   }
 
