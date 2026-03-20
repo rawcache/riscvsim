@@ -263,8 +263,7 @@ body.landing-page {
 
 .hero-code,
 .feature-card,
-.social-proof-strip,
-.coverage-strip,
+.signal-band,
 .landing-cta,
 .landing-footer {
   position: relative;
@@ -884,44 +883,64 @@ body.loaded .hero__visual {
   line-height: 1.7;
 }
 
-.social-proof-strip {
+.signal-band {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-6);
-  padding: var(--space-6) var(--space-8);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-elevated);
+  gap: 28px;
+  padding: 48px 0;
 }
 
-.social-proof-item {
+.signal-band__rule {
+  block-size: 1px;
+  background: var(--border);
+}
+
+.signal-band__facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+}
+
+.signal-band__item {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  max-width: 480px;
+  margin: 0 auto;
   color: var(--text-secondary);
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 13px;
-  line-height: 1.7;
+  line-height: 1.8;
 }
 
-.coverage-strip {
+.signal-band__item svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.signal-band__divider {
+  inline-size: 1px;
+  block-size: 32px;
+  background: var(--border);
+}
+
+.signal-band__pills {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-5);
-  border-radius: var(--radius-xl);
-  background: var(--bg-elevated);
+  justify-content: center;
+  gap: 8px;
 }
 
 .coverage-badge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  padding: 5px 14px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
+  border-radius: 999px;
   background: var(--bg-surface);
   color: var(--text-secondary);
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 12px;
   opacity: 0;
   transform: translateY(8px);
@@ -968,37 +987,50 @@ body.loaded .hero__visual {
 
 .landing-footer {
   display: grid;
-  gap: 10px;
-  padding: 28px 0 var(--space-10);
-  text-align: left;
+  justify-items: center;
+  gap: 12px;
+  padding: 40px var(--space-8) 80px;
+  text-align: center;
   color: var(--text-muted);
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 12px;
 }
 
 .landing-footer__links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 18px;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+}
+
+.landing-footer__separator {
+  margin: 0 12px;
+  color: var(--text-muted);
 }
 
 .landing-footer__copyright {
   margin: 0;
   line-height: 1.6;
+  font-size: 11px;
 }
 
 .landing-footer a {
   color: inherit;
-  text-decoration: inherit;
+  text-decoration: none;
+}
+
+.landing-footer a:hover {
+  color: var(--text-secondary);
 }
 
 #chip-wrapper {
-  --chip-jump: 0px;
   position: fixed;
-  right: 26px;
-  bottom: 24px;
+  right: 32px;
+  bottom: 32px;
   z-index: 0;
-  width: 78px;
-  height: 78px;
+  width: 82px;
+  height: 82px;
   opacity: 0;
   transform: translateY(80px);
   transition:
@@ -1015,18 +1047,11 @@ body.loaded .hero__visual {
 #chip-reactor {
   width: 100%;
   height: 100%;
-  transform: translateY(var(--chip-jump)) scale(1) rotate(0deg);
   transform-origin: center;
-  transition: transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-#chip-wrapper.is-chipper #chip-reactor {
-  transform: translateY(var(--chip-jump)) scale(1.1) rotate(-8deg);
-  transition-duration: 180ms;
-}
-
-#chip-wrapper.is-jumping {
-  --chip-jump: -12px;
+#chip-wrapper.is-reacting #chip-reactor {
+  animation: chip-hop 800ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 #chip-stage {
@@ -1040,7 +1065,7 @@ body.loaded .hero__visual {
   animation: chip-peek 1.8s ease-in-out forwards;
 }
 
-#chip-wrapper.is-chipper #chip-stage {
+#chip-wrapper.is-reacting #chip-stage {
   animation: none;
 }
 
@@ -1057,10 +1082,13 @@ body.loaded .hero__visual {
 .cpu-pet__eye {
   transform-box: fill-box;
   transform-origin: center;
+  transition: transform 150ms ease-out;
 }
 
-#chip-wrapper.is-chipper .cpu-pet__eye {
-  animation: chip-blink 200ms ease-in-out 2;
+.cpu-pet__svg.chip-eyes-closed .cpu-pet__eye {
+  transform: scaleY(0.1);
+  transition-duration: 100ms;
+  transition-timing-function: ease-in;
 }
 
 #chip-wrapper.is-blinking .cpu-pet__eye {
@@ -1075,11 +1103,11 @@ body.loaded .hero__visual {
   opacity: 0;
 }
 
-#chip-wrapper.is-chipper .cpu-pet__mouth--neutral {
+#chip-wrapper.is-reacting .cpu-pet__mouth--neutral {
   opacity: 0;
 }
 
-#chip-wrapper.is-chipper .cpu-pet__mouth--happy {
+#chip-wrapper.is-reacting .cpu-pet__mouth--happy {
   opacity: 1;
 }
 
@@ -1105,6 +1133,24 @@ body.loaded .hero__visual {
   }
   75% {
     transform: translate(4px, -1px) rotate(2deg);
+  }
+}
+
+@keyframes chip-hop {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  25% {
+    transform: translateY(-16px) scale(1.1);
+  }
+  58% {
+    transform: translateY(0) scale(1);
+  }
+  68% {
+    transform: translateY(0) scaleX(1.1) scaleY(0.85);
+  }
+  100% {
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -1151,9 +1197,17 @@ body.loaded .hero__visual {
     grid-template-columns: 1fr;
   }
 
-  .feature-grid,
-  .social-proof-strip {
+  .feature-grid {
     grid-template-columns: 1fr;
+  }
+
+  .signal-band__facts {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .signal-band__divider {
+    display: none;
   }
 }
 
@@ -1208,21 +1262,22 @@ body.loaded .hero__visual {
     padding: var(--space-4);
   }
 
-  .social-proof-strip {
-    padding-inline: var(--space-4);
-  }
-
   .landing-cta {
     padding-inline: var(--space-4);
   }
 
   .landing-footer {
     gap: 12px;
+    padding: 40px var(--space-4) 88px;
   }
 
   .landing-footer__links {
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
+  }
+
+  .landing-footer__separator {
+    display: none;
   }
 }
 
@@ -1237,19 +1292,10 @@ body.loaded .hero__visual {
     transition: none;
   }
 
-  .hero-widget {
-    transition-duration: 0.01ms;
-  }
-
-  .hero-widget__hover,
-  .hero.hero-loaded .hero-widget--register .hero-widget__row--updated,
   #chip-stage,
   #chip-wrapper.is-peeking #chip-stage,
+  #chip-wrapper.is-reacting #chip-reactor,
   .cpu-pet__pin-dot {
     animation: none;
-  }
-
-  #chip-wrapper.is-jumping {
-    --chip-jump: 0px;
   }
 }

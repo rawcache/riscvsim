@@ -140,11 +140,11 @@
                 <path d="M4 5v14"></path>
               </svg>
             </div>
-          <h2 class="feature-card__title">Step Execution</h2>
-          <p class="feature-card__body">
-            Step through every instruction and watch register and memory state update in real
-            time. Step backward too.
-          </p>
+            <h2 class="feature-card__title">Step Execution</h2>
+            <p class="feature-card__body">
+              Step through every instruction and watch register and memory state update in real
+              time. Step backward too.
+            </p>
           </article>
 
           <article class="feature-card js-reveal">
@@ -179,34 +179,37 @@
         </div>
       </section>
 
-      <section class="section social-proof-strip" aria-label="Platform details">
-        <div class="social-proof-item">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M12 3v18"></path>
-            <path d="M6 8h12"></path>
-            <path d="M7 16h10"></path>
-          </svg>
-          <span>Built on Rust + WebAssembly — runs at native speed in your browser</span>
+      <section class="section signal-band" aria-label="Platform details">
+        <div class="signal-band__rule" aria-hidden="true"></div>
+        <div class="signal-band__facts">
+          <div class="signal-band__item">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="7" y="7" width="10" height="10" rx="2"></rect>
+              <path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"></path>
+            </svg>
+            <span>Built on Rust + WebAssembly — runs at native speed in your browser</span>
+          </div>
+          <div class="signal-band__divider" aria-hidden="true"></div>
+          <div class="signal-band__item">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M6 5.5A2.5 2.5 0 0 1 8.5 3H20v18H8.5A2.5 2.5 0 0 0 6 23"></path>
+              <path d="M6 5.5v15"></path>
+              <path d="M9 7h7M9 11h7M9 15h5"></path>
+            </svg>
+            <span>Covers the full RV32IM subset taught in ECE 2035 at Georgia Tech</span>
+          </div>
         </div>
-        <div class="social-proof-item">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M4 6h16"></path>
-            <path d="M4 12h16"></path>
-            <path d="M4 18h10"></path>
-          </svg>
-          <span>Covers the full RV32IM subset taught in ECE 2035 at Georgia Tech</span>
+        <div class="signal-band__pills" aria-label="Supported instruction groups">
+          <span class="coverage-badge js-pill">ALU</span>
+          <span class="coverage-badge js-pill">Shifts</span>
+          <span class="coverage-badge js-pill">Branches</span>
+          <span class="coverage-badge js-pill">Loads/Stores</span>
+          <span class="coverage-badge js-pill">JAL/JALR</span>
+          <span class="coverage-badge js-pill">LUI/AUIPC</span>
+          <span class="coverage-badge js-pill">M Extension</span>
+          <span class="coverage-badge js-pill">Pseudos</span>
         </div>
-      </section>
-
-      <section class="section coverage-strip" aria-label="Supported instruction groups">
-        <span class="coverage-badge js-pill">ALU</span>
-        <span class="coverage-badge js-pill">Shifts</span>
-        <span class="coverage-badge js-pill">Branches</span>
-        <span class="coverage-badge js-pill">Loads/Stores</span>
-        <span class="coverage-badge js-pill">JAL/JALR</span>
-        <span class="coverage-badge js-pill">LUI/AUIPC</span>
-        <span class="coverage-badge js-pill">M Extension</span>
-        <span class="coverage-badge js-pill">Pseudos</span>
+        <div class="signal-band__rule" aria-hidden="true"></div>
       </section>
 
       <section class="section landing-cta">
@@ -217,20 +220,21 @@
 
     <footer class="landing-footer">
       <div class="landing-footer__links">
-        <a href="/terms-of-use/">Terms of service</a>
-        <a href="/privacy-policy/">Privacy policy</a>
-        <a href="/do-not-sell/">Do not sell my personal information</a>
+        <a href="/terms/">Terms of service</a>
+        <span class="landing-footer__separator" aria-hidden="true">·</span>
+        <a href="/privacy/">Privacy policy</a>
+        <span class="landing-footer__separator" aria-hidden="true">·</span>
+        <a href="/privacy/#do-not-sell">Do not sell my personal information</a>
       </div>
       <p class="landing-footer__copyright">
-        © 2026 StudyRISC-V. StudyRISC-V is an educational simulator built by
-        <a href="https://github.com/rawcache">Satchit Seth</a>.
+        © 2026 StudyRISC-V. Built by Satchit Seth.
       </p>
     </footer>
 
     <div id="chip-wrapper" aria-hidden="true">
       <div id="chip-reactor">
         <div id="chip-stage">
-          <svg class="cpu-pet__svg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg id="chipSvg" class="cpu-pet__svg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
             <g class="cpu-pet__pins">
                 <line x1="16" y1="22" x2="10" y2="22" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
                 <line x1="16" y1="26" x2="10" y2="26" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
@@ -299,6 +303,7 @@
         const chipWrapper = document.getElementById("chip-wrapper");
         const chipReactor = document.getElementById("chip-reactor");
         const chipStage = document.getElementById("chip-stage");
+        const chipSvg = document.getElementById("chipSvg");
         const chipLeftPupil = document.getElementById("chipLeftPupil");
         const chipRightPupil = document.getElementById("chipRightPupil");
         const heroProgram = [
@@ -446,6 +451,7 @@
             !(chipWrapper instanceof HTMLElement) ||
             !(chipReactor instanceof HTMLElement) ||
             !(chipStage instanceof HTMLElement) ||
+            !(chipSvg instanceof SVGSVGElement) ||
             !(chipLeftPupil instanceof SVGCircleElement) ||
             !(chipRightPupil instanceof SVGCircleElement)
           ) {
@@ -465,8 +471,8 @@
           let blinkTimer = 0;
           let blinkClassTimer = 0;
           let peekTimer = 0;
-          let chipperTimer = 0;
-          let jumpTimer = 0;
+          let reactionOpenTimer = 0;
+          let reactionResetTimer = 0;
           let fastPinsTimer = 0;
 
           function setPupils(angle, offset) {
@@ -474,6 +480,13 @@
             chipLeftPupil.setAttribute("cy", (30 + Math.sin(angle) * offset).toFixed(2));
             chipRightPupil.setAttribute("cx", (37 + Math.cos(angle) * offset).toFixed(2));
             chipRightPupil.setAttribute("cy", (30 + Math.sin(angle) * offset).toFixed(2));
+          }
+
+          function centerPupils() {
+            chipLeftPupil.setAttribute("cx", "27");
+            chipLeftPupil.setAttribute("cy", "30");
+            chipRightPupil.setAttribute("cx", "37");
+            chipRightPupil.setAttribute("cy", "30");
           }
 
           function updateEyes(cursorX, cursorY) {
@@ -487,6 +500,9 @@
           }
 
           function triggerBlink() {
+            if (chipWrapper.classList.contains("is-reacting")) {
+              return;
+            }
             chipWrapper.classList.remove("is-blinking");
             void chipWrapper.offsetWidth;
             chipWrapper.classList.add("is-blinking");
@@ -515,6 +531,10 @@
             }
             const nextDelay = Math.random() * 6000 + 8000;
             peekTimer = window.setTimeout(() => {
+              if (chipWrapper.classList.contains("is-reacting")) {
+                schedulePeek();
+                return;
+              }
               chipWrapper.classList.add("is-peeking");
               window.setTimeout(() => {
                 chipWrapper.classList.remove("is-peeking");
@@ -551,42 +571,51 @@
             }, 1000);
           }
 
-          function playChipperReaction(options = {}) {
-            const { jump = false, rapidPins = false } = options;
+          function playChipClickReaction(options = {}) {
+            const { rapidPins = false } = options;
 
-            chipWrapper.classList.add("is-chipper");
-            if (jump && !reducedMotion) {
-              chipWrapper.classList.add("is-jumping");
-            }
+            chipWrapper.classList.remove("is-peeking");
+            chipWrapper.classList.remove("is-reacting");
+            chipSvg.classList.remove("chip-eyes-closed");
+
             if (rapidPins) {
               setFastPins();
             }
-            triggerBlink();
-            window.setTimeout(() => {
-              triggerBlink();
-            }, 140);
 
-            window.clearTimeout(chipperTimer);
-            chipperTimer = window.setTimeout(() => {
-              chipWrapper.classList.remove("is-chipper");
-            }, 420);
+            window.clearTimeout(reactionOpenTimer);
+            window.clearTimeout(reactionResetTimer);
+            window.clearTimeout(eyeUnlockTimer);
 
-            window.clearTimeout(jumpTimer);
-            jumpTimer = window.setTimeout(() => {
-              chipWrapper.classList.remove("is-jumping");
-            }, jump && !reducedMotion ? 400 : 0);
+            chipWrapper.classList.add("is-reacting");
+            chipSvg.classList.add("chip-eyes-closed");
+            centerPupils();
+            eyeLockUntil = performance.now() + 600;
+
+            reactionOpenTimer = window.setTimeout(() => {
+              chipSvg.classList.remove("chip-eyes-closed");
+              centerPupils();
+            }, reducedMotion ? 1 : 200);
+
+            eyeUnlockTimer = window.setTimeout(() => {
+              eyeLockUntil = 0;
+              updateEyes(lastPointerX, lastPointerY);
+            }, 600);
+
+            reactionResetTimer = window.setTimeout(() => {
+              chipWrapper.classList.remove("is-reacting");
+            }, reducedMotion ? 220 : 800);
           }
 
           function handleChipClick() {
-            playChipperReaction();
+            playChipClickReaction();
           }
 
           function handleCtaClick() {
-            playChipperReaction({ jump: true, rapidPins: true });
+            playChipClickReaction({ rapidPins: true });
           }
 
           function handleSignInClick() {
-            playChipperReaction({ jump: true });
+            playChipClickReaction();
           }
 
           function handleGenericButtonClick(target) {
@@ -695,7 +724,7 @@
             observer.observe(card);
           });
 
-          const coverageStrip = document.querySelector(".coverage-strip");
+          const coverageStrip = document.querySelector(".signal-band__pills");
           const pills = document.querySelectorAll(".js-pill");
           pills.forEach((pill, index) => {
             pill.style.setProperty("--pill-delay", `${index * 40}ms`);
