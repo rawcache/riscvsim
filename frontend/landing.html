@@ -333,6 +333,7 @@
             <path class="cpu-pet__mouth cpu-pet__mouth--neutral" d="M 27 35 Q 32 38.5 37 35" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
             <path class="cpu-pet__mouth cpu-pet__mouth--happy" d="M 26 34.5 Q 32 40 38 34.5" stroke="var(--text-primary)" stroke-width="1.9" fill="none" stroke-linecap="round" />
             <path class="cpu-pet__mouth cpu-pet__mouth--scared" d="M 27 37 Q 32 32.8 37 37" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
+            <path class="cpu-pet__mouth cpu-pet__mouth--annoyed" d="M 27 36.2 L 37 36.2" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
           </svg>
         </div>
       </div>
@@ -906,7 +907,10 @@
           let reactionResetTimer = 0;
           let fastPinsTimer = 0;
           let coverFrame = 0;
+          let annoyedTimer = 0;
           let chipCovered = false;
+          let chipClickCount = 0;
+          let chipClickWindowStartedAt = 0;
           const chipCoverTargets = Array.from(
             document.querySelectorAll(".hero-code, .feature-card, .workflow-panel, .signal-band, .landing-cta, .landing-footer")
           );
@@ -923,13 +927,6 @@
             chipLeftPupil.setAttribute("cy", "30");
             chipRightPupil.setAttribute("cx", "37");
             chipRightPupil.setAttribute("cy", "30");
-          }
-
-          function setCoveredPupils() {
-            chipLeftPupil.setAttribute("cx", "26.4");
-            chipLeftPupil.setAttribute("cy", "29.1");
-            chipRightPupil.setAttribute("cx", "36.4");
-            chipRightPupil.setAttribute("cy", "29.1");
           }
 
           function updateCoveredState() {
@@ -955,11 +952,6 @@
 
             chipCovered = covered;
             chipWrapper.classList.toggle("is-covered", covered);
-
-            if (chipCovered && !chipWrapper.classList.contains("is-reacting")) {
-              setCoveredPupils();
-              return;
-            }
 
             if (!chipCovered && eyeLockUntil <= performance.now()) {
               updateEyes(lastPointerX, lastPointerY);
@@ -1091,15 +1083,33 @@
 
             reactionResetTimer = window.setTimeout(() => {
               chipWrapper.classList.remove("is-reacting");
-              if (chipCovered) {
-                setCoveredPupils();
-              } else {
-                updateEyes(lastPointerX, lastPointerY);
-              }
+              updateEyes(lastPointerX, lastPointerY);
             }, reducedMotion ? 220 : 800);
           }
 
+          function flashChipAnnoyed() {
+            chipWrapper.classList.add("is-annoyed");
+            window.clearTimeout(annoyedTimer);
+            annoyedTimer = window.setTimeout(() => {
+              chipWrapper.classList.remove("is-annoyed");
+            }, reducedMotion ? 220 : 520);
+          }
+
           function handleChipClick() {
+            const now = performance.now();
+            if (now - chipClickWindowStartedAt > 2200) {
+              chipClickWindowStartedAt = now;
+              chipClickCount = 0;
+            }
+
+            chipClickCount += 1;
+            if (chipClickCount >= 4) {
+              flashChipAnnoyed();
+              chipClickCount = 0;
+              chipClickWindowStartedAt = now;
+            } else {
+              triggerBlink();
+            }
             playChipClickReaction();
           }
 
@@ -1129,11 +1139,6 @@
               lastEyeUpdate = now;
 
               if (eyeLockUntil > now) {
-                return;
-              }
-
-              if (chipCovered && !chipWrapper.classList.contains("is-reacting")) {
-                setCoveredPupils();
                 return;
               }
 

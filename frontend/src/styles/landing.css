@@ -654,13 +654,15 @@ body.loaded .hero__visual {
   min-width: 0;
   justify-self: stretch;
   align-self: stretch;
-  padding-top: 28px;
+  padding-top: 48px;
 }
 
 .hero-code {
   position: relative;
   display: grid;
   grid-template-rows: 36px auto;
+  width: min(100%, 860px);
+  justify-self: end;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
@@ -754,9 +756,9 @@ body.loaded .hero__visual {
 }
 
 .hero-code__body {
-  height: 232px;
-  min-height: 220px;
-  max-height: 320px;
+  height: 278px;
+  min-height: 264px;
+  max-height: 360px;
   overflow: hidden;
   transition: height 300ms ease-in-out;
 }
@@ -1288,27 +1290,24 @@ body.loaded .hero__visual {
 }
 
 .cpu-pet__mouth--scared,
+.cpu-pet__mouth--annoyed,
 .cpu-pet__brow {
   opacity: 0;
   transition: opacity 160ms ease;
 }
 
-#chip-wrapper.is-covered .cpu-pet__mouth--neutral,
-#chip-wrapper.is-covered .cpu-pet__mouth--happy {
+#chip-wrapper.is-annoyed .cpu-pet__mouth--neutral,
+#chip-wrapper.is-annoyed .cpu-pet__mouth--happy {
   opacity: 0;
 }
 
-#chip-wrapper.is-covered .cpu-pet__mouth--scared,
-#chip-wrapper.is-covered .cpu-pet__brow {
+#chip-wrapper.is-annoyed .cpu-pet__mouth--annoyed,
+#chip-wrapper.is-annoyed .cpu-pet__brow {
   opacity: 1;
 }
 
-#chip-wrapper.is-covered #chip-stage {
-  animation: chip-cower 900ms ease-in-out infinite;
-}
-
-#chip-wrapper.is-covered .cpu-pet__pin-dot {
-  animation-duration: 0.9s;
+#chip-wrapper.is-annoyed #chip-stage {
+  animation: chip-annoyed 260ms ease-in-out 2;
 }
 
 .cpu-pet__pin-dot {
@@ -1372,19 +1371,16 @@ body.loaded .hero__visual {
   }
 }
 
-@keyframes chip-cower {
+@keyframes chip-annoyed {
   0%,
   100% {
     transform: translate(0, 0) scale(1) rotate(0deg);
   }
-  25% {
-    transform: translate(2px, 1px) scale(0.96) rotate(1.5deg);
+  30% {
+    transform: translate(-1px, 0) rotate(-3deg);
   }
-  50% {
-    transform: translate(-2px, 2px) scale(0.95) rotate(-1.5deg);
-  }
-  75% {
-    transform: translate(1px, 2px) scale(0.97) rotate(1deg);
+  60% {
+    transform: translate(1px, 0) rotate(3deg);
   }
 }
 
@@ -1478,7 +1474,7 @@ body.loaded .hero__visual {
   }
 
   .hero-code__body {
-    height: 220px;
+    height: 236px;
   }
 
   .hero-code__content {

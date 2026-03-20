@@ -10,6 +10,9 @@ export interface AuthConfig {
 export interface UserSession {
   userId: string;
   email: string;
+  firstName: string;
+  lastName: string;
+  displayName: string;
   isGtStudent: boolean;
   idToken: string;
   accessToken: string;
@@ -38,12 +41,14 @@ type SessionTokenInput = {
   accessToken: string;
   refreshToken?: string;
   expiresIn: number;
+  rememberMe?: boolean;
 };
 
 const ID_TOKEN_KEY = "studyriscv_id_token";
 const ACCESS_TOKEN_KEY = "studyriscv_access_token";
 const EXPIRES_AT_KEY = "studyriscv_expires_at";
 const REFRESH_TOKEN_KEY = "studyriscv_refresh_token";
+type TokenStorageKind = "local" | "session";
 
 function hasWindow(): boolean {
   return typeof window !== "undefined";
@@ -117,13 +122,37 @@ function hostedUiUrl(hostedUiDomain: string, path: string): string {
   return `https://${normalizeHostedUiDomain(hostedUiDomain)}${path}`;
 }
 
+function getStorage(kind: TokenStorageKind): StorageLike | null {
+  return kind === "local" ? getLocalStorage() : getSessionStorage();
+}
+
 function clearStoredTokens(): void {
   const localStorageRef = getLocalStorage();
   const sessionStorageRef = getSessionStorage();
   localStorageRef?.removeItem(ID_TOKEN_KEY);
   localStorageRef?.removeItem(ACCESS_TOKEN_KEY);
   localStorageRef?.removeItem(EXPIRES_AT_KEY);
+  localStorageRef?.removeItem(REFRESH_TOKEN_KEY);
+  sessionStorageRef?.removeItem(ID_TOKEN_KEY);
+  sessionStorageRef?.removeItem(ACCESS_TOKEN_KEY);
+  sessionStorageRef?.removeItem(EXPIRES_AT_KEY);
   sessionStorageRef?.removeItem(REFRESH_TOKEN_KEY);
+}
+
+function capitalizeWord(word: string): string {
+  return word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : "";
+}
+
+function fallbackDisplayName(email: string): string {
+  const localPart = email.split("@")[0] ?? "";
+  const normalized = localPart
+    .replace(/[._-]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(capitalizeWord)
+    .join(" ");
+  return normalized || email;
 }
 
 function buildSession(idToken: string, accessToken: string, expiresAt: number): UserSession | null {
@@ -135,9 +164,20 @@ function buildSession(idToken: string, accessToken: string, expiresAt: number): 
       return null;
     }
 
+    const firstName = typeof payload.given_name === "string" ? payload.given_name.trim() : "";
+    const lastName = typeof payload.family_name === "string" ? payload.family_name.trim() : "";
+    const fullName =
+      typeof payload.name === "string" && payload.name.trim().length > 0
+        ? payload.name.trim()
+        : [firstName, lastName].filter(Boolean).join(" ").trim();
+    const displayName = fullName || fallbackDisplayName(email);
+
     return {
       userId,
       email,
+      firstName,
+      lastName,
+      displayName,
       isGtStudent: email.toLowerCase().endsWith("@gatech.edu"),
       idToken,
       accessToken,
@@ -164,32 +204,70 @@ async function tokenRequest(config: AuthConfig, params: URLSearchParams): Promis
   return (await response.json()) as TokenResponse;
 }
 
-function persistTokens(tokens: TokenResponse, expiresIn: number): UserSession | null {
-  const localStorageRef = getLocalStorage();
-  const sessionStorageRef = getSessionStorage();
-  if (!localStorageRef || !sessionStorageRef || !tokens.id_token || !tokens.access_token) {
+function persistTokens(tokens: TokenResponse, expiresIn: number, rememberMe = true): UserSession | null {
+  const targetStorage = getStorage(rememberMe ? "local" : "session");
+  const otherStorage = getStorage(rememberMe ? "session" : "local");
+  if (!targetStorage || !otherStorage || !tokens.id_token || !tokens.access_token) {
     return null;
   }
 
   const expiresAt = Date.now() + expiresIn * 1000;
-  localStorageRef.setItem(ID_TOKEN_KEY, tokens.id_token);
-  localStorageRef.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
-  localStorageRef.setItem(EXPIRES_AT_KEY, String(expiresAt));
+  otherStorage.removeItem(ID_TOKEN_KEY);
+  otherStorage.removeItem(ACCESS_TOKEN_KEY);
+  otherStorage.removeItem(EXPIRES_AT_KEY);
+  otherStorage.removeItem(REFRESH_TOKEN_KEY);
+
+  targetStorage.setItem(ID_TOKEN_KEY, tokens.id_token);
+  targetStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
+  targetStorage.setItem(EXPIRES_AT_KEY, String(expiresAt));
   if (tokens.refresh_token) {
-    sessionStorageRef.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+    targetStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+  } else {
+    targetStorage.removeItem(REFRESH_TOKEN_KEY);
   }
 
   return buildSession(tokens.id_token, tokens.access_token, expiresAt);
 }
 
-async function refreshSession(config: AuthConfig = AUTH_CONFIG): Promise<UserSession | null> {
-  const sessionStorageRef = getSessionStorage();
-  if (!sessionStorageRef) {
+function readStoredSession(kind: TokenStorageKind): {
+  idToken: string;
+  accessToken: string;
+  expiresAt: number;
+} | null {
+  const storage = getStorage(kind);
+  if (!storage) {
     return null;
   }
 
-  const refreshToken = sessionStorageRef.getItem(REFRESH_TOKEN_KEY);
-  if (!refreshToken) {
+  const idToken = storage.getItem(ID_TOKEN_KEY);
+  const accessToken = storage.getItem(ACCESS_TOKEN_KEY);
+  const expiresAt = Number(storage.getItem(EXPIRES_AT_KEY));
+  if (!idToken || !accessToken || !Number.isFinite(expiresAt)) {
+    return null;
+  }
+
+  return { idToken, accessToken, expiresAt };
+}
+
+function readStoredRefreshToken():
+  | {
+      refreshToken: string;
+      storageKind: TokenStorageKind;
+    }
+  | null {
+  for (const storageKind of ["local", "session"] as const) {
+    const storage = getStorage(storageKind);
+    const refreshToken = storage?.getItem(REFRESH_TOKEN_KEY);
+    if (refreshToken) {
+      return { refreshToken, storageKind };
+    }
+  }
+  return null;
+}
+
+async function refreshSession(config: AuthConfig = AUTH_CONFIG): Promise<UserSession | null> {
+  const storedRefresh = readStoredRefreshToken();
+  if (!storedRefresh) {
     return null;
   }
 
@@ -198,7 +276,7 @@ async function refreshSession(config: AuthConfig = AUTH_CONFIG): Promise<UserSes
       config,
       new URLSearchParams({
         grant_type: "refresh_token",
-        refresh_token: refreshToken,
+        refresh_token: storedRefresh.refreshToken,
         client_id: config.clientId,
       })
     );
@@ -208,7 +286,7 @@ async function refreshSession(config: AuthConfig = AUTH_CONFIG): Promise<UserSes
       return null;
     }
 
-    return persistTokens(tokens, tokens.expires_in);
+    return persistTokens(tokens, tokens.expires_in, storedRefresh.storageKind === "local");
   } catch {
     clearStoredTokens();
     return null;
@@ -253,29 +331,22 @@ export function storeSessionTokens(tokens: SessionTokenInput): UserSession | nul
       refresh_token: tokens.refreshToken,
       expires_in: tokens.expiresIn,
     },
-    tokens.expiresIn
+    tokens.expiresIn,
+    tokens.rememberMe ?? true
   );
 }
 
 export async function getSession(): Promise<UserSession | null> {
-  const localStorageRef = getLocalStorage();
-  if (!localStorageRef) {
+  const storedSession = readStoredSession("local") ?? readStoredSession("session");
+  if (!storedSession) {
     return null;
   }
 
-  const idToken = localStorageRef.getItem(ID_TOKEN_KEY);
-  const accessToken = localStorageRef.getItem(ACCESS_TOKEN_KEY);
-  const expiresAt = Number(localStorageRef.getItem(EXPIRES_AT_KEY));
-
-  if (!idToken || !accessToken || !Number.isFinite(expiresAt)) {
-    return null;
-  }
-
-  if (expiresAt < Date.now() + 60_000) {
+  if (storedSession.expiresAt < Date.now() + 60_000) {
     return refreshSession();
   }
 
-  return buildSession(idToken, accessToken, expiresAt);
+  return buildSession(storedSession.idToken, storedSession.accessToken, storedSession.expiresAt);
 }
 
 export function login(config: AuthConfig = AUTH_CONFIG): void {
@@ -303,11 +374,10 @@ export function logout(config: AuthConfig): void {
 }
 
 export function isLoggedIn(): boolean {
-  const localStorageRef = getLocalStorage();
-  if (!localStorageRef) {
-    return false;
-  }
-
-  const expiresAt = Number(localStorageRef.getItem(EXPIRES_AT_KEY));
-  return Number.isFinite(expiresAt) && expiresAt > Date.now();
+  const localExpiresAt = Number(getLocalStorage()?.getItem(EXPIRES_AT_KEY));
+  const sessionExpiresAt = Number(getSessionStorage()?.getItem(EXPIRES_AT_KEY));
+  return (
+    (Number.isFinite(localExpiresAt) && localExpiresAt > Date.now()) ||
+    (Number.isFinite(sessionExpiresAt) && sessionExpiresAt > Date.now())
+  );
 }
