@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terms of Service - StudyRISC-V</title>
+    <meta
+      name="description"
+      content="Terms of Service for StudyRISC-V, the browser-based RISC-V simulator."
+    />
+    <link rel="canonical" href="https://studyriscv.com/terms/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore storage access failures and fall back to the default theme.
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Inter:wght@400;500;700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css"
+    />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/auth.css" />
+    <link rel="stylesheet" href="../src/styles/landing.css" />
+    <link rel="stylesheet" href="../legal.css" />
+    <link rel="icon" type="image/png" href="../favicon.png" />
+  </head>
+  <body class="landing-page">
+    <header id="landingNav" class="landing-nav" aria-label="Main navigation">
+      <div class="landing-nav__inner">
+        <a class="landing-brand" href="/">StudyRISC-V</a>
+        <nav class="landing-nav__links">
+          <a href="/simulator/">Simulator</a>
+          <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+          <div class="auth-nav">
+            <button id="auth-signin-btn" class="auth-signin-btn" type="button">Sign in</button>
+            <div class="auth-menu">
+              <button id="auth-user-btn" class="auth-user-btn" type="button" hidden></button>
+              <div id="auth-dropdown" class="auth-dropdown" hidden>
+                <div id="auth-email" class="auth-dropdown__email"></div>
+                <div id="auth-tier" class="auth-dropdown__tier"></div>
+                <div class="auth-dropdown__divider"></div>
+                <button id="auth-signout-btn" class="auth-dropdown__signout" type="button">Sign out</button>
+              </div>
+            </div>
+          </div>
+          <button id="landingThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+            <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path>
+              </svg>
+            </span>
+            <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
+              </svg>
+            </span>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="legal-page">
+      <h1>Terms of Service</h1>
+      <span class="legal-date">Last updated: March 2026</span>
+
+      <h2>Acceptance of Terms</h2>
+      <p>
+        By accessing or using StudyRISC-V at studyriscv.com, you agree to be bound by these Terms
+        of Service. If you do not agree, do not use the service. If you use StudyRISC-V on behalf
+        of a class, lab, employer, or other organization, you represent that you have authority to
+        do so.
+      </p>
+
+      <h2>Description of Service</h2>
+      <p>
+        StudyRISC-V is a browser-based RISC-V assembly simulator provided for educational purposes.
+        The simulator runs primarily in your browser through WebAssembly. The service is designed
+        for learning, debugging, and explaining RV32IM assembly code, not for formal verification,
+        production workloads, or safety-critical use.
+      </p>
+      <p>
+        StudyRISC-V offers free accounts and a Pro tier for verified Georgia Tech students.
+        Features may change over time as the project evolves.
+      </p>
+
+      <h2>User Accounts</h2>
+      <p>
+        You may create an account using your email address. You are responsible for maintaining the
+        confidentiality of your account credentials and for any activity that occurs through your
+        account. You agree to provide accurate information when creating an account.
+      </p>
+      <p>
+        Georgia Tech Pro accounts require a valid @gatech.edu email address and are subject to
+        verification. StudyRISC-V may revoke or adjust tier access if account information is
+        inaccurate, misleading, or no longer eligible.
+      </p>
+
+      <h2>Acceptable Use</h2>
+      <p>You agree not to:</p>
+      <ul>
+        <li>use the service for any unlawful purpose;</li>
+        <li>attempt to gain unauthorized access to any part of the service or its infrastructure;</li>
+        <li>upload or transmit malicious code;</li>
+        <li>impersonate another person or entity; or</li>
+        <li>use automated tools to scrape, abuse, or overload the service.</li>
+      </ul>
+
+      <h2>Saved Programs and User Content</h2>
+      <p>
+        You retain ownership of any assembly programs you save to your account. By saving programs,
+        you grant StudyRISC-V a limited license to store, process, and display that content only as
+        needed to provide the service to you. We do not claim ownership of your programs and do not
+        publish or share them with other users without your consent.
+      </p>
+
+      <h2>Intellectual Property</h2>
+      <p>
+        The StudyRISC-V name, branding, and simulator software are the property of Satchit Seth.
+        The RISC-V instruction set architecture is an open standard maintained by RISC-V
+        International. StudyRISC-V is an independent educational project and is not affiliated with
+        or endorsed by Georgia Tech or RISC-V International.
+      </p>
+
+      <h2>Disclaimer of Warranties</h2>
+      <p>
+        The service is provided "as is" without warranty of any kind. We do not warrant that the
+        service will be uninterrupted, error-free, or that simulation results will be accurate for
+        every program, course, or use case. You should independently verify results that matter for
+        grades, research, or engineering decisions.
+      </p>
+
+      <h2>Limitation of Liability</h2>
+      <p>
+        To the maximum extent permitted by law, StudyRISC-V and its creator shall not be liable for
+        any indirect, incidental, special, consequential, or punitive damages arising from your use
+        of the service, including loss of data, saved work, or academic results.
+      </p>
+
+      <h2>Changes to Terms</h2>
+      <p>
+        We may update these terms at any time as StudyRISC-V changes. Continued use of the service
+        after changes take effect constitutes acceptance of the updated Terms of Service. We will
+        update the "Last updated" date above when changes are made.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions about these terms can be directed through the StudyRISC-V GitHub repository linked
+        from studyriscv.com. Please do not post passwords, tokens, or other sensitive account
+        details in public issues.
+      </p>
+    </main>
+
+    <footer class="landing-footer">
+      <div class="landing-footer__links">
+        <a href="/terms/">Terms of service</a>
+        <span class="landing-footer__separator" aria-hidden="true">·</span>
+        <a href="/privacy/">Privacy policy</a>
+        <span class="landing-footer__separator" aria-hidden="true">·</span>
+        <a href="/privacy/#do-not-sell">Do not sell my personal information</a>
+      </div>
+      <p class="landing-footer__copyright">© 2026 StudyRISC-V. Built by Satchit Seth.</p>
+    </footer>
+
+    <script>
+      (() => {
+        const themeKey = "studyriscv-theme";
+        const root = document.documentElement;
+        const nav = document.getElementById("landingNav");
+        const themeToggle = document.getElementById("landingThemeToggle");
+
+        function syncThemeToggle() {
+          if (!(themeToggle instanceof HTMLButtonElement)) return;
+          const isDark = root.dataset.theme === "dark";
+          themeToggle.setAttribute("aria-pressed", String(isDark));
+          themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+        }
+
+        function handleScroll() {
+          if (!(nav instanceof HTMLElement)) return;
+          nav.classList.toggle("is-scrolled", window.scrollY > 8);
+        }
+
+        themeToggle?.addEventListener("click", () => {
+          const isDark = root.dataset.theme === "dark";
+          if (isDark) {
+            root.removeAttribute("data-theme");
+            window.localStorage.setItem(themeKey, "light");
+          } else {
+            root.dataset.theme = "dark";
+            window.localStorage.setItem(themeKey, "dark");
+          }
+          syncThemeToggle();
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+          syncThemeToggle();
+          handleScroll();
+          window.addEventListener("scroll", handleScroll, { passive: true });
+        });
+      })();
+    </script>
+    <script type="module">
+      import "../src/auth-page.ts";
+      import { initAuthUi } from "../src/auth-ui.ts";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        void initAuthUi();
+      });
+    </script>
+  </body>
+</html>

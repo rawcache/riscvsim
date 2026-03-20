@@ -97,6 +97,14 @@ Type:   200 (rewrite)
 Source: /simulator/
 Target: /simulator/index.html
 Type:   200 (rewrite)
+
+Source: /terms/
+Target: /terms/index.html
+Type:   200 (rewrite)
+
+Source: /privacy/
+Target: /privacy/index.html
+Type:   200 (rewrite)
 ```
 
 ## Project Structure

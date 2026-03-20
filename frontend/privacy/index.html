@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy - StudyRISC-V</title>
+    <meta
+      name="description"
+      content="Privacy Policy for StudyRISC-V, the browser-based RISC-V simulator."
+    />
+    <link rel="canonical" href="https://studyriscv.com/privacy/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore storage access failures and fall back to the default theme.
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Inter:wght@400;500;700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css"
+    />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/auth.css" />
+    <link rel="stylesheet" href="../src/styles/landing.css" />
+    <link rel="stylesheet" href="../legal.css" />
+    <link rel="icon" type="image/png" href="../favicon.png" />
+  </head>
+  <body class="landing-page">
+    <header id="landingNav" class="landing-nav" aria-label="Main navigation">
+      <div class="landing-nav__inner">
+        <a class="landing-brand" href="/">StudyRISC-V</a>
+        <nav class="landing-nav__links">
+          <a href="/simulator/">Simulator</a>
+          <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+          <div class="auth-nav">
+            <button id="auth-signin-btn" class="auth-signin-btn" type="button">Sign in</button>
+            <div class="auth-menu">
+              <button id="auth-user-btn" class="auth-user-btn" type="button" hidden></button>
+              <div id="auth-dropdown" class="auth-dropdown" hidden>
+                <div id="auth-email" class="auth-dropdown__email"></div>
+                <div id="auth-tier" class="auth-dropdown__tier"></div>
+                <div class="auth-dropdown__divider"></div>
+                <button id="auth-signout-btn" class="auth-dropdown__signout" type="button">Sign out</button>
+              </div>
+            </div>
+          </div>
+          <button id="landingThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+            <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path>
+              </svg>
+            </span>
+            <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
+              </svg>
+            </span>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="legal-page">
+      <h1>Privacy Policy</h1>
+      <span class="legal-date">Last updated: March 2026</span>
+
+      <h2>Overview</h2>
+      <p>
+        StudyRISC-V takes your privacy seriously. This policy explains what data we collect, how we
+        use it, and what choices you have. StudyRISC-V is a small educational tool, not an
+        advertising business, and the simulator is designed so that core usage works without an
+        account.
+      </p>
+
+      <h2>Data We Collect</h2>
+      <p>
+        <strong>Account data:</strong> When you create an account, we collect your email address and
+        account identifier. This is stored through AWS Cognito and used to authenticate you and to
+        determine your account tier. Georgia Tech Pro accounts are identified by @gatech.edu email
+        addresses and verification status.
+      </p>
+      <p>
+        <strong>Saved programs:</strong> If you choose to save assembly programs to your account,
+        those programs are stored in AWS DynamoDB and associated with your account ID. Saved program
+        names, source code, and timestamps are stored so you can retrieve them later. You can delete
+        saved programs at any time from within the simulator.
+      </p>
+      <p>
+        <strong>Usage data:</strong> We do not use analytics services, advertising trackers, or
+        third-party tracking pixels. We do not use device fingerprinting or browsing-behavior
+        profiling. Standard infrastructure logs may still capture limited technical data needed to
+        serve the site, detect abuse, and keep the service operating.
+      </p>
+      <p>
+        <strong>Simulator usage:</strong> The simulator runs entirely in your browser. Assembly
+        programs you run but do not save are not transmitted to our servers as part of normal
+        simulator use.
+      </p>
+
+      <h2>How We Use Your Data</h2>
+      <p>We use your email address and related account data only to:</p>
+      <ul>
+        <li>authenticate your account;</li>
+        <li>determine your account tier, including Georgia Tech Pro eligibility;</li>
+        <li>enable account recovery and account management; and</li>
+        <li>deliver saved-program features that you explicitly choose to use.</li>
+      </ul>
+      <p>
+        We do not use your email for marketing without your explicit consent. We do not sell your
+        data. We do not share your data with third parties except as required to operate the service,
+        including AWS infrastructure that provides authentication and storage.
+      </p>
+
+      <h2>Data Storage and Security</h2>
+      <p>
+        Your data is stored on AWS infrastructure in the United States, including the us-east-1
+        region. We use HTTPS, AWS Cognito for authentication, and IAM-based access controls for the
+        saved-program backend. No service can guarantee absolute security, so you should avoid storing
+        secrets or sensitive personal data inside saved assembly programs.
+      </p>
+
+      <h2>Data Retention</h2>
+      <p>
+        Your account data is retained as long as your account exists, unless we need to retain limited
+        records for security, abuse prevention, or legal reasons. Saved programs remain in storage
+        until you delete them or request account deletion. Unsaved local history and theme preference
+        remain in your browser until you clear them.
+      </p>
+
+      <h2>Your Rights</h2>
+      <p>Depending on your location, you may have rights including:</p>
+      <ul>
+        <li>the right to access your personal data;</li>
+        <li>the right to correct inaccurate data;</li>
+        <li>the right to delete your data;</li>
+        <li>the right to data portability; and</li>
+        <li>the right to opt out of data selling, although StudyRISC-V does not sell personal data.</li>
+      </ul>
+      <p>
+        To exercise these rights, use the contact information linked from studyriscv.com. If you are
+        contacting us about account deletion or another privacy request, please do not include your
+        password in the request.
+      </p>
+
+      <h2>California Privacy Rights (CCPA)</h2>
+      <p>
+        California residents may have additional rights under the California Consumer Privacy Act.
+        Details about data sales and opt-out rights are described in the Do Not Sell section below.
+      </p>
+
+      <h2>Children's Privacy</h2>
+      <p>
+        StudyRISC-V is not directed at children under 13. We do not knowingly collect personal data
+        from children under 13. If you believe a child has provided personal information in error,
+        contact us so we can review and remove it where appropriate.
+      </p>
+
+      <h2>Changes to This Policy</h2>
+      <p>
+        We may update this policy periodically as the service changes. We will update the "Last
+        updated" date when we do. Continued use of StudyRISC-V after changes take effect constitutes
+        acceptance of the updated policy.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Privacy-related questions can be directed through the contact information available at
+        studyriscv.com, including the StudyRISC-V GitHub repository linked from the site.
+      </p>
+
+      <hr />
+
+      <section id="do-not-sell">
+        <h2>Do Not Sell My Personal Information</h2>
+        <p>
+          StudyRISC-V does not sell your personal information to third parties. We never have and do
+          not intend to.
+        </p>
+        <p>
+          Under the California Consumer Privacy Act, California residents have the right to opt out of
+          the sale of their personal information. Since we do not sell personal information, there is
+          nothing to opt out of.
+        </p>
+        <p>
+          The personal information we collect, including your email address and saved programs, is
+          used solely to operate the service as described in this Privacy Policy. It is not shared with
+          advertisers, data brokers, or any third party for commercial purposes.
+        </p>
+        <p>
+          If you have questions about how your data is used, use the contact information available at
+          studyriscv.com.
+        </p>
+      </section>
+    </main>
+
+    <footer class="landing-footer">
+      <div class="landing-footer__links">
+        <a href="/terms/">Terms of service</a>
+        <span class="landing-footer__separator" aria-hidden="true">·</span>
+        <a href="/privacy/">Privacy policy</a>
+        <span class="landing-footer__separator" aria-hidden="true">·</span>
+        <a href="/privacy/#do-not-sell">Do not sell my personal information</a>
+      </div>
+      <p class="landing-footer__copyright">© 2026 StudyRISC-V. Built by Satchit Seth.</p>
+    </footer>
+
+    <script>
+      (() => {
+        const themeKey = "studyriscv-theme";
+        const root = document.documentElement;
+        const nav = document.getElementById("landingNav");
+        const themeToggle = document.getElementById("landingThemeToggle");
+
+        function syncThemeToggle() {
+          if (!(themeToggle instanceof HTMLButtonElement)) return;
+          const isDark = root.dataset.theme === "dark";
+          themeToggle.setAttribute("aria-pressed", String(isDark));
+          themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+        }
+
+        function handleScroll() {
+          if (!(nav instanceof HTMLElement)) return;
+          nav.classList.toggle("is-scrolled", window.scrollY > 8);
+        }
+
+        themeToggle?.addEventListener("click", () => {
+          const isDark = root.dataset.theme === "dark";
+          if (isDark) {
+            root.removeAttribute("data-theme");
+            window.localStorage.setItem(themeKey, "light");
+          } else {
+            root.dataset.theme = "dark";
+            window.localStorage.setItem(themeKey, "dark");
+          }
+          syncThemeToggle();
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+          syncThemeToggle();
+          handleScroll();
+          window.addEventListener("scroll", handleScroll, { passive: true });
+        });
+      })();
+    </script>
+    <script type="module">
+      import "../src/auth-page.ts";
+      import { initAuthUi } from "../src/auth-ui.ts";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        void initAuthUi();
+      });
+    </script>
+  </body>
+</html>
