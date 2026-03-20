@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terms of Use · StudyRISC-V</title>
+    <meta
+      name="description"
+      content="Terms of Use for StudyRISC-V, the browser-based RISC-V simulator."
+    />
+    <link rel="canonical" href="https://studyriscv.com/terms-of-use/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore storage access failures and fall back to the default theme.
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Inter:wght@400;500;700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css"
+    />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/legal.css" />
+    <link rel="icon" type="image/png" href="../favicon.png" />
+  </head>
+  <body class="legal-page">
+    <header class="legal-nav" aria-label="Legal navigation">
+      <div class="legal-nav__inner">
+        <a class="legal-brand" href="/">StudyRISC-V</a>
+        <nav class="legal-nav__links">
+          <a href="/">Home</a>
+          <a href="/simulator/">Simulator</a>
+          <a href="/privacy-policy/">Privacy Policy</a>
+          <a href="/do-not-sell/">Do Not Sell</a>
+          <button id="legalThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+            <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path>
+              </svg>
+            </span>
+            <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
+              </svg>
+            </span>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="legal-shell">
+      <div class="legal-hero">
+        <p class="legal-kicker">Legal</p>
+        <h1 class="legal-title">Terms of Use</h1>
+        <p class="legal-summary">
+          Last updated March 20, 2026. These Terms of Use govern access to and use of
+          StudyRISC-V, including the simulator, saved-program features, related documentation,
+          and any associated websites or APIs.
+        </p>
+      </div>
+
+      <article class="legal-card legal-copy">
+        <section>
+          <h2>1. Acceptance of Terms</h2>
+          <p>
+            By accessing or using StudyRISC-V, you agree to these Terms of Use. If you do not
+            agree, do not use the service. If you use StudyRISC-V on behalf of a school,
+            department, company, or other organization, you represent that you have authority to
+            bind that organization to these terms.
+          </p>
+        </section>
+
+        <section>
+          <h2>2. What StudyRISC-V Is</h2>
+          <p>
+            StudyRISC-V is an educational, browser-based RISC-V simulator designed to help users
+            learn, debug, and explain assembly programs. The simulator is intended for teaching,
+            coursework, self-study, demonstrations, and related educational use. It is not a
+            certified verification tool, production compiler, or safety-critical development
+            platform.
+          </p>
+        </section>
+
+        <section>
+          <h2>3. Eligibility and Accounts</h2>
+          <p>
+            You may use the simulator without an account for core functionality. Certain features,
+            including cloud-saved programs, require sign-in. Accounts are managed through Amazon
+            Cognito. You are responsible for maintaining the security of your account credentials
+            and for activity that occurs under your account.
+          </p>
+          <p>
+            Free and Pro features may differ. At the time of writing, a verified
+            <strong>@gatech.edu</strong> account may receive enhanced storage or related education
+            features. StudyRISC-V may change, add, or retire feature tiers at any time.
+          </p>
+        </section>
+
+        <section>
+          <h2>4. User Content and Saved Programs</h2>
+          <p>
+            You retain ownership of the code, comments, and other material you submit to
+            StudyRISC-V, including saved assembly programs. You grant StudyRISC-V a limited,
+            non-exclusive license to host, store, transmit, and display that content only as
+            needed to operate the service for you.
+          </p>
+          <p>
+            You are responsible for the content you upload or save. Do not submit content that you
+            do not have the right to use or that violates law, contracts, intellectual property
+            rights, or institutional policies.
+          </p>
+        </section>
+
+        <section>
+          <h2>5. Acceptable Use</h2>
+          <p>You agree not to:</p>
+          <ul>
+            <li>use the service in a way that violates law or another person’s rights;</li>
+            <li>attempt to break, probe, overload, reverse engineer, or disrupt the service;</li>
+            <li>circumvent account limits, security controls, or access restrictions;</li>
+            <li>upload malicious code, spam, deceptive content, or infringing material; or</li>
+            <li>use automated systems to scrape, mirror, or abuse StudyRISC-V without permission.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>6. Availability and Changes</h2>
+          <p>
+            StudyRISC-V is provided on an evolving basis. Features may change without notice,
+            including saved-program limits, account requirements, simulator behavior, or supported
+            instruction coverage. Access may be interrupted for maintenance, bugs, abuse handling,
+            infrastructure issues, or product changes.
+          </p>
+        </section>
+
+        <section>
+          <h2>7. Educational Nature; No Warranty of Correctness</h2>
+          <p>
+            StudyRISC-V is offered for educational convenience and is provided <strong>“as is”</strong>
+            and <strong>“as available.”</strong> No warranty is made that the simulator is error-free,
+            uninterrupted, perfectly accurate, or suitable for any specific purpose, including
+            grading, formal verification, research reproducibility, or production engineering.
+          </p>
+          <p>
+            You should independently verify any output that matters for coursework, publications,
+            product development, or operational decisions.
+          </p>
+        </section>
+
+        <section>
+          <h2>8. Suspension and Termination</h2>
+          <p>
+            StudyRISC-V may suspend or terminate access if these terms are violated, if use creates
+            risk for the service or other users, or if access is required to be restricted by law.
+            You may stop using the service at any time.
+          </p>
+        </section>
+
+        <section>
+          <h2>9. Limitation of Liability</h2>
+          <p>
+            To the maximum extent permitted by law, StudyRISC-V and its operator will not be liable
+            for indirect, incidental, consequential, exemplary, special, or punitive damages, or
+            for loss of data, profits, grades, research results, goodwill, or business opportunity,
+            arising out of or related to the service.
+          </p>
+        </section>
+
+        <section>
+          <h2>10. Privacy</h2>
+          <p>
+            Use of StudyRISC-V is also governed by the <a href="/privacy-policy/">Privacy Policy</a>.
+            Please review it to understand what information is collected, how it is used, and what
+            choices you have.
+          </p>
+        </section>
+
+        <section>
+          <h2>11. Governing Law</h2>
+          <p>
+            Unless otherwise required by applicable consumer law, these Terms are governed by the
+            laws of the State of Georgia, United States, without regard to conflict-of-laws rules.
+          </p>
+        </section>
+
+        <section>
+          <h2>12. Contact</h2>
+          <p>
+            Questions about these Terms may be directed through the StudyRISC-V GitHub repository
+            at <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">github.com/sseth30/riscvsim</a>.
+          </p>
+        </section>
+      </article>
+    </main>
+
+    <footer class="legal-footer">
+      <div class="legal-footer__links">
+        <a href="/terms-of-use/">Terms of service</a>
+        <a href="/privacy-policy/">Privacy policy</a>
+        <a href="/do-not-sell/">Do not sell my personal information</a>
+      </div>
+      <p class="legal-footer__copy">
+        © 2026 StudyRISC-V. StudyRISC-V is an educational simulator built by Satchit Seth.
+      </p>
+    </footer>
+
+    <script>
+      (() => {
+        const themeToggle = document.getElementById("legalThemeToggle");
+
+        function syncThemeToggle() {
+          if (!(themeToggle instanceof HTMLButtonElement)) return;
+          const isDark = document.documentElement.dataset.theme === "dark";
+          themeToggle.setAttribute("aria-pressed", String(isDark));
+          themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+        }
+
+        themeToggle?.addEventListener("click", () => {
+          const isDark = document.documentElement.dataset.theme === "dark";
+          if (isDark) {
+            document.documentElement.removeAttribute("data-theme");
+            window.localStorage.setItem("studyriscv-theme", "light");
+          } else {
+            document.documentElement.dataset.theme = "dark";
+            window.localStorage.setItem("studyriscv-theme", "dark");
+          }
+          syncThemeToggle();
+        });
+
+        syncThemeToggle();
+      })();
+    </script>
+  </body>
+</html>
