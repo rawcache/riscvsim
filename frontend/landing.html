@@ -90,125 +90,6 @@
 
     <main>
       <section class="hero">
-        <div class="hero__widgets" aria-hidden="true">
-          <div class="hero-widget hero-widget--register" style="--widget-delay: 200ms; --drift-delay: 800ms">
-            <div class="hero-widget__hover">
-              <div class="hero-widget__card">
-                <div class="hero-widget__header">REGISTERS</div>
-                <div class="hero-widget__stack hero-widget__stack--compact">
-                  <div class="hero-widget__row hero-widget__row--kv">
-                    <span>zero</span>
-                    <span>0x00000000</span>
-                  </div>
-                  <div class="hero-widget__row hero-widget__row--kv hero-widget__row--updated">
-                    <span>ra</span>
-                    <span>0x000000A4</span>
-                  </div>
-                  <div class="hero-widget__row hero-widget__row--kv">
-                    <span>sp</span>
-                    <span>0x7FFFFFFC</span>
-                  </div>
-                  <div class="hero-widget__row hero-widget__row--kv hero-widget__row--updated">
-                    <span>a0</span>
-                    <span>0x0000000F</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="hero-widget hero-widget--pseudo" style="--widget-delay: 350ms; --drift-delay: 950ms">
-            <div class="hero-widget__hover">
-              <div class="hero-widget__card hero-widget__card--accent-edge">
-                <div class="hero-widget__header">PSEUDO-C</div>
-                <div class="hero-widget__pseudo">
-                  <span class="hero-widget__value--accent">x1</span>
-                  <span class="hero-widget__value--muted">=</span>
-                  <span class="hero-widget__value--primary">x0 + 64;</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="hero-widget hero-widget--disasm" style="--widget-delay: 500ms; --drift-delay: 1100ms">
-            <div class="hero-widget__hover">
-              <div class="hero-widget__card">
-                <div class="hero-widget__header">DISASSEMBLY</div>
-                <div class="hero-widget__stack hero-widget__stack--tight">
-                  <div class="hero-widget__row hero-widget__row--disasm hero-widget__row--current">
-                    <span class="hero-widget__address">0x00000000</span>
-                    <span class="hero-widget__encoding">04000093</span>
-                    <span class="hero-widget__instruction">addi&nbsp;&nbsp;x1, x0, 64</span>
-                  </div>
-                  <div class="hero-widget__row hero-widget__row--disasm">
-                    <span class="hero-widget__address">0x00000004</span>
-                    <span class="hero-widget__encoding">00100113</span>
-                    <span class="hero-widget__instruction">addi&nbsp;&nbsp;x2, x0, 1</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="hero-widget hero-widget--memory" style="--widget-delay: 400ms; --drift-delay: 1000ms">
-            <div class="hero-widget__hover">
-              <div class="hero-widget__card">
-                <div class="hero-widget__header">MEMORY</div>
-                <div class="hero-widget__stack hero-widget__stack--tight">
-                  <div class="hero-widget__row hero-widget__row--memory">
-                    <span class="hero-widget__address">0x10000000</span>
-                    <span class="hero-widget__memory-bytes">
-                      <span class="hero-widget__memory-byte hero-widget__memory-byte--updated">01</span>
-                      <span class="hero-widget__memory-byte hero-widget__memory-byte--updated">02</span>
-                      <span class="hero-widget__memory-byte hero-widget__memory-byte--updated">03</span>
-                      <span class="hero-widget__memory-byte hero-widget__memory-byte--updated">04</span>
-                      <span class="hero-widget__memory-byte">05</span>
-                      <span class="hero-widget__memory-byte">06</span>
-                      <span class="hero-widget__memory-byte">07</span>
-                      <span class="hero-widget__memory-byte">08</span>
-                    </span>
-                  </div>
-                  <div class="hero-widget__row hero-widget__row--memory">
-                    <span class="hero-widget__address">0x10000008</span>
-                    <span class="hero-widget__memory-bytes">
-                      <span class="hero-widget__memory-byte">09</span>
-                      <span class="hero-widget__memory-byte">0A</span>
-                      <span class="hero-widget__memory-byte">0B</span>
-                      <span class="hero-widget__memory-byte">0C</span>
-                      <span class="hero-widget__memory-byte hero-widget__memory-byte--empty">--</span>
-                      <span class="hero-widget__memory-byte hero-widget__memory-byte--empty">--</span>
-                      <span class="hero-widget__memory-byte hero-widget__memory-byte--empty">--</span>
-                      <span class="hero-widget__memory-byte hero-widget__memory-byte--empty">--</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="hero-widget hero-widget--effects" style="--widget-delay: 600ms; --drift-delay: 1200ms">
-            <div class="hero-widget__hover">
-              <div class="hero-widget__card">
-                <div class="hero-widget__header">EFFECTS</div>
-                <div class="hero-widget__stack hero-widget__stack--tight">
-                  <div class="hero-widget__row hero-widget__row--effect hero-widget__row--recent">
-                    <span class="hero-widget__effect-label">x1</span>
-                    <span class="hero-widget__effect-before">0x00000000</span>
-                    <span class="hero-widget__effect-arrow">→</span>
-                    <span class="hero-widget__effect-after hero-widget__effect-after--primary">0x00000040</span>
-                  </div>
-                  <div class="hero-widget__row hero-widget__row--effect">
-                    <span class="hero-widget__effect-label">PC</span>
-                    <span class="hero-widget__effect-before">0x00000000</span>
-                    <span class="hero-widget__effect-arrow">→</span>
-                    <span class="hero-widget__effect-after hero-widget__effect-after--accent">0x00000004</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div class="hero__copy">
           <h1 class="hero__title">
             <span class="hero__title-line" style="--hero-delay: 0ms">Understand RISC-V.</span>
@@ -221,7 +102,7 @@
             translation. No install required.
           </p>
           <div class="hero__actions" style="--hero-delay: 360ms">
-            <a id="chipOpenSimulatorCta" class="cta cta--primary" href="/simulator/">Open Simulator →</a>
+            <a id="hero-cta-primary" class="cta cta--primary" href="/simulator/">Open Simulator →</a>
             <a class="cta cta--secondary" href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">
               View on GitHub
             </a>
@@ -246,7 +127,6 @@
             </div>
             <pre><code id="heroCode"></code></pre>
           </div>
-          <div class="cpu-pet cpu-pet--hero js-cpu-pet" aria-hidden="true"></div>
         </div>
       </section>
 
@@ -260,12 +140,11 @@
                 <path d="M4 5v14"></path>
               </svg>
             </div>
-            <h2 class="feature-card__title">Step Execution</h2>
-            <p class="feature-card__body">
-              Step through every instruction and watch register and memory state update in real
-              time. Step backward too.
-            </p>
-            <div class="cpu-pet cpu-pet--feature js-cpu-pet" aria-hidden="true"></div>
+          <h2 class="feature-card__title">Step Execution</h2>
+          <p class="feature-card__body">
+            Step through every instruction and watch register and memory state update in real
+            time. Step backward too.
+          </p>
           </article>
 
           <article class="feature-card js-reveal">
@@ -333,7 +212,6 @@
       <section class="section landing-cta">
         <h2 class="landing-cta__title">Ready to step through your first program?</h2>
         <a class="cta cta--primary landing-cta__button" href="/simulator/">Open the Simulator →</a>
-        <div class="cpu-pet cpu-pet--cta js-cpu-pet" aria-hidden="true"></div>
       </section>
     </main>
 
@@ -341,12 +219,14 @@
       StudyRISC-V · Built by <a href="https://github.com/rawcache">Satchit Seth</a> · Free for GT students
     </footer>
 
-    <template id="cpuPetTemplate">
-      <div class="cpu-pet__peek">
-        <div class="cpu-pet__wander">
-          <div class="cpu-pet__nudge">
-            <svg class="cpu-pet__svg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <g class="cpu-pet__pins">
+    <div id="chip-wrapper" aria-hidden="true">
+      <div id="chip-bubble" aria-hidden="true">
+        <span id="chip-bubble-text"></span>
+      </div>
+      <div id="chip-reactor">
+        <div id="chip-stage">
+          <svg class="cpu-pet__svg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g class="cpu-pet__pins">
                 <line x1="16" y1="22" x2="10" y2="22" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
                 <line x1="16" y1="26" x2="10" y2="26" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
                 <line x1="16" y1="30" x2="10" y2="30" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
@@ -363,8 +243,8 @@
                 <line x1="26" y1="48" x2="26" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
                 <line x1="30" y1="48" x2="30" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
                 <line x1="34" y1="48" x2="34" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-              </g>
-              <g>
+            </g>
+            <g>
                 <circle class="cpu-pet__pin-dot" cx="10" cy="22" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
                 <circle class="cpu-pet__pin-dot" cx="10" cy="26" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
                 <circle class="cpu-pet__pin-dot" cx="10" cy="30" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
@@ -381,23 +261,26 @@
                 <circle class="cpu-pet__pin-dot" cx="26" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
                 <circle class="cpu-pet__pin-dot" cx="30" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
                 <circle class="cpu-pet__pin-dot" cx="34" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
-              </g>
-              <rect x="16" y="16" width="32" height="32" rx="4" ry="4" fill="var(--accent)" />
-              <rect x="22" y="22" width="20" height="20" rx="2" fill="var(--bg-base)" />
-              <rect x="24" y="24" width="6" height="2" fill="var(--accent)" opacity="0.6" />
-              <rect x="24" y="28" width="10" height="2" fill="var(--accent)" opacity="0.6" />
-              <rect x="24" y="32" width="8" height="2" fill="var(--accent)" opacity="0.6" />
-              <rect x="24" y="36" width="5" height="2" fill="var(--accent)" opacity="0.6" />
+            </g>
+            <rect x="16" y="16" width="32" height="32" rx="4" ry="4" fill="var(--accent)" />
+            <rect x="22" y="22" width="20" height="20" rx="2" fill="var(--bg-base)" />
+            <rect x="24" y="24" width="6" height="2" fill="var(--accent)" opacity="0.6" />
+            <rect x="24" y="28" width="10" height="2" fill="var(--accent)" opacity="0.6" />
+            <rect x="24" y="32" width="8" height="2" fill="var(--accent)" opacity="0.6" />
+            <rect x="24" y="36" width="5" height="2" fill="var(--accent)" opacity="0.6" />
+            <g class="cpu-pet__eye cpu-pet__eye--left">
               <circle cx="27" cy="30" r="2" fill="var(--accent)" />
+              <circle id="chipLeftPupil" cx="27" cy="30" r="0.8" fill="var(--bg-base)" />
+            </g>
+            <g class="cpu-pet__eye cpu-pet__eye--right">
               <circle cx="37" cy="30" r="2" fill="var(--accent)" />
-              <circle class="cpu-pet__left-pupil" cx="27" cy="30" r="0.8" fill="var(--bg-base)" />
-              <circle class="cpu-pet__right-pupil" cx="37" cy="30" r="0.8" fill="var(--bg-base)" />
-              <path d="M 27 35 Q 32 38 37 35" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linecap="round" />
-            </svg>
-          </div>
+              <circle id="chipRightPupil" cx="37" cy="30" r="0.8" fill="var(--bg-base)" />
+            </g>
+            <path d="M 27 35 Q 32 38 37 35" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linecap="round" />
+          </svg>
         </div>
       </div>
-    </template>
+    </div>
 
     <script>
       (() => {
@@ -406,9 +289,14 @@
         const body = document.body;
         const nav = document.getElementById("landingNav");
         const themeToggle = document.getElementById("landingThemeToggle");
-        const heroSection = document.querySelector(".hero");
         const heroCode = document.getElementById("heroCode");
-        const cpuPetTemplate = document.getElementById("cpuPetTemplate");
+        const chipWrapper = document.getElementById("chip-wrapper");
+        const chipReactor = document.getElementById("chip-reactor");
+        const chipStage = document.getElementById("chip-stage");
+        const chipLeftPupil = document.getElementById("chipLeftPupil");
+        const chipRightPupil = document.getElementById("chipRightPupil");
+        const chipBubble = document.getElementById("chip-bubble");
+        const chipBubbleText = document.getElementById("chip-bubble-text");
         const heroProgram = [
           "addi x1, x0, 8    # limit",
           "addi x2, x0, 0    # i",
@@ -549,8 +437,16 @@
           scheduleHeroTyping(previousChar === "\n" ? 85 : 20);
         }
 
-        function initCpuPets() {
-          if (!(cpuPetTemplate instanceof HTMLTemplateElement)) {
+        function initChipPet() {
+          if (
+            !(chipWrapper instanceof HTMLElement) ||
+            !(chipReactor instanceof HTMLElement) ||
+            !(chipStage instanceof HTMLElement) ||
+            !(chipLeftPupil instanceof SVGCircleElement) ||
+            !(chipRightPupil instanceof SVGCircleElement) ||
+            !(chipBubble instanceof HTMLElement) ||
+            !(chipBubbleText instanceof HTMLElement)
+          ) {
             return;
           }
 
@@ -558,140 +454,217 @@
             return;
           }
 
-          const petStates = Array.from(document.querySelectorAll(".js-cpu-pet"))
-            .map((element) => {
-              element.replaceChildren(cpuPetTemplate.content.cloneNode(true));
+          const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          const bubbleMessages = ["01001010!", "RISC-V!", "Hello!", ":D", "x0 = 0", "beq!"];
+          let lastPointerX = window.innerWidth - 32;
+          let lastPointerY = window.innerHeight - 32;
+          let lastEyeUpdate = 0;
+          let eyeLockUntil = 0;
+          let eyeUnlockTimer = 0;
+          let blinkTimer = 0;
+          let blinkClassTimer = 0;
+          let peekTimer = 0;
+          let bubbleTimer = 0;
+          let excitedTimer = 0;
+          let jumpTimer = 0;
+          let fastPinsTimer = 0;
 
-              const wanderEl = element.querySelector(".cpu-pet__wander");
-              const nudgeEl = element.querySelector(".cpu-pet__nudge");
-              const leftPupil = element.querySelector(".cpu-pet__left-pupil");
-              const rightPupil = element.querySelector(".cpu-pet__right-pupil");
-              if (
-                !(wanderEl instanceof HTMLElement) ||
-                !(nudgeEl instanceof HTMLElement) ||
-                !(leftPupil instanceof SVGCircleElement) ||
-                !(rightPupil instanceof SVGCircleElement)
-              ) {
-                return null;
+          function setPupils(angle, offset) {
+            chipLeftPupil.setAttribute("cx", (27 + Math.cos(angle) * offset).toFixed(2));
+            chipLeftPupil.setAttribute("cy", (30 + Math.sin(angle) * offset).toFixed(2));
+            chipRightPupil.setAttribute("cx", (37 + Math.cos(angle) * offset).toFixed(2));
+            chipRightPupil.setAttribute("cy", (30 + Math.sin(angle) * offset).toFixed(2));
+          }
+
+          function updateEyes(cursorX, cursorY) {
+            const rect = chipWrapper.getBoundingClientRect();
+            const chipCX = rect.left + 32;
+            const chipCY = rect.top + 32;
+            const angle = Math.atan2(cursorY - chipCY, cursorX - chipCX);
+            const distance = Math.hypot(cursorX - chipCX, cursorY - chipCY);
+            const offset = Math.min(distance / 200, 1) * 1.5;
+            setPupils(angle, offset);
+          }
+
+          function showBubble(message) {
+            chipBubbleText.textContent = message;
+            chipBubble.classList.remove("visible");
+            void chipBubble.offsetWidth;
+            chipBubble.classList.add("visible");
+            window.clearTimeout(bubbleTimer);
+            bubbleTimer = window.setTimeout(() => {
+              chipBubble.classList.remove("visible");
+            }, 1800);
+          }
+
+          function triggerBlink() {
+            chipWrapper.classList.remove("is-blinking");
+            void chipWrapper.offsetWidth;
+            chipWrapper.classList.add("is-blinking");
+            window.clearTimeout(blinkClassTimer);
+            blinkClassTimer = window.setTimeout(() => {
+              chipWrapper.classList.remove("is-blinking");
+            }, 200);
+          }
+
+          function scheduleBlink() {
+            const nextDelay = Math.random() * 4000 + 3000;
+            blinkTimer = window.setTimeout(() => {
+              triggerBlink();
+              if (Math.random() < 0.25) {
+                window.setTimeout(() => {
+                  triggerBlink();
+                }, 350);
               }
-
-              return {
-                element,
-                wanderEl,
-                nudgeEl,
-                leftPupil,
-                rightPupil,
-                withinNudgeRange: false,
-                nudgeTimer: 0,
-                wanderTimer: 0,
-                wanderReturnTimer: 0,
-              };
-            })
-            .filter((entry) => entry !== null);
-
-          if (petStates.length === 0) {
-            return;
-          }
-
-          let pointerX = window.innerWidth * 0.5;
-          let pointerY = window.innerHeight * 0.5;
-          let pupilFrame = 0;
-
-          function queuePupilUpdate() {
-            if (pupilFrame !== 0) {
-              return;
-            }
-            pupilFrame = window.requestAnimationFrame(() => {
-              pupilFrame = 0;
-              for (const pet of petStates) {
-                const rect = pet.element.getBoundingClientRect();
-                const centerX = rect.left + rect.width / 2;
-                const centerY = rect.top + rect.height / 2;
-                const angle = Math.atan2(pointerY - centerY, pointerX - centerX);
-                const offsetX = Math.cos(angle) * 1.2;
-                const offsetY = Math.sin(angle) * 1.2;
-                pet.leftPupil.setAttribute("cx", (27 + offsetX).toFixed(2));
-                pet.leftPupil.setAttribute("cy", (30 + offsetY).toFixed(2));
-                pet.rightPupil.setAttribute("cx", (37 + offsetX).toFixed(2));
-                pet.rightPupil.setAttribute("cy", (30 + offsetY).toFixed(2));
-              }
-            });
-          }
-
-          function clearNudge(pet) {
-            pet.nudgeEl.style.setProperty("--pet-nudge-x", "0px");
-            pet.nudgeEl.style.setProperty("--pet-nudge-y", "0px");
-          }
-
-          function nudgeTowardPointer(pet, angle) {
-            const offsetX = Math.cos(angle) * 6;
-            const offsetY = Math.sin(angle) * 6;
-            pet.nudgeEl.style.setProperty("--pet-nudge-x", `${offsetX.toFixed(2)}px`);
-            pet.nudgeEl.style.setProperty("--pet-nudge-y", `${offsetY.toFixed(2)}px`);
-            window.clearTimeout(pet.nudgeTimer);
-            pet.nudgeTimer = window.setTimeout(() => {
-              clearNudge(pet);
-            }, 2000);
-          }
-
-          function scheduleWander(pet, delay = 0) {
-            const nextDelay = delay + 8000 + Math.random() * 7000;
-            pet.wanderTimer = window.setTimeout(() => {
-              const angle = Math.random() * Math.PI * 2;
-              const wanderX = Math.cos(angle) * 8;
-              const wanderY = Math.sin(angle) * 8;
-
-              pet.wanderEl.style.setProperty("--pet-wander-duration", "800ms");
-              pet.wanderEl.style.setProperty("--pet-wander-x", `${wanderX.toFixed(2)}px`);
-              pet.wanderEl.style.setProperty("--pet-wander-y", `${wanderY.toFixed(2)}px`);
-
-              pet.wanderReturnTimer = window.setTimeout(() => {
-                pet.wanderEl.style.setProperty("--pet-wander-duration", "1200ms");
-                pet.wanderEl.style.setProperty("--pet-wander-x", "0px");
-                pet.wanderEl.style.setProperty("--pet-wander-y", "0px");
-                pet.wanderReturnTimer = window.setTimeout(() => {
-                  scheduleWander(pet);
-                }, 1200);
-              }, 800);
+              scheduleBlink();
             }, nextDelay);
           }
 
-          function updatePetStates() {
-            for (const pet of petStates) {
-              const rect = pet.element.getBoundingClientRect();
-              const centerX = rect.left + rect.width / 2;
-              const centerY = rect.top + rect.height / 2;
-              const deltaX = pointerX - centerX;
-              const deltaY = pointerY - centerY;
-              const distance = Math.hypot(deltaX, deltaY);
-
-              pet.element.classList.toggle("is-revealed", distance <= 200);
-
-              if (distance <= 120 && !pet.withinNudgeRange) {
-                pet.withinNudgeRange = true;
-                nudgeTowardPointer(pet, Math.atan2(deltaY, deltaX));
-              } else if (distance > 120) {
-                pet.withinNudgeRange = false;
-              }
+          function schedulePeek() {
+            if (reducedMotion) {
+              return;
             }
+            const nextDelay = Math.random() * 6000 + 8000;
+            peekTimer = window.setTimeout(() => {
+              chipWrapper.classList.add("is-peeking");
+              window.setTimeout(() => {
+                chipWrapper.classList.remove("is-peeking");
+                schedulePeek();
+              }, 1800);
+            }, nextDelay);
           }
 
-          for (const [index, pet] of petStates.entries()) {
-            scheduleWander(pet, index * 1200);
+          function lockEyes(angle, duration) {
+            eyeLockUntil = performance.now() + duration;
+            setPupils(angle, 1.5);
+            window.clearTimeout(eyeUnlockTimer);
+            eyeUnlockTimer = window.setTimeout(() => {
+              eyeLockUntil = 0;
+              updateEyes(lastPointerX, lastPointerY);
+            }, duration);
           }
 
-          window.addEventListener(
+          function angleToElement(element) {
+            const rect = element.getBoundingClientRect();
+            const chipRect = chipWrapper.getBoundingClientRect();
+            const chipCX = chipRect.left + 32;
+            const chipCY = chipRect.top + 32;
+            const targetX = rect.left + rect.width / 2;
+            const targetY = rect.top + rect.height / 2;
+            return Math.atan2(targetY - chipCY, targetX - chipCX);
+          }
+
+          function setFastPins() {
+            chipWrapper.classList.add("chip-pins-fast");
+            window.clearTimeout(fastPinsTimer);
+            fastPinsTimer = window.setTimeout(() => {
+              chipWrapper.classList.remove("chip-pins-fast");
+            }, 1000);
+          }
+
+          function playExcitedReaction(message, options = {}) {
+            const { jump = false, rapidPins = false } = options;
+
+            chipWrapper.classList.add("is-excited");
+            if (jump && !reducedMotion) {
+              chipWrapper.classList.add("is-jumping");
+            }
+            if (rapidPins) {
+              setFastPins();
+            }
+
+            lockEyes(-Math.PI / 4, 300);
+            showBubble(message);
+
+            window.clearTimeout(excitedTimer);
+            excitedTimer = window.setTimeout(() => {
+              chipWrapper.classList.remove("is-excited");
+            }, 300);
+
+            window.clearTimeout(jumpTimer);
+            jumpTimer = window.setTimeout(() => {
+              chipWrapper.classList.remove("is-jumping");
+            }, jump && !reducedMotion ? 400 : 0);
+          }
+
+          function handleChipClick() {
+            const message = bubbleMessages[Math.floor(Math.random() * bubbleMessages.length)];
+            playExcitedReaction(message);
+          }
+
+          function handleCtaClick() {
+            playExcitedReaction("Let's go!", { jump: true, rapidPins: true });
+          }
+
+          function handleSignInClick() {
+            playExcitedReaction("Welcome!");
+          }
+
+          function handleGenericButtonClick(target) {
+            lockEyes(angleToElement(target), 600);
+            triggerBlink();
+          }
+
+          document.addEventListener(
             "mousemove",
             (event) => {
-              pointerX = event.clientX;
-              pointerY = event.clientY;
-              updatePetStates();
-              queuePupilUpdate();
+              lastPointerX = event.clientX;
+              lastPointerY = event.clientY;
+
+              const now = performance.now();
+              if (now - lastEyeUpdate < 16) {
+                return;
+              }
+              lastEyeUpdate = now;
+
+              if (eyeLockUntil > now) {
+                return;
+              }
+
+              updateEyes(event.clientX, event.clientY);
             },
             { passive: true }
           );
 
-          queuePupilUpdate();
+          document.addEventListener("click", (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+              return;
+            }
+
+            if (target.closest("#chip-wrapper")) {
+              handleChipClick();
+              return;
+            }
+
+            const heroCta = target.closest("#hero-cta-primary");
+            if (heroCta instanceof Element) {
+              handleCtaClick();
+              return;
+            }
+
+            if (target.closest("#auth-signin-btn")) {
+              handleSignInClick();
+              return;
+            }
+
+            const interactive = target.closest("button, a");
+            if (interactive instanceof Element) {
+              handleGenericButtonClick(interactive);
+            }
+          });
+
+          if (reducedMotion) {
+            chipWrapper.classList.add("is-visible");
+          } else {
+            window.setTimeout(() => {
+              chipWrapper.classList.add("is-visible");
+            }, 800);
+          }
+
+          updateEyes(lastPointerX, lastPointerY);
+          scheduleBlink();
+          schedulePeek();
         }
 
         themeToggle?.addEventListener("click", () => {
@@ -708,14 +681,11 @@
 
         document.addEventListener("DOMContentLoaded", () => {
           body.classList.add("loaded");
-          if (heroSection && window.innerWidth > 768) {
-            heroSection.classList.add("hero-loaded");
-          }
           renderHeroCode(typedCharacters);
           scheduleHeroTyping(320);
           syncThemeToggle();
           handleScroll();
-          initCpuPets();
+          initChipPet();
           window.addEventListener("scroll", handleScroll, { passive: true });
 
           const cards = document.querySelectorAll(".js-reveal");
