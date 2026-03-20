@@ -16,7 +16,7 @@ body.landing-page {
 .landing-page main {
   position: relative;
   z-index: 1;
-  width: min(1280px, calc(100% - 2 * var(--space-7)));
+  width: min(1200px, calc(100% - 2 * var(--space-6)));
   margin: 0 auto;
   padding: var(--space-16) 0 var(--space-20);
 }
@@ -35,7 +35,7 @@ body.landing-page {
 }
 
 .landing-nav__inner {
-  width: min(1240px, calc(100% - 2 * var(--space-7)));
+  width: min(1160px, calc(100% - 2 * var(--space-6)));
   margin: 0 auto;
   min-height: 56px;
   padding: var(--space-3) 0;
@@ -247,9 +247,9 @@ body.landing-page {
   position: relative;
   min-height: 580px;
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(460px, 1.1fr);
+  grid-template-columns: minmax(0, 0.98fr) minmax(400px, 1.02fr);
   align-items: center;
-  gap: clamp(48px, 6vw, 88px);
+  gap: clamp(36px, 4.5vw, 64px);
   padding-top: var(--space-10);
   overflow: hidden;
   isolation: isolate;
@@ -974,9 +974,9 @@ body.loaded .hero__visual {
 
 .workflow-panel__intro {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
-  align-items: end;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  max-width: 760px;
 }
 
 .workflow-panel__eyebrow {
@@ -991,7 +991,7 @@ body.loaded .hero__visual {
 
 .workflow-panel__title {
   margin: 0;
-  max-width: 720px;
+  max-width: 680px;
   font-family: var(--font-display);
   font-size: clamp(1.9rem, 3vw, 2.5rem);
   line-height: 1.08;
@@ -1287,6 +1287,30 @@ body.loaded .hero__visual {
   opacity: 1;
 }
 
+.cpu-pet__mouth--scared,
+.cpu-pet__brow {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+#chip-wrapper.is-covered .cpu-pet__mouth--neutral,
+#chip-wrapper.is-covered .cpu-pet__mouth--happy {
+  opacity: 0;
+}
+
+#chip-wrapper.is-covered .cpu-pet__mouth--scared,
+#chip-wrapper.is-covered .cpu-pet__brow {
+  opacity: 1;
+}
+
+#chip-wrapper.is-covered #chip-stage {
+  animation: chip-cower 900ms ease-in-out infinite;
+}
+
+#chip-wrapper.is-covered .cpu-pet__pin-dot {
+  animation-duration: 0.9s;
+}
+
 .cpu-pet__pin-dot {
   animation: pin-pulse 1.6s ease-in-out infinite;
   animation-delay: var(--pin-delay, 0ms);
@@ -1348,6 +1372,22 @@ body.loaded .hero__visual {
   }
 }
 
+@keyframes chip-cower {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+  25% {
+    transform: translate(2px, 1px) scale(0.96) rotate(1.5deg);
+  }
+  50% {
+    transform: translate(-2px, 2px) scale(0.95) rotate(-1.5deg);
+  }
+  75% {
+    transform: translate(1px, 2px) scale(0.97) rotate(1deg);
+  }
+}
+
 @keyframes chip-blink {
   0%,
   100% {
@@ -1377,9 +1417,8 @@ body.loaded .hero__visual {
     grid-template-columns: 1fr;
   }
 
-  .workflow-panel__intro,
   .workflow-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .signal-band__facts {
@@ -1448,6 +1487,10 @@ body.loaded .hero__visual {
 
   .workflow-panel {
     padding: 24px;
+  }
+
+  .workflow-grid {
+    grid-template-columns: 1fr;
   }
 
   .landing-cta {

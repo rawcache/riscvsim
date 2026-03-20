@@ -184,7 +184,7 @@
       <section class="section workflow-panel">
         <div class="workflow-panel__intro">
           <span class="workflow-panel__eyebrow">Why it clicks</span>
-          <h2 class="workflow-panel__title">A cleaner way to learn how each instruction changes state.</h2>
+          <h2 class="workflow-panel__title">See what each instruction actually changes.</h2>
           <p class="workflow-panel__body">
             StudyRISC-V is built for the moment where assembly finally starts making sense: you
             assemble, step once, and immediately see what changed in the machine.
@@ -328,8 +328,11 @@
               <circle cx="37" cy="30" r="2.4" fill="var(--text-primary)" />
               <circle id="chipRightPupil" cx="37" cy="30" r="1" fill="var(--accent)" />
             </g>
+            <path class="cpu-pet__brow cpu-pet__brow--left" d="M24 26.5 29 27.8" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
+            <path class="cpu-pet__brow cpu-pet__brow--right" d="M35 27.8 40 26.5" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
             <path class="cpu-pet__mouth cpu-pet__mouth--neutral" d="M 27 35 Q 32 38.5 37 35" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
             <path class="cpu-pet__mouth cpu-pet__mouth--happy" d="M 26 34.5 Q 32 40 38 34.5" stroke="var(--text-primary)" stroke-width="1.9" fill="none" stroke-linecap="round" />
+            <path class="cpu-pet__mouth cpu-pet__mouth--scared" d="M 27 37 Q 32 32.8 37 37" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
           </svg>
         </div>
       </div>
@@ -902,6 +905,11 @@
           let reactionOpenTimer = 0;
           let reactionResetTimer = 0;
           let fastPinsTimer = 0;
+          let coverFrame = 0;
+          let chipCovered = false;
+          const chipCoverTargets = Array.from(
+            document.querySelectorAll(".hero-code, .feature-card, .workflow-panel, .signal-band, .landing-cta, .landing-footer")
+          );
 
           function setPupils(angle, offset) {
             chipLeftPupil.setAttribute("cx", (27 + Math.cos(angle) * offset).toFixed(2));
@@ -915,6 +923,58 @@
             chipLeftPupil.setAttribute("cy", "30");
             chipRightPupil.setAttribute("cx", "37");
             chipRightPupil.setAttribute("cy", "30");
+          }
+
+          function setCoveredPupils() {
+            chipLeftPupil.setAttribute("cx", "26.4");
+            chipLeftPupil.setAttribute("cy", "29.1");
+            chipRightPupil.setAttribute("cx", "36.4");
+            chipRightPupil.setAttribute("cy", "29.1");
+          }
+
+          function updateCoveredState() {
+            const chipRect = chipWrapper.getBoundingClientRect();
+            const covered = chipCoverTargets.some((target) => {
+              if (!(target instanceof HTMLElement)) {
+                return false;
+              }
+
+              const rect = target.getBoundingClientRect();
+              if (rect.bottom <= 0 || rect.top >= window.innerHeight || rect.right <= 0 || rect.left >= window.innerWidth) {
+                return false;
+              }
+
+              const overlapX = Math.min(chipRect.right, rect.right) - Math.max(chipRect.left, rect.left);
+              const overlapY = Math.min(chipRect.bottom, rect.bottom) - Math.max(chipRect.top, rect.top);
+              return overlapX > 18 && overlapY > 18;
+            });
+
+            if (covered === chipCovered) {
+              return;
+            }
+
+            chipCovered = covered;
+            chipWrapper.classList.toggle("is-covered", covered);
+
+            if (chipCovered && !chipWrapper.classList.contains("is-reacting")) {
+              setCoveredPupils();
+              return;
+            }
+
+            if (!chipCovered && eyeLockUntil <= performance.now()) {
+              updateEyes(lastPointerX, lastPointerY);
+            }
+          }
+
+          function requestCoveredStateUpdate() {
+            if (coverFrame) {
+              return;
+            }
+
+            coverFrame = window.requestAnimationFrame(() => {
+              coverFrame = 0;
+              updateCoveredState();
+            });
           }
 
           function updateEyes(cursorX, cursorY) {
@@ -1031,6 +1091,11 @@
 
             reactionResetTimer = window.setTimeout(() => {
               chipWrapper.classList.remove("is-reacting");
+              if (chipCovered) {
+                setCoveredPupils();
+              } else {
+                updateEyes(lastPointerX, lastPointerY);
+              }
             }, reducedMotion ? 220 : 800);
           }
 
@@ -1064,6 +1129,11 @@
               lastEyeUpdate = now;
 
               if (eyeLockUntil > now) {
+                return;
+              }
+
+              if (chipCovered && !chipWrapper.classList.contains("is-reacting")) {
+                setCoveredPupils();
                 return;
               }
 
@@ -1109,8 +1179,11 @@
           }
 
           updateEyes(lastPointerX, lastPointerY);
+          requestCoveredStateUpdate();
           scheduleBlink();
           schedulePeek();
+          window.addEventListener("scroll", requestCoveredStateUpdate, { passive: true });
+          window.addEventListener("resize", requestCoveredStateUpdate);
         }
 
         themeToggle?.addEventListener("click", () => {
