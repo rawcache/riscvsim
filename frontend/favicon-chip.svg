@@ -6,47 +6,44 @@
     </linearGradient>
   </defs>
 
-  <!-- background -->
-  <rect x="0" y="0" width="64" height="64" rx="10" fill="#091724"/>
-
   <g transform="rotate(12 32 32)">
-    <!-- pins -->
-    <g stroke="#1a7fa8" stroke-width="2.2" stroke-linecap="round" opacity="0.95" fill="none">
+    <!-- pins pushed to absolute edge -->
+    <g stroke="#1a7fa8" stroke-width="2.8" stroke-linecap="round" opacity="0.98" fill="none">
       <!-- top -->
-      <line x1="16" y1="9" x2="16" y2="4"/>
-      <line x1="24" y1="9" x2="24" y2="4"/>
-      <line x1="32" y1="9" x2="32" y2="4"/>
-      <line x1="40" y1="9" x2="40" y2="4"/>
-      <line x1="48" y1="9" x2="48" y2="4"/>
+      <line x1="18" y1="8" x2="18" y2="0"/>
+      <line x1="25" y1="8" x2="25" y2="0"/>
+      <line x1="32" y1="8" x2="32" y2="0"/>
+      <line x1="39" y1="8" x2="39" y2="0"/>
+      <line x1="46" y1="8" x2="46" y2="0"/>
 
       <!-- bottom -->
-      <line x1="16" y1="55" x2="16" y2="60"/>
-      <line x1="24" y1="55" x2="24" y2="60"/>
-      <line x1="32" y1="55" x2="32" y2="60"/>
-      <line x1="40" y1="55" x2="40" y2="60"/>
-      <line x1="48" y1="55" x2="48" y2="60"/>
+      <line x1="18" y1="56" x2="18" y2="64"/>
+      <line x1="25" y1="56" x2="25" y2="64"/>
+      <line x1="32" y1="56" x2="32" y2="64"/>
+      <line x1="39" y1="56" x2="39" y2="64"/>
+      <line x1="46" y1="56" x2="46" y2="64"/>
 
       <!-- left -->
-      <line x1="9" y1="16" x2="4" y2="16"/>
-      <line x1="9" y1="24" x2="4" y2="24"/>
-      <line x1="9" y1="32" x2="4" y2="32"/>
-      <line x1="9" y1="40" x2="4" y2="40"/>
-      <line x1="9" y1="48" x2="4" y2="48"/>
+      <line x1="8" y1="18" x2="0" y2="18"/>
+      <line x1="8" y1="25" x2="0" y2="25"/>
+      <line x1="8" y1="32" x2="0" y2="32"/>
+      <line x1="8" y1="39" x2="0" y2="39"/>
+      <line x1="8" y1="46" x2="0" y2="46"/>
 
       <!-- right -->
-      <line x1="55" y1="16" x2="60" y2="16"/>
-      <line x1="55" y1="24" x2="60" y2="24"/>
-      <line x1="55" y1="32" x2="60" y2="32"/>
-      <line x1="55" y1="40" x2="60" y2="40"/>
-      <line x1="55" y1="48" x2="60" y2="48"/>
+      <line x1="56" y1="18" x2="64" y2="18"/>
+      <line x1="56" y1="25" x2="64" y2="25"/>
+      <line x1="56" y1="32" x2="64" y2="32"/>
+      <line x1="56" y1="39" x2="64" y2="39"/>
+      <line x1="56" y1="46" x2="64" y2="46"/>
     </g>
 
     <!-- chip body -->
-    <rect x="9" y="9" width="46" height="46" rx="8"
-          fill="url(#body)" stroke="#1a7fa8" stroke-width="2.2"/>
+    <rect x="8" y="8" width="48" height="48" rx="8.5"
+          fill="url(#body)" stroke="#1a7fa8" stroke-width="2.5"/>
 
     <!-- inner core -->
-    <rect x="19" y="19" width="26" height="26" rx="4"
-          fill="#10243a" stroke="#1a7fa8" stroke-width="1.8"/>
+    <rect x="17" y="17" width="30" height="30" rx="4.5"
+          fill="#17324a" stroke="#1a7fa8" stroke-width="2.1"/>
   </g>
 </svg>
