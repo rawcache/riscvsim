@@ -117,6 +117,7 @@ export class StudyRiscvStack extends Stack {
         allowMethods: [
           apigatewayv2.CorsHttpMethod.GET,
           apigatewayv2.CorsHttpMethod.POST,
+          apigatewayv2.CorsHttpMethod.PUT,
           apigatewayv2.CorsHttpMethod.DELETE,
         ],
         allowHeaders: ["Authorization", "Content-Type"],
@@ -142,8 +143,14 @@ export class StudyRiscvStack extends Stack {
       methods: [
         apigatewayv2.HttpMethod.GET,
         apigatewayv2.HttpMethod.POST,
-        apigatewayv2.HttpMethod.DELETE,
       ],
+      integration: programsIntegration,
+      authorizer: programsAuthorizer,
+    });
+
+    httpApi.addRoutes({
+      path: "/programs/{programId}",
+      methods: [apigatewayv2.HttpMethod.PUT, apigatewayv2.HttpMethod.DELETE],
       integration: programsIntegration,
       authorizer: programsAuthorizer,
     });
