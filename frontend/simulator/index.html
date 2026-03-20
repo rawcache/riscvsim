@@ -162,16 +162,19 @@
               </div>
               <p class="shortcut-hint">Enter: Assemble · ↓: Step · Shift+↓: Step Back · R: Run</p>
 
-              <label class="field-label" for="source">Assembly Source</label>
-              <div class="editor-shell">
-                <!-- main.ts line-number scroll sync targets #sourceLines and #source -->
-                <div id="sourceLines" class="source-lines" aria-hidden="true"></div>
+              <label class="field-label" for="source-input">Assembly Source</label>
+              <div class="editor-container">
+                <div class="line-numbers" id="line-numbers" aria-hidden="true">
+                  <span>1</span>
+                </div>
                 <textarea
-                  id="source"
-                  class="sim-source"
+                  id="source-input"
+                  class="source-textarea"
                   placeholder="Paste RV32 assembly here..."
                   wrap="off"
                   spellcheck="false"
+                  autocorrect="off"
+                  autocapitalize="off"
                 ></textarea>
               </div>
 
