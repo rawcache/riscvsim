@@ -3,18 +3,709 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Redirecting…</title>
-    <meta http-equiv="refresh" content="0; url=/" />
+    <title>StudyRISC-V</title>
+    <meta
+      name="description"
+      content="StudyRISC-V is a browser-based RISC-V simulator with step execution, register inspection, and pseudo-C translation."
+    />
     <link rel="canonical" href="https://studyriscv.com/" />
     <script>
       (() => {
-        const target = new URL(window.location.hash.startsWith("#p=") ? "/simulator/" : "/", window.location.origin);
-        if (window.location.hash.startsWith("#p=")) {
-          target.hash = window.location.hash;
+        const { hash, origin, pathname } = window.location;
+        if (hash.startsWith("#p=")) {
+          const target = new URL("/simulator/", origin);
+          target.hash = hash;
+          window.location.replace(target.toString());
+          return;
         }
-        window.location.replace(target.toString());
+
+        if (pathname === "/landing.html") {
+          window.location.replace(new URL("/", origin).toString());
+        }
       })();
     </script>
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore storage access failures and fall back to the default theme.
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Inter:wght@400;500;700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css"
+    />
+    <link rel="stylesheet" href="./src/styles/tokens.css" />
+    <link rel="stylesheet" href="./src/styles/auth.css" />
+    <link rel="stylesheet" href="./src/styles/landing.css" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
   </head>
-  <body></body>
+  <body class="landing-page">
+    <header id="landingNav" class="landing-nav" aria-label="Main navigation">
+      <div class="landing-nav__inner">
+        <a class="landing-brand" href="/">StudyRISC-V</a>
+        <nav class="landing-nav__links">
+          <a href="/simulator/">Simulator</a>
+          <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+          <div class="auth-nav">
+            <button id="auth-signin-btn" class="auth-signin-btn" type="button">Sign in</button>
+            <div class="auth-menu">
+              <button id="auth-user-btn" class="auth-user-btn" type="button" hidden></button>
+              <div id="auth-dropdown" class="auth-dropdown" hidden>
+                <div id="auth-email" class="auth-dropdown__email"></div>
+                <div id="auth-tier" class="auth-dropdown__tier"></div>
+                <div class="auth-dropdown__divider"></div>
+                <button id="auth-signout-btn" class="auth-dropdown__signout" type="button">Sign out</button>
+              </div>
+            </div>
+          </div>
+          <button id="landingThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+            <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path>
+              </svg>
+            </span>
+            <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
+              </svg>
+            </span>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero__widgets" aria-hidden="true">
+          <div class="hero-widget hero-widget--register" style="--widget-delay: 200ms; --drift-delay: 800ms">
+            <div class="hero-widget__hover">
+              <div class="hero-widget__card">
+                <div class="hero-widget__header">REGISTERS</div>
+                <div class="hero-widget__stack hero-widget__stack--compact">
+                  <div class="hero-widget__row hero-widget__row--kv">
+                    <span>zero</span>
+                    <span>0x00000000</span>
+                  </div>
+                  <div class="hero-widget__row hero-widget__row--kv hero-widget__row--updated">
+                    <span>ra</span>
+                    <span>0x000000A4</span>
+                  </div>
+                  <div class="hero-widget__row hero-widget__row--kv">
+                    <span>sp</span>
+                    <span>0x7FFFFFFC</span>
+                  </div>
+                  <div class="hero-widget__row hero-widget__row--kv hero-widget__row--updated">
+                    <span>a0</span>
+                    <span>0x0000000F</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-widget hero-widget--pseudo" style="--widget-delay: 350ms; --drift-delay: 950ms">
+            <div class="hero-widget__hover">
+              <div class="hero-widget__card hero-widget__card--accent-edge">
+                <div class="hero-widget__header">PSEUDO-C</div>
+                <div class="hero-widget__pseudo">
+                  <span class="hero-widget__value--accent">x1</span>
+                  <span class="hero-widget__value--muted">=</span>
+                  <span class="hero-widget__value--primary">x0 + 64;</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-widget hero-widget--disasm" style="--widget-delay: 500ms; --drift-delay: 1100ms">
+            <div class="hero-widget__hover">
+              <div class="hero-widget__card">
+                <div class="hero-widget__header">DISASSEMBLY</div>
+                <div class="hero-widget__stack hero-widget__stack--tight">
+                  <div class="hero-widget__row hero-widget__row--disasm hero-widget__row--current">
+                    <span class="hero-widget__address">0x00000000</span>
+                    <span class="hero-widget__encoding">04000093</span>
+                    <span class="hero-widget__instruction">addi&nbsp;&nbsp;x1, x0, 64</span>
+                  </div>
+                  <div class="hero-widget__row hero-widget__row--disasm">
+                    <span class="hero-widget__address">0x00000004</span>
+                    <span class="hero-widget__encoding">00100113</span>
+                    <span class="hero-widget__instruction">addi&nbsp;&nbsp;x2, x0, 1</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-widget hero-widget--memory" style="--widget-delay: 400ms; --drift-delay: 1000ms">
+            <div class="hero-widget__hover">
+              <div class="hero-widget__card">
+                <div class="hero-widget__header">MEMORY</div>
+                <div class="hero-widget__stack hero-widget__stack--tight">
+                  <div class="hero-widget__row hero-widget__row--memory">
+                    <span class="hero-widget__address">0x10000000</span>
+                    <span class="hero-widget__memory-bytes">
+                      <span class="hero-widget__memory-byte hero-widget__memory-byte--updated">01</span>
+                      <span class="hero-widget__memory-byte hero-widget__memory-byte--updated">02</span>
+                      <span class="hero-widget__memory-byte hero-widget__memory-byte--updated">03</span>
+                      <span class="hero-widget__memory-byte hero-widget__memory-byte--updated">04</span>
+                      <span class="hero-widget__memory-byte">05</span>
+                      <span class="hero-widget__memory-byte">06</span>
+                      <span class="hero-widget__memory-byte">07</span>
+                      <span class="hero-widget__memory-byte">08</span>
+                    </span>
+                  </div>
+                  <div class="hero-widget__row hero-widget__row--memory">
+                    <span class="hero-widget__address">0x10000008</span>
+                    <span class="hero-widget__memory-bytes">
+                      <span class="hero-widget__memory-byte">09</span>
+                      <span class="hero-widget__memory-byte">0A</span>
+                      <span class="hero-widget__memory-byte">0B</span>
+                      <span class="hero-widget__memory-byte">0C</span>
+                      <span class="hero-widget__memory-byte hero-widget__memory-byte--empty">--</span>
+                      <span class="hero-widget__memory-byte hero-widget__memory-byte--empty">--</span>
+                      <span class="hero-widget__memory-byte hero-widget__memory-byte--empty">--</span>
+                      <span class="hero-widget__memory-byte hero-widget__memory-byte--empty">--</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-widget hero-widget--effects" style="--widget-delay: 600ms; --drift-delay: 1200ms">
+            <div class="hero-widget__hover">
+              <div class="hero-widget__card">
+                <div class="hero-widget__header">EFFECTS</div>
+                <div class="hero-widget__stack hero-widget__stack--tight">
+                  <div class="hero-widget__row hero-widget__row--effect hero-widget__row--recent">
+                    <span class="hero-widget__effect-label">x1</span>
+                    <span class="hero-widget__effect-before">0x00000000</span>
+                    <span class="hero-widget__effect-arrow">→</span>
+                    <span class="hero-widget__effect-after hero-widget__effect-after--primary">0x00000040</span>
+                  </div>
+                  <div class="hero-widget__row hero-widget__row--effect">
+                    <span class="hero-widget__effect-label">PC</span>
+                    <span class="hero-widget__effect-before">0x00000000</span>
+                    <span class="hero-widget__effect-arrow">→</span>
+                    <span class="hero-widget__effect-after hero-widget__effect-after--accent">0x00000004</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero__copy">
+          <h1 class="hero__title">
+            <span class="hero__title-line" style="--hero-delay: 0ms">Understand RISC-V.</span>
+            <span class="hero__title-line hero__title-line--accent" style="--hero-delay: 120ms">
+              One instruction at a time.
+            </span>
+          </h1>
+          <p class="hero__subhead" style="--hero-delay: 240ms">
+            A browser-based simulator with step execution, register inspection, and pseudo-C
+            translation. No install required.
+          </p>
+          <div class="hero__actions" style="--hero-delay: 360ms">
+            <a id="chipOpenSimulatorCta" class="cta cta--primary" href="/simulator/">Open Simulator →</a>
+            <a class="cta cta--secondary" href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">
+              View on GitHub
+            </a>
+          </div>
+          <div class="hero__signals">
+            <span>Local-first · Rust + WebAssembly</span>
+            <span>RV32IM + M extension</span>
+            <span>Free for Georgia Tech students</span>
+          </div>
+        </div>
+
+        <div class="hero__visual" style="--hero-delay: 420ms">
+          <div class="hero-code" aria-hidden="true">
+            <div class="hero-code__bar">
+              <div class="hero-code__dots">
+                <span class="hero-code__dot"></span>
+                <span class="hero-code__dot"></span>
+                <span class="hero-code__dot"></span>
+              </div>
+              <span class="hero-code__label">sum_loop.s</span>
+              <span class="hero-code__bar-spacer" aria-hidden="true"></span>
+            </div>
+            <pre><code id="heroCode"></code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="feature-grid">
+          <article class="feature-card js-reveal">
+            <div class="feature-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M4 12h11"></path>
+                <path d="m11 5 7 7-7 7"></path>
+                <path d="M4 5v14"></path>
+              </svg>
+            </div>
+            <h2 class="feature-card__title">Step Execution</h2>
+            <p class="feature-card__body">
+              Step through every instruction and watch register and memory state update in real
+              time. Step backward too.
+            </p>
+          </article>
+
+          <article class="feature-card js-reveal">
+            <div class="feature-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M8 8 4 12l4 4"></path>
+                <path d="m16 8 4 4-4 4"></path>
+                <path d="M11 19h2"></path>
+                <path d="M10 5h4"></path>
+              </svg>
+            </div>
+            <h2 class="feature-card__title">Pseudo-C Explainer</h2>
+            <p class="feature-card__body">
+              Every instruction renders as a readable C-like expression so you can connect assembly
+              syntax to what it actually computes.
+            </p>
+          </article>
+
+          <article class="feature-card js-reveal">
+            <div class="feature-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                <path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"></path>
+              </svg>
+            </div>
+            <h2 class="feature-card__title">Local-First</h2>
+            <p class="feature-card__body">
+              Runs entirely in the browser via Rust compiled to WebAssembly. No server, no latency,
+              no account required to start.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section social-proof-strip" aria-label="Platform details">
+        <div class="social-proof-item">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 3v18"></path>
+            <path d="M6 8h12"></path>
+            <path d="M7 16h10"></path>
+          </svg>
+          <span>Built on Rust + WebAssembly — runs at native speed in your browser</span>
+        </div>
+        <div class="social-proof-item">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 6h16"></path>
+            <path d="M4 12h16"></path>
+            <path d="M4 18h10"></path>
+          </svg>
+          <span>Covers the full RV32IM subset taught in ECE 2035 at Georgia Tech</span>
+        </div>
+      </section>
+
+      <section class="section coverage-strip" aria-label="Supported instruction groups">
+        <span class="coverage-badge js-pill">ALU</span>
+        <span class="coverage-badge js-pill">Shifts</span>
+        <span class="coverage-badge js-pill">Branches</span>
+        <span class="coverage-badge js-pill">Loads/Stores</span>
+        <span class="coverage-badge js-pill">JAL/JALR</span>
+        <span class="coverage-badge js-pill">LUI/AUIPC</span>
+        <span class="coverage-badge js-pill">M Extension</span>
+        <span class="coverage-badge js-pill">Pseudos</span>
+      </section>
+
+      <section class="section landing-cta">
+        <h2 class="landing-cta__title">Ready to step through your first program?</h2>
+        <a class="cta cta--primary landing-cta__button" href="/simulator/">Open the Simulator →</a>
+      </section>
+    </main>
+
+    <footer class="landing-footer">
+      StudyRISC-V · Built by <a href="https://github.com/rawcache">Satchit Seth</a> · Free for GT students
+    </footer>
+
+    <div id="chip-cursor" aria-hidden="true">
+      <span class="chip-binary">01001010</span>
+      <svg id="chip-svg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g class="chip-pin-lines">
+          <line x1="16" y1="22" x2="10" y2="22" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="16" y1="26" x2="10" y2="26" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="16" y1="30" x2="10" y2="30" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="16" y1="34" x2="10" y2="34" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="48" y1="22" x2="54" y2="22" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="48" y1="26" x2="54" y2="26" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="48" y1="30" x2="54" y2="30" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="48" y1="34" x2="54" y2="34" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="22" y1="16" x2="22" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="26" y1="16" x2="26" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="30" y1="16" x2="30" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="34" y1="16" x2="34" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="22" y1="48" x2="22" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="26" y1="48" x2="26" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="30" y1="48" x2="30" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+          <line x1="34" y1="48" x2="34" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+        </g>
+
+        <g class="chip-solder-dots">
+          <circle class="chip-pin-dot" cx="10" cy="22" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
+          <circle class="chip-pin-dot" cx="10" cy="26" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
+          <circle class="chip-pin-dot" cx="10" cy="30" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
+          <circle class="chip-pin-dot" cx="10" cy="34" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
+          <circle class="chip-pin-dot" cx="54" cy="22" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
+          <circle class="chip-pin-dot" cx="54" cy="26" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
+          <circle class="chip-pin-dot" cx="54" cy="30" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
+          <circle class="chip-pin-dot" cx="54" cy="34" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
+          <circle class="chip-pin-dot" cx="22" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
+          <circle class="chip-pin-dot" cx="26" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
+          <circle class="chip-pin-dot" cx="30" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
+          <circle class="chip-pin-dot" cx="34" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
+          <circle class="chip-pin-dot" cx="22" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
+          <circle class="chip-pin-dot" cx="26" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
+          <circle class="chip-pin-dot" cx="30" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
+          <circle class="chip-pin-dot" cx="34" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
+        </g>
+
+        <rect x="16" y="16" width="32" height="32" rx="4" ry="4" fill="var(--accent)" />
+        <rect x="22" y="22" width="20" height="20" rx="2" fill="var(--bg-base)" />
+        <rect x="24" y="24" width="6" height="2" fill="var(--accent)" opacity="0.6" />
+        <rect x="24" y="28" width="10" height="2" fill="var(--accent)" opacity="0.6" />
+        <rect x="24" y="32" width="8" height="2" fill="var(--accent)" opacity="0.6" />
+        <rect x="24" y="36" width="5" height="2" fill="var(--accent)" opacity="0.6" />
+
+        <circle cx="27" cy="30" r="2" fill="var(--accent)" />
+        <circle cx="37" cy="30" r="2" fill="var(--accent)" />
+        <circle id="chipLeftPupil" cx="27" cy="30" r="0.8" fill="var(--bg-base)" />
+        <circle id="chipRightPupil" cx="37" cy="30" r="0.8" fill="var(--bg-base)" />
+
+        <g class="chip-mouth">
+          <path id="chipMouthPath" d="M 27 35 Q 32 38 37 35" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linecap="round" />
+        </g>
+      </svg>
+    </div>
+
+    <script>
+      (() => {
+        const themeKey = "studyriscv-theme";
+        const root = document.documentElement;
+        const body = document.body;
+        const nav = document.getElementById("landingNav");
+        const themeToggle = document.getElementById("landingThemeToggle");
+        const heroSection = document.querySelector(".hero");
+        const heroCode = document.getElementById("heroCode");
+        const chipCursor = document.getElementById("chip-cursor");
+        const chipLeftPupil = document.getElementById("chipLeftPupil");
+        const chipRightPupil = document.getElementById("chipRightPupil");
+        const chipMouthPath = document.getElementById("chipMouthPath");
+        const chipBinaryTarget = document.getElementById("chipOpenSimulatorCta");
+        const neutralMouth = "M 27 35 Q 32 38 37 35";
+        const smileMouth = "M 25 35 Q 32 40 39 35";
+        const heroProgram = [
+          "addi x1, x0, 8    # limit",
+          "addi x2, x0, 0    # i",
+          "addi x3, x0, 0    # sum",
+          "loop:",
+          "  add  x3, x3, x2",
+          "  addi x2, x2, 1",
+          "  blt  x2, x1, loop",
+        ];
+        const heroText = heroProgram.join("\n");
+        const mnemonics = new Set(["addi", "add", "blt"]);
+        const registerPattern =
+          /^(?:x(?:[0-9]|[12][0-9]|3[01])|zero|ra|sp|gp|tp|t[0-6]|s(?:[0-9]|1[01])|fp|a[0-7])$/;
+        const numberPattern = /^-?(?:0x[0-9a-f]+|\d+)$/i;
+        let typedCharacters = 0;
+        let deleting = false;
+        let heroTypingTimer = 0;
+
+        function escapeHtml(value) {
+          return value
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        function syncThemeToggle() {
+          if (!themeToggle) return;
+          const isDark = root.dataset.theme === "dark";
+          themeToggle.setAttribute("aria-pressed", String(isDark));
+          themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+        }
+
+        function handleScroll() {
+          if (!nav) return;
+          nav.classList.toggle("is-scrolled", window.scrollY > 8);
+        }
+
+        function highlightInline(text) {
+          const tokenPattern =
+            /\b(?:x(?:[0-9]|[12][0-9]|3[01])|zero|ra|sp|gp|tp|t[0-6]|s(?:[0-9]|1[01])|fp|a[0-7])\b|-?(?:0x[0-9a-f]+|\d+)/gi;
+          let cursor = 0;
+          let html = "";
+          for (const match of text.matchAll(tokenPattern)) {
+            const index = match.index ?? 0;
+            const token = match[0];
+            html += escapeHtml(text.slice(cursor, index));
+            if (registerPattern.test(token)) {
+              html += `<span class="hero-code__register">${escapeHtml(token)}</span>`;
+            } else if (numberPattern.test(token)) {
+              html += `<span class="hero-code__number">${escapeHtml(token)}</span>`;
+            } else {
+              html += escapeHtml(token);
+            }
+            cursor = index + token.length;
+          }
+          html += escapeHtml(text.slice(cursor));
+          return html;
+        }
+
+        function renderHeroLine(line, showCursor) {
+          const commentIndex = line.indexOf("#");
+          const codePart = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
+          const commentPart = commentIndex >= 0 ? line.slice(commentIndex) : "";
+          const leading = codePart.match(/^\s*/)?.[0] ?? "";
+          let remainder = codePart.slice(leading.length);
+          let labelHtml = "";
+          let mnemonicHtml = "";
+
+          const labelMatch = remainder.match(/^([A-Za-z_.$][\w.$]*:)(\s*)/);
+          if (labelMatch) {
+            labelHtml = `<span class="hero-code__label-ref">${escapeHtml(labelMatch[1])}</span>${escapeHtml(labelMatch[2])}`;
+            remainder = remainder.slice(labelMatch[0].length);
+          }
+
+          const mnemonicMatch = remainder.match(/^([A-Za-z.]+)(\s*)/);
+          if (mnemonicMatch && mnemonics.has(mnemonicMatch[1].toLowerCase())) {
+            mnemonicHtml = `<span class="hero-code__mnemonic">${escapeHtml(mnemonicMatch[1])}</span>${escapeHtml(mnemonicMatch[2])}`;
+            remainder = remainder.slice(mnemonicMatch[0].length);
+          }
+
+          const commentHtml = commentPart
+            ? `<span class="hero-code__comment">${escapeHtml(commentPart)}</span>`
+            : "";
+          const cursorHtml = showCursor ? '<span class="hero-code__cursor" aria-hidden="true"></span>' : "";
+
+          return `<span class="hero-code__line">${escapeHtml(leading)}${labelHtml}${mnemonicHtml}${highlightInline(
+            remainder
+          )}${commentHtml}${cursorHtml}</span>`;
+        }
+
+        function renderHeroCode(visibleCharacters) {
+          if (!heroCode) return;
+          const visibleText = heroText.slice(0, visibleCharacters);
+          const lines = visibleText.split("\n");
+          if (visibleText.endsWith("\n")) {
+            lines.push("");
+          }
+          if (lines.length === 0) {
+            lines.push("");
+          }
+
+          heroCode.innerHTML = lines
+            .map((line, index) => renderHeroLine(line, index === lines.length - 1))
+            .join("");
+        }
+
+        function scheduleHeroTyping(delay) {
+          window.clearTimeout(heroTypingTimer);
+          heroTypingTimer = window.setTimeout(stepHeroTyping, delay);
+        }
+
+        function stepHeroTyping() {
+          renderHeroCode(typedCharacters);
+
+          if (!deleting) {
+            if (typedCharacters >= heroText.length) {
+              deleting = true;
+              scheduleHeroTyping(1300);
+              return;
+            }
+
+            const nextChar = heroText.charAt(typedCharacters);
+            typedCharacters += 1;
+            scheduleHeroTyping(nextChar === "\n" ? 170 : 42);
+            return;
+          }
+
+          if (typedCharacters <= 0) {
+            deleting = false;
+            scheduleHeroTyping(500);
+            return;
+          }
+
+          typedCharacters -= 1;
+          const previousChar = heroText.charAt(typedCharacters);
+          scheduleHeroTyping(previousChar === "\n" ? 85 : 20);
+        }
+
+        function initChipCursor() {
+          if (!chipCursor || !chipLeftPupil || !chipRightPupil || !chipMouthPath) {
+            return;
+          }
+
+          if (window.matchMedia("(hover: none)").matches || window.innerWidth <= 768) {
+            return;
+          }
+
+          let targetX = window.innerWidth * 0.5;
+          let targetY = window.innerHeight * 0.5;
+          let currentX = targetX;
+          let currentY = targetY;
+          let lastPointerX = targetX;
+          let lastPointerY = targetY;
+          let visible = false;
+
+          const setInteractiveState = (target) => {
+            const interactive = target instanceof Element ? target.closest("a, button") : null;
+            const isExcited = Boolean(interactive);
+            const showBinary = interactive === chipBinaryTarget;
+            chipCursor.classList.toggle("chip-excited", isExcited);
+            chipCursor.classList.toggle("chip-binary-visible", showBinary);
+            chipMouthPath.setAttribute("d", isExcited ? smileMouth : neutralMouth);
+          };
+
+          const updatePupils = () => {
+            const angle = Math.atan2(lastPointerY - currentY, lastPointerX - currentX);
+            const offsetX = Math.cos(angle) * 1;
+            const offsetY = Math.sin(angle) * 1;
+
+            chipLeftPupil.setAttribute("cx", (27 + offsetX).toFixed(2));
+            chipLeftPupil.setAttribute("cy", (30 + offsetY).toFixed(2));
+            chipRightPupil.setAttribute("cx", (37 + offsetX).toFixed(2));
+            chipRightPupil.setAttribute("cy", (30 + offsetY).toFixed(2));
+          };
+
+          const tick = () => {
+            currentX += (targetX - currentX) * 0.07;
+            currentY += (targetY - currentY) * 0.07;
+            chipCursor.style.transform = `translate(${currentX - 32}px, ${currentY - 32}px)`;
+            updatePupils();
+            window.requestAnimationFrame(tick);
+          };
+
+          window.addEventListener(
+            "mousemove",
+            (event) => {
+              targetX = event.clientX;
+              targetY = event.clientY;
+              lastPointerX = event.clientX;
+              lastPointerY = event.clientY;
+
+              if (!visible) {
+                chipCursor.classList.add("is-visible");
+                visible = true;
+              }
+
+              setInteractiveState(event.target);
+            },
+            { passive: true }
+          );
+
+          document.addEventListener("mouseover", (event) => {
+            setInteractiveState(event.target);
+          });
+
+          document.addEventListener("mouseout", (event) => {
+            const nextTarget = event.relatedTarget;
+            if (!(nextTarget instanceof Element) || !nextTarget.closest("a, button")) {
+              setInteractiveState(nextTarget);
+            }
+          });
+
+          window.addEventListener("blur", () => {
+            chipCursor.classList.remove("chip-excited", "chip-binary-visible");
+            chipMouthPath.setAttribute("d", neutralMouth);
+          });
+
+          window.requestAnimationFrame(tick);
+        }
+
+        themeToggle?.addEventListener("click", () => {
+          const isDark = root.dataset.theme === "dark";
+          if (isDark) {
+            root.removeAttribute("data-theme");
+            window.localStorage.setItem(themeKey, "light");
+          } else {
+            root.dataset.theme = "dark";
+            window.localStorage.setItem(themeKey, "dark");
+          }
+          syncThemeToggle();
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+          body.classList.add("loaded");
+          if (heroSection && window.innerWidth > 768) {
+            heroSection.classList.add("hero-loaded");
+          }
+          renderHeroCode(typedCharacters);
+          scheduleHeroTyping(320);
+          syncThemeToggle();
+          handleScroll();
+          initChipCursor();
+          window.addEventListener("scroll", handleScroll, { passive: true });
+
+          const cards = document.querySelectorAll(".js-reveal");
+          const observer = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                  entry.target.classList.add("is-visible");
+                  observer.unobserve(entry.target);
+                }
+              });
+            },
+            { threshold: 0.2 }
+          );
+
+          cards.forEach((card, index) => {
+            card.style.setProperty("--reveal-delay", `${index * 80}ms`);
+            observer.observe(card);
+          });
+
+          const coverageStrip = document.querySelector(".coverage-strip");
+          const pills = document.querySelectorAll(".js-pill");
+          pills.forEach((pill, index) => {
+            pill.style.setProperty("--pill-delay", `${index * 40}ms`);
+          });
+
+          if (coverageStrip && pills.length > 0) {
+            const pillObserver = new IntersectionObserver(
+              (entries) => {
+                entries.forEach((entry) => {
+                  if (!entry.isIntersecting) return;
+                  pills.forEach((pill) => pill.classList.add("is-visible"));
+                  pillObserver.unobserve(entry.target);
+                });
+              },
+              { threshold: 0.3 }
+            );
+            pillObserver.observe(coverageStrip);
+          }
+        });
+      })();
+    </script>
+    <script type="module">
+      import "./src/auth-page.ts";
+      import { initAuthUi } from "./src/auth-ui.ts";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        void initAuthUi();
+      });
+    </script>
+  </body>
 </html>
