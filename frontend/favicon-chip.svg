@@ -1,53 +1,47 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
-    <linearGradient id="chipBody" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2a3d67" />
-      <stop offset="100%" stop-color="#18243c" />
-    </linearGradient>
-    <linearGradient id="chipDie" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#101827" />
-      <stop offset="100%" stop-color="#0b1220" />
+    <linearGradient id="body" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d2d4a"/>
+      <stop offset="100%" stop-color="#071828"/>
     </linearGradient>
   </defs>
 
-  <g fill="none" stroke="#4f80ff" stroke-width="3.4" stroke-linecap="round">
-    <path d="M16 9V2.5" />
-    <path d="M24 9V2.5" />
-    <path d="M32 9V2.5" />
-    <path d="M40 9V2.5" />
-    <path d="M48 9V2.5" />
+  <!-- pins -->
+  <g stroke="#1a7fa8" stroke-width="2.4" stroke-linecap="round" opacity="0.9" fill="none">
+    <!-- top -->
+    <line x1="16" y1="8" x2="16" y2="3"/>
+    <line x1="24" y1="8" x2="24" y2="3"/>
+    <line x1="32" y1="8" x2="32" y2="3"/>
+    <line x1="40" y1="8" x2="40" y2="3"/>
+    <line x1="48" y1="8" x2="48" y2="3"/>
 
-    <path d="M16 61.5V55" />
-    <path d="M24 61.5V55" />
-    <path d="M32 61.5V55" />
-    <path d="M40 61.5V55" />
-    <path d="M48 61.5V55" />
+    <!-- bottom -->
+    <line x1="16" y1="56" x2="16" y2="61"/>
+    <line x1="24" y1="56" x2="24" y2="61"/>
+    <line x1="32" y1="56" x2="32" y2="61"/>
+    <line x1="40" y1="56" x2="40" y2="61"/>
+    <line x1="48" y1="56" x2="48" y2="61"/>
 
-    <path d="M9 16H2.5" />
-    <path d="M9 24H2.5" />
-    <path d="M9 32H2.5" />
-    <path d="M9 40H2.5" />
-    <path d="M9 48H2.5" />
+    <!-- left -->
+    <line x1="8" y1="16" x2="3" y2="16"/>
+    <line x1="8" y1="24" x2="3" y2="24"/>
+    <line x1="8" y1="32" x2="3" y2="32"/>
+    <line x1="8" y1="40" x2="3" y2="40"/>
+    <line x1="8" y1="48" x2="3" y2="48"/>
 
-    <path d="M61.5 16H55" />
-    <path d="M61.5 24H55" />
-    <path d="M61.5 32H55" />
-    <path d="M61.5 40H55" />
-    <path d="M61.5 48H55" />
+    <!-- right -->
+    <line x1="56" y1="16" x2="61" y2="16"/>
+    <line x1="56" y1="24" x2="61" y2="24"/>
+    <line x1="56" y1="32" x2="61" y2="32"/>
+    <line x1="56" y1="40" x2="61" y2="40"/>
+    <line x1="56" y1="48" x2="61" y2="48"/>
   </g>
 
-  <rect x="9" y="9" width="46" height="46" rx="9" fill="url(#chipBody)" stroke="#4f80ff" stroke-width="3" />
-  <rect x="18.5" y="18.5" width="27" height="27" rx="5.5" fill="url(#chipDie)" stroke="#6b96ff" stroke-width="1.9" />
+  <!-- chip body -->
+  <rect x="8" y="8" width="48" height="48" rx="8"
+        fill="url(#body)" stroke="#1a7fa8" stroke-width="2"/>
 
-  <g fill="#eef4ff" opacity="0.95">
-    <rect x="23.5" y="23.5" width="12.5" height="3" rx="1.5" />
-    <rect x="23.5" y="31" width="17" height="3" rx="1.5" />
-    <rect x="23.5" y="38.5" width="9.5" height="3" rx="1.5" />
-  </g>
-
-  <g fill="none" stroke="#cfdcff" stroke-width="1.6" stroke-linecap="round" opacity="0.9">
-    <path d="M40.5 23.5V34" />
-    <path d="M33.5 40h7" />
-    <path d="M21.5 31h2.5" />
-  </g>
+  <!-- inner core -->
+  <rect x="18" y="18" width="28" height="28" rx="4"
+        fill="#040e18" stroke="#1a7fa8" stroke-width="1.8"/>
 </svg>
