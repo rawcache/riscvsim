@@ -9,7 +9,6 @@ frontend/node_modules/
 infra/node_modules/
 
 # wasm-pack output (regenerated at build time)
-frontend/src/pkg/
 infra/dist/
 infra/cdk.out/
 frontend/.env
