@@ -16,7 +16,7 @@ body.landing-page {
 .landing-page main {
   position: relative;
   z-index: 1;
-  width: min(1160px, calc(100% - 2 * var(--space-6)));
+  width: min(1280px, calc(100% - 2 * var(--space-7)));
   margin: 0 auto;
   padding: var(--space-16) 0 var(--space-20);
 }
@@ -35,7 +35,7 @@ body.landing-page {
 }
 
 .landing-nav__inner {
-  width: min(1120px, calc(100% - 2 * var(--space-6)));
+  width: min(1240px, calc(100% - 2 * var(--space-7)));
   margin: 0 auto;
   min-height: 56px;
   padding: var(--space-3) 0;
@@ -247,9 +247,9 @@ body.landing-page {
   position: relative;
   min-height: 580px;
   display: grid;
-  grid-template-columns: minmax(0, 0.96fr) minmax(380px, 1.04fr);
+  grid-template-columns: minmax(0, 0.9fr) minmax(460px, 1.1fr);
   align-items: center;
-  gap: var(--space-10);
+  gap: clamp(48px, 6vw, 88px);
   padding-top: var(--space-10);
   overflow: hidden;
   isolation: isolate;
@@ -654,6 +654,7 @@ body.loaded .hero__visual {
   min-width: 0;
   justify-self: stretch;
   align-self: stretch;
+  padding-top: 28px;
 }
 
 .hero-code {
@@ -954,6 +955,105 @@ body.loaded .hero__visual {
 }
 
 .feature-card__body {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.workflow-panel {
+  display: grid;
+  gap: 28px;
+  padding: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 12%, transparent), transparent 34%),
+    color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.workflow-panel__intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  align-items: end;
+  gap: 24px;
+}
+
+.workflow-panel__eyebrow {
+  display: inline-flex;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.workflow-panel__title {
+  margin: 0;
+  max-width: 720px;
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.workflow-panel__body {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.workflow-step {
+  opacity: 0;
+  transform: translateY(16px);
+  display: grid;
+  gap: 10px;
+  min-height: 188px;
+  padding: 18px 18px 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 10%, var(--border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-base) 72%, var(--bg-surface));
+  transition:
+    opacity 420ms ease,
+    transform 420ms ease,
+    border-color var(--transition),
+    box-shadow var(--transition),
+    background-color 300ms ease;
+}
+
+.workflow-step.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.workflow-step:hover {
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
+  box-shadow: var(--shadow-md);
+  background: color-mix(in srgb, var(--accent-subtle) 34%, var(--bg-surface));
+}
+
+.workflow-step__index {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.workflow-step__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.workflow-step__body {
   margin: 0;
   color: var(--text-secondary);
   line-height: 1.7;
@@ -1277,6 +1377,11 @@ body.loaded .hero__visual {
     grid-template-columns: 1fr;
   }
 
+  .workflow-panel__intro,
+  .workflow-grid {
+    grid-template-columns: 1fr;
+  }
+
   .signal-band__facts {
     grid-template-columns: 1fr;
     gap: 20px;
@@ -1339,6 +1444,10 @@ body.loaded .hero__visual {
 
   .hero-code__content {
     padding: var(--space-4);
+  }
+
+  .workflow-panel {
+    padding: 24px;
   }
 
   .landing-cta {
