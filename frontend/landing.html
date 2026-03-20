@@ -246,6 +246,7 @@
             </div>
             <pre><code id="heroCode"></code></pre>
           </div>
+          <div class="cpu-pet cpu-pet--hero js-cpu-pet" aria-hidden="true"></div>
         </div>
       </section>
 
@@ -264,6 +265,7 @@
               Step through every instruction and watch register and memory state update in real
               time. Step backward too.
             </p>
+            <div class="cpu-pet cpu-pet--feature js-cpu-pet" aria-hidden="true"></div>
           </article>
 
           <article class="feature-card js-reveal">
@@ -331,6 +333,7 @@
       <section class="section landing-cta">
         <h2 class="landing-cta__title">Ready to step through your first program?</h2>
         <a class="cta cta--primary landing-cta__button" href="/simulator/">Open the Simulator →</a>
+        <div class="cpu-pet cpu-pet--cta js-cpu-pet" aria-hidden="true"></div>
       </section>
     </main>
 
@@ -338,64 +341,63 @@
       StudyRISC-V · Built by <a href="https://github.com/rawcache">Satchit Seth</a> · Free for GT students
     </footer>
 
-    <div id="chip-cursor" aria-hidden="true">
-      <span class="chip-binary">01001010</span>
-      <svg id="chip-svg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <g class="chip-pin-lines">
-          <line x1="16" y1="22" x2="10" y2="22" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="16" y1="26" x2="10" y2="26" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="16" y1="30" x2="10" y2="30" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="16" y1="34" x2="10" y2="34" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="48" y1="22" x2="54" y2="22" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="48" y1="26" x2="54" y2="26" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="48" y1="30" x2="54" y2="30" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="48" y1="34" x2="54" y2="34" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="22" y1="16" x2="22" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="26" y1="16" x2="26" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="30" y1="16" x2="30" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="34" y1="16" x2="34" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="22" y1="48" x2="22" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="26" y1="48" x2="26" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="30" y1="48" x2="30" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-          <line x1="34" y1="48" x2="34" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-        </g>
-
-        <g class="chip-solder-dots">
-          <circle class="chip-pin-dot" cx="10" cy="22" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
-          <circle class="chip-pin-dot" cx="10" cy="26" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
-          <circle class="chip-pin-dot" cx="10" cy="30" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
-          <circle class="chip-pin-dot" cx="10" cy="34" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
-          <circle class="chip-pin-dot" cx="54" cy="22" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
-          <circle class="chip-pin-dot" cx="54" cy="26" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
-          <circle class="chip-pin-dot" cx="54" cy="30" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
-          <circle class="chip-pin-dot" cx="54" cy="34" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
-          <circle class="chip-pin-dot" cx="22" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
-          <circle class="chip-pin-dot" cx="26" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
-          <circle class="chip-pin-dot" cx="30" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
-          <circle class="chip-pin-dot" cx="34" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
-          <circle class="chip-pin-dot" cx="22" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
-          <circle class="chip-pin-dot" cx="26" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
-          <circle class="chip-pin-dot" cx="30" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
-          <circle class="chip-pin-dot" cx="34" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
-        </g>
-
-        <rect x="16" y="16" width="32" height="32" rx="4" ry="4" fill="var(--accent)" />
-        <rect x="22" y="22" width="20" height="20" rx="2" fill="var(--bg-base)" />
-        <rect x="24" y="24" width="6" height="2" fill="var(--accent)" opacity="0.6" />
-        <rect x="24" y="28" width="10" height="2" fill="var(--accent)" opacity="0.6" />
-        <rect x="24" y="32" width="8" height="2" fill="var(--accent)" opacity="0.6" />
-        <rect x="24" y="36" width="5" height="2" fill="var(--accent)" opacity="0.6" />
-
-        <circle cx="27" cy="30" r="2" fill="var(--accent)" />
-        <circle cx="37" cy="30" r="2" fill="var(--accent)" />
-        <circle id="chipLeftPupil" cx="27" cy="30" r="0.8" fill="var(--bg-base)" />
-        <circle id="chipRightPupil" cx="37" cy="30" r="0.8" fill="var(--bg-base)" />
-
-        <g class="chip-mouth">
-          <path id="chipMouthPath" d="M 27 35 Q 32 38 37 35" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linecap="round" />
-        </g>
-      </svg>
-    </div>
+    <template id="cpuPetTemplate">
+      <div class="cpu-pet__peek">
+        <div class="cpu-pet__wander">
+          <div class="cpu-pet__nudge">
+            <svg class="cpu-pet__svg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <g class="cpu-pet__pins">
+                <line x1="16" y1="22" x2="10" y2="22" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="16" y1="26" x2="10" y2="26" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="16" y1="30" x2="10" y2="30" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="16" y1="34" x2="10" y2="34" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="48" y1="22" x2="54" y2="22" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="48" y1="26" x2="54" y2="26" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="48" y1="30" x2="54" y2="30" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="48" y1="34" x2="54" y2="34" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="22" y1="16" x2="22" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="26" y1="16" x2="26" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="30" y1="16" x2="30" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="34" y1="16" x2="34" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="22" y1="48" x2="22" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="26" y1="48" x2="26" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="30" y1="48" x2="30" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="34" y1="48" x2="34" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+              </g>
+              <g>
+                <circle class="cpu-pet__pin-dot" cx="10" cy="22" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
+                <circle class="cpu-pet__pin-dot" cx="10" cy="26" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
+                <circle class="cpu-pet__pin-dot" cx="10" cy="30" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
+                <circle class="cpu-pet__pin-dot" cx="10" cy="34" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
+                <circle class="cpu-pet__pin-dot" cx="54" cy="22" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
+                <circle class="cpu-pet__pin-dot" cx="54" cy="26" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
+                <circle class="cpu-pet__pin-dot" cx="54" cy="30" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
+                <circle class="cpu-pet__pin-dot" cx="54" cy="34" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
+                <circle class="cpu-pet__pin-dot" cx="22" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
+                <circle class="cpu-pet__pin-dot" cx="26" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
+                <circle class="cpu-pet__pin-dot" cx="30" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
+                <circle class="cpu-pet__pin-dot" cx="34" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
+                <circle class="cpu-pet__pin-dot" cx="22" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
+                <circle class="cpu-pet__pin-dot" cx="26" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
+                <circle class="cpu-pet__pin-dot" cx="30" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
+                <circle class="cpu-pet__pin-dot" cx="34" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
+              </g>
+              <rect x="16" y="16" width="32" height="32" rx="4" ry="4" fill="var(--accent)" />
+              <rect x="22" y="22" width="20" height="20" rx="2" fill="var(--bg-base)" />
+              <rect x="24" y="24" width="6" height="2" fill="var(--accent)" opacity="0.6" />
+              <rect x="24" y="28" width="10" height="2" fill="var(--accent)" opacity="0.6" />
+              <rect x="24" y="32" width="8" height="2" fill="var(--accent)" opacity="0.6" />
+              <rect x="24" y="36" width="5" height="2" fill="var(--accent)" opacity="0.6" />
+              <circle cx="27" cy="30" r="2" fill="var(--accent)" />
+              <circle cx="37" cy="30" r="2" fill="var(--accent)" />
+              <circle class="cpu-pet__left-pupil" cx="27" cy="30" r="0.8" fill="var(--bg-base)" />
+              <circle class="cpu-pet__right-pupil" cx="37" cy="30" r="0.8" fill="var(--bg-base)" />
+              <path d="M 27 35 Q 32 38 37 35" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linecap="round" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <script>
       (() => {
@@ -406,13 +408,7 @@
         const themeToggle = document.getElementById("landingThemeToggle");
         const heroSection = document.querySelector(".hero");
         const heroCode = document.getElementById("heroCode");
-        const chipCursor = document.getElementById("chip-cursor");
-        const chipLeftPupil = document.getElementById("chipLeftPupil");
-        const chipRightPupil = document.getElementById("chipRightPupil");
-        const chipMouthPath = document.getElementById("chipMouthPath");
-        const chipBinaryTarget = document.getElementById("chipOpenSimulatorCta");
-        const neutralMouth = "M 27 35 Q 32 38 37 35";
-        const smileMouth = "M 25 35 Q 32 40 39 35";
+        const cpuPetTemplate = document.getElementById("cpuPetTemplate");
         const heroProgram = [
           "addi x1, x0, 8    # limit",
           "addi x2, x0, 0    # i",
@@ -553,8 +549,8 @@
           scheduleHeroTyping(previousChar === "\n" ? 85 : 20);
         }
 
-        function initChipCursor() {
-          if (!chipCursor || !chipLeftPupil || !chipRightPupil || !chipMouthPath) {
+        function initCpuPets() {
+          if (!(cpuPetTemplate instanceof HTMLTemplateElement)) {
             return;
           }
 
@@ -562,77 +558,140 @@
             return;
           }
 
-          let targetX = window.innerWidth * 0.5;
-          let targetY = window.innerHeight * 0.5;
-          let currentX = targetX;
-          let currentY = targetY;
-          let lastPointerX = targetX;
-          let lastPointerY = targetY;
-          let visible = false;
+          const petStates = Array.from(document.querySelectorAll(".js-cpu-pet"))
+            .map((element) => {
+              element.replaceChildren(cpuPetTemplate.content.cloneNode(true));
 
-          const setInteractiveState = (target) => {
-            const interactive = target instanceof Element ? target.closest("a, button") : null;
-            const isExcited = Boolean(interactive);
-            const showBinary = interactive === chipBinaryTarget;
-            chipCursor.classList.toggle("chip-excited", isExcited);
-            chipCursor.classList.toggle("chip-binary-visible", showBinary);
-            chipMouthPath.setAttribute("d", isExcited ? smileMouth : neutralMouth);
-          };
+              const wanderEl = element.querySelector(".cpu-pet__wander");
+              const nudgeEl = element.querySelector(".cpu-pet__nudge");
+              const leftPupil = element.querySelector(".cpu-pet__left-pupil");
+              const rightPupil = element.querySelector(".cpu-pet__right-pupil");
+              if (
+                !(wanderEl instanceof HTMLElement) ||
+                !(nudgeEl instanceof HTMLElement) ||
+                !(leftPupil instanceof SVGCircleElement) ||
+                !(rightPupil instanceof SVGCircleElement)
+              ) {
+                return null;
+              }
 
-          const updatePupils = () => {
-            const angle = Math.atan2(lastPointerY - currentY, lastPointerX - currentX);
-            const offsetX = Math.cos(angle) * 1;
-            const offsetY = Math.sin(angle) * 1;
+              return {
+                element,
+                wanderEl,
+                nudgeEl,
+                leftPupil,
+                rightPupil,
+                withinNudgeRange: false,
+                nudgeTimer: 0,
+                wanderTimer: 0,
+                wanderReturnTimer: 0,
+              };
+            })
+            .filter((entry) => entry !== null);
 
-            chipLeftPupil.setAttribute("cx", (27 + offsetX).toFixed(2));
-            chipLeftPupil.setAttribute("cy", (30 + offsetY).toFixed(2));
-            chipRightPupil.setAttribute("cx", (37 + offsetX).toFixed(2));
-            chipRightPupil.setAttribute("cy", (30 + offsetY).toFixed(2));
-          };
+          if (petStates.length === 0) {
+            return;
+          }
 
-          const tick = () => {
-            currentX += (targetX - currentX) * 0.07;
-            currentY += (targetY - currentY) * 0.07;
-            chipCursor.style.transform = `translate(${currentX - 32}px, ${currentY - 32}px)`;
-            updatePupils();
-            window.requestAnimationFrame(tick);
-          };
+          let pointerX = window.innerWidth * 0.5;
+          let pointerY = window.innerHeight * 0.5;
+          let pupilFrame = 0;
+
+          function queuePupilUpdate() {
+            if (pupilFrame !== 0) {
+              return;
+            }
+            pupilFrame = window.requestAnimationFrame(() => {
+              pupilFrame = 0;
+              for (const pet of petStates) {
+                const rect = pet.element.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const angle = Math.atan2(pointerY - centerY, pointerX - centerX);
+                const offsetX = Math.cos(angle) * 1.2;
+                const offsetY = Math.sin(angle) * 1.2;
+                pet.leftPupil.setAttribute("cx", (27 + offsetX).toFixed(2));
+                pet.leftPupil.setAttribute("cy", (30 + offsetY).toFixed(2));
+                pet.rightPupil.setAttribute("cx", (37 + offsetX).toFixed(2));
+                pet.rightPupil.setAttribute("cy", (30 + offsetY).toFixed(2));
+              }
+            });
+          }
+
+          function clearNudge(pet) {
+            pet.nudgeEl.style.setProperty("--pet-nudge-x", "0px");
+            pet.nudgeEl.style.setProperty("--pet-nudge-y", "0px");
+          }
+
+          function nudgeTowardPointer(pet, angle) {
+            const offsetX = Math.cos(angle) * 6;
+            const offsetY = Math.sin(angle) * 6;
+            pet.nudgeEl.style.setProperty("--pet-nudge-x", `${offsetX.toFixed(2)}px`);
+            pet.nudgeEl.style.setProperty("--pet-nudge-y", `${offsetY.toFixed(2)}px`);
+            window.clearTimeout(pet.nudgeTimer);
+            pet.nudgeTimer = window.setTimeout(() => {
+              clearNudge(pet);
+            }, 2000);
+          }
+
+          function scheduleWander(pet, delay = 0) {
+            const nextDelay = delay + 8000 + Math.random() * 7000;
+            pet.wanderTimer = window.setTimeout(() => {
+              const angle = Math.random() * Math.PI * 2;
+              const wanderX = Math.cos(angle) * 8;
+              const wanderY = Math.sin(angle) * 8;
+
+              pet.wanderEl.style.setProperty("--pet-wander-duration", "800ms");
+              pet.wanderEl.style.setProperty("--pet-wander-x", `${wanderX.toFixed(2)}px`);
+              pet.wanderEl.style.setProperty("--pet-wander-y", `${wanderY.toFixed(2)}px`);
+
+              pet.wanderReturnTimer = window.setTimeout(() => {
+                pet.wanderEl.style.setProperty("--pet-wander-duration", "1200ms");
+                pet.wanderEl.style.setProperty("--pet-wander-x", "0px");
+                pet.wanderEl.style.setProperty("--pet-wander-y", "0px");
+                pet.wanderReturnTimer = window.setTimeout(() => {
+                  scheduleWander(pet);
+                }, 1200);
+              }, 800);
+            }, nextDelay);
+          }
+
+          function updatePetStates() {
+            for (const pet of petStates) {
+              const rect = pet.element.getBoundingClientRect();
+              const centerX = rect.left + rect.width / 2;
+              const centerY = rect.top + rect.height / 2;
+              const deltaX = pointerX - centerX;
+              const deltaY = pointerY - centerY;
+              const distance = Math.hypot(deltaX, deltaY);
+
+              pet.element.classList.toggle("is-revealed", distance <= 200);
+
+              if (distance <= 120 && !pet.withinNudgeRange) {
+                pet.withinNudgeRange = true;
+                nudgeTowardPointer(pet, Math.atan2(deltaY, deltaX));
+              } else if (distance > 120) {
+                pet.withinNudgeRange = false;
+              }
+            }
+          }
+
+          for (const [index, pet] of petStates.entries()) {
+            scheduleWander(pet, index * 1200);
+          }
 
           window.addEventListener(
             "mousemove",
             (event) => {
-              targetX = event.clientX;
-              targetY = event.clientY;
-              lastPointerX = event.clientX;
-              lastPointerY = event.clientY;
-
-              if (!visible) {
-                chipCursor.classList.add("is-visible");
-                visible = true;
-              }
-
-              setInteractiveState(event.target);
+              pointerX = event.clientX;
+              pointerY = event.clientY;
+              updatePetStates();
+              queuePupilUpdate();
             },
             { passive: true }
           );
 
-          document.addEventListener("mouseover", (event) => {
-            setInteractiveState(event.target);
-          });
-
-          document.addEventListener("mouseout", (event) => {
-            const nextTarget = event.relatedTarget;
-            if (!(nextTarget instanceof Element) || !nextTarget.closest("a, button")) {
-              setInteractiveState(nextTarget);
-            }
-          });
-
-          window.addEventListener("blur", () => {
-            chipCursor.classList.remove("chip-excited", "chip-binary-visible");
-            chipMouthPath.setAttribute("d", neutralMouth);
-          });
-
-          window.requestAnimationFrame(tick);
+          queuePupilUpdate();
         }
 
         themeToggle?.addEventListener("click", () => {
@@ -656,7 +715,7 @@
           scheduleHeroTyping(320);
           syncThemeToggle();
           handleScroll();
-          initChipCursor();
+          initCpuPets();
           window.addEventListener("scroll", handleScroll, { passive: true });
 
           const cards = document.querySelectorAll(".js-reveal");

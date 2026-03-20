@@ -438,7 +438,7 @@ body.simulator-page {
 }
 
 .sim-select,
-.sim-source,
+.source-textarea,
 .disasm-mnemonic,
 .disasm-operands,
 .disasm-addr,
@@ -463,7 +463,7 @@ body.simulator-page {
 }
 
 .sim-select,
-.sim-source {
+.source-textarea {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -785,51 +785,71 @@ body.simulator-page {
   margin-top: 16px;
 }
 
-.editor-shell {
+.editor-container {
+  display: flex;
+  flex-direction: row;
   position: relative;
   flex: 1;
   min-height: 280px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--bg-base);
   overflow: hidden;
 }
 
-.source-lines {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 32px;
-  padding: 10px 8px 10px 0;
+.line-numbers {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+  min-width: 40px;
+  width: 40px;
+  flex-shrink: 0;
   border-right: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg-elevated) 68%, transparent);
-  color: var(--text-muted);
-  font-size: 10px;
-  line-height: 1.6;
-  text-align: right;
-  pointer-events: none;
-}
-
-.source-line-number {
-  display: block;
-}
-
-.sim-source {
-  position: relative;
-  block-size: 100%;
-  min-height: 280px;
-  padding: 10px 12px 10px 44px;
-  border: 0;
-  resize: none;
   background: var(--bg-base);
+  user-select: none;
+  overflow: hidden;
+  scrollbar-width: none;
+}
+
+.line-numbers::-webkit-scrollbar {
+  display: none;
+}
+
+.line-numbers span {
+  display: block;
+  height: 1.6em;
+  line-height: 1.6;
+  font-family: "DM Mono", monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: right;
+  padding-right: 10px;
+  padding-left: 6px;
+}
+
+.line-numbers span.current-line {
+  color: var(--text-secondary);
+}
+
+.source-textarea {
+  flex: 1;
+  min-height: 280px;
+  padding: 12px 12px 12px 10px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: "DM Mono", monospace;
   font-size: 12px;
   line-height: 1.6;
+  overflow-y: auto;
+  overflow-x: auto;
   white-space: pre;
-  overflow-wrap: normal;
-  word-break: normal;
   tab-size: 2;
 }
 
-.sim-source:focus,
+.source-textarea:focus,
 .sim-select:focus {
   outline: 2px solid color-mix(in srgb, var(--accent) 25%, transparent);
   outline-offset: 0;
@@ -1496,7 +1516,7 @@ body.simulator-page {
   animation: memory-ripple 400ms ease-out forwards;
 }
 
-.sim-source,
+.source-textarea,
 .disasm-view,
 .effects-view,
 .memory-writes,
@@ -1505,7 +1525,7 @@ body.simulator-page {
   scrollbar-color: var(--border) transparent;
 }
 
-.sim-source::-webkit-scrollbar,
+.source-textarea::-webkit-scrollbar,
 .disasm-view::-webkit-scrollbar,
 .effects-view::-webkit-scrollbar,
 .memory-writes::-webkit-scrollbar,
@@ -1514,7 +1534,7 @@ body.simulator-page {
   height: 6px;
 }
 
-.sim-source::-webkit-scrollbar-track,
+.source-textarea::-webkit-scrollbar-track,
 .disasm-view::-webkit-scrollbar-track,
 .effects-view::-webkit-scrollbar-track,
 .memory-writes::-webkit-scrollbar-track,
@@ -1522,7 +1542,7 @@ body.simulator-page {
   background: transparent;
 }
 
-.sim-source::-webkit-scrollbar-thumb,
+.source-textarea::-webkit-scrollbar-thumb,
 .disasm-view::-webkit-scrollbar-thumb,
 .effects-view::-webkit-scrollbar-thumb,
 .memory-writes::-webkit-scrollbar-thumb,
@@ -1531,7 +1551,7 @@ body.simulator-page {
   border-radius: 3px;
 }
 
-.sim-source::-webkit-scrollbar-thumb:hover,
+.source-textarea::-webkit-scrollbar-thumb:hover,
 .disasm-view::-webkit-scrollbar-thumb:hover,
 .effects-view::-webkit-scrollbar-thumb:hover,
 .memory-writes::-webkit-scrollbar-thumb:hover,
@@ -1735,8 +1755,8 @@ body.simulator-page {
     grid-column: 1 / -1;
   }
 
-  .editor-shell,
-  .sim-source {
+  .editor-container,
+  .source-textarea {
     min-height: 200px;
   }
 

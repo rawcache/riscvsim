@@ -82,8 +82,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   const copyToastEl = document.getElementById("copyToast") as HTMLElement | null;
   const sharedLinkBannerEl = document.getElementById("sharedLinkBanner") as HTMLElement | null;
   const dismissSharedBannerBtn = document.getElementById("dismissSharedBanner") as HTMLButtonElement | null;
-  const sourceEl = document.getElementById("source") as HTMLTextAreaElement;
-  const sourceLinesEl = document.getElementById("sourceLines") as HTMLElement | null;
+  const sourceEl = document.getElementById("source-input") as HTMLTextAreaElement;
+  const sourceLinesEl = document.getElementById("line-numbers") as HTMLElement | null;
 
   const clikeEl = document.getElementById("clike") as HTMLElement;
   const effectsEl = document.getElementById("effects") as HTMLElement;
@@ -137,20 +137,34 @@ window.addEventListener("DOMContentLoaded", async () => {
     themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
   }
 
-  function updateSourceLineNumbers() {
+  function updateLineNumbers() {
     if (!sourceLinesEl) return;
-    const lineCount = Math.max(1, sourceEl.value.split(/\r?\n/).length);
+    const lines = sourceEl.value.split("\n");
+    const lineCount = Math.max(10, lines.length);
+    const currentLine = sourceEl.value.substring(0, sourceEl.selectionStart).split("\n").length;
+
     sourceLinesEl.innerHTML = Array.from({ length: lineCount }, (_, index) => {
-      return `<span class="source-line-number">${index + 1}</span>`;
+      const lineNumber = index + 1;
+      const currentLineClass = lineNumber === currentLine ? ' class="current-line"' : "";
+      const label = lineNumber <= lines.length ? String(lineNumber) : "";
+      return `<span${currentLineClass}>${label}</span>`;
     }).join("");
-    sourceLinesEl.style.transform = `translateY(${-sourceEl.scrollTop}px)`;
+
+    sourceLinesEl.scrollTop = sourceEl.scrollTop;
   }
 
   function handleSourceInput() {
-    updateSourceLineNumbers();
+    updateLineNumbers();
     if (!currentProgram.isDirty) {
       updateCurrentProgramState({ isDirty: true });
     }
+  }
+
+  function insertTextAtSelection(text: string) {
+    const start = sourceEl.selectionStart;
+    const end = sourceEl.selectionEnd;
+    sourceEl.setRangeText(text, start, end, "end");
+    handleSourceInput();
   }
 
   function syncSampleOptionLabels(selectedName: string) {
@@ -885,7 +899,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     resetMemoryControls(0);
     resetEffectFilters();
     setSharedBannerVisible(options.keepSharedBanner === true);
-    updateSourceLineNumbers();
+    updateLineNumbers();
     clearPanels();
     sessionId = undefined;
     disasmLines = [];
@@ -1177,7 +1191,17 @@ window.addEventListener("DOMContentLoaded", async () => {
   await programsUi?.setSession(currentUserSession);
 
   sourceEl.addEventListener("input", handleSourceInput);
-  sourceEl.addEventListener("scroll", updateSourceLineNumbers);
+  sourceEl.addEventListener("keyup", updateLineNumbers);
+  sourceEl.addEventListener("click", updateLineNumbers);
+  sourceEl.addEventListener("scroll", updateLineNumbers);
+  sourceEl.addEventListener("focus", updateLineNumbers);
+  sourceEl.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab") {
+      return;
+    }
+    event.preventDefault();
+    insertTextAtSelection("  ");
+  });
 
   sampleSelect.onchange = () => {
     loadSample(sampleSelect.value || "arraySum");
@@ -1279,6 +1303,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   resetBtn.onclick = async () => {
     resetCurrentProgramState();
     await assembleCurrentSource(false, "Program reset.");
+    updateLineNumbers();
   };
 
   stepBackBtn.onclick = () => {
