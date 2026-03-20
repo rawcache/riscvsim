@@ -59,15 +59,32 @@ body.auth-modal-open {
   color: var(--accent);
   font-family: var(--font-display);
   font-size: 18px;
-  text-align: center;
 }
 
 .auth-modal__subhead {
-  margin-top: 4px;
   color: var(--text-secondary);
   font-family: var(--font-display);
   font-size: 13px;
+}
+
+.auth-modal__brand-lockup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   text-align: center;
+}
+
+.auth-modal__brand-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.auth-modal__logo {
+  width: 34px;
+  height: 34px;
+  display: block;
 }
 
 .auth-modal__form {
@@ -81,6 +98,12 @@ body.auth-modal-open {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.auth-modal__field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .auth-modal__label {
@@ -104,6 +127,23 @@ body.auth-modal-open {
 .auth-modal__input:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+.auth-modal__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.auth-modal__checkbox input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
 }
 
 .auth-modal__info {
@@ -175,6 +215,17 @@ body.auth-modal-open {
 
 .auth-modal__text-button:hover {
   color: var(--text-primary);
+}
+
+@media (max-width: 480px) {
+  .auth-modal__card {
+    padding: 28px 20px 24px;
+  }
+
+  .auth-modal__field-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
 
 @keyframes auth-spin {

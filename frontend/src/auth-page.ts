@@ -1,14 +1,18 @@
 import { AUTH_CONFIG } from "./auth-config";
 import { storeSessionTokens } from "./auth";
 import type { AuthConfig, UserSession } from "./auth";
+const faviconChipUrl = new URL("../favicon-chip.svg", import.meta.url).href;
 
 type Mode = "sign-in" | "sign-up" | "confirm-sign-up" | "forgot-password" | "reset-password";
 
 type ModalState = {
   mode: Mode;
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
   confirmationCode: string;
+  rememberMe: boolean;
   info: string;
   error: string;
   loading: boolean;
@@ -40,9 +44,12 @@ const EVENT_NAME = "studyriscv-auth-changed";
 let overlayEl: HTMLElement | null = null;
 let state: ModalState = {
   mode: "sign-in",
+  firstName: "",
+  lastName: "",
   email: "",
   password: "",
   confirmationCode: "",
+  rememberMe: true,
   info: "",
   error: "",
   loading: false,
@@ -159,6 +166,24 @@ function titleForMode(mode: Mode): string {
 function renderFields(): string {
   if (state.mode === "sign-in" || state.mode === "sign-up" || state.mode === "forgot-password") {
     return `
+      ${
+        state.mode === "sign-up"
+          ? `<div class="auth-modal__field-row">
+              <label class="auth-modal__field">
+                <span class="auth-modal__label">First name</span>
+                <input data-auth-input="firstName" class="auth-modal__input" type="text" value="${escapeHtml(
+                  state.firstName
+                )}" autocomplete="given-name" />
+              </label>
+              <label class="auth-modal__field">
+                <span class="auth-modal__label">Last name</span>
+                <input data-auth-input="lastName" class="auth-modal__input" type="text" value="${escapeHtml(
+                  state.lastName
+                )}" autocomplete="family-name" />
+              </label>
+            </div>`
+          : ""
+      }
       <label class="auth-modal__field">
         <span class="auth-modal__label">Email</span>
         <input data-auth-input="email" class="auth-modal__input" type="email" value="${escapeHtml(state.email)}" autocomplete="email" />
@@ -172,6 +197,14 @@ function renderFields(): string {
                 state.password
               )}" autocomplete="${state.mode === "sign-up" ? "new-password" : "current-password"}" />
             </label>`
+      }
+      ${
+        state.mode === "sign-in"
+          ? `<label class="auth-modal__checkbox">
+              <input data-auth-input="rememberMe" type="checkbox" ${state.rememberMe ? "checked" : ""} />
+              <span>Remember me</span>
+            </label>`
+          : ""
       }
     `;
   }
@@ -243,6 +276,36 @@ function infoLine(): string {
   return "";
 }
 
+function validateState(): string {
+  const email = state.email.trim();
+  if ((state.mode === "sign-in" || state.mode === "sign-up" || state.mode === "forgot-password") && !email) {
+    return "Enter your email.";
+  }
+  if (state.mode === "sign-up") {
+    if (!state.firstName.trim()) {
+      return "Enter your first name.";
+    }
+    if (!state.lastName.trim()) {
+      return "Enter your last name.";
+    }
+  }
+  if ((state.mode === "sign-in" || state.mode === "sign-up") && !state.password) {
+    return "Enter your password.";
+  }
+  if (state.mode === "confirm-sign-up" && !state.confirmationCode.trim()) {
+    return "Enter the code from your email.";
+  }
+  if (state.mode === "reset-password") {
+    if (!state.confirmationCode.trim()) {
+      return "Enter the reset code.";
+    }
+    if (!state.password) {
+      return "Enter a new password.";
+    }
+  }
+  return "";
+}
+
 function render(): void {
   if (!overlayEl) {
     return;
@@ -259,8 +322,13 @@ function render(): void {
           ? '<button class="auth-modal__close" type="button" data-auth-action="close" aria-label="Close auth dialog">×</button>'
           : ""
       }
-      <div class="auth-modal__brand">StudyRISC-V</div>
-      <div id="authModalTitle" class="auth-modal__subhead">${escapeHtml(titleForMode(state.mode))}</div>
+      <div class="auth-modal__brand-lockup">
+        <img class="auth-modal__logo" src="${escapeHtml(faviconChipUrl)}" alt="" />
+        <div class="auth-modal__brand-stack">
+          <div class="auth-modal__brand">StudyRISC-V</div>
+          <div id="authModalTitle" class="auth-modal__subhead">${escapeHtml(titleForMode(state.mode))}</div>
+        </div>
+      </div>
       <form class="auth-modal__form" data-auth-action="submit">
         ${renderFields()}
         ${infoLine() ? `<div class="auth-modal__info">${infoLine()}</div>` : ""}
@@ -280,8 +348,18 @@ function render(): void {
   overlayEl.querySelectorAll<HTMLInputElement>("[data-auth-input]").forEach((input) => {
     input.addEventListener("input", (event) => {
       const target = event.currentTarget as HTMLInputElement;
-      const key = target.dataset.authInput as "email" | "password" | "confirmationCode";
-      state = { ...state, [key]: target.value, error: "" };
+      const key = target.dataset.authInput as
+        | "firstName"
+        | "lastName"
+        | "email"
+        | "password"
+        | "confirmationCode"
+        | "rememberMe";
+      state = {
+        ...state,
+        [key]: key === "rememberMe" ? target.checked : target.value,
+        error: "",
+      };
     });
   });
 
@@ -355,6 +433,7 @@ async function signIn(): Promise<void> {
     accessToken: result.AccessToken,
     refreshToken: result.RefreshToken,
     expiresIn: result.ExpiresIn,
+    rememberMe: state.rememberMe,
   });
 
   if (!session) {
@@ -370,7 +449,12 @@ async function signUp(): Promise<void> {
     ClientId: state.config.clientId,
     Username: state.email.trim(),
     Password: state.password,
-    UserAttributes: [{ Name: "email", Value: state.email.trim() }],
+    UserAttributes: [
+      { Name: "email", Value: state.email.trim() },
+      { Name: "given_name", Value: state.firstName.trim() },
+      { Name: "family_name", Value: state.lastName.trim() },
+      { Name: "name", Value: `${state.firstName.trim()} ${state.lastName.trim()}`.trim() },
+    ],
   });
 
   if (payload.UserConfirmed) {
@@ -465,6 +549,13 @@ async function submit(): Promise<void> {
   const configError = configErrorMessage(state.config);
   if (configError) {
     state = { ...state, loading: false, error: configError };
+    render();
+    return;
+  }
+
+  const validationError = validateState();
+  if (validationError) {
+    state = { ...state, loading: false, error: validationError };
     render();
     return;
   }
@@ -564,9 +655,12 @@ export function show(options: ShowOptions = {}): void {
 
   state = {
     mode: options.initialMode ?? "sign-in",
+    firstName: state.firstName,
+    lastName: state.lastName,
     email: state.email,
     password: "",
     confirmationCode: "",
+    rememberMe: state.rememberMe,
     info: "",
     error: "",
     loading: false,

@@ -29,11 +29,11 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function truncateEmail(email: string, maxLength = 20): string {
-  if (email.length <= maxLength) {
-    return email;
+function truncateLabel(label: string, maxLength = 20): string {
+  if (label.length <= maxLength) {
+    return label;
   }
-  return `${email.slice(0, Math.max(0, maxLength - 1))}\u2026`;
+  return `${label.slice(0, Math.max(0, maxLength - 1))}\u2026`;
 }
 
 function tierLabel(session: UserSession | null): string {
@@ -118,7 +118,7 @@ export function updateAuthUI(session: UserSession | null): void {
     elements.authUserBtn.innerHTML =
       hasSession && session
         ? `${session.isGtStudent ? '<span class="auth-user-btn__badge">Pro</span>' : ""}<span class="auth-user-btn__label">${escapeHtml(
-            truncateEmail(session.email)
+            truncateLabel(session.displayName)
           )}</span><span class="auth-user-btn__chevron" aria-hidden="true">▾</span>`
         : "";
   }
