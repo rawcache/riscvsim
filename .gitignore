@@ -8,9 +8,11 @@ frontend/dist/
 frontend/node_modules/
 infra/node_modules/
 
-# wasm-pack output (regenerated at build time)
+# CDK build output
 infra/dist/
 infra/cdk.out/
+
+# Environment variables (contains real credentials)
 frontend/.env
 
 # OS
