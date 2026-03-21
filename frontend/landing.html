@@ -75,7 +75,7 @@
             <a href="/simulator/">Simulator</a>
             <a href="/about/">About</a>
             <a href="/docs/">Docs</a>
-            <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+            <a href="https://github.com/rawcache" target="_blank" rel="noreferrer">GitHub</a>
           </div>
           <div class="auth-nav">
             <button id="auth-signin-btn" class="auth-signin-btn" type="button">Sign in</button>
@@ -107,243 +107,440 @@
           <a href="/simulator/">Simulator</a>
           <a href="/about/">About</a>
           <a href="/docs/">Docs</a>
-          <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="https://github.com/rawcache" target="_blank" rel="noreferrer">GitHub</a>
         </div>
       </div>
     </header>
 
-    <main>
-      <section class="hero">
-        <div class="hero__copy">
-          <h1 class="hero__title">
-            <span class="hero__title-line" style="--hero-delay: 0ms">Understand RISC-V.</span>
-            <span class="hero__title-line hero__title-line--accent" style="--hero-delay: 120ms">
-              One instruction at a time.
-            </span>
-          </h1>
-          <p class="hero__subhead" style="--hero-delay: 240ms">
-            A browser-based simulator with step execution, register inspection, and pseudo-C
-            translation. No install required.
-          </p>
-          <div class="hero__actions" style="--hero-delay: 360ms">
-            <a id="hero-cta-primary" class="cta cta--primary" href="/simulator/">Open Simulator →</a>
-            <a class="cta cta--secondary" href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">
-              View on GitHub
-            </a>
+    <main class="landing-main">
+      <section class="landing-section landing-section--hero">
+        <div class="landing-shell hero">
+          <div class="hero__copy">
+            <div class="hero__eyebrow">
+              <span class="hero__eyebrow-dot" aria-hidden="true"></span>
+              <span>Free for GT students</span>
+            </div>
+            <h1 class="hero__title">
+              <span class="hero__title-row">
+                <span class="hero-word" style="--word-delay: 0ms">Learn</span>
+                <span class="hero-word" style="--word-delay: 80ms">RISC-V.</span>
+              </span>
+              <span class="hero__title-row">
+                <span class="hero-word" style="--word-delay: 200ms">See</span>
+                <span class="hero-word" style="--word-delay: 260ms">the</span>
+                <span class="hero-word" style="--word-delay: 320ms">machine</span>
+                <span class="hero-word" style="--word-delay: 380ms">think.</span>
+              </span>
+            </h1>
+            <p class="hero__subhead">
+              The first RISC-V simulator built for understanding, not just execution. Step through
+              assembly, watch the stack build, and finally see what the CPU is actually doing.
+            </p>
+            <div class="hero__actions">
+              <a id="hero-cta-primary" class="cta cta--primary" href="/simulator/">Open Simulator →</a>
+              <a class="cta cta--secondary" href="https://github.com/rawcache" target="_blank" rel="noreferrer">
+                View on GitHub
+              </a>
+            </div>
+            <div class="hero__trust" aria-label="Product trust signals">
+              <span>Local-first · Rust + WASM</span>
+              <span>RV32I + M extension</span>
+              <span>101 passing tests</span>
+            </div>
           </div>
-          <div class="hero__signals">
-            <span>Instant browser simulator</span>
-            <span>RV32IM + M extension</span>
-            <span>Free for Georgia Tech students</span>
-          </div>
-        </div>
 
-        <div class="hero__visual" style="--hero-delay: 420ms">
-          <div id="heroCodeWindow" class="hero-code" aria-hidden="true">
-            <div class="hero-code__bar">
-              <div class="hero-code__dots" role="group" aria-label="Terminal controls">
-                <button id="heroCodeClose" class="hero-code__window-btn hero-code__window-btn--close" type="button" aria-label="Close terminal"></button>
-                <button id="heroCodeNext" class="hero-code__window-btn hero-code__window-btn--minimize" type="button" aria-label="Show next program"></button>
-                <button id="heroCodePulse" class="hero-code__window-btn hero-code__window-btn--maximize" type="button" aria-label="Pulse terminal"></button>
+          <div class="hero__visual">
+            <div class="hero__visual-stack">
+              <section class="mini-sim" aria-label="Interactive mini RISC-V simulator">
+                <div class="mini-sim__bar">
+                  <div class="mini-sim__dots" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                  <span class="mini-sim__label">try it →</span>
+                </div>
+                <textarea
+                  id="landingMiniSource"
+                  class="mini-sim__editor"
+                  spellcheck="false"
+                  rows="10"
+                  aria-label="Mini simulator source code"
+                ># Add two numbers
+addi x1, x0, 10    # x1 = 10
+addi x2, x0, 20    # x2 = 20
+add  x3, x1, x2    # x3 = x1 + x2</textarea>
+                <div class="mini-sim__controls">
+                  <div class="mini-sim__button-row">
+                    <button id="landingMiniAssemble" class="mini-sim__button mini-sim__button--primary" type="button">
+                      Assemble
+                    </button>
+                    <button id="landingMiniStep" class="mini-sim__button mini-sim__button--secondary" type="button">
+                      Step
+                    </button>
+                  </div>
+                  <div id="landingMiniStatus" class="mini-sim__status">Loading runtime…</div>
+                </div>
+                <div class="mini-sim__registers">
+                  <div class="mini-sim__registers-header">x0-x7</div>
+                  <div id="landingMiniRegs" class="mini-sim__register-grid" role="status" aria-live="polite"></div>
+                </div>
+                <div class="mini-sim__pseudo">
+                  <div class="mini-sim__pseudo-header">Pseudo-C</div>
+                  <div id="landingMiniPseudo" class="mini-sim__pseudo-value">
+                    <span class="mini-sim__empty">assemble to begin</span>
+                  </div>
+                </div>
+              </section>
+
+              <section class="mini-sim-mock" aria-hidden="true">
+                <div class="mini-sim__bar">
+                  <div class="mini-sim__dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                  <span class="mini-sim__label">try it →</span>
+                </div>
+                <div class="mini-sim-mock__body">
+                  <pre class="mini-sim-mock__code"># Add two numbers
+addi x1, x0, 10
+addi x2, x0, 20
+add  x3, x1, x2</pre>
+                  <div class="mini-sim-mock__regs">
+                    <span>x1 0x0000000a</span>
+                    <span>x2 0x00000014</span>
+                    <span>x3 0x0000001e</span>
+                    <span>sp 0x7ffffffc</span>
+                  </div>
+                  <div class="mini-sim-mock__pseudo">
+                    <span class="pc-dest">x3</span>
+                    <span class="pc-op"> = </span>
+                    <span class="pc-src">x1 + x2;</span>
+                  </div>
+                </div>
+              </section>
+
+              <div id="heroCodeWindow" class="hero-code" aria-hidden="true">
+                <div class="hero-code__bar">
+                  <div class="hero-code__dots" role="group" aria-label="Terminal controls">
+                    <button id="heroCodeClose" class="hero-code__window-btn hero-code__window-btn--close" type="button" aria-label="Close terminal"></button>
+                    <button id="heroCodeNext" class="hero-code__window-btn hero-code__window-btn--minimize" type="button" aria-label="Show next program"></button>
+                    <button id="heroCodePulse" class="hero-code__window-btn hero-code__window-btn--maximize" type="button" aria-label="Pulse terminal"></button>
+                  </div>
+                  <span id="heroCodeLabel" class="hero-code__label">sum_loop.s</span>
+                  <span class="hero-code__bar-spacer" aria-hidden="true"></span>
+                </div>
+                <div class="hero-code__body">
+                  <div id="heroCode" class="hero-code__content"></div>
+                </div>
               </div>
-              <span id="heroCodeLabel" class="hero-code__label">sum_loop.s</span>
-              <span class="hero-code__bar-spacer" aria-hidden="true"></span>
-            </div>
-            <div class="hero-code__body">
-              <div id="heroCode" class="hero-code__content"></div>
             </div>
           </div>
         </div>
       </section>
 
-      <section class="section">
-        <div class="feature-grid">
-          <article class="feature-card js-reveal">
-            <div class="feature-card__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M4 12h11"></path>
-                <path d="m11 5 7 7-7 7"></path>
-                <path d="M4 5v14"></path>
-              </svg>
-            </div>
-            <h2 class="feature-card__title">Step Execution</h2>
-            <p class="feature-card__body">
-              Step through every instruction and watch register and memory state update in real
-              time. Step backward too.
-            </p>
-          </article>
-
-          <article class="feature-card js-reveal">
-            <div class="feature-card__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M8 8 4 12l4 4"></path>
-                <path d="m16 8 4 4-4 4"></path>
-                <path d="M11 19h2"></path>
-                <path d="M10 5h4"></path>
-              </svg>
-            </div>
-            <h2 class="feature-card__title">Pseudo-C Explainer</h2>
-            <p class="feature-card__body">
-              Every instruction renders as a readable C-like expression so you can connect assembly
-              syntax to what it actually computes.
-            </p>
-          </article>
-
-          <article class="feature-card js-reveal">
-            <div class="feature-card__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <rect x="6" y="6" width="12" height="12" rx="2"></rect>
-                <path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"></path>
-              </svg>
-            </div>
-            <h2 class="feature-card__title">Zero Setup</h2>
-            <p class="feature-card__body">
-              Open the simulator and start assembling immediately. No install, no backend latency,
-              no login wall to try it.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section class="section workflow-panel">
-        <div class="workflow-panel__intro">
-          <span class="workflow-panel__eyebrow">Why it clicks</span>
-          <h2 class="workflow-panel__title">See what each instruction actually changes.</h2>
-          <p class="workflow-panel__body">
-            StudyRISC-V is built for the moment where assembly finally starts making sense: you
-            assemble, step once, and immediately see what changed in the machine.
-          </p>
-        </div>
-        <div class="workflow-grid">
-          <article class="workflow-step js-reveal">
-            <span class="workflow-step__index">01</span>
-            <h3 class="workflow-step__title">Assemble fast</h3>
-            <p class="workflow-step__body">
-              Start from class-style samples or paste your own code and assemble in one click.
-            </p>
-          </article>
-          <article class="workflow-step js-reveal">
-            <span class="workflow-step__index">02</span>
-            <h3 class="workflow-step__title">Step with context</h3>
-            <p class="workflow-step__body">
-              Watch the PC, current instruction, and execution effects move together instead of in isolation.
-            </p>
-          </article>
-          <article class="workflow-step js-reveal">
-            <span class="workflow-step__index">03</span>
-            <h3 class="workflow-step__title">Read the intent</h3>
-            <p class="workflow-step__body">
-              Pseudo-C and labels make loops, branches, and data movement easier to reason about.
-            </p>
-          </article>
-          <article class="workflow-step js-reveal">
-            <span class="workflow-step__index">04</span>
-            <h3 class="workflow-step__title">Revisit your work</h3>
-            <p class="workflow-step__body">
-              Save programs to your account, keep a local history, and return to tricky examples later.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section class="section signal-band" aria-label="Platform details">
-        <div class="signal-band__rule" aria-hidden="true"></div>
-        <div class="signal-band__facts">
-          <div class="signal-band__item">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
-              <rect x="7" y="7" width="10" height="10" rx="2"></rect>
-              <path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"></path>
-            </svg>
-            <span>Instant feedback in the browser with no installs or server round-trips</span>
-          </div>
-          <div class="signal-band__divider" aria-hidden="true"></div>
-          <div class="signal-band__item">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M6 5.5A2.5 2.5 0 0 1 8.5 3H20v18H8.5A2.5 2.5 0 0 0 6 23"></path>
-              <path d="M6 5.5v15"></path>
-              <path d="M9 7h7M9 11h7M9 15h5"></path>
-            </svg>
-            <span>Covers the full RV32IM subset taught in ECE 2035 at Georgia Tech</span>
+      <section class="proof-strip" aria-label="What StudyRISC-V is built for">
+        <div class="landing-shell">
+          <div class="proof-strip__row">
+            <span>Georgia Tech</span>
+            <span>RV32IM</span>
+            <span>Rust</span>
+            <span>WebAssembly</span>
+            <span>ECE 2035</span>
+            <span>Open Source</span>
+            <span>Local-First</span>
+            <span>No Server</span>
           </div>
         </div>
-        <div class="signal-band__pills" aria-label="Supported instruction groups">
-          <span class="coverage-badge js-pill">ALU</span>
-          <span class="coverage-badge js-pill">Shifts</span>
-          <span class="coverage-badge js-pill">Branches</span>
-          <span class="coverage-badge js-pill">Loads/Stores</span>
-          <span class="coverage-badge js-pill">JAL/JALR</span>
-          <span class="coverage-badge js-pill">LUI/AUIPC</span>
-          <span class="coverage-badge js-pill">M Extension</span>
-          <span class="coverage-badge js-pill">Pseudos</span>
-        </div>
-        <div class="signal-band__rule" aria-hidden="true"></div>
       </section>
 
-      <section class="section landing-cta">
-        <h2 class="landing-cta__title">Ready to step through your first program?</h2>
-        <a class="cta cta--primary landing-cta__button" href="/simulator/">Open the Simulator →</a>
+      <section class="landing-section landing-section--features">
+        <div class="landing-shell">
+          <div class="section-intro section-intro--center">
+            <h2 class="section-intro__title">Built different.</h2>
+            <p class="section-intro__body">
+              Every other RISC-V simulator shows you results. StudyRISC-V shows you understanding.
+            </p>
+          </div>
+
+          <div class="feature-grid">
+            <article class="feature-card js-reveal">
+              <div class="feature-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9">
+                  <path d="M4 12h11"></path>
+                  <path d="m11 5 7 7-7 7"></path>
+                  <path d="M4 5v14"></path>
+                </svg>
+              </div>
+              <h3 class="feature-card__title">Step. Inspect. Understand.</h3>
+              <p class="feature-card__body">
+                Execute one instruction at a time. Watch every register change, every memory write,
+                every PC jump. Step back if you missed something.
+              </p>
+            </article>
+
+            <article class="feature-card js-reveal">
+              <div class="feature-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9">
+                  <path d="M8 8 4 12l4 4"></path>
+                  <path d="m16 8 4 4-4 4"></path>
+                  <path d="M10 19h4"></path>
+                </svg>
+              </div>
+              <h3 class="feature-card__title">Assembly in plain English.</h3>
+              <p class="feature-card__body">
+                Every instruction translates to a C-like expression in real time. addi x1, x2, 10
+                becomes x1 = x2 + 10. The gap between syntax and meaning, closed.
+              </p>
+            </article>
+
+            <article class="feature-card js-reveal">
+              <div class="feature-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9">
+                  <rect x="5" y="6" width="14" height="4" rx="1.5"></rect>
+                  <rect x="5" y="10" width="14" height="4" rx="1.5"></rect>
+                  <rect x="5" y="14" width="14" height="4" rx="1.5"></rect>
+                </svg>
+              </div>
+              <h3 class="feature-card__title feature-card__title--stack">
+                <span>Watch the stack build live.</span>
+                <span class="feature-card__pill">New</span>
+              </h3>
+              <p class="feature-card__body">
+                The only RISC-V simulator that visualizes your call stack frame by frame. See ra
+                saved, see sp move, see the calling convention made concrete.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="landing-section landing-section--comparison">
+        <div class="landing-shell">
+          <div class="section-intro section-intro--center">
+            <h2 class="section-intro__title section-intro__title--comparison">How we compare.</h2>
+          </div>
+
+          <div class="comparison-card js-reveal">
+            <div class="comparison-card__scroll">
+              <table class="comparison-table">
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th class="comparison-table__study-heading">StudyRISC-V</th>
+                    <th>Venus</th>
+                    <th>RARS</th>
+                    <th>CPUlator</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Browser-based (no install)</td>
+                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                    <td><span class="compare-yes">✓</span></td>
+                  </tr>
+                  <tr>
+                    <td>Local-first (no server)</td>
+                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                  </tr>
+                  <tr>
+                    <td>Pseudo-C explainer</td>
+                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                  </tr>
+                  <tr>
+                    <td>Call stack visualizer</td>
+                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                  </tr>
+                  <tr>
+                    <td>Syntax highlighting</td>
+                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                    <td><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                  </tr>
+                  <tr>
+                    <td>Step back (undo)</td>
+                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                  </tr>
+                  <tr>
+                    <td>Data directives (.data)</td>
+                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-yes">✓</span></td>
+                  </tr>
+                  <tr>
+                    <td>M extension (mul/div)</td>
+                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-yes">✓</span></td>
+                  </tr>
+                  <tr>
+                    <td>Permalink sharing</td>
+                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                  </tr>
+                  <tr>
+                    <td>Saved programs</td>
+                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                  </tr>
+                  <tr>
+                    <td>Free for GT students</td>
+                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                    <td><span class="compare-no">✗</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="landing-section coverage-section">
+        <div class="landing-shell">
+          <div class="section-intro section-intro--left">
+            <h2 class="section-intro__title section-intro__title--coverage">Full RV32IM coverage.</h2>
+            <p class="section-intro__body section-intro__body--muted">
+              Every instruction taught in ECE 2035 at Georgia Tech.
+            </p>
+          </div>
+          <div class="coverage-pills" aria-label="Supported instruction groups">
+            <span class="coverage-badge js-pill">ALU</span>
+            <span class="coverage-badge js-pill">Shifts</span>
+            <span class="coverage-badge js-pill">Branches</span>
+            <span class="coverage-badge js-pill">Loads</span>
+            <span class="coverage-badge js-pill">Stores</span>
+            <span class="coverage-badge js-pill">JAL/JALR</span>
+            <span class="coverage-badge js-pill">LUI</span>
+            <span class="coverage-badge js-pill">AUIPC</span>
+            <span class="coverage-badge js-pill">M Extension (mul/div/rem)</span>
+            <span class="coverage-badge js-pill">Pseudos</span>
+            <span class="coverage-badge js-pill">Ecall</span>
+            <span class="coverage-badge js-pill">Data Directives</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="landing-cta">
+        <div class="landing-shell landing-cta__inner">
+          <h2 class="landing-cta__title">The CPU has been waiting.</h2>
+          <p class="landing-cta__subhead">Step through your first instruction.</p>
+          <a class="cta cta--primary landing-cta__button" href="/simulator/">Open the Simulator →</a>
+          <p class="landing-cta__note">Free · No account required · Runs in your browser</p>
+        </div>
       </section>
     </main>
 
     <footer class="landing-footer">
-      <div class="landing-footer__links">
-        <a href="/terms/">Terms of service</a>
-        <span class="landing-footer__separator" aria-hidden="true">·</span>
-        <a href="/privacy/">Privacy policy</a>
-        <span class="landing-footer__separator" aria-hidden="true">·</span>
-        <a href="/privacy/#do-not-sell">Do not sell my personal information</a>
+      <div class="landing-shell landing-footer__grid">
+        <div class="landing-footer__column landing-footer__column--brand">
+          <div class="landing-footer__brand">StudyRISC-V</div>
+          <p class="landing-footer__tagline">
+            Built for engineers who want to understand the machine.
+          </p>
+        </div>
+
+        <div class="landing-footer__column">
+          <div class="landing-footer__heading">Navigate</div>
+          <div class="landing-footer__links">
+            <a href="/simulator/">Simulator</a>
+            <a href="/about/">About</a>
+            <a href="/docs/">Docs</a>
+            <a href="https://github.com/rawcache" target="_blank" rel="noreferrer">GitHub</a>
+          </div>
+        </div>
+
+        <div class="landing-footer__column">
+          <div class="landing-footer__heading">Legal</div>
+          <div class="landing-footer__links">
+            <a href="/terms/">Terms of service</a>
+            <a href="/privacy/">Privacy policy</a>
+            <a href="/privacy/#do-not-sell">Do not sell my personal information</a>
+          </div>
+        </div>
       </div>
-      <p class="landing-footer__copyright">
-        © 2026 StudyRISC-V. Built by Satchit Seth.
-      </p>
+
+      <div class="landing-shell landing-footer__bottom">
+        <span>© 2026 StudyRISC-V. Built by Satchit Seth.</span>
+        <span>studyriscv.com</span>
+      </div>
     </footer>
 
     <div id="chip-wrapper" aria-hidden="true">
       <div id="chip-reactor">
         <div id="chip-stage">
           <svg id="chipSvg" class="cpu-pet__svg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="cpuPetBodyGradient" x1="16" y1="16" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" style="stop-color: var(--chip-body-top)" />
+                <stop offset="100%" style="stop-color: var(--chip-body-bottom)" />
+              </linearGradient>
+            </defs>
             <g class="cpu-pet__pins">
-                <line x1="16" y1="22" x2="10" y2="22" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="16" y1="26" x2="10" y2="26" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="16" y1="30" x2="10" y2="30" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="16" y1="34" x2="10" y2="34" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="48" y1="22" x2="54" y2="22" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="48" y1="26" x2="54" y2="26" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="48" y1="30" x2="54" y2="30" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="48" y1="34" x2="54" y2="34" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="22" y1="16" x2="22" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="26" y1="16" x2="26" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="30" y1="16" x2="30" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="34" y1="16" x2="34" y2="10" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="22" y1="48" x2="22" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="26" y1="48" x2="26" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="30" y1="48" x2="30" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
-                <line x1="34" y1="48" x2="34" y2="54" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+                <line x1="16" y1="22" x2="10" y2="22" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="16" y1="26" x2="10" y2="26" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="16" y1="30" x2="10" y2="30" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="16" y1="34" x2="10" y2="34" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="48" y1="22" x2="54" y2="22" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="48" y1="26" x2="54" y2="26" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="48" y1="30" x2="54" y2="30" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="48" y1="34" x2="54" y2="34" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="22" y1="16" x2="22" y2="10" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="26" y1="16" x2="26" y2="10" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="30" y1="16" x2="30" y2="10" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="34" y1="16" x2="34" y2="10" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="22" y1="48" x2="22" y2="54" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="26" y1="48" x2="26" y2="54" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="30" y1="48" x2="30" y2="54" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
+                <line x1="34" y1="48" x2="34" y2="54" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
             </g>
             <g>
-                <circle class="cpu-pet__pin-dot" cx="10" cy="22" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
-                <circle class="cpu-pet__pin-dot" cx="10" cy="26" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
-                <circle class="cpu-pet__pin-dot" cx="10" cy="30" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
-                <circle class="cpu-pet__pin-dot" cx="10" cy="34" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
-                <circle class="cpu-pet__pin-dot" cx="54" cy="22" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
-                <circle class="cpu-pet__pin-dot" cx="54" cy="26" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
-                <circle class="cpu-pet__pin-dot" cx="54" cy="30" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
-                <circle class="cpu-pet__pin-dot" cx="54" cy="34" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
-                <circle class="cpu-pet__pin-dot" cx="22" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
-                <circle class="cpu-pet__pin-dot" cx="26" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
-                <circle class="cpu-pet__pin-dot" cx="30" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
-                <circle class="cpu-pet__pin-dot" cx="34" cy="10" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
-                <circle class="cpu-pet__pin-dot" cx="22" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 0ms" />
-                <circle class="cpu-pet__pin-dot" cx="26" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 200ms" />
-                <circle class="cpu-pet__pin-dot" cx="30" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 400ms" />
-                <circle class="cpu-pet__pin-dot" cx="34" cy="54" r="1.5" fill="var(--accent)" opacity="0.5" style="--pin-delay: 600ms" />
+                <circle class="cpu-pet__pin-dot" cx="10" cy="22" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 0ms" />
+                <circle class="cpu-pet__pin-dot" cx="10" cy="26" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 200ms" />
+                <circle class="cpu-pet__pin-dot" cx="10" cy="30" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 400ms" />
+                <circle class="cpu-pet__pin-dot" cx="10" cy="34" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 600ms" />
+                <circle class="cpu-pet__pin-dot" cx="54" cy="22" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 0ms" />
+                <circle class="cpu-pet__pin-dot" cx="54" cy="26" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 200ms" />
+                <circle class="cpu-pet__pin-dot" cx="54" cy="30" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 400ms" />
+                <circle class="cpu-pet__pin-dot" cx="54" cy="34" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 600ms" />
+                <circle class="cpu-pet__pin-dot" cx="22" cy="10" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 0ms" />
+                <circle class="cpu-pet__pin-dot" cx="26" cy="10" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 200ms" />
+                <circle class="cpu-pet__pin-dot" cx="30" cy="10" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 400ms" />
+                <circle class="cpu-pet__pin-dot" cx="34" cy="10" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 600ms" />
+                <circle class="cpu-pet__pin-dot" cx="22" cy="54" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 0ms" />
+                <circle class="cpu-pet__pin-dot" cx="26" cy="54" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 200ms" />
+                <circle class="cpu-pet__pin-dot" cx="30" cy="54" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 400ms" />
+                <circle class="cpu-pet__pin-dot" cx="34" cy="54" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 600ms" />
             </g>
-            <rect x="16" y="16" width="32" height="32" rx="4" ry="4" fill="var(--accent)" />
-            <rect x="22" y="22" width="20" height="20" rx="2" fill="var(--bg-surface)" />
-            <rect x="24" y="24" width="6" height="2" fill="var(--accent)" opacity="0.6" />
-            <rect x="24" y="28" width="10" height="2" fill="var(--accent)" opacity="0.6" />
-            <rect x="24" y="32" width="8" height="2" fill="var(--accent)" opacity="0.6" />
-            <rect x="24" y="36" width="5" height="2" fill="var(--accent)" opacity="0.6" />
+            <rect x="16" y="16" width="32" height="32" rx="4" ry="4" fill="url(#cpuPetBodyGradient)" stroke="var(--chip-stroke)" stroke-width="2.2" />
+            <rect x="22" y="22" width="20" height="20" rx="2" fill="var(--chip-die-fill)" stroke="var(--chip-stroke)" stroke-width="1.6" />
+            <rect x="24" y="24" width="6" height="2" fill="var(--chip-stroke)" opacity="0.6" />
+            <rect x="24" y="28" width="10" height="2" fill="var(--chip-stroke)" opacity="0.6" />
+            <rect x="24" y="32" width="8" height="2" fill="var(--chip-stroke)" opacity="0.6" />
+            <rect x="24" y="36" width="5" height="2" fill="var(--chip-stroke)" opacity="0.6" />
             <g class="cpu-pet__eye cpu-pet__eye--left">
               <circle cx="27" cy="30" r="2.4" fill="var(--text-primary)" />
               <circle id="chipLeftPupil" cx="27" cy="30" r="1" fill="var(--accent)" />
@@ -936,7 +1133,9 @@
           let chipClickCount = 0;
           let chipClickWindowStartedAt = 0;
           const chipCoverTargets = Array.from(
-            document.querySelectorAll(".hero-code, .feature-card, .workflow-panel, .signal-band, .landing-cta, .landing-footer")
+            document.querySelectorAll(
+              ".mini-sim, .mini-sim-mock, .hero-code, .feature-card, .proof-strip, .comparison-card, .coverage-section, .landing-cta, .landing-footer"
+            )
           );
 
           function setPupils(angle, offset) {
@@ -1244,6 +1443,7 @@
 
         document.addEventListener("DOMContentLoaded", () => {
           body.classList.add("loaded");
+          body.classList.add("hero-loaded");
           startHeroProgram(0);
           syncThemeToggle();
           handleScroll();
@@ -1268,7 +1468,7 @@
             observer.observe(card);
           });
 
-          const coverageStrip = document.querySelector(".signal-band__pills");
+          const coverageStrip = document.querySelector(".coverage-pills");
           const pills = document.querySelectorAll(".js-pill");
           pills.forEach((pill, index) => {
             pill.style.setProperty("--pill-delay", `${index * 40}ms`);
@@ -1298,6 +1498,257 @@
           bindTheme: false,
           bindScroll: false,
         });
+      });
+
+      const MINI_PROGRAM = `# Add two numbers
+addi x1, x0, 10    # x1 = 10
+addi x2, x0, 20    # x2 = 20
+add  x3, x1, x2    # x3 = x1 + x2`;
+
+      const MINI_ABI = ["zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2"];
+
+      function translateRiscvToClike(instText) {
+        const normalized = instText.trim().replace(/\s+/g, " ");
+        const tokens = normalized.replace(/,/g, " ").split(/\s+/);
+        const op = (tokens[0] || "").toLowerCase();
+        const a = tokens[1];
+        const b = tokens[2];
+        const c = tokens[3];
+
+        const binOp = (symbol) => `${a} = ${b} ${symbol} ${c};`;
+        const immOp = (symbol) => `${a} = ${b} ${symbol} ${c};`;
+
+        if (op === "addi") return immOp("+");
+        if (op === "add") return binOp("+");
+        if (op === "sub") return binOp("-");
+        if (op === "and") return binOp("&");
+        if (op === "or") return binOp("|");
+        if (op === "xor") return binOp("^");
+        if (op === "sll") return binOp("<<");
+        if (op === "srl") return `${a} = ((unsigned)${b}) >> ${c};`;
+        if (op === "sra") return `${a} = ((int)${b}) >> ${c};`;
+        if (op === "mul") return binOp("*");
+        if (op === "div") return `${a} = ((int)${b}) / ((int)${c});`;
+        if (op === "divu") return `${a} = ${b} / ${c};`;
+        if (op === "rem") return `${a} = ((int)${b}) % ((int)${c});`;
+        if (op === "remu") return `${a} = ${b} % ${c};`;
+        if (op === "slti") return `${a} = ((int)${b} < ${c}) ? 1 : 0;`;
+        if (op === "slt") return `${a} = ((int)${b} < (int)${c}) ? 1 : 0;`;
+        if (op === "sltu") return `${a} = (${b} < ${c}) ? 1 : 0;`;
+
+        const loadMatch = normalized.match(/^(\w+)\s+(\w+)\s*,\s*([^)]+)\((\w+)\)$/i);
+        if (loadMatch) {
+          const loadOp = loadMatch[1].toLowerCase();
+          const rd = loadMatch[2];
+          const imm = loadMatch[3];
+          const rs1 = loadMatch[4];
+          if (loadOp === "lw") return `${rd} = *(u32*)(${rs1} + ${imm});`;
+          if (loadOp === "lh") return `${rd} = *(i16*)(${rs1} + ${imm});`;
+          if (loadOp === "lhu") return `${rd} = *(u16*)(${rs1} + ${imm});`;
+          if (loadOp === "lb") return `${rd} = *(i8*)(${rs1} + ${imm});`;
+          if (loadOp === "lbu") return `${rd} = *(u8*)(${rs1} + ${imm});`;
+          if (loadOp === "jalr") return `tmp = pc + 4; pc = (${rs1} + ${imm}) & ~1; ${rd} = tmp;`;
+        }
+
+        const storeMatch = normalized.match(/^(\w+)\s+(\w+)\s*,\s*([^)]+)\((\w+)\)$/i);
+        if (storeMatch) {
+          const storeOp = storeMatch[1].toLowerCase();
+          const rs2 = storeMatch[2];
+          const imm = storeMatch[3];
+          const rs1 = storeMatch[4];
+          if (storeOp === "sw") return `*(u32*)(${rs1} + ${imm}) = ${rs2};`;
+          if (storeOp === "sh") return `*(u16*)(${rs1} + ${imm}) = ${rs2};`;
+          if (storeOp === "sb") return `*(u8*)(${rs1} + ${imm}) = ${rs2};`;
+        }
+
+        if (op === "beq") return `if (${a} == ${b}) pc = ${c}; else pc += 4;`;
+        if (op === "bne") return `if (${a} != ${b}) pc = ${c}; else pc += 4;`;
+        if (op === "blt") return `if ((int)${a} < (int)${b}) pc = ${c}; else pc += 4;`;
+        if (op === "bge") return `if ((int)${a} >= (int)${b}) pc = ${c}; else pc += 4;`;
+        if (op === "bltu") return `if (${a} < ${b}) pc = ${c}; else pc += 4;`;
+        if (op === "bgeu") return `if (${a} >= ${b}) pc = ${c}; else pc += 4;`;
+        if (op === "jal") return `tmp = pc + 4; pc = ${c ?? b}; ${a ?? "x1"} = tmp;`;
+        if (op === "lui") return `${a} = ${b} << 12;`;
+        if (op === "auipc") return `${a} = pc + (${b} << 12);`;
+        if (op === "ecall") return "trap_ecall();";
+
+        return normalized;
+      }
+
+      function buildClikeMap(disasm) {
+        const map = new Map();
+        for (const line of disasm ?? []) {
+          if (!line.label) {
+            map.set(line.pc, translateRiscvToClike(line.text));
+          }
+        }
+        return map;
+      }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        if (window.matchMedia("(max-width: 767px)").matches) {
+          return;
+        }
+
+        const sourceEl = document.getElementById("landingMiniSource");
+        const assembleBtn = document.getElementById("landingMiniAssemble");
+        const stepBtn = document.getElementById("landingMiniStep");
+        const regsEl = document.getElementById("landingMiniRegs");
+        const pseudoEl = document.getElementById("landingMiniPseudo");
+        const statusEl = document.getElementById("landingMiniStatus");
+
+        if (
+          !(sourceEl instanceof HTMLTextAreaElement) ||
+          !(assembleBtn instanceof HTMLButtonElement) ||
+          !(stepBtn instanceof HTMLButtonElement) ||
+          !(regsEl instanceof HTMLElement) ||
+          !(pseudoEl instanceof HTMLElement) ||
+          !(statusEl instanceof HTMLElement)
+        ) {
+          return;
+        }
+
+        sourceEl.value = MINI_PROGRAM;
+        assembleBtn.disabled = true;
+        stepBtn.disabled = true;
+
+        let parseAssembly;
+        let WasmRuntime;
+        let escapeHtml;
+        let formatClikeExpression;
+        let renderClikeExpression;
+        let hex32;
+        let runtime;
+
+        try {
+          const [{ parseAssembly: parseAssemblyImpl }, { WasmRuntime: WasmRuntimeImpl }, format] = await Promise.all([
+            import("./src/asm.ts"),
+            import("./src/wasm-runtime.ts"),
+            import("./src/format.ts"),
+          ]);
+
+          parseAssembly = parseAssemblyImpl;
+          WasmRuntime = WasmRuntimeImpl;
+          ({ escapeHtml, formatClikeExpression, renderClikeExpression, hex32 } = format);
+          runtime = await WasmRuntime.create();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          statusEl.textContent = "Runtime unavailable.";
+          statusEl.classList.add("is-error");
+          pseudoEl.innerHTML = `<span class="mini-sim__error">${String(message)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;")}</span>`;
+          return;
+        }
+
+        let clikeByPc = new Map();
+        let previousRegs = Array.from({ length: 32 }, () => 0);
+        let currentRegs = Array.from({ length: 32 }, () => 0);
+        let assembled = false;
+
+        function setStatus(message, isError = false) {
+          statusEl.textContent = message;
+          statusEl.classList.toggle("is-error", isError);
+        }
+
+        function renderRegs(changed = new Set()) {
+          regsEl.innerHTML = MINI_ABI.map((abi, index) => {
+            const classes = ["mini-sim__register"];
+            if (changed.has(index)) {
+              classes.push("is-changed");
+            }
+            return `
+              <div class="${classes.join(" ")}">
+                <span class="mini-sim__register-name">${escapeHtml(abi)} <span>x${index}</span></span>
+                <span class="mini-sim__register-value">${hex32(currentRegs[index] ?? 0)}</span>
+              </div>
+            `;
+          }).join("");
+        }
+
+        function renderPseudo(message, isError = false) {
+          if (isError) {
+            pseudoEl.innerHTML = `<span class="mini-sim__error">${escapeHtml(message)}</span>`;
+            return;
+          }
+
+          const parts = formatClikeExpression(message);
+          pseudoEl.innerHTML = renderClikeExpression(parts);
+        }
+
+        function syncPseudoForPc(pc) {
+          const expression = clikeByPc.get(pc) ?? "";
+          if (!expression) {
+            pseudoEl.innerHTML = '<span class="mini-sim__empty">assemble to begin</span>';
+            return;
+          }
+          renderPseudo(expression, false);
+        }
+
+        function assembleMiniProgram() {
+          try {
+            const parsed = parseAssembly(sourceEl.value);
+            runtime.loadProgram(parsed.instructions);
+            runtime.reset();
+            clikeByPc = buildClikeMap(parsed.disasm);
+            previousRegs = runtime.readRegisters();
+            currentRegs = previousRegs.slice();
+            assembled = true;
+            renderRegs(new Set());
+            syncPseudoForPc(runtime.pc());
+            setStatus("Assembled. Ready to step.");
+            stepBtn.disabled = false;
+          } catch (error) {
+            assembled = false;
+            clikeByPc = new Map();
+            renderRegs(new Set());
+            renderPseudo(error instanceof Error ? error.message : String(error), true);
+            setStatus("Assembly failed.", true);
+            stepBtn.disabled = true;
+          }
+        }
+
+        function stepMiniProgram() {
+          if (!assembled) {
+            assembleMiniProgram();
+            return;
+          }
+
+          try {
+            const delta = runtime.step();
+            const nextRegs = runtime.readRegisters();
+            const changed = new Set();
+            nextRegs.slice(0, 8).forEach((value, index) => {
+              if (value !== previousRegs[index]) {
+                changed.add(index);
+              }
+            });
+            currentRegs = nextRegs.slice();
+            previousRegs = nextRegs.slice();
+            renderRegs(changed);
+            syncPseudoForPc(delta.pc);
+            if (delta.halted) {
+              setStatus("Program halted.");
+              stepBtn.disabled = true;
+            } else {
+              setStatus(`Stepped to ${hex32(delta.pc)}.`);
+            }
+          } catch (error) {
+            setStatus("Execution trapped.", true);
+            renderPseudo(error instanceof Error ? error.message : String(error), true);
+            stepBtn.disabled = true;
+          }
+        }
+
+        assembleBtn.disabled = false;
+        stepBtn.disabled = false;
+        assembleBtn.addEventListener("click", assembleMiniProgram);
+        stepBtn.addEventListener("click", stepMiniProgram);
+
+        assembleMiniProgram();
       });
     </script>
   </body>
