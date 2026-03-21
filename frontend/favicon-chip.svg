@@ -39,11 +39,11 @@
     </g>
 
     <!-- chip body -->
-    <rect x="8" y="8" width="48" height="48" rx="8.5"
+    <rect x="8" y="8" width="48" height="48" rx="3"
           fill="url(#body)" stroke="#1a7fa8" stroke-width="2.5"/>
 
     <!-- inner core -->
-    <rect x="17" y="17" width="30" height="30" rx="4.5"
+    <rect x="17" y="17" width="30" height="30" rx="1.5"
           fill="#17324a" stroke="#1a7fa8" stroke-width="2.1"/>
   </g>
 </svg>
