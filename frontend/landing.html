@@ -72,9 +72,105 @@
         </div>
         <nav class="landing-nav__links">
           <div class="landing-nav__link-row">
-            <a href="/simulator/">Simulator</a>
-            <a href="/about/">About</a>
-            <a href="/docs/">Docs</a>
+            <div class="nav-dropdown" data-dropdown>
+              <button class="nav-dropdown__trigger" type="button" aria-expanded="false" aria-haspopup="true">
+                <span>Product</span>
+                <svg class="nav-dropdown__chevron" viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M2.5 4.5 6 8l3.5-3.5"></path>
+                </svg>
+              </button>
+              <div class="nav-dropdown__panel" hidden>
+                <a class="nav-dropdown__item" href="/simulator/">
+                  <span class="nav-dropdown__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9">
+                      <path d="M4 12h11"></path>
+                      <path d="m11 5 7 7-7 7"></path>
+                      <path d="M4 5v14"></path>
+                    </svg>
+                  </span>
+                  <span class="nav-dropdown__copy">
+                    <span class="nav-dropdown__title">Open Simulator</span>
+                    <span class="nav-dropdown__desc">Step through RISC-V assembly in your browser</span>
+                  </span>
+                </a>
+                <a class="nav-dropdown__item" href="/simulator/">
+                  <span class="nav-dropdown__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9">
+                      <rect x="5" y="6" width="14" height="4" rx="1.5"></rect>
+                      <rect x="5" y="10" width="14" height="4" rx="1.5"></rect>
+                      <rect x="5" y="14" width="14" height="4" rx="1.5"></rect>
+                    </svg>
+                  </span>
+                  <span class="nav-dropdown__copy">
+                    <span class="nav-dropdown__title">Call Stack Visualizer</span>
+                    <span class="nav-dropdown__desc">Watch stack frames build live</span>
+                  </span>
+                </a>
+                <a class="nav-dropdown__item" href="/simulator/">
+                  <span class="nav-dropdown__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9">
+                      <path d="M8 8 4 12l4 4"></path>
+                      <path d="m16 8 4 4-4 4"></path>
+                      <path d="M10 19h4"></path>
+                    </svg>
+                  </span>
+                  <span class="nav-dropdown__copy">
+                    <span class="nav-dropdown__title">Pseudo-C Explainer</span>
+                    <span class="nav-dropdown__desc">Assembly translated to readable C</span>
+                  </span>
+                </a>
+              </div>
+            </div>
+            <div class="nav-dropdown" data-dropdown>
+              <button class="nav-dropdown__trigger" type="button" aria-expanded="false" aria-haspopup="true">
+                <span>Resources</span>
+                <svg class="nav-dropdown__chevron" viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M2.5 4.5 6 8l3.5-3.5"></path>
+                </svg>
+              </button>
+              <div class="nav-dropdown__panel" hidden>
+                <a class="nav-dropdown__item" href="/about/">
+                  <span class="nav-dropdown__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9">
+                      <circle cx="12" cy="8" r="3.5"></circle>
+                      <path d="M5 20c1.8-3.5 4.2-5 7-5s5.2 1.5 7 5"></path>
+                    </svg>
+                  </span>
+                  <span class="nav-dropdown__copy">
+                    <span class="nav-dropdown__title">About</span>
+                    <span class="nav-dropdown__desc">Who built this and why</span>
+                  </span>
+                </a>
+                <a class="nav-dropdown__item" href="/docs/">
+                  <span class="nav-dropdown__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9">
+                      <path d="M6 4.5A2.5 2.5 0 0 1 8.5 2H20v20H8.5A2.5 2.5 0 0 0 6 24"></path>
+                      <path d="M6 4.5v17"></path>
+                      <path d="M10 7h7M10 11h7M10 15h5"></path>
+                    </svg>
+                  </span>
+                  <span class="nav-dropdown__copy">
+                    <span class="nav-dropdown__title">Docs</span>
+                    <span class="nav-dropdown__desc">Instruction reference and guides</span>
+                  </span>
+                </a>
+                <a class="nav-dropdown__item" href="/docs/#ece-2035">
+                  <span class="nav-dropdown__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9">
+                      <path d="M5 6h14"></path>
+                      <path d="M7 4v4"></path>
+                      <path d="M17 4v4"></path>
+                      <rect x="4" y="6" width="16" height="14" rx="2"></rect>
+                      <path d="M8 11h8M8 15h5"></path>
+                    </svg>
+                  </span>
+                  <span class="nav-dropdown__copy">
+                    <span class="nav-dropdown__title">ECE 2035 Guide</span>
+                    <span class="nav-dropdown__desc">Georgia Tech course reference</span>
+                  </span>
+                </a>
+              </div>
+            </div>
             <a href="https://github.com/rawcache" target="_blank" rel="noreferrer">GitHub</a>
           </div>
           <div class="auth-nav">
@@ -105,8 +201,11 @@
         </nav>
         <div id="landingNavMobileMenu" class="landing-nav__mobile-menu" hidden>
           <a href="/simulator/">Simulator</a>
+          <a href="/simulator/">Call Stack Visualizer</a>
+          <a href="/simulator/">Pseudo-C Explainer</a>
           <a href="/about/">About</a>
           <a href="/docs/">Docs</a>
+          <a href="/docs/#ece-2035">ECE 2035 Guide</a>
           <a href="https://github.com/rawcache" target="_blank" rel="noreferrer">GitHub</a>
         </div>
       </div>
@@ -121,11 +220,11 @@
               <span>Free for GT students</span>
             </div>
             <h1 class="hero__title">
-              <span class="hero__title-row">
+              <span class="hero__title-line hero__title-line--primary">
                 <span class="hero-word" style="--word-delay: 0ms">Learn</span>
                 <span class="hero-word" style="--word-delay: 80ms">RISC-V.</span>
               </span>
-              <span class="hero__title-row">
+              <span class="hero__title-line hero__title-line--accent">
                 <span class="hero-word" style="--word-delay: 200ms">See</span>
                 <span class="hero-word" style="--word-delay: 260ms">the</span>
                 <span class="hero-word" style="--word-delay: 320ms">machine</span>
@@ -143,9 +242,9 @@
               </a>
             </div>
             <div class="hero__trust" aria-label="Product trust signals">
-              <span>Local-first · Rust + WASM</span>
-              <span>RV32I + M extension</span>
-              <span>101 passing tests</span>
+              <span>No install required</span>
+              <span>Free for GT students</span>
+              <span>Step-by-step execution</span>
             </div>
           </div>
 
@@ -193,48 +292,6 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
                 </div>
               </section>
 
-              <section class="mini-sim-mock" aria-hidden="true">
-                <div class="mini-sim__bar">
-                  <div class="mini-sim__dots">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                  <span class="mini-sim__label">try it →</span>
-                </div>
-                <div class="mini-sim-mock__body">
-                  <pre class="mini-sim-mock__code"># Add two numbers
-addi x1, x0, 10
-addi x2, x0, 20
-add  x3, x1, x2</pre>
-                  <div class="mini-sim-mock__regs">
-                    <span>x1 0x0000000a</span>
-                    <span>x2 0x00000014</span>
-                    <span>x3 0x0000001e</span>
-                    <span>sp 0x7ffffffc</span>
-                  </div>
-                  <div class="mini-sim-mock__pseudo">
-                    <span class="pc-dest">x3</span>
-                    <span class="pc-op"> = </span>
-                    <span class="pc-src">x1 + x2;</span>
-                  </div>
-                </div>
-              </section>
-
-              <div id="heroCodeWindow" class="hero-code" aria-hidden="true">
-                <div class="hero-code__bar">
-                  <div class="hero-code__dots" role="group" aria-label="Terminal controls">
-                    <button id="heroCodeClose" class="hero-code__window-btn hero-code__window-btn--close" type="button" aria-label="Close terminal"></button>
-                    <button id="heroCodeNext" class="hero-code__window-btn hero-code__window-btn--minimize" type="button" aria-label="Show next program"></button>
-                    <button id="heroCodePulse" class="hero-code__window-btn hero-code__window-btn--maximize" type="button" aria-label="Pulse terminal"></button>
-                  </div>
-                  <span id="heroCodeLabel" class="hero-code__label">sum_loop.s</span>
-                  <span class="hero-code__bar-spacer" aria-hidden="true"></span>
-                </div>
-                <div class="hero-code__body">
-                  <div id="heroCode" class="hero-code__content"></div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -243,14 +300,14 @@ add  x3, x1, x2</pre>
       <section class="proof-strip" aria-label="What StudyRISC-V is built for">
         <div class="landing-shell">
           <div class="proof-strip__row">
-            <span>Georgia Tech</span>
-            <span>RV32IM</span>
-            <span>Rust</span>
-            <span>WebAssembly</span>
-            <span>ECE 2035</span>
-            <span>Open Source</span>
-            <span>Local-First</span>
-            <span>No Server</span>
+            <span>Used in ECE 2035 at Georgia Tech</span>
+            <span>No install · runs in your browser</span>
+            <span>Step back through execution</span>
+            <span>Free for GT students</span>
+            <span>Calling convention visualizer</span>
+            <span>Pseudo-C translation</span>
+            <span>Permalink sharing</span>
+            <span>Dark + light mode</span>
           </div>
         </div>
       </section>
@@ -258,10 +315,8 @@ add  x3, x1, x2</pre>
       <section class="landing-section landing-section--features">
         <div class="landing-shell">
           <div class="section-intro section-intro--center">
-            <h2 class="section-intro__title">Built different.</h2>
-            <p class="section-intro__body">
-              Every other RISC-V simulator shows you results. StudyRISC-V shows you understanding.
-            </p>
+            <h2 class="section-intro__title">Everything you need to actually understand RISC-V.</h2>
+            <p class="section-intro__body">Not just execute it.</p>
           </div>
 
           <div class="feature-grid">
@@ -328,7 +383,10 @@ add  x3, x1, x2</pre>
                 <thead>
                   <tr>
                     <th>Feature</th>
-                    <th class="comparison-table__study-heading">StudyRISC-V</th>
+                    <th class="comparison-table__study-heading">
+                      <span class="comparison-table__badge">Best choice</span>
+                      <span class="comparison-table__heading">StudyRISC-V</span>
+                    </th>
                     <th>Venus</th>
                     <th>RARS</th>
                     <th>CPUlator</th>
@@ -422,9 +480,9 @@ add  x3, x1, x2</pre>
       <section class="landing-section coverage-section">
         <div class="landing-shell">
           <div class="section-intro section-intro--left">
-            <h2 class="section-intro__title section-intro__title--coverage">Full RV32IM coverage.</h2>
+            <h2 class="section-intro__title section-intro__title--coverage">Everything ECE 2035 covers. And more.</h2>
             <p class="section-intro__body section-intro__body--muted">
-              Every instruction taught in ECE 2035 at Georgia Tech.
+              The complete RV32IM instruction set with M extension for multiply and divide.
             </p>
           </div>
           <div class="coverage-pills" aria-label="Supported instruction groups">
@@ -446,8 +504,8 @@ add  x3, x1, x2</pre>
 
       <section class="landing-cta">
         <div class="landing-shell landing-cta__inner">
-          <h2 class="landing-cta__title">The CPU has been waiting.</h2>
-          <p class="landing-cta__subhead">Step through your first instruction.</p>
+          <h2 class="landing-cta__title">Ready to see the machine think?</h2>
+          <p class="landing-cta__subhead">Join GT students and engineers who finally get it.</p>
           <a class="cta cta--primary landing-cta__button" href="/simulator/">Open the Simulator →</a>
           <p class="landing-cta__note">Free · No account required · Runs in your browser</p>
         </div>
@@ -567,6 +625,7 @@ add  x3, x1, x2</pre>
         const body = document.body;
         const nav = document.getElementById("landingNav");
         const themeToggle = document.getElementById("landingThemeToggle");
+        const dropdowns = Array.from(document.querySelectorAll("[data-dropdown]"));
         const heroCodeWindow = document.getElementById("heroCodeWindow");
         const heroCode = document.getElementById("heroCode");
         const heroCodeLabel = document.getElementById("heroCodeLabel");
@@ -735,6 +794,46 @@ add  x3, x1, x2</pre>
           const isDark = root.dataset.theme === "dark";
           themeToggle.setAttribute("aria-pressed", String(isDark));
           themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+        }
+
+        const dropdownTimers = new WeakMap();
+
+        function setDropdownOpen(dropdown, isOpen) {
+          const trigger = dropdown.querySelector(".nav-dropdown__trigger");
+          const panel = dropdown.querySelector(".nav-dropdown__panel");
+          if (!(trigger instanceof HTMLButtonElement) || !(panel instanceof HTMLElement)) {
+            return;
+          }
+          dropdown.classList.toggle("is-open", isOpen);
+          trigger.setAttribute("aria-expanded", String(isOpen));
+          panel.hidden = !isOpen;
+        }
+
+        function clearDropdownTimer(dropdown) {
+          const existing = dropdownTimers.get(dropdown);
+          if (existing) {
+            window.clearTimeout(existing);
+            dropdownTimers.delete(dropdown);
+          }
+        }
+
+        function closeAllDropdowns(except = null) {
+          dropdowns.forEach((dropdown) => {
+            if (dropdown === except) {
+              return;
+            }
+            clearDropdownTimer(dropdown);
+            setDropdownOpen(dropdown, false);
+          });
+        }
+
+        function closeDropdownWithDelay(dropdown, delay = 100) {
+          clearDropdownTimer(dropdown);
+          const timer = window.setTimeout(() => {
+            setDropdownOpen(dropdown, false);
+            dropdownTimers.delete(dropdown);
+          }, delay);
+          dropdownTimers.set(dropdown, timer);
         }
 
         function handleScroll() {
@@ -1487,6 +1586,53 @@ add  x3, x1, x2</pre>
             );
             pillObserver.observe(coverageStrip);
           }
+
+          const hoverCapable = window.matchMedia("(hover: hover)");
+          dropdowns.forEach((dropdown) => {
+            const trigger = dropdown.querySelector(".nav-dropdown__trigger");
+            const panel = dropdown.querySelector(".nav-dropdown__panel");
+            if (!(trigger instanceof HTMLButtonElement) || !(panel instanceof HTMLElement)) {
+              return;
+            }
+
+            dropdown.addEventListener("mouseenter", () => {
+              if (!hoverCapable.matches) {
+                return;
+              }
+              clearDropdownTimer(dropdown);
+              closeAllDropdowns(dropdown);
+              setDropdownOpen(dropdown, true);
+            });
+
+            dropdown.addEventListener("mouseleave", () => {
+              if (!hoverCapable.matches) {
+                return;
+              }
+              closeDropdownWithDelay(dropdown, 100);
+            });
+
+            trigger.addEventListener("click", (event) => {
+              event.preventDefault();
+              const isOpen = dropdown.classList.contains("is-open");
+              closeAllDropdowns(isOpen ? null : dropdown);
+              setDropdownOpen(dropdown, !isOpen);
+            });
+          });
+
+          document.addEventListener("click", (event) => {
+            if (!(event.target instanceof Node)) {
+              return;
+            }
+            if (!dropdowns.some((dropdown) => dropdown.contains(event.target))) {
+              closeAllDropdowns();
+            }
+          });
+
+          document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+              closeAllDropdowns();
+            }
+          });
         });
       })();
     </script>
