@@ -6,7 +6,7 @@ A browser-based RV32IM simulator with step execution, pseudo-C translation, and 
 
 ## Features
 
-StudyRISC-V is built for interactive debugging rather than batch execution. You can assemble source, step forward, step backward through recorded states, or run to completion while inspecting register changes, memory writes, and PC flow. The register file highlights what changed, the memory panel can follow key registers or jump to an explicit address, and the pseudo-C explainer translates the current instruction into a compact C-like expression as you move through the program.
+StudyRISC-V is built for interactive debugging rather t4han batch execution. You can assemble source, step forward, step backward through recorded states, or run to completion while inspecting register changes, memory writes, and PC flow. The register file highlights what changed, the memory panel can follow key registers or jump to an explicit address, and the pseudo-C explainer translates the current instruction into a compact C-like expression as you move through the program.
 
 The assembler supports both instruction and data authoring in one source file. `.data`, `.word`, `.half`, `.byte`, `.ascii`, `.asciz`, `.string`, `.space`, `.align`, and the `la` pseudo are all supported, so array and string examples can be written naturally instead of being hand-built with stores. The effect log can be filtered by register, memory, or PC updates, permalink sharing restores a full program from the URL hash, light and dark mode are built in, and the whole simulator is local-first with no server round-trips or account requirements.
 
@@ -52,16 +52,7 @@ cd frontend && npm run build
 
 ## Authentication
 
-StudyRISC-V uses AWS Cognito for auth. The simulator is fully usable without an account. Signing in with a `@gatech.edu` email unlocks the Pro tier.
-
-## Saved Programs
-
-Signed-in users can save assembly programs to their account.
-
-Free accounts: up to 3 saved programs
-Pro accounts (`@gatech.edu`): unlimited saved programs + history
-
-Programs are stored in DynamoDB via a JWT-authenticated API Gateway endpoint. The API is in `infra/lambda/programs.ts`.
+StudyRISC-V uses AWS Cognito for auth. The simulator is fully usable without an account. Signing in with a `@gatech.edu` email unlocks saved programs (coming soon).
 
 ### Deploying the auth infrastructure
 
@@ -85,34 +76,13 @@ VITE_COGNITO_DOMAIN=<CognitoHostedUiDomain output>
 
 Leave `frontend/.env` absent or use placeholder values. The auth UI will still render on localhost, and Cognito sign-out will return to the landing page. The simulator works fully without completing auth.
 
-### Amplify rewrites
-
-After deploying, add these Amplify Console rewrite rules under Rewrites and redirects so the simulator is served cleanly from `/simulator/`:
-
-```text
-Source: /simulator
-Target: /simulator/index.html
-Type:   200 (rewrite)
-
-Source: /simulator/
-Target: /simulator/index.html
-Type:   200 (rewrite)
-
-Source: /terms/
-Target: /terms/index.html
-Type:   200 (rewrite)
-
-Source: /privacy/
-Target: /privacy/index.html
-Type:   200 (rewrite)
-```
-
 ## Project Structure
 
 ```text
 riscvsim/
 ├── frontend/
-│   ├── landing.html        # Marketing landing page source for /
+│   ├── index.html          # Marketing landing page at /
+│   ├── landing.html        # Legacy redirect to /
 │   ├── simulator/
 │   │   └── index.html      # Simulator app at /simulator/
 │   └── src/
