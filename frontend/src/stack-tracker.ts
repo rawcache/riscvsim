@@ -1,7 +1,8 @@
 import type { Effect, WasmStateDelta } from "./types";
 
 const STACK_POINTER_INIT = 0x7ffffffc;
-const STACK_SCAN_BYTES = 128;
+const STACK_REGION_BASE = 0x70000000;
+const STACK_SCAN_BYTES = 256;
 const MAX_HISTORY = 500;
 const ROOT_RETURN_ADDRESS = -1;
 
@@ -160,6 +161,7 @@ export class StackTracker {
     this.regState[2] = STACK_POINTER_INIT;
     this.memState = new Map<number, number>();
     this.snapshots = [];
+    this.syncSpCurrent();
   }
 
   reset(): void {
@@ -169,6 +171,7 @@ export class StackTracker {
     this.regState[2] = STACK_POINTER_INIT;
     this.memState = new Map<number, number>();
     this.snapshots = [];
+    this.syncSpCurrent();
   }
 
   applyDelta(delta: WasmStateDelta): void {
@@ -191,10 +194,14 @@ export class StackTracker {
       }
     }
 
-    this.callStack.spCurrent = this.regState[2] >>> 0;
+    this.syncSpCurrent();
 
     const touchedStackWords = this.collectTouchedStackWords(delta.effects);
-    if (this.callStack.frames.length === 0 && (this.callStack.spCurrent < this.callStack.spInitial || touchedStackWords.size > 0)) {
+    const stackAllocatedDownward =
+      this.isValidStackPointer(previousSp) &&
+      this.isValidStackPointer(this.callStack.spCurrent) &&
+      this.callStack.spCurrent < previousSp;
+    if (this.callStack.frames.length === 0 && (stackAllocatedDownward || touchedStackWords.size > 0)) {
       this.ensureRootFrame(pcEffect?.before ?? delta.pc ?? 0, previousSp);
     }
 
@@ -268,6 +275,7 @@ export class StackTracker {
     this.callStack = cloneCallStack(snapshot.callStack);
     this.regState = [...snapshot.regState];
     this.memState = new Map(snapshot.memState);
+    this.syncSpCurrent();
   }
 
   private pushHistorySnapshot(): void {
@@ -292,6 +300,18 @@ export class StackTracker {
     return this.callStack.frames[this.callStack.frames.length - 1];
   }
 
+  private syncSpCurrent(): void {
+    this.callStack.spCurrent = this.regState[2] >>> 0;
+    if (this.callStack.spCurrent !== (this.regState[2] >>> 0)) {
+      throw new Error("StackTracker invariant violated: spCurrent must equal regState[2].");
+    }
+  }
+
+  private isValidStackPointer(value: number): boolean {
+    const address = value >>> 0;
+    return address >= STACK_REGION_BASE && address <= this.callStack.spInitial;
+  }
+
   private ensureRootFrame(entryPc: number, baseAddress: number): void {
     if (this.callStack.frames.length > 0) {
       return;
@@ -310,14 +330,14 @@ export class StackTracker {
 
   private collectTouchedStackWords(effects: readonly Effect[]): Set<number> {
     const addresses = new Set<number>();
-    const lowerBound = Math.max(0, (this.callStack.spCurrent >>> 0) - STACK_SCAN_BYTES);
+    const lowerBound = Math.max(STACK_REGION_BASE, (this.callStack.spCurrent >>> 0) - STACK_SCAN_BYTES);
 
     for (const effect of effects) {
       if (effect.kind !== "mem") {
         continue;
       }
       const addr = effect.addr >>> 0;
-      if (addr >= this.callStack.spInitial || addr < lowerBound) {
+      if (addr < STACK_REGION_BASE || addr > this.callStack.spInitial || addr < lowerBound) {
         continue;
       }
       addresses.add(addr & ~0x3);

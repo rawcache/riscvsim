@@ -1251,6 +1251,7 @@ body.simulator-page {
 }
 
 .stack-panel {
+  position: relative;
   overflow: hidden;
 }
 
@@ -1293,20 +1294,15 @@ body.simulator-page {
   display: flex;
   flex-direction: column;
   gap: 0;
-  min-height: 360px;
   padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 .stack-view {
-  position: relative;
-  min-height: 252px;
-  max-height: 336px;
-  overflow: auto;
-  padding: 10px 10px 4px 30px;
-}
-
-.stack-frames-canvas {
-  position: relative;
+  min-height: 0;
+  overflow: visible;
+  padding: 10px 10px 4px 14px;
 }
 
 .stack-frames-scroll {
@@ -1496,12 +1492,13 @@ body.simulator-page {
 
 .stack-direction-label {
   position: absolute;
-  left: -22px;
-  top: 50%;
-  transform: translateY(-50%) rotate(-90deg);
+  left: 6px;
+  top: 128px;
+  transform: rotate(-90deg);
+  transform-origin: top left;
   color: var(--text-muted);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 8px;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -1648,6 +1645,28 @@ body.simulator-page {
   min-height: 28px;
 }
 
+.stack-panel .panel-body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.stack-panel .panel-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.stack-panel .panel-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stack-panel .panel-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.stack-panel .panel-body::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
 .effect-entry {
   min-height: 22px;
   padding: 0 12px;
@@ -1762,8 +1781,8 @@ body.simulator-page {
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 9px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   user-select: none;
 }
 
@@ -2294,12 +2313,11 @@ body.simulator-page {
   }
 
   .stack-panel__body {
-    min-height: 320px;
+    max-height: 300px;
   }
 
   .stack-view {
-    max-height: 300px;
-    padding-left: 24px;
+    padding-left: 14px;
   }
 
   .stack-slot-row {
