@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Docs - StudyRISC-V</title>
+    <meta
+      name="description"
+      content="StudyRISC-V documentation covering the simulator, RV32IM reference, calling convention, and ECE 2035 workflows."
+    />
+    <link rel="canonical" href="https://studyriscv.com/docs/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore storage access failures and fall back to the default theme.
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Inter:wght@400;500;700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css"
+    />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/auth.css" />
+    <link rel="stylesheet" href="../src/styles/landing.css" />
+    <link rel="stylesheet" href="../src/styles/docs.css" />
+    <link rel="icon" type="image/svg+xml" href="../favicon-chip.svg" />
+  </head>
+  <body class="landing-page docs-page">
+    <header id="landingNav" class="landing-nav" aria-label="Main navigation">
+      <div class="landing-nav__inner">
+        <div class="landing-nav__brand-row">
+          <a class="landing-brand" href="/">StudyRISC-V</a>
+          <button
+            id="landingNavToggle"
+            class="landing-nav__mobile-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="landingNavMobileMenu"
+            aria-label="Toggle navigation"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+        <nav class="landing-nav__links">
+          <div class="landing-nav__link-row">
+            <a href="/simulator/">Simulator</a>
+            <a href="/about/">About</a>
+            <a href="/docs/" aria-current="page">Docs</a>
+            <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+          </div>
+          <div class="auth-nav">
+            <button id="auth-signin-btn" class="auth-signin-btn" type="button">Sign in</button>
+            <div class="auth-menu">
+              <button id="auth-user-btn" class="auth-user-btn" type="button" hidden></button>
+              <div id="auth-dropdown" class="auth-dropdown" hidden>
+                <div id="auth-email" class="auth-dropdown__email"></div>
+                <div id="auth-tier" class="auth-dropdown__tier"></div>
+                <div class="auth-dropdown__divider"></div>
+                <button id="auth-signout-btn" class="auth-dropdown__signout" type="button">Sign out</button>
+              </div>
+            </div>
+          </div>
+          <button id="landingThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+            <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path>
+              </svg>
+            </span>
+            <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
+              </svg>
+            </span>
+          </button>
+        </nav>
+        <div id="landingNavMobileMenu" class="landing-nav__mobile-menu" hidden>
+          <a href="/simulator/">Simulator</a>
+          <a href="/about/">About</a>
+          <a href="/docs/" aria-current="page">Docs</a>
+          <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="docs-main">
+      <aside class="docs-sidebar" aria-label="Documentation table of contents">
+        <nav class="docs-sidebar__nav">
+          <div class="docs-sidebar__group">
+            <div class="docs-sidebar__heading">Getting Started</div>
+            <a href="#quick-start" data-docs-link>Quick start</a>
+            <a href="#your-first-program" data-docs-link>Your first program</a>
+            <a href="#controls-reference" data-docs-link>Controls reference</a>
+          </div>
+          <div class="docs-sidebar__group">
+            <div class="docs-sidebar__heading">Simulator Panels</div>
+            <a href="#assembly-editor" data-docs-link>Assembly editor</a>
+            <a href="#disassembly-view" data-docs-link>Disassembly view</a>
+            <a href="#pseudo-c-explainer" data-docs-link>Pseudo-C explainer</a>
+            <a href="#call-stack-visualizer" data-docs-link>Call stack visualizer</a>
+            <a href="#effect-log" data-docs-link>Effect log</a>
+            <a href="#memory-panel" data-docs-link>Memory panel</a>
+            <a href="#register-file" data-docs-link>Register file</a>
+          </div>
+          <div class="docs-sidebar__group">
+            <div class="docs-sidebar__heading">RISC-V Reference</div>
+            <a href="#register-table" data-docs-link>Register table</a>
+            <a href="#instruction-set" data-docs-link>Instruction set</a>
+            <a href="#pseudo-instructions" data-docs-link>Pseudo-instructions</a>
+            <a href="#memory-map" data-docs-link>Memory map</a>
+          </div>
+          <div class="docs-sidebar__group">
+            <div class="docs-sidebar__heading">Calling Convention</div>
+            <a href="#calling-convention-overview" data-docs-link>Overview</a>
+            <a href="#stack-frames" data-docs-link>Stack frames</a>
+            <a href="#caller-vs-callee-saved" data-docs-link>Caller vs callee saved</a>
+            <a href="#example-walkthrough" data-docs-link>Example walkthrough</a>
+          </div>
+          <div class="docs-sidebar__group">
+            <div class="docs-sidebar__heading">ECE 2035</div>
+            <a href="#ece-2035" data-docs-link>Relevant topics</a>
+            <a href="#sample-programs" data-docs-link>Sample programs</a>
+          </div>
+        </nav>
+      </aside>
+
+      <div class="docs-content-shell">
+        <details id="docsMobileToc" class="docs-mobile-toc">
+          <summary>On this page</summary>
+          <nav class="docs-mobile-toc__nav">
+            <a href="#quick-start" data-docs-link>Quick start</a>
+            <a href="#your-first-program" data-docs-link>Your first program</a>
+            <a href="#controls-reference" data-docs-link>Controls reference</a>
+            <a href="#assembly-editor" data-docs-link>Assembly editor</a>
+            <a href="#disassembly-view" data-docs-link>Disassembly view</a>
+            <a href="#pseudo-c-explainer" data-docs-link>Pseudo-C explainer</a>
+            <a href="#call-stack-visualizer" data-docs-link>Call stack visualizer</a>
+            <a href="#effect-log" data-docs-link>Effect log</a>
+            <a href="#memory-panel" data-docs-link>Memory panel</a>
+            <a href="#register-file" data-docs-link>Register file</a>
+            <a href="#register-table" data-docs-link>Register table</a>
+            <a href="#instruction-set" data-docs-link>Instruction set</a>
+            <a href="#pseudo-instructions" data-docs-link>Pseudo-instructions</a>
+            <a href="#memory-map" data-docs-link>Memory map</a>
+            <a href="#calling-convention-overview" data-docs-link>Overview</a>
+            <a href="#stack-frames" data-docs-link>Stack frames</a>
+            <a href="#caller-vs-callee-saved" data-docs-link>Caller vs callee saved</a>
+            <a href="#example-walkthrough" data-docs-link>Example walkthrough</a>
+            <a href="#ece-2035" data-docs-link>Relevant topics</a>
+            <a href="#sample-programs" data-docs-link>Sample programs</a>
+          </nav>
+        </details>
+
+        <article class="docs-content">
+          <section class="docs-section">
+            <h2 id="quick-start" data-docs-target>Getting Started</h2>
+            <h3>Quick start</h3>
+            <p>
+              StudyRISC-V runs entirely in your browser. No installation, no account required. Open
+              the simulator and start typing.
+            </p>
+            <div class="docs-steps">
+              <div class="docs-step">
+                <span class="docs-step__index">1</span>
+                <p>Write or load assembly in the editor.</p>
+              </div>
+              <div class="docs-step">
+                <span class="docs-step__index">2</span>
+                <p>Click Assemble to compile your program.</p>
+              </div>
+              <div class="docs-step">
+                <span class="docs-step__index">3</span>
+                <p>Click Step to execute one instruction at a time.</p>
+              </div>
+            </div>
+
+            <h3 id="your-first-program" data-docs-target>Your first program</h3>
+            <div class="docs-code-block">
+              <pre><code><span class="docs-code__comment"># Your first RISC-V program</span>
+<span class="docs-code__mnemonic">addi</span> <span class="docs-code__register">x1</span>, <span class="docs-code__register">x0</span>, <span class="docs-code__number">10</span>    <span class="docs-code__comment"># x1 = 10</span>
+<span class="docs-code__mnemonic">addi</span> <span class="docs-code__register">x2</span>, <span class="docs-code__register">x0</span>, <span class="docs-code__number">20</span>    <span class="docs-code__comment"># x2 = 20</span>
+<span class="docs-code__mnemonic">add</span>  <span class="docs-code__register">x3</span>, <span class="docs-code__register">x1</span>, <span class="docs-code__register">x2</span>    <span class="docs-code__comment"># x3 = x1 + x2 (should be 30)</span></code></pre>
+            </div>
+            <p>
+              After assembling and stepping three times, <code>x3</code> in the register file will
+              show <code>0x0000001E</code> (30 in decimal).
+            </p>
+            <a class="cta cta--primary docs-button" href="/simulator/#p=U1aIzC8tUkjLLCouUQjyDHbWDVMoKMpPL0rM5UpMSclUqDDUUagw0FEwNFAAAmUgX8EWyIFKGkEkjWCSRkBJI7CkgkKFsQ5EtxFU0hgoCdSuDRLRKM7IL81JUUhKVTA20AQA">
+              Open in Simulator →
+            </a>
+
+            <h3 id="controls-reference" data-docs-target>Controls reference</h3>
+            <div class="docs-table-wrap">
+              <table>
+                <tbody>
+                  <tr><td>Assemble</td><td>Compile the assembly source and load into simulator</td></tr>
+                  <tr><td>Step</td><td>Execute one instruction, advance PC</td></tr>
+                  <tr><td>Step Back</td><td>Undo the last instruction</td></tr>
+                  <tr><td>Run</td><td>Execute continuously until halt or trap</td></tr>
+                  <tr><td>Reset</td><td>Clear all state and return to assembled state</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="docs-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Keyboard</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Enter</td><td>Assemble when the editor is not focused</td></tr>
+                  <tr><td>↓</td><td>Step</td></tr>
+                  <tr><td>Shift+↓</td><td>Step Back</td></tr>
+                  <tr><td>R</td><td>Run / Stop</td></tr>
+                  <tr><td>Escape</td><td>Reset</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="docs-section">
+            <h2 id="assembly-editor" data-docs-target>Simulator Panels</h2>
+            <h3>Assembly editor</h3>
+            <p>Syntax highlighting, line numbers, and tab support make it easy to write class-style assembly quickly.</p>
+            <p><strong>Watch for:</strong> label coloring, inline comments, and the sample selector for fast starting points.</p>
+
+            <h3 id="disassembly-view" data-docs-target>Disassembly view</h3>
+            <p>Shows instruction address, hex encoding, mnemonic, and operands. The highlighted row is the current PC.</p>
+            <p><strong>Watch for:</strong> the highlighted row moving as you step and branch targets snapping into focus.</p>
+
+            <h3 id="pseudo-c-explainer" data-docs-target>Pseudo-C explainer</h3>
+            <p>
+              Translates the current instruction into a C-like expression. <code>x1 = x2 + 10</code>
+              is clearer than <code>addi x1, x2, 10</code> for building intuition.
+            </p>
+            <p><strong>Watch for:</strong> the destination, operator, and source coloring as you step.</p>
+
+            <h3 id="call-stack-visualizer" data-docs-target>Call stack visualizer</h3>
+            <p>Shows live stack frames as functions are called and returned from. Load the Function call sample to see it.</p>
+            <p><strong>Watch for:</strong> saved <code>ra</code>, saved registers, local slots, and the current <code>sp</code> row moving.</p>
+
+            <h3 id="effect-log" data-docs-target>Effect log</h3>
+            <p>Every register change, memory write, and PC update from each step. Use the REG, MEM, and PC filters to focus.</p>
+            <p><strong>Watch for:</strong> branch redirections, stores to memory, and which register changed most recently.</p>
+
+            <h3 id="memory-panel" data-docs-target>Memory panel</h3>
+            <p>Shows a window of memory around a chosen address. Use the follow dropdown to track <code>sp</code> or another register.</p>
+            <p><strong>Watch for:</strong> stack writes landing near <code>0x7FFFFFFC</code> and data segment writes near <code>0x10000000</code>.</p>
+
+            <h3 id="register-file" data-docs-target>Register file</h3>
+            <p>All 32 RISC-V registers with ABI names and current values. Changed registers flash when updated.</p>
+            <p><strong>Watch for:</strong> calling convention groupings, ABI aliases, and hex values stabilizing across steps.</p>
+          </section>
+
+          <section class="docs-section">
+            <h2 id="register-table" data-docs-target>RISC-V Reference</h2>
+            <h3>Register table</h3>
+            <div class="docs-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Register</th>
+                    <th>ABI Name</th>
+                    <th>Role</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>x0</td><td><span class="docs-abi docs-abi--muted">zero</span></td><td>Constant value 0</td></tr>
+                  <tr><td>x1</td><td><span class="docs-abi docs-abi--warning">ra</span></td><td>Return address</td></tr>
+                  <tr><td>x2</td><td><span class="docs-abi docs-abi--danger">sp</span></td><td>Stack pointer</td></tr>
+                  <tr><td>x3</td><td><span class="docs-abi docs-abi--muted">gp</span></td><td>Global pointer</td></tr>
+                  <tr><td>x4</td><td><span class="docs-abi docs-abi--muted">tp</span></td><td>Thread pointer</td></tr>
+                  <tr><td>x5-x7</td><td><span class="docs-abi docs-abi--muted">t0-t2</span></td><td>Temporaries</td></tr>
+                  <tr><td>x8</td><td><span class="docs-abi docs-abi--success">s0/fp</span></td><td>Saved register / frame pointer</td></tr>
+                  <tr><td>x9</td><td><span class="docs-abi docs-abi--success">s1</span></td><td>Saved register</td></tr>
+                  <tr><td>x10-x11</td><td><span class="docs-abi docs-abi--accent">a0-a1</span></td><td>Function args / return values</td></tr>
+                  <tr><td>x12-x17</td><td><span class="docs-abi docs-abi--accent">a2-a7</span></td><td>Function arguments</td></tr>
+                  <tr><td>x18-x27</td><td><span class="docs-abi docs-abi--success">s2-s11</span></td><td>Saved registers</td></tr>
+                  <tr><td>x28-x31</td><td><span class="docs-abi docs-abi--muted">t3-t6</span></td><td>Temporaries</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3 id="instruction-set" data-docs-target>Instruction set</h3>
+            <div class="docs-table-wrap">
+              <table>
+                <thead><tr><th>Arithmetic</th><th>Format</th><th>Operation</th><th>Example</th></tr></thead>
+                <tbody>
+                  <tr><td>add</td><td>rd, rs1, rs2</td><td>rd = rs1 + rs2</td><td>add x3, x1, x2</td></tr>
+                  <tr><td>addi</td><td>rd, rs1, imm</td><td>rd = rs1 + imm</td><td>addi x1, x0, 10</td></tr>
+                  <tr><td>sub</td><td>rd, rs1, rs2</td><td>rd = rs1 - rs2</td><td>sub x3, x1, x2</td></tr>
+                  <tr><td>lui</td><td>rd, imm</td><td>rd = imm &lt;&lt; 12</td><td>lui x1, 0x10000</td></tr>
+                  <tr><td>auipc</td><td>rd, imm</td><td>rd = PC + (imm &lt;&lt; 12)</td><td>auipc x1, 0</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="docs-table-wrap">
+              <table>
+                <thead><tr><th>Comparison</th><th>Format</th><th>Operation</th><th>Example</th></tr></thead>
+                <tbody>
+                  <tr><td>slt</td><td>rd, rs1, rs2</td><td>rd = (rs1 &lt; rs2) ? 1 : 0</td><td>slt x3, x1, x2</td></tr>
+                  <tr><td>slti</td><td>rd, rs1, imm</td><td>rd = (rs1 &lt; imm) ? 1 : 0</td><td>slti x1, x2, 5</td></tr>
+                  <tr><td>sltu</td><td>rd, rs1, rs2</td><td>unsigned compare</td><td>sltu x3, x1, x2</td></tr>
+                  <tr><td>sltiu</td><td>rd, rs1, imm</td><td>unsigned compare with imm</td><td>sltiu x1, x2, 5</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="docs-table-wrap">
+              <table>
+                <thead><tr><th>Bitwise</th><th>Format</th><th>Operation</th><th>Example</th></tr></thead>
+                <tbody>
+                  <tr><td>and</td><td>rd, rs1, rs2</td><td>rd = rs1 &amp; rs2</td><td>and x3, x1, x2</td></tr>
+                  <tr><td>or</td><td>rd, rs1, rs2</td><td>rd = rs1 | rs2</td><td>or x3, x1, x2</td></tr>
+                  <tr><td>xor</td><td>rd, rs1, rs2</td><td>rd = rs1 ^ rs2</td><td>xor x3, x1, x2</td></tr>
+                  <tr><td>andi</td><td>rd, rs1, imm</td><td>rd = rs1 &amp; imm</td><td>andi x1, x2, 15</td></tr>
+                  <tr><td>ori</td><td>rd, rs1, imm</td><td>rd = rs1 | imm</td><td>ori x1, x2, 1</td></tr>
+                  <tr><td>xori</td><td>rd, rs1, imm</td><td>rd = rs1 ^ imm</td><td>xori x1, x2, 1</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="docs-table-wrap">
+              <table>
+                <thead><tr><th>Shifts</th><th>Format</th><th>Operation</th><th>Example</th></tr></thead>
+                <tbody>
+                  <tr><td>sll</td><td>rd, rs1, rs2</td><td>rd = rs1 &lt;&lt; rs2</td><td>sll x3, x1, x2</td></tr>
+                  <tr><td>srl</td><td>rd, rs1, rs2</td><td>rd = rs1 &gt;&gt; rs2 (logical)</td><td>srl x3, x1, x2</td></tr>
+                  <tr><td>sra</td><td>rd, rs1, rs2</td><td>rd = rs1 &gt;&gt; rs2 (arithmetic)</td><td>sra x3, x1, x2</td></tr>
+                  <tr><td>slli</td><td>rd, rs1, imm</td><td>shift left immediate</td><td>slli x1, x2, 2</td></tr>
+                  <tr><td>srli</td><td>rd, rs1, imm</td><td>shift right logical immediate</td><td>srli x1, x2, 1</td></tr>
+                  <tr><td>srai</td><td>rd, rs1, imm</td><td>shift right arithmetic immediate</td><td>srai x1, x2, 1</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="docs-table-wrap">
+              <table>
+                <thead><tr><th>M Extension</th><th>Format</th><th>Operation</th><th>Example</th></tr></thead>
+                <tbody>
+                  <tr><td>mul</td><td>rd, rs1, rs2</td><td>rd = rs1 * rs2 (lower 32 bits)</td><td>mul x3, x1, x2</td></tr>
+                  <tr><td>mulh</td><td>rd, rs1, rs2</td><td>rd = (rs1 * rs2) &gt;&gt; 32 signed</td><td>mulh x3, x1, x2</td></tr>
+                  <tr><td>div</td><td>rd, rs1, rs2</td><td>rd = rs1 / rs2 signed</td><td>div x3, x1, x2</td></tr>
+                  <tr><td>divu</td><td>rd, rs1, rs2</td><td>rd = rs1 / rs2 unsigned</td><td>divu x3, x1, x2</td></tr>
+                  <tr><td>rem</td><td>rd, rs1, rs2</td><td>rd = rs1 % rs2 signed</td><td>rem x3, x1, x2</td></tr>
+                  <tr><td>remu</td><td>rd, rs1, rs2</td><td>rd = rs1 % rs2 unsigned</td><td>remu x3, x1, x2</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="docs-table-wrap">
+              <table>
+                <thead><tr><th>Control flow</th><th>Format</th><th>Operation</th><th>Example</th></tr></thead>
+                <tbody>
+                  <tr><td>jal</td><td>rd, label</td><td>rd = PC+4; PC = label</td><td>jal ra, func</td></tr>
+                  <tr><td>jalr</td><td>rd, rs1, imm</td><td>rd = PC+4; PC = rs1+imm</td><td>jalr x0, ra, 0</td></tr>
+                  <tr><td>beq</td><td>rs1, rs2, label</td><td>if rs1==rs2 branch</td><td>beq x1, x2, done</td></tr>
+                  <tr><td>bne</td><td>rs1, rs2, label</td><td>if rs1!=rs2 branch</td><td>bne x1, x2, loop</td></tr>
+                  <tr><td>blt</td><td>rs1, rs2, label</td><td>if rs1&lt;rs2 branch (signed)</td><td>blt x1, x2, less</td></tr>
+                  <tr><td>bge</td><td>rs1, rs2, label</td><td>if rs1&gt;=rs2 branch (signed)</td><td>bge x1, x2, ge</td></tr>
+                  <tr><td>bltu</td><td>rs1, rs2, label</td><td>unsigned less than</td><td>bltu x1, x2, lessu</td></tr>
+                  <tr><td>bgeu</td><td>rs1, rs2, label</td><td>unsigned greater or equal</td><td>bgeu x1, x2, geu</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="docs-table-wrap">
+              <table>
+                <thead><tr><th>Memory</th><th>Format</th><th>Operation</th><th>Example</th></tr></thead>
+                <tbody>
+                  <tr><td>lw</td><td>rd, imm(rs1)</td><td>rd = mem[rs1+imm] (32-bit)</td><td>lw x3, 0(x1)</td></tr>
+                  <tr><td>lh</td><td>rd, imm(rs1)</td><td>rd = mem[rs1+imm] (16-bit sign-ext)</td><td>lh x3, 0(x1)</td></tr>
+                  <tr><td>lb</td><td>rd, imm(rs1)</td><td>rd = mem[rs1+imm] (8-bit sign-ext)</td><td>lb x3, 0(x1)</td></tr>
+                  <tr><td>lhu</td><td>rd, imm(rs1)</td><td>16-bit zero-extended</td><td>lhu x3, 0(x1)</td></tr>
+                  <tr><td>lbu</td><td>rd, imm(rs1)</td><td>8-bit zero-extended</td><td>lbu x3, 0(x1)</td></tr>
+                  <tr><td>sw</td><td>rs2, imm(rs1)</td><td>mem[rs1+imm] = rs2 (32-bit)</td><td>sw x3, 0(x1)</td></tr>
+                  <tr><td>sh</td><td>rs2, imm(rs1)</td><td>mem[rs1+imm] = rs2 (16-bit)</td><td>sh x3, 0(x1)</td></tr>
+                  <tr><td>sb</td><td>rs2, imm(rs1)</td><td>mem[rs1+imm] = rs2 (8-bit)</td><td>sb x3, 0(x1)</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="docs-table-wrap">
+              <table>
+                <thead><tr><th>System</th><th>Format</th><th>Operation</th><th>Example</th></tr></thead>
+                <tbody>
+                  <tr><td>ecall</td><td></td><td>Environment call (syscall)</td><td>ecall</td></tr>
+                  <tr><td>ebreak</td><td></td><td>Breakpoint</td><td>ebreak</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="docs-callout docs-callout--accent">
+              The M extension (multiply/divide) is part of RV32IM and is covered in ECE 2035 at
+              Georgia Tech. StudyRISC-V supports the full M extension including
+              <code>mul</code>, <code>div</code>, <code>rem</code>, and their unsigned and
+              upper-word variants.
+            </div>
+
+            <h3 id="pseudo-instructions" data-docs-target>Pseudo-instructions</h3>
+            <div class="docs-table-wrap">
+              <table>
+                <thead><tr><th>Pseudo</th><th>Expands to</th><th>Meaning</th></tr></thead>
+                <tbody>
+                  <tr><td>li rd, imm</td><td>addi rd, x0, imm (small) or lui+addi (large imm)</td><td>Load immediate</td></tr>
+                  <tr><td>mv rd, rs</td><td>addi rd, rs, 0</td><td>Copy register</td></tr>
+                  <tr><td>nop</td><td>addi x0, x0, 0</td><td>No operation</td></tr>
+                  <tr><td>j label</td><td>jal x0, label</td><td>Unconditional jump</td></tr>
+                  <tr><td>ret</td><td>jalr x0, ra, 0</td><td>Return from function</td></tr>
+                  <tr><td>call label</td><td>auipc ra, hi20; jalr ra, lo12</td><td>Call function</td></tr>
+                  <tr><td>la rd, lbl</td><td>auipc+addi</td><td>Load address</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3 id="memory-map" data-docs-target>Memory map</h3>
+            <div class="docs-memory-map" aria-label="RISC-V memory map diagram">
+              <div class="docs-memory-map__column">
+                <div class="docs-memory-map__block docs-memory-map__block--stack"></div>
+                <div class="docs-memory-map__block docs-memory-map__block--gap"></div>
+                <div class="docs-memory-map__block docs-memory-map__block--data"></div>
+                <div class="docs-memory-map__block docs-memory-map__block--gap docs-memory-map__block--small"></div>
+                <div class="docs-memory-map__block docs-memory-map__block--text"></div>
+              </div>
+              <div class="docs-memory-map__labels">
+                <div><strong>0x7FFFFFFC</strong><span>Stack (grows down) · sp initialized here</span></div>
+                <div><strong>0x10000000</strong><span>Data segment (.data section)</span></div>
+                <div><strong>0x00000000</strong><span>Text segment (instructions)</span></div>
+              </div>
+            </div>
+            <p class="docs-note">Not to scale.</p>
+          </section>
+
+          <section class="docs-section">
+            <h2 id="calling-convention-overview" data-docs-target>Calling Convention</h2>
+            <p>
+              The RISC-V calling convention is a set of rules that functions agree to follow so they
+              can call each other correctly. StudyRISC-V&apos;s call stack panel visualizes these rules
+              in real time.
+            </p>
+
+            <div class="docs-callout-grid">
+              <div class="docs-callout docs-callout--warning">
+                Caller-saved registers (<code>ra</code>, <code>t0-t6</code>, <code>a0-a7</code>) may be overwritten by any function you call. Save them yourself if you need them after the call.
+              </div>
+              <div class="docs-callout docs-callout--success" id="caller-vs-callee-saved" data-docs-target>
+                Callee-saved registers (<code>s0-s11</code>, <code>sp</code>) must be restored to their original values before a function returns. If you use them, save and restore them.
+              </div>
+            </div>
+
+            <h3 id="stack-frames" data-docs-target>Stack frames</h3>
+            <p>
+              A typical function prologue moves <code>sp</code> downward to allocate space, saves
+              <code>ra</code> and any callee-saved registers it uses, then writes local variables into
+              that frame.
+            </p>
+            <div class="docs-stack-diagram">
+              <div class="docs-stack-diagram__header">
+                <span>example frame</span>
+                <span>16 bytes</span>
+              </div>
+              <div class="docs-stack-diagram__slot docs-stack-diagram__slot--ra">
+                <span>0x7FFFFFF8</span>
+                <span>0x00000028</span>
+                <span>saved ra</span>
+              </div>
+              <div class="docs-stack-diagram__slot docs-stack-diagram__slot--saved">
+                <span>0x7FFFFFF4</span>
+                <span>s0 = 0x00000015</span>
+                <span>saved reg</span>
+              </div>
+              <div class="docs-stack-diagram__slot docs-stack-diagram__slot--local">
+                <span>0x7FFFFFF0</span>
+                <span>0x00000015</span>
+                <span>local var</span>
+              </div>
+              <div class="docs-stack-diagram__sp">
+                <span>→ sp</span>
+                <span>0x7FFFFFEC</span>
+              </div>
+            </div>
+
+            <h3 id="example-walkthrough" data-docs-target>Example walkthrough</h3>
+            <ol class="docs-walkthrough">
+              <li>
+                <strong><code>addi sp, sp, -16</code></strong>
+                <p>Allocates a new stack frame by moving the stack pointer down 16 bytes.</p>
+                <p>This is the start of the function prologue.</p>
+              </li>
+              <li>
+                <strong><code>sw ra, 12(sp)</code> and <code>sw s0, 8(sp)</code></strong>
+                <p>Saves the return address and a callee-saved register into the new frame.</p>
+                <p>This follows the rule that anything you promise to preserve must be restored before return.</p>
+              </li>
+              <li>
+                <strong><code>addi a0, x0, 21</code> and <code>jal ra, double</code></strong>
+                <p>Places the argument in <code>a0</code> and calls the callee, writing the return address into <code>ra</code>.</p>
+                <p>The call stack panel pushes a new frame when this happens.</p>
+              </li>
+              <li>
+                <strong><code>add a0, a0, a0</code></strong>
+                <p>The callee computes its result in <code>a0</code>, which is where return values belong.</p>
+                <p>This is why argument registers double as return-value registers.</p>
+              </li>
+              <li>
+                <strong><code>lw ra, 4(sp)</code>, <code>addi sp, sp, 8</code>, <code>jalr x0, ra, 0</code></strong>
+                <p>Restores the saved return address, deallocates the callee frame, and jumps back to the caller.</p>
+                <p>The call stack panel collapses the frame and shows the symmetry of call and return.</p>
+              </li>
+            </ol>
+            <div class="docs-code-block">
+              <pre><code><span class="docs-code__comment"># Watch the CALL STACK panel on the right.</span>
+<span class="docs-code__comment"># Step through to see the frame grow, save ra and s0, call double, and return.</span>
+main:
+  <span class="docs-code__mnemonic">addi</span> <span class="docs-code__register">sp</span>, <span class="docs-code__register">sp</span>, <span class="docs-code__number">-16</span>
+  <span class="docs-code__mnemonic">sw</span>   <span class="docs-code__register">ra</span>, <span class="docs-code__number">12</span>(<span class="docs-code__register">sp</span>)
+  <span class="docs-code__mnemonic">sw</span>   <span class="docs-code__register">s0</span>, <span class="docs-code__number">8</span>(<span class="docs-code__register">sp</span>)
+  <span class="docs-code__mnemonic">addi</span> <span class="docs-code__register">a0</span>, <span class="docs-code__register">x0</span>, <span class="docs-code__number">21</span>
+  <span class="docs-code__mnemonic">jal</span>  <span class="docs-code__register">ra</span>, <span class="docs-code__label">double</span>
+double:
+  <span class="docs-code__mnemonic">addi</span> <span class="docs-code__register">sp</span>, <span class="docs-code__register">sp</span>, <span class="docs-code__number">-8</span>
+  <span class="docs-code__mnemonic">sw</span>   <span class="docs-code__register">ra</span>, <span class="docs-code__number">4</span>(<span class="docs-code__register">sp</span>)
+  <span class="docs-code__mnemonic">add</span>  <span class="docs-code__register">a0</span>, <span class="docs-code__register">a0</span>, <span class="docs-code__register">a0</span>
+  <span class="docs-code__mnemonic">jalr</span> <span class="docs-code__register">x0</span>, <span class="docs-code__register">ra</span>, <span class="docs-code__number">0</span></code></pre>
+            </div>
+            <a class="cta cta--primary docs-button" href="/simulator/#p=dVLBjtMwFLz7K0bqZReVKC0LqipxWFXiworLInF-Gz-SgGMH22nL3_McJyW0iyVH1nvjeTPjrPCNYtUgNozD49MTnr8-Hj6jJ8sGzo5139ZNLNQKz5F7qXg31HLDITDvpbwppEPVT3z31DHIGFdRZI1TGxuQ1i1Cvx73280HubAt4AlkNUKJQEeBClvHnfO_86VwEti7Al_4NLH2Q2gSZcMWP8igkjEB2g0vhgX7UOBTxrm-X-A8PMfB2yCY96JzHOa5bkNkH-QUovOslbQPwtjaGpWzR7axFfdaJElnOevufC_krUQ2EeOMN9iqjlq7V9dmkdbqEkn2osJJqp7W2GzvQn-PCZWSmFhTaqItZGgo19j9Rc7QUOZ5JO2z7O1mbpOvh0487KWmUlrjtGxgxiRTc37dcZpCJS7rIigMJirzuuYpQOlkxK3UGTGrndOZwhGE5qt8XvgXRkdpa2c549hqlQVfB71bmuKbmB9usxO9QoExO1oYX6XTx_RJj2peZ1iY_kfHDreW1PgTJiOJp1xwpHdWyd3-f4YbMvEP">
+              Try it in the simulator →
+            </a>
+          </section>
+
+          <section class="docs-section">
+            <h2 id="ece-2035" data-docs-target>ECE 2035 at Georgia Tech</h2>
+            <p>
+              StudyRISC-V was built while taking ECE 2035 (Processor Design) at Georgia Tech. The
+              simulator covers the full RV32IM subset used in that course.
+            </p>
+            <div class="docs-table-wrap">
+              <table>
+                <thead><tr><th>Topic</th><th>Feature</th></tr></thead>
+                <tbody>
+                  <tr><td>Assembly programming fundamentals</td><td>Editor with syntax highlighting, built-in samples</td></tr>
+                  <tr><td>Register file and data types</td><td>Live register panel, ABI name labels, hex/decimal context</td></tr>
+                  <tr><td>Memory addressing and load/store</td><td>Memory panel with address following, byte-level view</td></tr>
+                  <tr><td>Control flow (branches and jumps)</td><td>Disassembly with PC highlighting, effect log</td></tr>
+                  <tr><td>Function calls and calling convention</td><td>Call stack visualizer that shows frame building live</td></tr>
+                  <tr><td>M extension (multiply/divide)</td><td>Full mul/div/rem support including edge cases</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="docs-callout docs-callout--accent docs-signup-callout">
+              <p>
+                If you are a Georgia Tech student, sign up with your <code>@gatech.edu</code> email
+                for a Pro account. Free forever.
+              </p>
+              <button id="docsSignupCta" class="cta cta--primary" type="button">Sign up free →</button>
+            </div>
+
+            <h3 id="sample-programs" data-docs-target>Sample programs</h3>
+            <p>
+              Start with the calling convention demo or recursive factorial if you want to see stack
+              growth clearly. For data-segment practice, use the built-in string copy or bubble sort
+              examples.
+            </p>
+          </section>
+        </article>
+      </div>
+    </main>
+
+    <footer class="landing-footer">
+      <div class="landing-footer__links">
+        <a href="/terms/">Terms of service</a>
+        <span class="landing-footer__separator" aria-hidden="true">·</span>
+        <a href="/privacy/">Privacy policy</a>
+        <span class="landing-footer__separator" aria-hidden="true">·</span>
+        <a href="/privacy/#do-not-sell">Do not sell my personal information</a>
+      </div>
+      <p class="landing-footer__copyright">© 2026 StudyRISC-V. Built by Satchit Seth.</p>
+    </footer>
+
+    <script type="module" src="../src/docs-page.ts"></script>
+  </body>
+</html>

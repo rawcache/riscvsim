@@ -55,14 +55,14 @@ const TRAP_LABELS: Record<string, string> = {
 const REGISTER_GROUPS = {
   left: [
     { label: "special", indices: [0, 1, 2, 3, 4] },
-    { label: "temporaries", indices: [5, 6, 7] },
+    { label: "temp", indices: [5, 6, 7] },
     { label: "saved", indices: [8, 9] },
-    { label: "args / return", indices: [10, 11, 12, 13, 14, 15] },
+    { label: "args", indices: [10, 11, 12, 13, 14, 15] },
   ],
   right: [
-    { label: "args (cont)", indices: [16, 17] },
-    { label: "saved (cont)", indices: [18, 19, 20, 21, 22, 23, 24, 25, 26, 27] },
-    { label: "temp (cont)", indices: [28, 29, 30, 31] },
+    { label: "args", indices: [16, 17] },
+    { label: "saved", indices: [18, 19, 20, 21, 22, 23, 24, 25, 26, 27] },
+    { label: "temp", indices: [28, 29, 30, 31] },
   ],
 } as const;
 
@@ -205,7 +205,7 @@ export function formatClikeExpression(expression?: string): ClikeExpressionParts
 
 export function renderClikeExpression(parts?: ClikeExpressionParts | null): string {
   if (!parts) {
-    return '<span class="clike-empty">Step a program to inspect the current instruction.</span>';
+    return '<span class="clike-empty">Assemble a program and step to see the translation.</span>';
   }
 
   if (!parts.dest && !parts.op) {

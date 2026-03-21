@@ -1,0 +1,241 @@
+body.about-page {
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 10%, transparent), transparent 28%),
+    var(--bg-base);
+}
+
+.about-page main.about-main {
+  width: min(860px, calc(100% - 2 * var(--space-6)));
+  margin: 0 auto;
+  padding: 72px 0 96px;
+}
+
+.about-hero {
+  display: grid;
+  gap: 18px;
+}
+
+.about-hero__title {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(32px, 5.4vw, 42px);
+  font-weight: 700;
+  line-height: 1.08;
+}
+
+.about-hero__title-accent {
+  color: var(--accent);
+}
+
+.about-hero__subhead {
+  max-width: 560px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.about-section {
+  margin-top: 72px;
+}
+
+.about-eyebrow {
+  display: inline-flex;
+  margin-bottom: 20px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.about-problem {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.9fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.about-problem__copy h2,
+.about-builder__copy h2,
+.about-mission__inner h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 20px;
+}
+
+.about-problem__copy p,
+.about-builder__bio p,
+.about-mission__inner p,
+.about-tech__note {
+  margin: 16px 0 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.about-problem__copy code {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.about-quote-card {
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+
+.about-quote-card__mark {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 48px;
+  line-height: 1;
+}
+
+.about-quote-card__body {
+  margin: 16px 0 0;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.about-quote-card__attribution {
+  margin: 20px 0 0;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.about-builder {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.about-builder__photo-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.about-builder__photo {
+  width: 120px;
+  height: 120px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top;
+  background: var(--bg-elevated);
+  transition: border-color 200ms ease;
+}
+
+.about-builder__photo:hover {
+  border-color: var(--accent);
+}
+
+.about-builder__role {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.about-builder__bio {
+  margin-top: 16px;
+}
+
+.about-builder__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.about-builder__link:hover {
+  color: var(--accent);
+}
+
+.about-mission {
+  margin-top: 72px;
+  padding: 48px 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--bg-elevated);
+}
+
+.about-mission__inner {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.about-mission__inner h2 {
+  font-size: 22px;
+}
+
+.about-mission__inner .cta {
+  margin-top: 24px;
+}
+
+.about-tech {
+  text-align: center;
+}
+
+.about-tech__pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.about-tech__pills span {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.about-tech__note {
+  max-width: 620px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 760px) {
+  .about-page main.about-main {
+    width: min(100%, calc(100% - 2 * var(--space-4)));
+    padding: 56px 0 80px;
+  }
+
+  .about-problem,
+  .about-builder {
+    grid-template-columns: 1fr;
+  }
+
+  .about-builder__photo-wrap {
+    justify-content: flex-start;
+  }
+
+  .about-mission {
+    padding: 36px 20px;
+  }
+}

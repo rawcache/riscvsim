@@ -46,6 +46,12 @@ body.landing-page {
   gap: var(--space-4);
 }
 
+.landing-nav__brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .landing-brand {
   font-family: var(--font-display);
   font-size: 18px;
@@ -63,6 +69,73 @@ body.landing-page {
   row-gap: var(--space-2);
   color: var(--text-secondary);
   font-size: 0.95rem;
+}
+
+.landing-nav__link-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.landing-nav__mobile-toggle {
+  display: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition), background-color var(--transition);
+}
+
+.landing-nav__mobile-toggle span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transition: transform 150ms ease, opacity 150ms ease;
+}
+
+.landing-nav__mobile-toggle.is-open span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.landing-nav__mobile-toggle.is-open span:nth-child(2) {
+  opacity: 0;
+}
+
+.landing-nav__mobile-toggle.is-open span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+.landing-nav__mobile-menu {
+  width: 100%;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.landing-nav__mobile-menu a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.landing-nav__mobile-menu a:last-child {
+  border-bottom: 0;
 }
 
 .auth-nav,
@@ -204,6 +277,11 @@ body.landing-page {
 }
 
 .landing-nav__links a:hover {
+  color: var(--text-primary);
+}
+
+.landing-nav__link-row a[aria-current="page"],
+.landing-nav__mobile-menu a[aria-current="page"] {
   color: var(--text-primary);
 }
 
@@ -1455,8 +1533,16 @@ body.loaded .hero__visual {
 
   .landing-nav__links {
     width: 100%;
-    justify-content: flex-start;
+    justify-content: flex-end;
     gap: var(--space-3);
+  }
+
+  .landing-nav__link-row {
+    display: none;
+  }
+
+  .landing-nav__mobile-toggle {
+    display: inline-flex;
   }
 
   .hero__actions {

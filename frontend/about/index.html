@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>About - StudyRISC-V</title>
+    <meta
+      name="description"
+      content="Why StudyRISC-V exists, who built it, and why hardware understanding matters."
+    />
+    <link rel="canonical" href="https://studyriscv.com/about/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore storage access failures and fall back to the default theme.
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Inter:wght@400;500;700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css"
+    />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/auth.css" />
+    <link rel="stylesheet" href="../src/styles/landing.css" />
+    <link rel="stylesheet" href="../src/styles/about.css" />
+    <link rel="icon" type="image/svg+xml" href="../favicon-chip.svg" />
+  </head>
+  <body class="landing-page about-page">
+    <header id="landingNav" class="landing-nav" aria-label="Main navigation">
+      <div class="landing-nav__inner">
+        <div class="landing-nav__brand-row">
+          <a class="landing-brand" href="/">StudyRISC-V</a>
+          <button
+            id="landingNavToggle"
+            class="landing-nav__mobile-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="landingNavMobileMenu"
+            aria-label="Toggle navigation"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+        <nav class="landing-nav__links">
+          <div class="landing-nav__link-row">
+            <a href="/simulator/">Simulator</a>
+            <a href="/about/" aria-current="page">About</a>
+            <a href="/docs/">Docs</a>
+            <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+          </div>
+          <div class="auth-nav">
+            <button id="auth-signin-btn" class="auth-signin-btn" type="button">Sign in</button>
+            <div class="auth-menu">
+              <button id="auth-user-btn" class="auth-user-btn" type="button" hidden></button>
+              <div id="auth-dropdown" class="auth-dropdown" hidden>
+                <div id="auth-email" class="auth-dropdown__email"></div>
+                <div id="auth-tier" class="auth-dropdown__tier"></div>
+                <div class="auth-dropdown__divider"></div>
+                <button id="auth-signout-btn" class="auth-dropdown__signout" type="button">Sign out</button>
+              </div>
+            </div>
+          </div>
+          <button id="landingThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+            <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path>
+              </svg>
+            </span>
+            <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
+              </svg>
+            </span>
+          </button>
+        </nav>
+        <div id="landingNavMobileMenu" class="landing-nav__mobile-menu" hidden>
+          <a href="/simulator/">Simulator</a>
+          <a href="/about/" aria-current="page">About</a>
+          <a href="/docs/">Docs</a>
+          <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="about-main">
+      <section class="about-hero">
+        <h1 class="about-hero__title">
+          <span>Built for engineers</span>
+          <span class="about-hero__title-accent">who want to understand the machine.</span>
+        </h1>
+        <p class="about-hero__subhead">
+          Computer engineering principles are some of the most beautiful ideas in all of technology.
+          StudyRISC-V exists to make them accessible.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <span class="about-eyebrow">Why this exists</span>
+        <div class="about-problem">
+          <div class="about-problem__copy">
+            <h2>The tools weren&apos;t there.</h2>
+            <p>
+              If you want to learn Python, you have Jupyter notebooks, hundreds of interactive tutorials,
+              and tools that meet you where you are. If you want to learn RISC-V assembly, the foundation
+              of modern processor design, you get a dense textbook and a simulator that looks like it was
+              built in 2003.
+            </p>
+            <p>
+              That gap bothered me. The concepts aren&apos;t hard. The execution of a single
+              <code>addi</code> instruction, the way a function call builds a stack frame, the elegance
+              of a load-store architecture, these ideas are genuinely beautiful once you see them clearly.
+              The tools just weren&apos;t showing them clearly.
+            </p>
+            <p>
+              I built StudyRISC-V because I was frustrated taking ECE 2035 at Georgia Tech and watching
+              students struggle not with the concepts, but with the tooling. Venus works. RARS works. But
+              neither of them makes you feel like you understand what the CPU is actually doing.
+            </p>
+          </div>
+          <aside class="about-quote-card">
+            <div class="about-quote-card__mark">&quot;</div>
+            <p class="about-quote-card__body">
+              Hardware is the foundation everything else is built on. As AI reshapes software, the
+              engineers who understand the machine will have an edge that others won&apos;t.
+            </p>
+            <p class="about-quote-card__attribution">— Satchit Seth, Builder</p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="about-section">
+        <span class="about-eyebrow">Who built this</span>
+        <div class="about-builder">
+          <div class="about-builder__photo-wrap">
+            <img class="about-builder__photo" src="/satchit.jpg" alt="Portrait of Satchit Seth" />
+          </div>
+          <div class="about-builder__copy">
+            <h2>Satchit Seth</h2>
+            <p class="about-builder__role">Computer Engineering · Georgia Tech</p>
+            <div class="about-builder__bio">
+              <p>
+                I&apos;m a Computer Engineering student at Georgia Tech and a former Senior Product Manager
+                with 12 years of experience building AI/ML-driven products. I built StudyRISC-V to bridge
+                the gap between the hardware foundations that engineers rarely get to see and the
+                software-first world most of us live in.
+              </p>
+              <p>
+                My background is in product and systems. I&apos;ve worked on lead scoring, fraud detection,
+                and conversational AI. But the more time I spend in CS and CE coursework, the more
+                convinced I am that understanding the machine, the actual electrons-and-gates level, makes
+                you a fundamentally better engineer at every level above it.
+              </p>
+              <p>
+                StudyRISC-V is my attempt to make that understanding more accessible. It&apos;s free for
+                Georgia Tech students and open to everyone.
+              </p>
+            </div>
+            <a class="about-builder__link" href="https://github.com/rawcache" target="_blank" rel="noreferrer">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M9 19c-4.5 1.5-5-2-7-2"></path>
+                <path d="M16 22v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77 5.44 5.44 0 0 0 3.5 8.53c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+              </svg>
+              <span>rawcache</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="about-mission">
+        <div class="about-mission__inner">
+          <h2>The surge of AI makes hardware knowledge more valuable, not less.</h2>
+          <p>
+            Every large language model runs on silicon. Every inference call touches memory hierarchies,
+            cache lines, and instruction pipelines. The engineers who understand those layers will build
+            better systems, debug harder problems, and see around corners that pure software engineers
+            will miss.
+          </p>
+          <p>
+            Computer science education has drifted toward abstraction. StudyRISC-V is a small correction
+            in the other direction.
+          </p>
+          <a class="cta cta--primary" href="/simulator/">Open the Simulator →</a>
+        </div>
+      </section>
+
+      <section class="about-section about-tech">
+        <span class="about-eyebrow">How it&apos;s built</span>
+        <div class="about-tech__pills" aria-label="Technology stack">
+          <span>Rust</span>
+          <span>WebAssembly</span>
+          <span>TypeScript</span>
+          <span>Vite</span>
+          <span>AWS Cognito</span>
+          <span>DynamoDB</span>
+          <span>CDK</span>
+          <span>Amplify</span>
+        </div>
+        <p class="about-tech__note">
+          The simulator core is written in Rust and compiled to WebAssembly. It runs entirely in your
+          browser. No server processes your assembly code. Ever.
+        </p>
+      </section>
+    </main>
+
+    <footer class="landing-footer">
+      <div class="landing-footer__links">
+        <a href="/terms/">Terms of service</a>
+        <span class="landing-footer__separator" aria-hidden="true">·</span>
+        <a href="/privacy/">Privacy policy</a>
+        <span class="landing-footer__separator" aria-hidden="true">·</span>
+        <a href="/privacy/#do-not-sell">Do not sell my personal information</a>
+      </div>
+      <p class="landing-footer__copyright">© 2026 StudyRISC-V. Built by Satchit Seth.</p>
+    </footer>
+
+    <script type="module">
+      import { initSiteShell } from "../src/site-shell.ts";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        void initSiteShell();
+      });
+    </script>
+  </body>
+</html>

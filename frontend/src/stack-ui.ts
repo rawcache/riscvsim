@@ -5,9 +5,6 @@ import { stackFrameKey } from "./stack-tracker";
 const IDLE_EXPLAINER = "Step into a function to see the calling convention.";
 
 type RenderRefs = {
-  panelBody: HTMLElement;
-  summary: HTMLElement;
-  panelToggle: HTMLButtonElement;
   stackView: HTMLElement;
   legendToggle: HTMLButtonElement;
   legendBody: HTMLElement;
@@ -24,8 +21,7 @@ type SlotDescriptor = {
 
 let refs: RenderRefs | null = null;
 let initialized = false;
-let panelCollapsed = false;
-let legendCollapsed = false;
+let legendCollapsed = true;
 let explainerText = IDLE_EXPLAINER;
 let placeholderLabel = "main";
 let currentCallStack: CallStack = {
@@ -69,22 +65,16 @@ function getRefs(): RenderRefs | null {
     return refs;
   }
 
-  const panelBody = document.getElementById("stackPanelBody") as HTMLElement | null;
-  const summary = document.getElementById("stackPanelSummary") as HTMLElement | null;
-  const panelToggle = document.getElementById("stackPanelToggle") as HTMLButtonElement | null;
   const stackView = document.getElementById("callStackView") as HTMLElement | null;
   const legendToggle = document.getElementById("stackLegendToggle") as HTMLButtonElement | null;
   const legendBody = document.getElementById("stackLegendBody") as HTMLElement | null;
   const explainer = document.getElementById("stackExplainer") as HTMLElement | null;
 
-  if (!panelBody || !summary || !panelToggle || !stackView || !legendToggle || !legendBody || !explainer) {
+  if (!stackView || !legendToggle || !legendBody || !explainer) {
     return null;
   }
 
   refs = {
-    panelBody,
-    summary,
-    panelToggle,
     stackView,
     legendToggle,
     legendBody,
@@ -137,16 +127,6 @@ function syncChrome(): void {
     return;
   }
 
-  const visibleFrameCount = validFrameCount(currentCallStack);
-
-  dom.panelBody.hidden = panelCollapsed;
-  dom.panelToggle.setAttribute("aria-expanded", String(!panelCollapsed));
-  dom.panelToggle.classList.toggle("is-collapsed", panelCollapsed);
-  dom.summary.hidden = !panelCollapsed;
-  dom.summary.textContent = `${visibleFrameCount} ${
-    visibleFrameCount === 1 ? "frame" : "frames"
-  } · sp = ${hex32(currentCallStack.spCurrent)}`;
-
   dom.legendBody.hidden = legendCollapsed;
   dom.legendToggle.setAttribute("aria-expanded", String(!legendCollapsed));
   dom.legendToggle.classList.toggle("is-collapsed", legendCollapsed);
@@ -162,11 +142,6 @@ function initialize(): boolean {
   if (!dom) {
     return false;
   }
-
-  dom.panelToggle.addEventListener("click", () => {
-    panelCollapsed = !panelCollapsed;
-    syncChrome();
-  });
 
   dom.legendToggle.addEventListener("click", () => {
     legendCollapsed = !legendCollapsed;
@@ -252,10 +227,6 @@ function frameSizeLabel(callStack: CallStack, frame: StackFrame): string {
 
 function isRenderableFrame(callStack: CallStack, frame: StackFrame): boolean {
   return collectSlots(frame).length > 0 || (safeFrameSize(callStack, frame) ?? 0) > 0;
-}
-
-function validFrameCount(callStack: CallStack): number {
-  return callStack.frames.filter((frame) => isRenderableFrame(callStack, frame)).length;
 }
 
 function renderSlotRows(frame: StackFrame, previousFrame?: StackFrame): string {
@@ -384,17 +355,9 @@ function renderCompressedFrame(frame: StackFrame, callStack: CallStack): string 
 
 function renderEmptyState(callStack: CallStack): string {
   return `
-    <section class="stack-frame-block stack-frame-block--placeholder">
-      <div class="stack-frame-header stack-frame-header--active">
-        <span class="stack-frame-name">${escapeHtml(placeholderLabel)}</span>
-        <span class="stack-frame-size">${hex32(callStack.spCurrent)}</span>
-      </div>
-      <div class="stack-frame-placeholder">
-        <div class="stack-frame-placeholder__sp">sp = ${hex32(callStack.spCurrent)}</div>
-        <div class="stack-frame-placeholder__arrow" aria-hidden="true">↓</div>
-        <div class="stack-frame-placeholder__copy">No active function calls. Step into a function to see frames.</div>
-      </div>
-    </section>
+    <div class="stack-empty-state" aria-label="${escapeHtml(placeholderLabel)} stack frame placeholder">
+      sp = ${hex32(callStack.spCurrent)} · No active frames
+    </div>
   `;
 }
 
