@@ -32,6 +32,14 @@ The assembler supports both instruction and data authoring in one source file. `
 | Data | 0x10000000 | `.data` segment |
 | Stack | 0x7FFFFFFC | `sp` initialized here |
 
+## Call Stack Visualizer
+
+The call stack panel shows live stack frame state as programs execute. Each function call pushes a new frame showing saved registers, local slots, and the return address. Frames animate in and out as calls are made and returned from.
+
+Load the "Function call (calling convention)" or "Recursive factorial" sample programs to see the visualizer in action.
+
+The visualizer derives all state from the step delta stream -- no changes to the Rust core were required.
+
 ## Development Setup
 
 Prerequisites: Rust + `wasm-pack`, Node 18+
@@ -96,6 +104,8 @@ riscvsim/
 │       ├── memory.ts       # Memory panel
 │       ├── format.ts       # Pseudo-C and effect formatting
 │       ├── animator.ts     # Step animations
+│       ├── stack-tracker.ts # Call stack state derived from step deltas
+│       ├── stack-ui.ts     # Call stack visualizer rendering
 │       ├── permalink.ts    # URL state sharing
 │       └── types.ts        # Shared types (StepDelta)
 ├── infra/

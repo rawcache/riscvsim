@@ -145,7 +145,8 @@
                 <option value="arraySum">Array sum (sensor readings)</option>
                 <option value="stringLength">String length</option>
                 <option value="memoryCopy">Memory copy</option>
-                <option value="functionCall">Function call (jal/jalr)</option>
+                <option value="functionCall">Function call (calling convention)</option>
+                <option value="recursiveFactorial">Recursive factorial</option>
                 <option value="tempConvert">Temp conversion (mul/div)</option>
                 <option value="checksum">XOR checksum</option>
                 <option value="bubbleSortData">Bubble sort (data segment)</option>
@@ -263,6 +264,44 @@
                 <div class="clike-label">Pseudo-C</div>
                 <div id="clike" class="clike-view"></div>
               </div>
+            </div>
+          </section>
+
+          <section class="sim-panel stack-panel">
+            <div class="panel-header panel-header--collapsible stack-panel__header">
+              <div class="stack-panel__header-copy">
+                <span>CALL STACK</span>
+                <span id="stackPanelSummary" class="stack-panel__summary" hidden></span>
+              </div>
+              <button
+                id="stackPanelToggle"
+                class="panel-toggle"
+                type="button"
+                aria-expanded="true"
+                aria-controls="stackPanelBody"
+                title="Collapse call stack"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="m6 9 6 6 6-6"></path>
+                </svg>
+              </button>
+            </div>
+            <div id="stackPanelBody" class="panel-body stack-panel__body">
+              <div id="callStackView" class="stack-view" aria-live="polite"></div>
+              <section class="stack-legend">
+                <button
+                  id="stackLegendToggle"
+                  class="stack-legend__toggle"
+                  type="button"
+                  aria-expanded="true"
+                  aria-controls="stackLegendBody"
+                >
+                  <span>Register Roles</span>
+                  <span class="stack-legend__chevron" aria-hidden="true">⌄</span>
+                </button>
+                <div id="stackLegendBody" class="stack-legend__body"></div>
+                <div id="stackExplainer" class="stack-explainer"></div>
+              </section>
             </div>
           </section>
 
