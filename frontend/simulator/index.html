@@ -52,9 +52,28 @@
     <div id="assembleProgress" class="assemble-progress" aria-hidden="true"></div>
     <nav class="sim-nav" aria-label="Simulator navigation">
       <div class="sim-nav__inner">
-        <a class="sim-brand" href="/">StudyRISC-V</a>
+        <div class="sim-nav__brand-row">
+          <a class="sim-brand" href="/">StudyRISC-V</a>
+          <button
+            id="simNavToggle"
+            class="sim-nav__mobile-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="simNavMobileMenu"
+            aria-label="Toggle navigation"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
         <div class="sim-nav__actions">
-          <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+          <div class="sim-nav__links">
+            <a href="/simulator/" aria-current="page">Simulator</a>
+            <a href="/about/">About</a>
+            <a href="/docs/">Docs</a>
+            <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+          </div>
           <span id="statusBadge" class="status-badge status-badge--ready">Ready</span>
           <div class="auth-nav">
             <button id="auth-signin-btn" class="auth-signin-btn" type="button">Sign in</button>
@@ -81,6 +100,12 @@
               </svg>
             </span>
           </button>
+        </div>
+        <div id="simNavMobileMenu" class="sim-nav__mobile-menu" hidden>
+          <a href="/simulator/" aria-current="page">Simulator</a>
+          <a href="/about/">About</a>
+          <a href="/docs/">Docs</a>
+          <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
         </div>
       </div>
     </nav>
@@ -183,33 +208,6 @@
               </div>
 
               <div id="status" class="status-line" aria-live="polite"></div>
-
-              <details class="reg-guide">
-                <summary>Register Guide</summary>
-                <table class="reg-guide__table">
-                  <thead>
-                    <tr>
-                      <th>Register</th>
-                      <th>Mnemonic</th>
-                      <th>Use</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr><td>x0</td><td>zero</td><td>Constant value 0</td></tr>
-                    <tr><td>x1</td><td>ra</td><td>Return address</td></tr>
-                    <tr><td>x2</td><td>sp</td><td>Stack pointer</td></tr>
-                    <tr><td>x3</td><td>gp</td><td>Global pointer</td></tr>
-                    <tr><td>x4</td><td>tp</td><td>Thread pointer</td></tr>
-                    <tr><td>x5-x7</td><td>t0-t2</td><td>Temporaries</td></tr>
-                    <tr><td>x8</td><td>s0/fp</td><td>Saved register / frame pointer</td></tr>
-                    <tr><td>x9</td><td>s1</td><td>Saved register</td></tr>
-                    <tr><td>x10-x11</td><td>a0-a1</td><td>Function args / return values</td></tr>
-                    <tr><td>x12-x17</td><td>a2-a7</td><td>Function arguments</td></tr>
-                    <tr><td>x18-x27</td><td>s2-s11</td><td>Saved registers</td></tr>
-                    <tr><td>x28-x31</td><td>t3-t6</td><td>Temporaries</td></tr>
-                  </tbody>
-                </table>
-              </details>
             </div>
           </section>
 
@@ -253,68 +251,133 @@
         </div>
 
         <div class="sim-column sim-column--center">
-          <section class="sim-panel sim-panel--disasm">
-            <div class="panel-header">
-              <span>Disassembly</span>
-              <span id="pc" class="pc-pill"></span>
-            </div>
-            <div class="panel-body panel-body--compact">
-              <div id="disasm" class="disasm-view" aria-live="polite"></div>
-              <div id="clikeCard" class="clike-card">
-                <div class="clike-label">Pseudo-C</div>
-                <div id="clike" class="clike-view"></div>
-              </div>
-            </div>
-          </section>
-
-          <section class="sim-panel stack-panel">
-            <div class="panel-header panel-header--collapsible stack-panel__header">
-              <div class="stack-panel__header-copy">
-                <span>CALL STACK</span>
-                <span id="stackPanelSummary" class="stack-panel__summary" hidden></span>
-              </div>
+          <section class="sim-panel sim-panel--center-tabs">
+            <div class="center-tabs" role="tablist" aria-label="Simulator center panels">
               <button
-                id="stackPanelToggle"
-                class="panel-toggle"
+                id="centerTabDisassembly"
+                class="center-tab-button is-active"
                 type="button"
-                aria-expanded="true"
-                aria-controls="stackPanelBody"
-                title="Collapse call stack"
+                role="tab"
+                aria-selected="true"
+                aria-controls="centerPanelDisassembly"
+                data-center-tab="disassembly"
               >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path d="m6 9 6 6 6-6"></path>
-                </svg>
+                <span>Disassembly</span>
+              </button>
+              <button
+                id="centerTabCallStack"
+                class="center-tab-button"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="centerPanelCallStack"
+                data-center-tab="call-stack"
+              >
+                <span>Call Stack</span>
+              </button>
+              <button
+                id="centerTabEffects"
+                class="center-tab-button"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="centerPanelEffects"
+                data-center-tab="effects"
+              >
+                <span>Effects</span>
+              </button>
+              <button
+                id="centerTabPseudoC"
+                class="center-tab-button"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="centerPanelPseudoC"
+                data-center-tab="pseudo-c"
+              >
+                <span>Pseudo-C</span>
               </button>
             </div>
-            <div class="stack-direction-label" aria-hidden="true">↓ grows down</div>
-            <div id="stackPanelBody" class="panel-body stack-panel__body">
-              <div id="callStackView" class="stack-view" aria-live="polite"></div>
-              <section class="stack-legend">
-                <button
-                  id="stackLegendToggle"
-                  class="stack-legend__toggle"
-                  type="button"
-                  aria-expanded="true"
-                  aria-controls="stackLegendBody"
-                >
-                  <span>Register Roles</span>
-                  <span class="stack-legend__chevron" aria-hidden="true">⌄</span>
-                </button>
-                <div id="stackLegendBody" class="stack-legend__body"></div>
-                <div id="stackExplainer" class="stack-explainer"></div>
-              </section>
-            </div>
-          </section>
 
-          <section class="sim-panel sim-panel--effects">
-            <div class="panel-header">Effect Log</div>
-            <div class="effect-filter-bar" aria-label="Effect log filters">
-              <button id="effectFilterReg" class="effect-filter-button" type="button" aria-pressed="true">REG</button>
-              <button id="effectFilterMem" class="effect-filter-button" type="button" aria-pressed="true">MEM</button>
-              <button id="effectFilterPc" class="effect-filter-button" type="button" aria-pressed="true">PC</button>
-            </div>
-            <div class="panel-body">
-              <div id="effects" class="effects-view" aria-live="polite"></div>
+            <div class="center-tabs__content">
+              <section
+                id="centerPanelDisassembly"
+                class="center-tab-panel is-active"
+                role="tabpanel"
+                aria-labelledby="centerTabDisassembly"
+                data-center-panel="disassembly"
+              >
+                <div class="center-tab-panel__header">
+                  <span>Disassembly</span>
+                  <span id="pc" class="pc-pill"></span>
+                </div>
+                <div class="center-tab-panel__body center-tab-panel__body--disassembly">
+                  <div id="disasm" class="disasm-view" aria-live="polite"></div>
+                </div>
+              </section>
+
+              <section
+                id="centerPanelCallStack"
+                class="center-tab-panel"
+                role="tabpanel"
+                aria-labelledby="centerTabCallStack"
+                data-center-panel="call-stack"
+                hidden
+              >
+                <div class="center-tab-panel__body center-tab-panel__body--stack">
+                  <div class="stack-tab-layout">
+                    <div class="stack-view-meta">Stack grows ↓</div>
+                    <div id="callStackView" class="stack-view" aria-live="polite"></div>
+                    <section class="stack-legend">
+                      <button
+                        id="stackLegendToggle"
+                        class="stack-legend__toggle"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="stackLegendBody"
+                      >
+                        <span>Register roles</span>
+                        <span class="stack-legend__chevron" aria-hidden="true">⌄</span>
+                      </button>
+                      <div id="stackLegendBody" class="stack-legend__body" hidden></div>
+                      <div id="stackExplainer" class="stack-explainer"></div>
+                    </section>
+                  </div>
+                </div>
+              </section>
+
+              <section
+                id="centerPanelEffects"
+                class="center-tab-panel"
+                role="tabpanel"
+                aria-labelledby="centerTabEffects"
+                data-center-panel="effects"
+                hidden
+              >
+                <div class="effect-filter-bar" aria-label="Effect log filters">
+                  <button id="effectFilterReg" class="effect-filter-button" type="button" aria-pressed="true">REG</button>
+                  <button id="effectFilterMem" class="effect-filter-button" type="button" aria-pressed="true">MEM</button>
+                  <button id="effectFilterPc" class="effect-filter-button" type="button" aria-pressed="true">PC</button>
+                </div>
+                <div class="center-tab-panel__body center-tab-panel__body--effects">
+                  <div id="effects" class="effects-view" aria-live="polite"></div>
+                </div>
+              </section>
+
+              <section
+                id="centerPanelPseudoC"
+                class="center-tab-panel"
+                role="tabpanel"
+                aria-labelledby="centerTabPseudoC"
+                data-center-panel="pseudo-c"
+                hidden
+              >
+                <div class="center-tab-panel__body center-tab-panel__body--pseudo">
+                  <div id="clikeCard" class="clike-card clike-card--tab">
+                    <div id="clike" class="clike-view clike-view--tab"></div>
+                  </div>
+                </div>
+              </section>
             </div>
           </section>
         </div>

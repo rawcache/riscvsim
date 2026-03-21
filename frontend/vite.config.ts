@@ -30,6 +30,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         landing: resolve(__dirname, "landing.html"),
+        about: resolve(__dirname, "about/index.html"),
+        docs: resolve(__dirname, "docs/index.html"),
         terms: resolve(__dirname, "terms/index.html"),
         privacy: resolve(__dirname, "privacy/index.html"),
         termsOfUse: resolve(__dirname, "terms-of-use/index.html"),

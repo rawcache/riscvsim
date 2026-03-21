@@ -64,6 +64,7 @@ type EffectLogEntry =
 type MemoryFollowMode = "none" | "sp" | "a0" | "a1" | "ra";
 
 type StatusState = "ready" | "assembled" | "stepping" | "running" | "halted" | "trap";
+type CenterTabId = "disassembly" | "call-stack" | "effects" | "pseudo-c";
 
 const DEFAULT_EFFECT_FILTERS: EffectLogFilters = {
   reg: true,
@@ -112,12 +113,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   const statusBadgeEl = document.getElementById("statusBadge") as HTMLElement | null;
   const sampleSelect = document.getElementById("sampleSelect") as HTMLSelectElement;
   const themeToggle = document.getElementById("simThemeToggle") as HTMLButtonElement | null;
+  const simNavToggle = document.getElementById("simNavToggle") as HTMLButtonElement | null;
+  const simNavMobileMenu = document.getElementById("simNavMobileMenu") as HTMLElement | null;
   const savedProgramsPanel = document.getElementById("savedProgramsPanel") as HTMLElement | null;
   const savedProgramsBody = document.getElementById("savedProgramsBody") as HTMLElement | null;
   const savedProgramsToggle = document.getElementById("savedProgramsToggle") as HTMLButtonElement | null;
   const historyPanel = document.getElementById("historyPanel") as HTMLElement | null;
   const historyBody = document.getElementById("historyBody") as HTMLElement | null;
   const historyToggle = document.getElementById("historyToggle") as HTMLButtonElement | null;
+  const centerTabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-center-tab]"));
+  const centerTabPanels = Array.from(document.querySelectorAll<HTMLElement>("[data-center-panel]"));
 
   const memoryView = createMemoryView();
   let lastPc: number | undefined;
@@ -130,6 +135,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   let runtime: WasmRuntime | null = null;
   let programsUi: ProgramsUiController | null = null;
   let copyToastTimer: number | null = null;
+  let callStackTabFlashTimer: number | null = null;
   let assembleProgressStartedAt = 0;
   let assembleProgressResetTimer: number | null = null;
   let programDataBytes = new Uint8Array();
@@ -137,6 +143,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   let memoryFollowMode: MemoryFollowMode = "none";
   let effectFilters: EffectLogFilters = { ...DEFAULT_EFFECT_FILTERS };
   let memoryInputInvalidTimer: number | null = null;
+  let activeCenterTab: CenterTabId = "disassembly";
   const sampleOptionLabels = new Map<string, string>(
     Array.from(sampleSelect.options).map((option) => [option.value, option.textContent ?? option.value])
   );
@@ -241,6 +248,75 @@ window.addEventListener("DOMContentLoaded", async () => {
     const isDark = document.documentElement.dataset.theme === "dark";
     themeToggle.setAttribute("aria-pressed", String(isDark));
     themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+  }
+
+  function closeSimNavMenu() {
+    if (!simNavToggle || !simNavMobileMenu) {
+      return;
+    }
+
+    simNavToggle.setAttribute("aria-expanded", "false");
+    simNavToggle.classList.remove("is-open");
+    simNavMobileMenu.hidden = true;
+    simNavMobileMenu.classList.remove("is-open");
+  }
+
+  function toggleSimNavMenu() {
+    if (!simNavToggle || !simNavMobileMenu) {
+      return;
+    }
+
+    const nextExpanded = simNavToggle.getAttribute("aria-expanded") !== "true";
+    simNavToggle.setAttribute("aria-expanded", String(nextExpanded));
+    simNavToggle.classList.toggle("is-open", nextExpanded);
+    simNavMobileMenu.hidden = !nextExpanded;
+    simNavMobileMenu.classList.toggle("is-open", nextExpanded);
+  }
+
+  function setActiveCenterTab(tabId: CenterTabId) {
+    activeCenterTab = tabId;
+
+    for (const button of centerTabButtons) {
+      const isActive = button.dataset.centerTab === tabId;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", String(isActive));
+      button.tabIndex = isActive ? 0 : -1;
+    }
+
+    for (const panel of centerTabPanels) {
+      const isActive = panel.dataset.centerPanel === tabId;
+      panel.classList.toggle("is-active", isActive);
+      panel.hidden = !isActive;
+    }
+  }
+
+  function maybeSwitchToDisassembly(effects: Effect[]): void {
+    const pcEffect = effects.find((effect): effect is Extract<Effect, { kind: "pc" }> => effect.kind === "pc");
+    if (!pcEffect || pcEffect.before === pcEffect.after) {
+      return;
+    }
+
+    if (activeCenterTab === "effects" || activeCenterTab === "pseudo-c") {
+      setActiveCenterTab("disassembly");
+    }
+  }
+
+  function flashCenterTab(tabId: CenterTabId): void {
+    const button = centerTabButtons.find((candidate) => candidate.dataset.centerTab === tabId);
+    if (!button) {
+      return;
+    }
+
+    button.classList.remove("is-flashing");
+    void button.offsetWidth;
+    button.classList.add("is-flashing");
+    if (callStackTabFlashTimer !== null) {
+      window.clearTimeout(callStackTabFlashTimer);
+    }
+    callStackTabFlashTimer = window.setTimeout(() => {
+      button.classList.remove("is-flashing");
+      callStackTabFlashTimer = null;
+    }, 600);
   }
 
   function syncHighlightScroll() {
@@ -1598,7 +1674,54 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
     applyThemeIcon();
   });
+
+  simNavToggle?.addEventListener("click", () => {
+    toggleSimNavMenu();
+  });
+
+  simNavMobileMenu?.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      closeSimNavMenu();
+    });
+  });
+
+  centerTabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const tabId = button.dataset.centerTab as CenterTabId | undefined;
+      if (!tabId) {
+        return;
+      }
+      setActiveCenterTab(tabId);
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    if (
+      simNavToggle &&
+      simNavMobileMenu &&
+      simNavToggle.getAttribute("aria-expanded") === "true" &&
+      event.target instanceof Node &&
+      !simNavToggle.contains(event.target) &&
+      !simNavMobileMenu.contains(event.target)
+    ) {
+      closeSimNavMenu();
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 767) {
+      closeSimNavMenu();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeSimNavMenu();
+    }
+  });
+
   applyThemeIcon();
+  setActiveCenterTab("disassembly");
   setStatus("ready");
   currentUserSession = await initAuthUi({
     onSession(session) {
@@ -1754,6 +1877,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       historyIndex += 1;
       stackTracker.applyDelta(snapshotToDelta(history[historyIndex]));
       renderFromHistory(historyIndex, false);
+      maybeSwitchToDisassembly(history[historyIndex].effects ?? []);
       statusEl.textContent = "Viewing recorded state.";
       setStatus("assembled");
       return;
@@ -1780,8 +1904,12 @@ window.addEventListener("DOMContentLoaded", async () => {
           ? collectCurrentFrameWrites(beforeCallStack, afterCallStack)
           : [];
       renderAll(data);
+      maybeSwitchToDisassembly(delta.effects);
       setCallStackExplainer(buildCallStackExplainer(beforeCallStack, afterCallStack));
       renderCallStack(afterCallStack);
+      if (pushedFrame) {
+        flashCenterTab("call-stack");
+      }
       animateStep(delta);
       if (pushedFrame || poppedFrame || currentFrameWrites.length > 0) {
         window.requestAnimationFrame(() => {
@@ -1935,6 +2063,12 @@ window.addEventListener("DOMContentLoaded", async () => {
       if (!runBtn.disabled) {
         void runBtn.click();
       }
+      return;
+    }
+
+    if (event.key === "Escape" && simNavToggle?.getAttribute("aria-expanded") === "true") {
+      event.preventDefault();
+      closeSimNavMenu();
       return;
     }
 

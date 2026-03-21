@@ -41,10 +41,28 @@
   <body class="landing-page">
     <header id="landingNav" class="landing-nav" aria-label="Main navigation">
       <div class="landing-nav__inner">
-        <a class="landing-brand" href="/">StudyRISC-V</a>
+        <div class="landing-nav__brand-row">
+          <a class="landing-brand" href="/">StudyRISC-V</a>
+          <button
+            id="landingNavToggle"
+            class="landing-nav__mobile-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="landingNavMobileMenu"
+            aria-label="Toggle navigation"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
         <nav class="landing-nav__links">
-          <a href="/simulator/">Simulator</a>
-          <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+          <div class="landing-nav__link-row">
+            <a href="/simulator/">Simulator</a>
+            <a href="/about/">About</a>
+            <a href="/docs/">Docs</a>
+            <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+          </div>
           <div class="auth-nav">
             <button id="auth-signin-btn" class="auth-signin-btn" type="button">Sign in</button>
             <div class="auth-menu">
@@ -71,6 +89,12 @@
             </span>
           </button>
         </nav>
+        <div id="landingNavMobileMenu" class="landing-nav__mobile-menu" hidden>
+          <a href="/simulator/">Simulator</a>
+          <a href="/about/">About</a>
+          <a href="/docs/">Docs</a>
+          <a href="https://github.com/sseth30/riscvsim" target="_blank" rel="noreferrer">GitHub</a>
+        </div>
       </div>
     </header>
 
@@ -218,50 +242,11 @@
       <p class="landing-footer__copyright">© 2026 StudyRISC-V. Built by Satchit Seth.</p>
     </footer>
 
-    <script>
-      (() => {
-        const themeKey = "studyriscv-theme";
-        const root = document.documentElement;
-        const nav = document.getElementById("landingNav");
-        const themeToggle = document.getElementById("landingThemeToggle");
-
-        function syncThemeToggle() {
-          if (!(themeToggle instanceof HTMLButtonElement)) return;
-          const isDark = root.dataset.theme === "dark";
-          themeToggle.setAttribute("aria-pressed", String(isDark));
-          themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
-        }
-
-        function handleScroll() {
-          if (!(nav instanceof HTMLElement)) return;
-          nav.classList.toggle("is-scrolled", window.scrollY > 8);
-        }
-
-        themeToggle?.addEventListener("click", () => {
-          const isDark = root.dataset.theme === "dark";
-          if (isDark) {
-            root.removeAttribute("data-theme");
-            window.localStorage.setItem(themeKey, "light");
-          } else {
-            root.dataset.theme = "dark";
-            window.localStorage.setItem(themeKey, "dark");
-          }
-          syncThemeToggle();
-        });
-
-        document.addEventListener("DOMContentLoaded", () => {
-          syncThemeToggle();
-          handleScroll();
-          window.addEventListener("scroll", handleScroll, { passive: true });
-        });
-      })();
-    </script>
     <script type="module">
-      import "../src/auth-page.ts";
-      import { initAuthUi } from "../src/auth-ui.ts";
+      import { initSiteShell } from "../src/site-shell.ts";
 
       document.addEventListener("DOMContentLoaded", () => {
-        void initAuthUi();
+        void initSiteShell();
       });
     </script>
   </body>
