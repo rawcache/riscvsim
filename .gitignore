@@ -15,6 +15,9 @@ infra/cdk.out/
 # Environment variables (contains real credentials)
 frontend/.env
 
+# AI agent config (local only)
+AGENTS.md
+
 # OS
 .DS_Store
 Thumbs.db
