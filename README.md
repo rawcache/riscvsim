@@ -40,6 +40,17 @@ Load the "Function call (calling convention)" or "Recursive factorial" sample pr
 
 The visualizer derives all state from the step delta stream -- no changes to the Rust core were required.
 
+## Frontend Rewrites
+
+If you deploy on Amplify or another static host, add rewrites for the multi-page routes:
+
+| Source | Target | Status |
+|---|---|---|
+| `/about/` | `/about/index.html` | `200` |
+| `/about` | `/about/index.html` | `200` |
+| `/docs/` | `/docs/index.html` | `200` |
+| `/docs` | `/docs/index.html` | `200` |
+
 ## Development Setup
 
 Prerequisites: Rust + `wasm-pack`, Node 18+
