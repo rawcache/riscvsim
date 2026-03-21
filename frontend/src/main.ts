@@ -2,7 +2,14 @@ import { parseAssembly } from "./asm";
 import "./auth-page";
 import type { UserSession } from "./auth";
 import { initAuthUi } from "./auth-ui";
-import { animateStep, resetAnimator, setAnimationsEnabled } from "./animator";
+import {
+  animateFramePop,
+  animateFramePush,
+  animateSlotWrite,
+  animateStep,
+  resetAnimator,
+  setAnimationsEnabled,
+} from "./animator";
 import { renderDisasm } from "./disasm";
 import {
   escapeHtml,
@@ -17,11 +24,14 @@ import { DATA_BASE } from "./memory-map";
 import { createMemoryView } from "./memory";
 import { pushToUrl, readFromUrl } from "./permalink";
 import { createProgramsUi, type ProgramsUiController } from "./programs-ui";
+import { renderCallStack, setCallStackExplainer, setCallStackPlaceholder, syncCallStackUi } from "./stack-ui";
+import { setStackLabelResolver, StackTracker, type CallStack, type StackFrame } from "./stack-tracker";
 import type { ApiResponse, Effect, WasmStateDelta } from "./types";
 import { WasmRuntime } from "./wasm-runtime";
 
 let sessionId: string | undefined;
 export let currentUserSession: UserSession | null = null;
+const stackTracker = new StackTracker();
 
 interface CurrentProgramState {
   programId: string | null;
@@ -436,6 +446,130 @@ window.addEventListener("DOMContentLoaded", async () => {
     return historyIndex >= 0 ? history[historyIndex] : undefined;
   }
 
+  function normalizeDisasmLabel(labelText: string): string {
+    return labelText.replace(/:\s*$/, "").trim();
+  }
+
+  function buildStackLabelContext(disasm: ApiResponse["disasm"]): {
+    resolve: (pc: number) => string | undefined;
+    firstLabel: string;
+  } {
+    const labelsByPc = new Map<number, string>();
+    let activeLabel: string | undefined;
+    let firstLabel = "main";
+
+    for (const line of disasm ?? []) {
+      if (line.label) {
+        const label = normalizeDisasmLabel(line.text);
+        if (label) {
+          if (firstLabel === "main") {
+            firstLabel = label;
+          }
+          activeLabel = label;
+        }
+        continue;
+      }
+
+      if (activeLabel) {
+        labelsByPc.set(line.pc >>> 0, activeLabel);
+      }
+    }
+
+    return {
+      resolve(pc: number) {
+        return labelsByPc.get(pc >>> 0);
+      },
+      firstLabel,
+    };
+  }
+
+  function snapshotToDelta(snapshot: ApiResponse): WasmStateDelta {
+    return {
+      pc: snapshot.pc ?? 0,
+      halted: snapshot.halted === true,
+      trap: snapshot.trap ?? null,
+      effects: snapshot.effects ?? [],
+    };
+  }
+
+  function currentStackFrame(callStack: CallStack): StackFrame | undefined {
+    return callStack.frames[callStack.frames.length - 1];
+  }
+
+  function frameSlotValues(frame?: StackFrame): Map<number, number> {
+    const values = new Map<number, number>();
+    if (!frame) {
+      return values;
+    }
+
+    for (const saved of frame.savedRegisters) {
+      values.set(saved.address >>> 0, saved.value >>> 0);
+    }
+    for (const slot of frame.localSlots) {
+      values.set(slot.address >>> 0, slot.value >>> 0);
+    }
+
+    return values;
+  }
+
+  function collectCurrentFrameWrites(before: CallStack, after: CallStack): Array<{ address: number; value: number }> {
+    const current = currentStackFrame(after);
+    if (!current) {
+      return [];
+    }
+
+    const previousFrame = before.frames.find(
+      (frame) =>
+        frame.entryPc === current.entryPc &&
+        frame.baseAddress === current.baseAddress &&
+        frame.returnAddress === current.returnAddress
+    );
+    const previousValues = frameSlotValues(previousFrame);
+    const currentValues = frameSlotValues(current);
+    const writes: Array<{ address: number; value: number }> = [];
+
+    for (const [address, value] of currentValues) {
+      if (!previousValues.has(address) || previousValues.get(address) !== value) {
+        writes.push({ address, value });
+      }
+    }
+
+    return writes.sort((left, right) => right.address - left.address);
+  }
+
+  function buildSavedRegisterExplainer(frame?: StackFrame): string | null {
+    if (!frame || frame.savedRegisters.length === 0) {
+      return null;
+    }
+
+    return frame.savedRegisters
+      .slice(0, 2)
+      .map((saved) => `${saved.name} saved at ${hex32(saved.address)}.`)
+      .join(" ");
+  }
+
+  function buildCallStackExplainer(before: CallStack, after: CallStack): string {
+    if (after.frames.length < before.frames.length) {
+      return "Restoring saved registers. Returning to ra.";
+    }
+
+    const current = currentStackFrame(after);
+    const savedRegisterNarration = buildSavedRegisterExplainer(current);
+    if (savedRegisterNarration) {
+      return savedRegisterNarration;
+    }
+
+    if (after.frames.length > before.frames.length && current) {
+      return `Entered ${current.functionLabel}. Watch the frame build downward.`;
+    }
+
+    if (!current) {
+      return "Step into a function to see the calling convention.";
+    }
+
+    return `Current frame: ${current.functionLabel}. Watch where sp moves next.`;
+  }
+
   function resolveMemoryWindowBase(regs?: number[]): number {
     if (memoryFollowMode === "none") {
       return manualMemoryBase;
@@ -652,6 +786,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     pcEl.textContent = "";
     disasmEl.innerHTML = renderDisasm(undefined, undefined, []);
     resetMemoryView();
+    stackTracker.reset();
+    setCallStackExplainer("Step into a function to see the calling convention.");
+    syncCallStackUi(stackTracker.getCallStack());
     resetAnimator();
   }
 
@@ -670,6 +807,13 @@ window.addEventListener("DOMContentLoaded", async () => {
   function pushHistory(data: ApiResponse) {
     history.push(data);
     historyIndex = history.length - 1;
+  }
+
+  function syncStackTrackerToHistory(index: number) {
+    stackTracker.reset();
+    for (let i = 1; i <= index; i++) {
+      stackTracker.applyDelta(snapshotToDelta(history[i]));
+    }
   }
 
   function syncHistoryControls() {
@@ -959,13 +1103,19 @@ window.addEventListener("DOMContentLoaded", async () => {
     syncHistoryControls();
   }
 
-  function renderFromHistory(index: number) {
+  function renderFromHistory(index: number, syncStack = true) {
     resetMemoryView();
     lastPc = undefined;
     for (let i = 0; i < index; i++) {
       memoryView.applyEffects(history[i].effects ?? []);
     }
     renderAll(history[index]);
+    if (syncStack) {
+      syncStackTrackerToHistory(index);
+    }
+    const callStack = stackTracker.getCallStack();
+    setCallStackExplainer(buildCallStackExplainer(callStack, callStack));
+    syncCallStackUi(callStack);
   }
 
   async function assembleCurrentSource(showSpinner: boolean, successMessage: string): Promise<boolean> {
@@ -1035,6 +1185,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     try {
       const parsed = parseAssembly(sourceEl.value);
       disasmLines = parsed.disasm;
+      const stackLabels = buildStackLabelContext(disasmLines);
+      setStackLabelResolver(stackLabels.resolve, stackLabels.firstLabel);
+      setCallStackPlaceholder(stackLabels.firstLabel);
       clikeByPc = buildClikeMap(disasmLines);
       programDataBytes = parsed.data instanceof Uint8Array ? Uint8Array.from(parsed.data) : new Uint8Array();
       resetMemoryControls(programDataBytes.length > 0 ? DATA_BASE : 0);
@@ -1046,7 +1199,10 @@ window.addEventListener("DOMContentLoaded", async () => {
       resetMemoryView();
       const initial = buildSnapshot();
       setHistory(initial);
+      stackTracker.reset();
+      setCallStackExplainer("Step into a function to see the calling convention.");
       renderAll(initial);
+      syncCallStackUi(stackTracker.getCallStack());
       setAnimationsEnabled(true);
       resetAnimator();
       stepBtn.disabled = !sessionId;
@@ -1060,12 +1216,15 @@ window.addEventListener("DOMContentLoaded", async () => {
       setPanelMessage(effectsEl, `Error: ${message}`, "danger");
       sessionId = undefined;
       disasmLines = [];
+      setStackLabelResolver(null, "main");
+      setCallStackPlaceholder("main");
       clikeByPc = new Map<number, string>();
       disasmEncodings = new Map<number, string>();
       programDataBytes = new Uint8Array();
       resetMemoryControls(0);
       history = [];
       historyIndex = -1;
+      stackTracker.reset();
       runBtn.disabled = true;
       resetBtn.disabled = true;
       stepBackBtn.disabled = true;
@@ -1073,6 +1232,8 @@ window.addEventListener("DOMContentLoaded", async () => {
       pcEl.textContent = "";
       disasmEl.innerHTML = renderDisasm(undefined, undefined, []);
       clikeEl.innerHTML = renderClikeExpression(null);
+      setCallStackExplainer("Step into a function to see the calling convention.");
+      syncCallStackUi(stackTracker.getCallStack());
       resetAnimator();
       setStatus("ready");
     } finally {
@@ -1097,6 +1258,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     } = {}
   ) {
     syncSampleOptionLabels(options.sampleName ?? "__custom__");
+    setStackLabelResolver(null, "main");
+    setCallStackPlaceholder("main");
+    setCallStackExplainer("Step into a function to see the calling convention.");
     sourceEl.value = source;
     sourceEl.scrollTop = 0;
     sourceEl.scrollLeft = 0;
@@ -1206,17 +1370,65 @@ window.addEventListener("DOMContentLoaded", async () => {
       "beq x0, x0, done",
     ].join("\n"),
     functionCall: [
-      "# Sample: function call to scale and add",
-      "addi a0, x0, 6",
-      "addi a1, x0, 7",
-      "jal  ra, scale_add",
-      "addi x5, a0, 0        # result copy",
-      "halt:",
-      "beq  x0, x0, halt",
-      "scale_add:",
-      "add  a0, a0, a1",
-      "slli a0, a0, 1",
-      "jalr x0, 0(ra)",
+      "# Watch the CALL STACK panel on the right.",
+      "# Step through to see:",
+      "# 1. Stack frame allocated with addi sp, sp, -16",
+      "# 2. ra and s0 saved to memory with sw",
+      "# 3. New frame pushed when jal calls double",
+      "# 4. Frame popped when jalr returns",
+      "# 5. Saved registers restored",
+      "",
+      "# Calling convention demo",
+      "# calls double(x) which returns x * 2",
+      "main:",
+      "addi sp, sp, -16     # allocate frame",
+      "sw   ra, 12(sp)      # save return address",
+      "sw   s0, 8(sp)       # save s0",
+      "addi a0, x0, 21      # argument: 21",
+      "jal  ra, double      # call double",
+      "mv   s0, a0          # save result",
+      "lw   ra, 12(sp)      # restore ra",
+      "lw   s0, 8(sp)       # restore s0",
+      "addi sp, sp, 16      # deallocate frame",
+      "beq  x0, x0, done    # end",
+      "double:",
+      "addi sp, sp, -8      # callee frame",
+      "sw   ra, 4(sp)       # save ra",
+      "add  a0, a0, a0      # a0 = a0 * 2",
+      "lw   ra, 4(sp)       # restore ra",
+      "addi sp, sp, 8       # deallocate",
+      "jalr x0, ra, 0       # return",
+      "done:",
+      "beq  x0, x0, done    # halt",
+    ].join("\n"),
+    recursiveFactorial: [
+      "# Recursive factorial",
+      "# factorial(5) = 120",
+      "# Watch the call stack grow and shrink",
+      "main:",
+      "addi a0, x0, 5       # n = 5",
+      "jal  ra, factorial",
+      "beq  x0, x0, done",
+      "factorial:",
+      "addi sp, sp, -8",
+      "sw   ra, 4(sp)",
+      "sw   a0, 0(sp)",
+      "slti t0, a0, 2       # if n < 2",
+      "bne  t0, x0, base    # go to base case",
+      "addi a0, a0, -1      # n - 1",
+      "jal  ra, factorial   # recursive call",
+      "lw   t0, 0(sp)       # reload n",
+      "mul  a0, t0, a0      # n * factorial(n-1)",
+      "lw   ra, 4(sp)",
+      "addi sp, sp, 8",
+      "jalr x0, ra, 0",
+      "base:",
+      "addi a0, x0, 1       # base case: return 1",
+      "lw   ra, 4(sp)",
+      "addi sp, sp, 8",
+      "jalr x0, ra, 0",
+      "done:",
+      "beq  x0, x0, done",
     ].join("\n"),
     tempConvert: [
       "# Sample: temperature conversion C -> F (F = C*9/5 + 32)",
@@ -1522,7 +1734,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
     stopRun();
     historyIndex -= 1;
-    renderFromHistory(historyIndex);
+    stackTracker.stepBack();
+    renderFromHistory(historyIndex, false);
     resetAnimator();
     statusEl.textContent = "Viewing previous state.";
   };
@@ -1539,7 +1752,8 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     if (historyIndex < history.length - 1) {
       historyIndex += 1;
-      renderFromHistory(historyIndex);
+      stackTracker.applyDelta(snapshotToDelta(history[historyIndex]));
+      renderFromHistory(historyIndex, false);
       statusEl.textContent = "Viewing recorded state.";
       setStatus("assembled");
       return;
@@ -1547,11 +1761,41 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     try {
       setStatus("stepping");
+      const beforeCallStack = stackTracker.getCallStack();
       const delta = runtime.step();
       const data = buildSnapshot(delta);
       pushHistory(data);
+      stackTracker.applyDelta(delta);
+      const afterCallStack = stackTracker.getCallStack();
+      const pushedFrame =
+        afterCallStack.frames.length > beforeCallStack.frames.length
+          ? afterCallStack.frames[afterCallStack.frames.length - 1]
+          : undefined;
+      const poppedFrame =
+        afterCallStack.frames.length < beforeCallStack.frames.length
+          ? beforeCallStack.frames[beforeCallStack.frames.length - 1]
+          : undefined;
+      const currentFrameWrites =
+        delta.effects.some((effect) => effect.kind === "mem")
+          ? collectCurrentFrameWrites(beforeCallStack, afterCallStack)
+          : [];
       renderAll(data);
+      setCallStackExplainer(buildCallStackExplainer(beforeCallStack, afterCallStack));
+      renderCallStack(afterCallStack);
       animateStep(delta);
+      if (pushedFrame || poppedFrame || currentFrameWrites.length > 0) {
+        window.requestAnimationFrame(() => {
+          if (pushedFrame) {
+            animateFramePush(pushedFrame);
+          }
+          if (poppedFrame) {
+            animateFramePop(poppedFrame);
+          }
+          for (const write of currentFrameWrites) {
+            animateSlotWrite(write.address, write.value);
+          }
+        });
+      }
       if (!data.halted && !data.trap) {
         statusEl.textContent = "Step completed.";
         setStatus("stepping");

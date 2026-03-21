@@ -1,4 +1,5 @@
 import type { Effect, WasmStateDelta } from "./types";
+import { stackFrameKey, type StackFrame } from "./stack-tracker";
 
 const prefersReducedMotion =
   typeof window !== "undefined" &&
@@ -19,6 +20,7 @@ function hex32(value: number): string {
 
 function clearTransientNodes() {
   document.querySelectorAll(".reg-fly, .memory-ripple").forEach((node) => node.remove());
+  document.querySelectorAll(".stack-frame-block--ghost").forEach((node) => node.remove());
 }
 
 function clearClikeTimers() {
@@ -50,6 +52,64 @@ function disasmRow(pc: number, className: string): HTMLElement | null {
 
 function memoryByteCell(addr: number): HTMLElement | null {
   return document.querySelector<HTMLElement>(`.memory-byte[data-byte-addr="${addr >>> 0}"]`);
+}
+
+function cssVar(name: string, fallback: string): string {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  const value = window.getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+function canAnimateStack(): boolean {
+  return typeof document !== "undefined" && animationsEnabled && !prefersReducedMotion;
+}
+
+function stackFrameElement(frame: StackFrame, ghost = false): HTMLElement | null {
+  const selector = ghost
+    ? `.stack-frame-block[data-frame-key="${stackFrameKey(frame)}"][data-popping="true"]`
+    : `.stack-frame-block[data-frame-key="${stackFrameKey(frame)}"]:not([data-popping="true"])`;
+  return document.querySelector<HTMLElement>(selector);
+}
+
+function pulseHeaderBorder(header: HTMLElement | null, colorVar: string, duration: number): void {
+  if (!header) {
+    return;
+  }
+
+  const accent = cssVar(colorVar, cssVar("--accent", "#2d6be4"));
+  const border = cssVar("--border", "#e2ddd6");
+  header.animate(
+    [
+      { boxShadow: `inset 0 0 0 1px ${border}` },
+      { boxShadow: `inset 0 0 0 1px ${accent}` },
+      { boxShadow: `inset 0 0 0 1px ${border}` },
+    ],
+    {
+      duration,
+      easing: "ease-out",
+    }
+  );
+}
+
+function flashRowBackground(row: HTMLElement | null, colorVar: string, duration: number): void {
+  if (!row) {
+    return;
+  }
+
+  const start = cssVar(colorVar, cssVar("--highlight-new", "#fef3c7"));
+  const end = window.getComputedStyle(row).backgroundColor;
+  row.animate(
+    [
+      { backgroundColor: start },
+      { backgroundColor: end },
+    ],
+    {
+      duration,
+      easing: "ease-out",
+    }
+  );
 }
 
 function animateRegister(effect: Extract<Effect, { kind: "reg" }>) {
@@ -231,4 +291,162 @@ export function animateStep(delta: WasmStateDelta): void {
 
   animateClike(currentClikeMarkup);
   animateLatestEffect();
+}
+
+export function animateFramePush(frame: StackFrame): void {
+  if (!canAnimateStack()) {
+    return;
+  }
+
+  const frameEl = stackFrameElement(frame);
+  if (!frameEl) {
+    return;
+  }
+
+  frameEl.animate(
+    [
+      { opacity: 0, transform: "translateY(-20px)" },
+      { opacity: 1, transform: "translateY(0)" },
+    ],
+    {
+      duration: 350,
+      easing: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+      fill: "both",
+    }
+  );
+
+  const header = frameEl.querySelector<HTMLElement>(".stack-frame-header");
+  pulseHeaderBorder(header, "--accent", 400);
+
+  const slots = Array.from(frameEl.querySelectorAll<HTMLElement>(".stack-slot-row")).reverse();
+  slots.forEach((slot, index) => {
+    slot.animate(
+      [
+        { opacity: 0 },
+        { opacity: 1 },
+      ],
+      {
+        duration: 180,
+        delay: index * 60,
+        easing: "ease-out",
+        fill: "both",
+      }
+    );
+  });
+
+  const spRow = frameEl.querySelector<HTMLElement>(".stack-sp-row");
+  if (spRow) {
+    spRow.animate(
+      [
+        { transform: "translateY(-8px)" },
+        { transform: "translateY(0)" },
+      ],
+      {
+        duration: 250,
+        easing: "ease-out",
+      }
+    );
+    flashRowBackground(spRow, "--highlight-new", 600);
+  }
+}
+
+export function animateFramePop(frame: StackFrame): void {
+  if (!canAnimateStack()) {
+    return;
+  }
+
+  const frameEl = stackFrameElement(frame, true) ?? stackFrameElement(frame);
+  if (!frameEl) {
+    return;
+  }
+
+  const slots = Array.from(frameEl.querySelectorAll<HTMLElement>(".stack-slot-row"));
+  slots.forEach((slot, index) => {
+    slot.animate(
+      [
+        { opacity: 1 },
+        { opacity: 0 },
+      ],
+      {
+        duration: 160,
+        delay: index * 40,
+        easing: "ease-in",
+        fill: "forwards",
+      }
+    );
+  });
+
+  const popAnimation = frameEl.animate(
+    [
+      { transform: "translateY(0)", opacity: 1 },
+      { transform: "translateY(-16px)", opacity: 0 },
+    ],
+    {
+      duration: 300,
+      easing: "ease-in",
+      fill: "forwards",
+    }
+  );
+
+  popAnimation.addEventListener("finish", () => frameEl.remove(), { once: true });
+
+  const currentHeader = document.querySelector<HTMLElement>(".stack-frame-block--current .stack-frame-header");
+  pulseHeaderBorder(currentHeader, "--success", 400);
+
+  const spRow = document.querySelector<HTMLElement>(".stack-frame-block--current .stack-sp-row");
+  if (spRow) {
+    spRow.animate(
+      [
+        { transform: "translateY(8px)" },
+        { transform: "translateY(0)" },
+      ],
+      {
+        duration: 250,
+        easing: "ease-out",
+      }
+    );
+    flashRowBackground(spRow, "--highlight-prev", 600);
+  }
+}
+
+export function animateSlotWrite(address: number, _value: number): void {
+  if (!canAnimateStack()) {
+    return;
+  }
+
+  const row = document.querySelector<HTMLElement>(
+    `.stack-frame-block--current .stack-slot-row[data-slot-address="${address >>> 0}"]`
+  );
+  if (!row) {
+    return;
+  }
+
+  flashRowBackground(row, "--highlight-new", 300);
+
+  const content = row.querySelector<HTMLElement>(".stack-slot-content");
+  content?.animate(
+    [
+      { transform: "scale(1)" },
+      { transform: "scale(1.05)" },
+      { transform: "scale(1)" },
+    ],
+    {
+      duration: 200,
+      easing: "ease-out",
+    }
+  );
+
+  if (row.classList.contains("stack-slot-row--new")) {
+    row.animate(
+      [
+        { transform: "translateX(12px)", opacity: 0 },
+        { transform: "translateX(0)", opacity: 1 },
+      ],
+      {
+        duration: 250,
+        easing: "ease-out",
+        fill: "both",
+      }
+    );
+  }
 }
