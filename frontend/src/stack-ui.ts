@@ -137,12 +137,14 @@ function syncChrome(): void {
     return;
   }
 
+  const visibleFrameCount = validFrameCount(currentCallStack);
+
   dom.panelBody.hidden = panelCollapsed;
   dom.panelToggle.setAttribute("aria-expanded", String(!panelCollapsed));
   dom.panelToggle.classList.toggle("is-collapsed", panelCollapsed);
   dom.summary.hidden = !panelCollapsed;
-  dom.summary.textContent = `${currentCallStack.frames.length} ${
-    currentCallStack.frames.length === 1 ? "frame" : "frames"
+  dom.summary.textContent = `${visibleFrameCount} ${
+    visibleFrameCount === 1 ? "frame" : "frames"
   } · sp = ${hex32(currentCallStack.spCurrent)}`;
 
   dom.legendBody.hidden = legendCollapsed;
@@ -235,7 +237,25 @@ function frameFloor(callStack: CallStack, frame: StackFrame): number {
 }
 
 function frameSize(callStack: CallStack, frame: StackFrame): number {
-  return Math.max(0, (frame.baseAddress >>> 0) - frameFloor(callStack, frame));
+  return (frame.baseAddress >>> 0) - frameFloor(callStack, frame);
+}
+
+function safeFrameSize(callStack: CallStack, frame: StackFrame): number | null {
+  const size = frameSize(callStack, frame);
+  return Number.isFinite(size) && size >= 0 && size <= 4096 ? size : null;
+}
+
+function frameSizeLabel(callStack: CallStack, frame: StackFrame): string {
+  const size = safeFrameSize(callStack, frame);
+  return size === null ? "" : `${size} bytes`;
+}
+
+function isRenderableFrame(callStack: CallStack, frame: StackFrame): boolean {
+  return collectSlots(frame).length > 0 || (safeFrameSize(callStack, frame) ?? 0) > 0;
+}
+
+function validFrameCount(callStack: CallStack): number {
+  return callStack.frames.filter((frame) => isRenderableFrame(callStack, frame)).length;
 }
 
 function renderSlotRows(frame: StackFrame, previousFrame?: StackFrame): string {
@@ -270,16 +290,17 @@ function renderSpRow(frame: StackFrame, callStack: CallStack, isCurrentFrame: bo
   if (isCurrentFrame) {
     classes.push("stack-sp-row--current");
   }
+  const spValue = isCurrentFrame ? callStack.spCurrent >>> 0 : frameFloor(callStack, frame);
 
   return `
     <div
       class="${classes.join(" ")}"
       data-sp-frame-key="${escapeHtml(stackFrameKey(frame))}"
-      data-address-ruler="${hex32(frameFloor(callStack, frame))}"
+      data-address-ruler="${hex32(spValue)}"
     >
       <span class="stack-sp-arrow" aria-hidden="true">→</span>
       <span class="stack-sp-label">sp</span>
-      <span class="stack-sp-value">${hex32(frameFloor(callStack, frame))}</span>
+      <span class="stack-sp-value">${hex32(spValue)}</span>
     </div>
   `;
 }
@@ -304,7 +325,7 @@ function renderExpandedFrame(
     ? `
         <div class="stack-frame-header stack-frame-header--active">
           <span class="stack-frame-name">${escapeHtml(frame.functionLabel)}</span>
-          <span class="stack-frame-size">${frameSize(callStack, frame)} bytes</span>
+          <span class="stack-frame-size">${escapeHtml(frameSizeLabel(callStack, frame))}</span>
         </div>
       `
     : `
@@ -315,7 +336,7 @@ function renderExpandedFrame(
           aria-expanded="true"
         >
           <span class="stack-frame-name">${escapeHtml(frame.functionLabel)}</span>
-          <span class="stack-frame-size">${frameSize(callStack, frame)} bytes</span>
+          <span class="stack-frame-size">${escapeHtml(frameSizeLabel(callStack, frame))}</span>
         </button>
       `;
 
@@ -343,6 +364,7 @@ function renderCompressedFrame(frame: StackFrame, callStack: CallStack): string 
   const key = stackFrameKey(frame);
   const returnAddress =
     frame.returnAddress < 0 ? "entry" : `ra ${hex32(frame.returnAddress)}`;
+  const sizeLabel = frameSizeLabel(callStack, frame);
   return `
     <button
       type="button"
@@ -352,7 +374,7 @@ function renderCompressedFrame(frame: StackFrame, callStack: CallStack): string 
     >
       <span class="stack-frame-summary">
         <span class="stack-frame-name">${escapeHtml(frame.functionLabel)}</span>
-        <span class="stack-frame-size">${frameSize(callStack, frame)} bytes</span>
+        <span class="stack-frame-size">${escapeHtml(sizeLabel)}</span>
         <span class="stack-frame-return">${escapeHtml(returnAddress)}</span>
       </span>
       <span class="stack-frame-chevron" aria-hidden="true">⌄</span>
@@ -370,7 +392,7 @@ function renderEmptyState(callStack: CallStack): string {
       <div class="stack-frame-placeholder">
         <div class="stack-frame-placeholder__sp">sp = ${hex32(callStack.spCurrent)}</div>
         <div class="stack-frame-placeholder__arrow" aria-hidden="true">↓</div>
-        <div class="stack-frame-placeholder__copy">No active calls. Step into a function to see the frame.</div>
+        <div class="stack-frame-placeholder__copy">No active function calls. Step into a function to see frames.</div>
       </div>
     </section>
   `;
@@ -384,10 +406,11 @@ function renderFrames(callStack: CallStack, includeDiff: boolean): string {
       ? previousCallStack.frames[previousCallStack.frames.length - 1]
       : undefined;
 
-  if (callStack.frames.length === 0) {
+  const visibleFrames = callStack.frames.filter((frame) => isRenderableFrame(callStack, frame));
+
+  if (visibleFrames.length === 0) {
     return `
       <div class="stack-frames-canvas">
-        <div class="stack-direction-label">↓ grows down</div>
         <div class="stack-frames-scroll">
           ${
             ghostFrame
@@ -406,13 +429,12 @@ function renderFrames(callStack: CallStack, includeDiff: boolean): string {
   const previousByKey = new Map<string, StackFrame>(
     (previousCallStack?.frames ?? []).map((frame) => [stackFrameKey(frame), frame])
   );
-  const newestFirst = [...callStack.frames].reverse();
+  const newestFirst = [...visibleFrames].reverse();
   const currentFrame = newestFirst[0];
   const olderFrames = newestFirst.slice(1);
 
   return `
     <div class="stack-frames-canvas">
-      <div class="stack-direction-label">↓ grows down</div>
       <div class="stack-frames-scroll">
         ${
           ghostFrame
