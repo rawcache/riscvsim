@@ -278,13 +278,11 @@
 @media (max-width: 768px) {
   .nav-inner {
     padding: 0 20px;
-    justify-content: space-between;
   }
 
   .nav-logo {
-    font-size: 15px;
     margin-right: 0;
-    text-align: left;
+    font-size: 15px;
   }
 
   .nav-links {
@@ -304,28 +302,44 @@
 
   .nav-signin-btn {
     display: inline-flex;
-    height: 32px;
-    padding: 0 14px;
+    height: 30px;
+    padding: 0 12px;
     font-size: 13px;
-    border-radius: 20px;
-    background: white;
-    color: #000;
-    font-weight: 600;
+    font-weight: 500;
+    border-radius: 6px;
+    background: var(--accent);
+    color: #fff;
   }
 
   .nav-signin-btn:hover {
-    background: #f0f0f0;
+    background: var(--accent-hover);
+  }
+
+  .nav-theme-toggle {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
   }
 
   .nav-hamburger {
     display: inline-flex;
-    width: 32px;
-    height: 32px;
+    flex-direction: column;
+    gap: 4px;
+    width: 30px;
+    height: 30px;
     border: none;
     background: none;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
   }
 
-  .nav-theme-toggle {
-    display: none;
+  .nav-hamburger span {
+    width: 18px;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--text-primary);
+    display: block;
   }
 }
