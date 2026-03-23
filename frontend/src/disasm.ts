@@ -2,6 +2,118 @@ import { escapeHtml, hex32 } from "./format";
 import type { Breakpoint } from "./breakpoints";
 import type { DisasmLine } from "./types";
 
+export function getInstructionType(mnemonic: string): string {
+  const op = mnemonic.toLowerCase();
+  if (["add", "sub", "and", "or", "xor", "sll", "srl", "sra", "slt", "sltu", "mul", "div", "rem"].includes(op)) {
+    return "R-type";
+  }
+  if (["addi", "andi", "ori", "xori", "slti", "sltiu", "slli", "srli", "srai", "lw", "lh", "lb", "lhu", "lbu", "jalr"].includes(op)) {
+    return "I-type";
+  }
+  if (["sw", "sh", "sb"].includes(op)) {
+    return "S-type";
+  }
+  if (["beq", "bne", "blt", "bge", "bltu", "bgeu"].includes(op)) {
+    return "B-type";
+  }
+  if (["jal"].includes(op)) {
+    return "J-type";
+  }
+  if (["lui", "auipc"].includes(op)) {
+    return "U-type";
+  }
+  return "Pseudo";
+}
+
+export function getInstructionTypeLabel(mnemonic: string): string {
+  const op = mnemonic.toLowerCase();
+  if (["add", "sub", "and", "or", "xor", "sll", "srl", "sra", "slt", "sltu", "mul", "div", "rem"].includes(op)) {
+    return "R-type register arithmetic";
+  }
+  if (["addi", "andi", "ori", "xori", "slti", "sltiu", "slli", "srli", "srai"].includes(op)) {
+    return "I-type immediate arithmetic";
+  }
+  if (["lw", "lh", "lb", "lhu", "lbu", "jalr"].includes(op)) {
+    return "I-type load / indirect jump";
+  }
+  if (["sw", "sh", "sb"].includes(op)) {
+    return "S-type store";
+  }
+  if (["beq", "bne", "blt", "bge", "bltu", "bgeu"].includes(op)) {
+    return "B-type conditional branch";
+  }
+  if (["jal"].includes(op)) {
+    return "J-type jump";
+  }
+  if (["lui", "auipc"].includes(op)) {
+    return "U-type upper immediate";
+  }
+  return "Pseudo / system instruction";
+}
+
+export function computeEffectiveAddress(base: number, offset: number): number {
+  return (base + offset) >>> 0;
+}
+
+export function willBranchBeq(left: number, right: number): boolean {
+  return (left >>> 0) === (right >>> 0);
+}
+
+export function willBranchBlt(left: number, right: number): boolean {
+  return (left | 0) < (right | 0);
+}
+
+export function formatBitField(mnemonic: string, encoding: number): Record<string, string> {
+  const op = mnemonic.toLowerCase();
+  const binary = (encoding >>> 0).toString(2).padStart(32, "0");
+
+  if (["sw", "sh", "sb"].includes(op)) {
+    return {
+      immHigh: binary.slice(0, 7),
+      rs2: binary.slice(7, 12),
+      rs1: binary.slice(12, 17),
+      funct3: binary.slice(17, 20),
+      immLow: binary.slice(20, 25),
+      opcode: binary.slice(25),
+    };
+  }
+
+  if (["beq", "bne", "blt", "bge", "bltu", "bgeu"].includes(op)) {
+    return {
+      immHigh: binary.slice(0, 7),
+      rs2: binary.slice(7, 12),
+      rs1: binary.slice(12, 17),
+      funct3: binary.slice(17, 20),
+      immLow: binary.slice(20, 25),
+      opcode: binary.slice(25),
+    };
+  }
+
+  if (["jal"].includes(op)) {
+    return {
+      imm: binary.slice(0, 20),
+      rd: binary.slice(20, 25),
+      opcode: binary.slice(25),
+    };
+  }
+
+  if (["lui", "auipc"].includes(op)) {
+    return {
+      imm: binary.slice(0, 20),
+      rd: binary.slice(20, 25),
+      opcode: binary.slice(25),
+    };
+  }
+
+  return {
+    imm: binary.slice(0, 12),
+    rs1: binary.slice(12, 17),
+    funct3: binary.slice(17, 20),
+    rd: binary.slice(20, 25),
+    opcode: binary.slice(25),
+  };
+}
+
 function splitInstruction(text: string): { mnemonic: string; operands: string; comment: string } {
   const [instPart, commentPart] = text.split("#", 2);
   const trimmed = instPart.trim();
@@ -44,32 +156,6 @@ function renderOperands(operands: string): string {
       return `<span class="disasm-operand ${cls}">${escapeHtml(part)}</span>`;
     })
     .join("");
-}
-
-function opType(mnemonic: string): string {
-  const op = mnemonic.toLowerCase();
-  if (["add", "sub", "and", "or", "xor", "sll", "srl", "sra", "slt", "sltu", "mul", "div", "rem"].includes(op)) {
-    return "R-type register arithmetic";
-  }
-  if (["addi", "andi", "ori", "xori", "slti", "sltiu", "slli", "srli", "srai"].includes(op)) {
-    return "I-type immediate arithmetic";
-  }
-  if (["lw", "lh", "lb", "lhu", "lbu", "jalr"].includes(op)) {
-    return "I-type load / indirect jump";
-  }
-  if (["sw", "sh", "sb"].includes(op)) {
-    return "S-type store";
-  }
-  if (["beq", "bne", "blt", "bge", "bltu", "bgeu"].includes(op)) {
-    return "B-type conditional branch";
-  }
-  if (["jal"].includes(op)) {
-    return "J-type jump";
-  }
-  if (["lui", "auipc"].includes(op)) {
-    return "U-type upper immediate";
-  }
-  return "Pseudo / system instruction";
 }
 
 function opDescription(mnemonic: string, operands: string): string {
@@ -220,20 +306,18 @@ function memoryNote(operands: string, regs?: number[]): string {
   if (imm === null || baseReg === null) {
     return "";
   }
-  return `Address = ${match[3]} + ${match[2]} = ${hex32((baseReg + imm) >>> 0)}`;
+  return `Address = ${match[3]} + ${match[2]} = ${hex32(computeEffectiveAddress(baseReg, imm))}`;
 }
 
-function renderEncodingBits(encoding: string): string {
+function renderEncodingBits(mnemonic: string, encoding: string): string {
   const padded = encoding.padStart(8, "0");
   const value = Number.parseInt(padded, 16) >>> 0;
-  const binary = value.toString(2).padStart(32, "0");
-  const segments = [
-    { name: "imm", value: binary.slice(0, 12), className: "is-imm" },
-    { name: "rs1", value: binary.slice(12, 17), className: "is-reg" },
-    { name: "funct3", value: binary.slice(17, 20), className: "is-funct" },
-    { name: "rd", value: binary.slice(20, 25), className: "is-reg" },
-    { name: "opcode", value: binary.slice(25), className: "is-opcode" },
-  ];
+  const fields = formatBitField(mnemonic, value);
+  const segments = Object.entries(fields).map(([name, bits]) => ({
+    name,
+    value: bits,
+    className: name === "opcode" ? "is-opcode" : name === "funct3" ? "is-funct" : name.includes("rs") || name === "rd" ? "is-reg" : "is-imm",
+  }));
 
   return `
     <div class="disasm-tooltip__bits">
@@ -262,9 +346,9 @@ function renderTooltip(mnemonic: string, operands: string, encoding: string, reg
   return `
     <div class="disasm-tooltip">
       <div class="disasm-tooltip__title">${escapeHtml(mnemonic.toUpperCase())}</div>
-      <div class="disasm-tooltip__type">${escapeHtml(opType(mnemonic))}</div>
+      <div class="disasm-tooltip__type">${escapeHtml(getInstructionTypeLabel(mnemonic))}</div>
       <div class="disasm-tooltip__op">${escapeHtml(opDescription(mnemonic, operands))}</div>
-      ${renderEncodingBits(encoding)}
+      ${renderEncodingBits(mnemonic, encoding)}
       ${branch ? `<div class="disasm-tooltip__note">${escapeHtml(branch)}</div>` : ""}
       ${memory ? `<div class="disasm-tooltip__note">${escapeHtml(memory)}</div>` : ""}
     </div>

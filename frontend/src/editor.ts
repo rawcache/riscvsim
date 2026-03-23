@@ -420,6 +420,9 @@ export function createEditor(config: EditorConfig) {
       }
       if (breakpoint) {
         classes.push("has-breakpoint");
+        if (breakpoint.condition) {
+          classes.push("has-conditional-breakpoint");
+        }
       }
       if (diagnostic?.severity === "error") {
         classes.push("has-error");
@@ -431,7 +434,11 @@ export function createEditor(config: EditorConfig) {
       }
 
       const label = line <= lines.length ? String(line) : "";
-      return `<span class="${classes.join(" ")}" data-line="${line}">${breakpoint ? '<i class="editor-gutter-breakpoint"></i>' : escapeHtml(label)}</span>`;
+      return `<span class="${classes.join(" ")}" data-line="${line}">${
+        breakpoint
+          ? `<i class="editor-gutter-breakpoint"></i>${breakpoint.condition ? '<i class="editor-gutter-breakpoint-cond">cond</i>' : ""}`
+          : escapeHtml(label)
+      }</span>`;
     }).join("");
   }
 

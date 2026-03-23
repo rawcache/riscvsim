@@ -20,7 +20,7 @@ import {
   hex32,
   renderClikeExpression,
 } from "./format";
-import { BreakpointManager } from "./breakpoints";
+import { BreakpointManager, parseBreakpointCondition } from "./breakpoints";
 import { createChallengeMode } from "./challenge-ui";
 import { createEditor } from "./editor";
 import { createLabMode } from "./lab-mode";
@@ -110,6 +110,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   const sharedLinkBannerEl = document.getElementById("sharedLinkBanner") as HTMLElement | null;
   const dismissSharedBannerBtn = document.getElementById("dismissSharedBanner") as HTMLButtonElement | null;
   const sourceEl = document.getElementById("source-input") as HTMLTextAreaElement;
+  const editorContainerEl = sourceEl.closest(".editor-container") as HTMLElement | null;
   const sourceLinesEl = document.getElementById("line-numbers") as HTMLElement | null;
   const highlightDisplayEl = document.getElementById("highlight-display") as HTMLElement | null;
   const runSpeedPanelEl = document.getElementById("runSpeedPanel") as HTMLElement | null;
@@ -188,7 +189,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   const breakpointManager = new BreakpointManager();
   const registersUi = createRegistersUi(regsEl);
   const editor = createEditor({
-    container: sourceEl.closest(".editor-container") as HTMLElement,
+    container: editorContainerEl as HTMLElement,
     textarea: sourceEl,
     lineNumbers: sourceLinesEl as HTMLElement,
     highlightDisplay: highlightDisplayEl as HTMLElement,
@@ -214,6 +215,10 @@ window.addEventListener("DOMContentLoaded", async () => {
     instructions: 0,
     cycles: 0,
   };
+  let breakpointConditionPopoverEl: HTMLDivElement | null = null;
+  let breakpointConditionInputEl: HTMLInputElement | null = null;
+  let breakpointConditionErrorEl: HTMLElement | null = null;
+  let editingBreakpointId: string | null = null;
 
   function loadStoredRunSpeed(): RunSpeedPreset {
     try {
@@ -371,6 +376,9 @@ window.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     const breakpoints = breakpointManager.getAll();
+    if (editingBreakpointId && !breakpoints.some((breakpoint) => breakpoint.id === editingBreakpointId)) {
+      closeBreakpointConditionEditor();
+    }
     breakpointsPanelEl.hidden = breakpoints.length === 0;
     breakpointsCountEl.textContent = `BREAKPOINTS (${breakpoints.length})`;
     breakpointsListEl.innerHTML = breakpoints
@@ -379,11 +387,127 @@ window.addEventListener("DOMContentLoaded", async () => {
           <div class="breakpoint-row">
             <span class="breakpoint-row__dot"></span>
             <span class="breakpoint-row__text">Line ${breakpoint.line}${breakpoint.address !== undefined ? ` · ${hex32(breakpoint.address)}` : ""} · hit ${breakpoint.hitCount}x</span>
+            ${breakpoint.condition ? `<span class="breakpoint-row__condition-badge">cond</span><span class="breakpoint-row__condition">${escapeHtml(breakpoint.condition)}</span>` : ""}
             <button type="button" class="breakpoint-row__remove" data-breakpoint-id="${escapeHtml(breakpoint.id)}" aria-label="Remove breakpoint">🗑</button>
           </div>
         `
       )
       .join("");
+  }
+
+  function ensureBreakpointConditionPopover(): void {
+    if (breakpointConditionPopoverEl || !editorContainerEl) {
+      return;
+    }
+    const popover = document.createElement("div");
+    popover.className = "breakpoint-condition-popover";
+    popover.hidden = true;
+    popover.innerHTML = `
+      <div class="breakpoint-condition-popover__title">Conditional breakpoint</div>
+      <input
+        type="text"
+        class="breakpoint-condition-popover__input"
+        placeholder="x1 == 10"
+        aria-label="Breakpoint condition"
+      />
+      <div class="breakpoint-condition-popover__hint">Use x0-x31 or ABI names with ==, !=, &lt;, &gt;, &lt;=, &gt;=.</div>
+      <div class="breakpoint-condition-popover__error" hidden></div>
+      <div class="breakpoint-condition-popover__actions">
+        <button type="button" class="breakpoint-condition-popover__button" data-breakpoint-condition-action="clear">Clear</button>
+        <button type="button" class="breakpoint-condition-popover__button breakpoint-condition-popover__button--primary" data-breakpoint-condition-action="save">Save</button>
+      </div>
+    `;
+    editorContainerEl.appendChild(popover);
+    breakpointConditionPopoverEl = popover;
+    breakpointConditionInputEl = popover.querySelector(".breakpoint-condition-popover__input");
+    breakpointConditionErrorEl = popover.querySelector(".breakpoint-condition-popover__error");
+
+    popover.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+    breakpointConditionInputEl?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        commitBreakpointCondition();
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeBreakpointConditionEditor();
+      }
+    });
+    popover.addEventListener("click", (event) => {
+      const target = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-breakpoint-condition-action]");
+      if (!target) {
+        return;
+      }
+      const action = target.dataset.breakpointConditionAction;
+      if (action === "clear") {
+        if (breakpointConditionInputEl) {
+          breakpointConditionInputEl.value = "";
+        }
+        commitBreakpointCondition();
+        return;
+      }
+      if (action === "save") {
+        commitBreakpointCondition();
+      }
+    });
+  }
+
+  function closeBreakpointConditionEditor(): void {
+    editingBreakpointId = null;
+    if (breakpointConditionPopoverEl) {
+      breakpointConditionPopoverEl.hidden = true;
+    }
+    if (breakpointConditionInputEl) {
+      breakpointConditionInputEl.value = "";
+    }
+    if (breakpointConditionErrorEl) {
+      breakpointConditionErrorEl.textContent = "";
+      breakpointConditionErrorEl.hidden = true;
+    }
+  }
+
+  function commitBreakpointCondition(): void {
+    if (!editingBreakpointId || !breakpointConditionInputEl) {
+      return;
+    }
+    const value = breakpointConditionInputEl.value.trim();
+    if (value && !parseBreakpointCondition(value)) {
+      if (breakpointConditionErrorEl) {
+        breakpointConditionErrorEl.hidden = false;
+        breakpointConditionErrorEl.textContent = "Use forms like x1 == 10, sp == 0x7FFFFFF4, or a0 > 3.";
+      }
+      return;
+    }
+    breakpointManager.setCondition(editingBreakpointId, value || undefined);
+    editor.setBreakpoints(breakpointManager.getAll());
+    renderBreakpointPanel();
+    closeBreakpointConditionEditor();
+  }
+
+  function openBreakpointConditionEditor(line: number, targetRect: DOMRect): void {
+    const breakpoint = breakpointManager.getByLine(line);
+    if (!breakpoint || !editorContainerEl) {
+      return;
+    }
+    ensureBreakpointConditionPopover();
+    if (!breakpointConditionPopoverEl || !breakpointConditionInputEl) {
+      return;
+    }
+    const containerRect = editorContainerEl.getBoundingClientRect();
+    editingBreakpointId = breakpoint.id;
+    breakpointConditionInputEl.value = breakpoint.condition ?? "";
+    if (breakpointConditionErrorEl) {
+      breakpointConditionErrorEl.textContent = "";
+      breakpointConditionErrorEl.hidden = true;
+    }
+    breakpointConditionPopoverEl.style.top = `${Math.max(8, targetRect.bottom - containerRect.top + 6)}px`;
+    breakpointConditionPopoverEl.style.left = `${Math.max(8, targetRect.right - containerRect.left + 8)}px`;
+    breakpointConditionPopoverEl.hidden = false;
+    breakpointConditionInputEl.focus();
+    breakpointConditionInputEl.select();
   }
 
   function updateRunSpeedUi(): void {
@@ -492,8 +616,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     ];
   }
 
-  function breakpointForPc(pc: number): ReturnType<BreakpointManager["getAll"]>[number] | undefined {
-    return breakpointManager.getAll().find((breakpoint) => breakpoint.address !== undefined && (breakpoint.address >>> 0) === (pc >>> 0));
+  function breakpointForPc(pc: number, regs?: number[]): ReturnType<BreakpointManager["getAll"]>[number] | undefined {
+    return breakpointManager.getMatchingBreakpoint(pc, regs) ?? undefined;
   }
 
   function trapStatusLabel(trap: NonNullable<ApiResponse["trap"]>): string {
@@ -2087,6 +2211,29 @@ window.addEventListener("DOMContentLoaded", async () => {
     renderBreakpointPanel();
   });
 
+  sourceLinesEl?.addEventListener("contextmenu", (event) => {
+    const target = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-line]");
+    if (!target) {
+      return;
+    }
+    const line = Number(target.dataset.line);
+    if (!breakpointManager.getByLine(line)) {
+      return;
+    }
+    event.preventDefault();
+    openBreakpointConditionEditor(line, target.getBoundingClientRect());
+  });
+
+  document.addEventListener("click", (event) => {
+    const target = event.target as Node | null;
+    if (!target) {
+      return;
+    }
+    if (breakpointConditionPopoverEl?.hidden === false && !breakpointConditionPopoverEl.contains(target)) {
+      closeBreakpointConditionEditor();
+    }
+  });
+
   goToPcBtn?.addEventListener("click", () => {
     const currentPc = currentSnapshot()?.pc;
     if (currentPc === undefined) {
@@ -2371,7 +2518,8 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     let lastDelta: WasmStateDelta | null = null;
     let finalMessage = `Run stopped after ${MAX_RUN_STEPS} steps.`;
-    let skipBreakpointPc = breakpointManager.isBreakpointAt(activeRuntime.pc()) ? activeRuntime.pc() : null;
+    const initialRegs = activeRuntime.readRegisters();
+    let skipBreakpointPc = breakpointManager.isBreakpointAt(activeRuntime.pc(), initialRegs) ? activeRuntime.pc() : null;
 
     try {
       await new Promise<void>((resolve) => {
@@ -2394,8 +2542,9 @@ window.addEventListener("DOMContentLoaded", async () => {
 
             const currentPc = activeRuntime.pc();
             const ignoreCurrentBreakpoint = skipBreakpointPc !== null && currentPc === skipBreakpointPc;
-            if (!ignoreCurrentBreakpoint && breakpointManager.isBreakpointAt(currentPc)) {
-              const breakpoint = breakpointForPc(currentPc);
+            const currentRegs = activeRuntime.readRegisters();
+            const breakpoint = breakpointForPc(currentPc, currentRegs);
+            if (!ignoreCurrentBreakpoint && breakpoint) {
               breakpointManager.recordHit(currentPc);
               renderBreakpointPanel();
               finalMessage = `Paused at breakpoint · Line ${breakpoint?.line ?? "?"} · ${hex32(currentPc)}`;

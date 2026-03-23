@@ -3522,12 +3522,19 @@ body.simulator-page {
 .warnings-panel__item,
 .breakpoint-row {
   display: grid;
-  grid-template-columns: auto auto 1fr auto;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   background: var(--bg-elevated);
+}
+
+.warnings-panel__item {
+  grid-template-columns: auto auto 1fr auto;
+}
+
+.breakpoint-row {
+  grid-template-columns: auto 1fr auto auto auto;
 }
 
 .warnings-panel__code,
@@ -3561,6 +3568,33 @@ body.simulator-page {
 
 .breakpoint-row__text {
   color: var(--text-secondary);
+}
+
+.breakpoint-row__condition-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 18px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  border-radius: 999px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-family: "Geist Mono", "DM Mono", monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.breakpoint-row__condition {
+  color: var(--text-muted);
+  font-family: "Geist Mono", "DM Mono", monospace;
+  font-size: 11px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .breakpoint-row__remove,
@@ -3627,6 +3661,26 @@ body.simulator-page {
 .editor-gutter-line.has-breakpoint::before {
   background: var(--danger);
   border: 1px solid var(--danger);
+}
+
+.editor-gutter-breakpoint-cond {
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 12px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font-family: "Geist Mono", "DM Mono", monospace;
+  font-size: 7px;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .editor-gutter-line.has-error {
@@ -3706,6 +3760,77 @@ body.simulator-page {
   background: var(--bg-elevated);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   z-index: 30;
+}
+
+.breakpoint-condition-popover {
+  position: absolute;
+  width: min(260px, calc(100% - 16px));
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 50;
+}
+
+.breakpoint-condition-popover__title {
+  color: var(--text-primary);
+  font-family: "Geist", var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.breakpoint-condition-popover__input {
+  width: 100%;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: "Geist Mono", "DM Mono", monospace;
+  font-size: 12px;
+}
+
+.breakpoint-condition-popover__hint,
+.breakpoint-condition-popover__error {
+  font-family: "Geist", var(--font-body);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.breakpoint-condition-popover__hint {
+  color: var(--text-muted);
+}
+
+.breakpoint-condition-popover__error {
+  color: var(--danger);
+}
+
+.breakpoint-condition-popover__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.breakpoint-condition-popover__button {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: "Geist", var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.breakpoint-condition-popover__button--primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
 }
 
 .editor-autocomplete__item {
@@ -3924,6 +4049,11 @@ body.simulator-page {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
+  transition-delay: 400ms;
+}
+
+.disasm-line:not(:hover) .disasm-tooltip {
+  transition-delay: 0ms;
 }
 
 .disasm-tooltip {
@@ -3939,7 +4069,7 @@ body.simulator-page {
   opacity: 0;
   transform: translateY(6px);
   pointer-events: none;
-  z-index: 25;
+  z-index: 600;
   transition: opacity 150ms ease, transform 150ms ease;
 }
 
@@ -4459,6 +4589,7 @@ body.simulator-page {
   gap: 8px;
   padding: 8px 12px 12px;
   overflow-y: auto;
+  scroll-behavior: smooth;
 }
 
 .memory-watches {
@@ -4541,6 +4672,18 @@ body.simulator-page {
 
 .memory-word-row.is-current {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.memory-word-row--stack.is-current-sp {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.memory-word-row--stack.is-recent .memory-word-row__value {
+  color: var(--accent);
+}
+
+.memory-word-row--stack.is-unchanged .memory-word-row__value {
+  color: var(--text-muted);
 }
 
 @keyframes reg-diff-fade {

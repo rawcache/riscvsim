@@ -58,6 +58,7 @@ function printable(byte: number | undefined): string {
 
 export function createMemoryView(): MemoryView {
   const memBytes = new Map<number, number>();
+  const initialBytes = new Map<number, number>();
   let recentWrites: RecentWrite[] = [];
   let lastMemAddr: number | undefined;
   let currentWriteAddrs = new Set<number>();
@@ -111,7 +112,10 @@ export function createMemoryView(): MemoryView {
   function seedBytes(start: number, bytes: Uint8Array): void {
     const base = start >>> 0;
     for (let index = 0; index < bytes.length; index += 1) {
-      memBytes.set((base + index) >>> 0, bytes[index] & 0xff);
+      const addr = (base + index) >>> 0;
+      const value = bytes[index] & 0xff;
+      memBytes.set(addr, value);
+      initialBytes.set(addr, value);
     }
   }
 
@@ -185,11 +189,31 @@ export function createMemoryView(): MemoryView {
 
   function renderStackWindow(sp: number, format: MemoryWordFormat): string {
     const base = sp >>> 0;
-    return Array.from({ length: 32 }, (_, index) => {
+    const newestStep = recentWrites[0]?.step ?? 0;
+    return Array.from({ length: 16 }, (_, index) => {
       const addr = (base + index * 4) >>> 0;
       const value = readWord(addr);
+      const initialValue =
+        ((initialBytes.get(addr) ?? 0) |
+          ((initialBytes.get((addr + 1) >>> 0) ?? 0) << 8) |
+          ((initialBytes.get((addr + 2) >>> 0) ?? 0) << 16) |
+          ((initialBytes.get((addr + 3) >>> 0) ?? 0) << 24)) >>>
+        0;
+      const recentlyWritten = recentWrites.some(
+        (write) => write.address >= addr && write.address < ((addr + 4) >>> 0) && newestStep - write.step <= 5
+      );
+      const classes = ["memory-word-row", "memory-word-row--stack"];
+      if (index === 0) {
+        classes.push("is-current-sp");
+      }
+      if (recentlyWritten) {
+        classes.push("is-recent");
+      }
+      if (value === initialValue) {
+        classes.push("is-unchanged");
+      }
       return `
-        <div class="memory-word-row memory-word-row--stack">
+        <div class="${classes.join(" ")}">
           <span class="memory-word-row__addr">sp+${index * 4}</span>
           <span class="memory-word-row__value">${formatWord(value, format)}</span>
         </div>
@@ -240,6 +264,7 @@ export function createMemoryView(): MemoryView {
 
   function reset(): void {
     memBytes.clear();
+    initialBytes.clear();
     recentWrites = [];
     lastMemAddr = undefined;
     currentWriteAddrs = new Set<number>();
