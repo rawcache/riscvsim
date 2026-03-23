@@ -1,0 +1,238 @@
+.learn-page main.learn-main {
+  width: min(920px, calc(100% - 2 * var(--space-6)));
+  padding-top: var(--space-16);
+  padding-bottom: var(--space-18);
+}
+
+.learn-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.learn-hero__title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(2.4rem, 3vw, 3rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.learn-hero__subhead {
+  max-width: 560px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.learn-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.learn-progress__track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.learn-progress__fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 200ms ease;
+}
+
+.learn-progress__label {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.learn-curriculum {
+  display: flex;
+  flex-direction: column;
+}
+
+.learn-lessons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.learn-lesson {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.learn-lesson__marker {
+  flex: 0 0 auto;
+}
+
+.learn-lesson__badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.learn-lesson__badge--completed {
+  background: var(--accent);
+  color: #fff;
+}
+
+.learn-lesson__badge--active {
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.learn-lesson__badge--locked {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+}
+
+.learn-lesson__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.learn-lesson__title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.learn-lesson__description {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.learn-lesson__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.learn-lesson__tag {
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.learn-lesson__meta {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.learn-lesson__actions {
+  flex: 0 0 auto;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.learn-lesson__action {
+  min-width: 110px;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  transition: border-color var(--transition), background-color var(--transition), color var(--transition);
+}
+
+.learn-lesson__action--primary {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #fff;
+}
+
+.learn-lesson__action--primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.learn-lesson__action--outline {
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
+  color: var(--accent);
+  background: transparent;
+}
+
+.learn-lesson__action--outline:hover {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.learn-lesson__action--disabled {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.learn-lesson__locked-note {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .learn-page main.learn-main {
+    width: min(100%, calc(100% - 2 * var(--space-4)));
+    padding-top: var(--space-12);
+  }
+
+  .learn-lesson {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .learn-lesson__actions {
+    width: 100%;
+    align-items: stretch;
+    min-width: 0;
+  }
+
+  .learn-lesson__action {
+    width: 100%;
+  }
+
+  .learn-lesson__locked-note {
+    text-align: left;
+  }
+}

@@ -20,6 +20,7 @@ import {
   renderClikeExpression,
   renderRegs,
 } from "./format";
+import { createLessonMode } from "./lesson-mode";
 import { DATA_BASE } from "./memory-map";
 import { createMemoryView } from "./memory";
 import { pushToUrl, readFromUrl } from "./permalink";
@@ -1602,6 +1603,30 @@ window.addEventListener("DOMContentLoaded", async () => {
     ].join("\n"),
   };
 
+  const lessonMode = createLessonMode({
+    loadSource(source, options = {}) {
+      applyEditorSource(source, {
+        statusMessage: options.statusMessage ?? "",
+        focus: options.focus ?? false,
+      });
+    },
+    assembleSource(showSpinner, successMessage) {
+      return assembleCurrentSource(showSpinner, successMessage);
+    },
+    getExecutionDeltas() {
+      return history.slice(1, historyIndex + 1).map(snapshotToDelta);
+    },
+    getCurrentSession() {
+      return currentUserSession;
+    },
+    showToast(message) {
+      showToast(message);
+    },
+    setStatusMessage(message) {
+      statusEl.textContent = message;
+    },
+  });
+
   function loadSample(name: string) {
     applyEditorSource(samplePrograms[name] ?? "", {
       sampleName: name,
@@ -1727,9 +1752,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     onSession(session) {
       currentUserSession = session;
       void programsUi?.setSession(session);
+      void lessonMode.handleSessionChange(session);
     },
   });
   await programsUi?.setSession(currentUserSession);
+  await lessonMode.handleSessionChange(currentUserSession);
 
   sourceEl.addEventListener("input", handleSourceInput);
   sourceEl.addEventListener("keyup", updateLineNumbers);
@@ -1803,8 +1830,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     await copyTextToClipboard(window.location.href, "Link copied!");
   });
 
-  const sharedProgram = await readFromUrl();
-  if (sharedProgram) {
+  const sharedProgram = lessonMode.isActive() ? null : await readFromUrl();
+  if (lessonMode.isActive()) {
+    setSharedBannerVisible(false);
+    lessonMode.prefillSource();
+  } else if (sharedProgram) {
     setSharedBannerVisible(true);
     applyEditorSource(sharedProgram, {
       keepSharedBanner: true,
@@ -1827,7 +1857,9 @@ window.addEventListener("DOMContentLoaded", async () => {
       rt.setAlignmentChecks(true);
       statusEl.textContent = "Rust/WASM simulator ready.";
       assembleBtn.disabled = false;
-      if (sharedProgram) {
+      if (lessonMode.isActive()) {
+        await lessonMode.initialize();
+      } else if (sharedProgram) {
         await assembleCurrentSource(true, "Loaded from shared link.");
       }
     })
@@ -1839,6 +1871,9 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   assembleBtn.onclick = async () => {
     const assembled = await assembleCurrentSource(true, "Program assembled. Ready to step.");
+    if (assembled) {
+      lessonMode.handleAssembled();
+    }
     if (assembled && currentUserSession?.isGtStudent) {
       programsUi?.recordHistory(sourceEl.value);
     }
@@ -1846,7 +1881,10 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   resetBtn.onclick = async () => {
     resetCurrentProgramState();
-    await assembleCurrentSource(false, "Program reset.");
+    const assembled = await assembleCurrentSource(false, "Program reset.");
+    if (assembled) {
+      lessonMode.handleReset();
+    }
     updateLineNumbers();
     syncHighlightScroll();
   };
@@ -1861,6 +1899,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     renderFromHistory(historyIndex, false);
     resetAnimator();
     statusEl.textContent = "Viewing previous state.";
+    lessonMode.handleStepBack();
   };
 
   stepBtn.onclick = async () => {
@@ -1880,6 +1919,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       maybeSwitchToDisassembly(history[historyIndex].effects ?? []);
       statusEl.textContent = "Viewing recorded state.";
       setStatus("assembled");
+      lessonMode.handleStep(false);
       return;
     }
 
@@ -1928,6 +1968,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         statusEl.textContent = "Step completed.";
         setStatus("stepping");
       }
+      lessonMode.handleStep(true);
     } catch (err) {
       setPanelMessage(effectsEl, `Error: ${(err as Error).message}`, "danger");
       setStatus("ready");
@@ -1990,6 +2031,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         renderFromHistory(historyIndex);
       }
       statusEl.textContent = finalMessage;
+      lessonMode.handleRunEnd();
       setAnimationsEnabled(true);
       if (lastDelta) {
         animateStep(lastDelta);
