@@ -171,6 +171,30 @@
   flex-shrink: 0;
 }
 
+.nav-status-badge {
+  display: none;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 11px;
+}
+
+.nav-status-badge.visible {
+  display: block;
+}
+
+.nav-streak-indicator {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #f97316 12%, transparent);
+  color: #f97316;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .nav-signin-btn {
   font-family: "Geist", sans-serif;
   font-size: 14px;
@@ -297,6 +321,10 @@
   }
 
   .nav-status-badge {
+    display: none !important;
+  }
+
+  .nav-streak-indicator {
     display: none !important;
   }
 

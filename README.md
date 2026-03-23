@@ -42,7 +42,7 @@ The visualizer derives all state from the step delta stream -- no changes to the
 
 ## Guided Learning
 
-Fifteen structured lessons live at `/learn/`, covering the full ECE 2035 path from registers to a capstone program.
+Twenty structured lessons live at `/learn/`, covering the full ECE 2035 path from registers and memory to pipelines, interrupts, and a mini-kernel capstone.
 
 Each lesson has:
 - Explanatory content with tips and warnings
@@ -51,7 +51,7 @@ Each lesson has:
 - Hints after multiple failed attempts
 - Progress saved to account or localStorage for guests
 
-Lessons: Registers · Memory · Branches · Functions · Sorting · Bitwise · Shifts · Comparison · Stack · M Extension · Strings · Linked Lists · Recursion · Syscalls · Capstone
+Lessons: Registers · Memory · Branches · Functions · Sorting · Bitwise · Shifts · Comparison · Stack · M Extension · Strings · Linked Lists · Recursion · Syscalls · Capstone · Pipeline · Cache · Floating Point Concepts · Interrupts · Mini Kernel
 
 ## Challenges
 
@@ -66,6 +66,38 @@ Each challenge includes:
 
 The `/learn/` page also includes a public leaderboard powered by the backend API.
 
+## Labs
+
+Five lab-style assignments live at `/labs/`, designed to feel like real ECE 2035 programming labs.
+
+Each lab includes:
+- A full assignment spec and function signature
+- Visible and hidden grader test cases
+- Hints that unlock over time
+- Best-score tracking and repeat submissions
+- Lab-mode execution directly inside the simulator
+
+## Quizzes
+
+Five timed quizzes live at `/quiz/`, ranging from quick checks to a full-curriculum final.
+
+Each quiz includes:
+- Mixed MCQ, trace, fill-in, and assembly questions
+- Per-quiz timers with auto-submit
+- Review mode with explanations
+- XP awards for passing attempts
+
+## Leaderboard
+
+The public leaderboard lives at `/leaderboard/` and supports both all-time and weekly XP views.
+
+It tracks:
+- Total XP
+- Weekly XP
+- Lessons completed
+- Challenges passed
+- Badge count and streaks
+
 ## Frontend Rewrites
 
 If you deploy on Amplify or another static host, add rewrites for the multi-page routes:
@@ -74,8 +106,14 @@ If you deploy on Amplify or another static host, add rewrites for the multi-page
 |---|---|---|
 | `/learn/` | `/learn/index.html` | `200` |
 | `/learn` | `/learn/index.html` | `200` |
+| `/quiz/` | `/quiz/index.html` | `200` |
+| `/quiz` | `/quiz/index.html` | `200` |
+| `/labs/` | `/labs/index.html` | `200` |
+| `/labs` | `/labs/index.html` | `200` |
 | `/challenges/` | `/challenges/index.html` | `200` |
 | `/challenges` | `/challenges/index.html` | `200` |
+| `/leaderboard/` | `/leaderboard/index.html` | `200` |
+| `/leaderboard` | `/leaderboard/index.html` | `200` |
 | `/about/` | `/about/index.html` | `200` |
 | `/about` | `/about/index.html` | `200` |
 | `/docs/` | `/docs/index.html` | `200` |

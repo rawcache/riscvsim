@@ -2,7 +2,17 @@ import "./auth-page";
 import { initAuthUi } from "./auth-ui";
 
 export interface NavConfig {
-  activePage: "landing" | "learn" | "challenges" | "simulator" | "about" | "docs" | "github";
+  activePage:
+    | "landing"
+    | "learn"
+    | "quiz"
+    | "labs"
+    | "leaderboard"
+    | "challenges"
+    | "simulator"
+    | "about"
+    | "docs"
+    | "github";
 }
 
 const THEME_KEY = "studyriscv-theme";
@@ -71,8 +81,28 @@ function resourcesActive(config: NavConfig["activePage"]): boolean {
   return config === "about" || config === "docs";
 }
 
+function loadStreakCount(): number {
+  if (typeof localStorage === "undefined") {
+    return 0;
+  }
+
+  try {
+    const stored = localStorage.getItem("studyriscv_score");
+    if (!stored) {
+      return 0;
+    }
+    const parsed = JSON.parse(stored) as { streak?: unknown };
+    return Number.isFinite(parsed?.streak) ? Math.max(0, Number(parsed.streak)) : 0;
+  } catch {
+    return 0;
+  }
+}
+
 function renderNav(config: NavConfig): string {
   const isLearn = config.activePage === "learn";
+  const isQuiz = config.activePage === "quiz";
+  const isLabs = config.activePage === "labs";
+  const isLeaderboard = config.activePage === "leaderboard";
   const isChallenges = config.activePage === "challenges";
   const isGithub = config.activePage === "github";
   const isProduct = productActive(config.activePage);
@@ -85,6 +115,8 @@ function renderNav(config: NavConfig): string {
         <a href="/" class="nav-logo">StudyRISC-V</a>
         <div class="nav-links">
           <a href="/learn/" class="nav-link${isLearn ? " nav-link-active" : ""}">Learn</a>
+          <a href="/quiz/" class="nav-link${isQuiz ? " nav-link-active" : ""}">Quizzes</a>
+          <a href="/labs/" class="nav-link${isLabs ? " nav-link-active" : ""}">Labs</a>
           <a href="/challenges/" class="nav-link${isChallenges ? " nav-link-active" : ""}">Challenges</a>
           <div class="nav-dropdown-wrapper" data-nav-dropdown="product">
             <button class="nav-link nav-dropdown-trigger${isProduct ? " nav-link-active" : ""}" type="button" aria-expanded="false" aria-controls="nav-dropdown-product">
@@ -130,6 +162,7 @@ function renderNav(config: NavConfig): string {
         </div>
         <div class="nav-actions">
           <div id="nav-status-badge" class="nav-status-badge${config.activePage === "simulator" ? " visible" : ""}"></div>
+          <div id="nav-streak-indicator" class="nav-streak-indicator" hidden></div>
           <button id="auth-signin-btn" class="nav-signin-btn" type="button">Sign in</button>
           <div class="auth-menu">
             <button id="auth-user-btn" class="auth-user-btn nav-user-btn" type="button" hidden></button>
@@ -146,12 +179,15 @@ function renderNav(config: NavConfig): string {
       </div>
       <div class="nav-mobile-menu" id="nav-mobile-menu">
         <a href="/learn/" class="nav-mobile-link${isLearn ? " nav-link-active" : ""}">Learn</a>
+        <a href="/quiz/" class="nav-mobile-link${isQuiz ? " nav-link-active" : ""}">Quizzes</a>
+        <a href="/labs/" class="nav-mobile-link${isLabs ? " nav-link-active" : ""}">Labs</a>
         <a href="/challenges/" class="nav-mobile-link${isChallenges ? " nav-link-active" : ""}">Challenges</a>
         <a href="/simulator/" class="nav-mobile-link${isProduct ? " nav-link-active" : ""}">Simulator</a>
         <a href="/simulator/" class="nav-mobile-link${isProduct ? " nav-link-active" : ""}">Call Stack Visualizer</a>
         <a href="/simulator/" class="nav-mobile-link${isProduct ? " nav-link-active" : ""}">Pseudo-C Explainer</a>
         <a href="/about/" class="nav-mobile-link${config.activePage === "about" ? " nav-link-active" : ""}">About</a>
         <a href="/docs/" class="nav-mobile-link${config.activePage === "docs" ? " nav-link-active" : ""}">Docs</a>
+        <a href="/leaderboard/" class="nav-mobile-link${isLeaderboard ? " nav-link-active" : ""}">Leaderboard</a>
         <a href="/docs/#ece-2035" class="nav-mobile-link${docsGuideActive ? " nav-link-active" : ""}">ECE 2035 Guide</a>
         <a href="https://github.com/rawcache/riscvsim" class="nav-mobile-link${isGithub ? " nav-link-active" : ""}" target="_blank" rel="noopener">GitHub</a>
         <div class="nav-mobile-theme-row">
@@ -182,6 +218,7 @@ export function initNav(config: NavConfig): void {
   const mobileThemeToggle = root.querySelector<HTMLButtonElement>("#nav-mobile-theme-toggle");
   const mobileSignin = root.querySelector<HTMLButtonElement>("#nav-mobile-signin-btn");
   const desktopSignin = root.querySelector<HTMLButtonElement>("#auth-signin-btn");
+  const streakIndicator = root.querySelector<HTMLElement>("#nav-streak-indicator");
   const closeTimers = new WeakMap<HTMLElement, number>();
 
   const closeAllDropdowns = () => {
@@ -272,6 +309,20 @@ export function initNav(config: NavConfig): void {
       desktopSignin.click();
       closeMobileMenu();
     });
+  }
+
+  const streakCount = loadStreakCount();
+  if (streakIndicator) {
+    if (streakCount >= 2) {
+      streakIndicator.hidden = false;
+      streakIndicator.textContent = `🔥 ${streakCount}`;
+      streakIndicator.title = `${streakCount}-day streak! Keep it up.`;
+      streakIndicator.setAttribute("aria-label", `${streakCount}-day streak`);
+    } else {
+      streakIndicator.hidden = true;
+      streakIndicator.textContent = "";
+      streakIndicator.removeAttribute("title");
+    }
   }
 
   const syncMobileSigninVisibility = () => {

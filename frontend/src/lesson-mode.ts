@@ -16,8 +16,10 @@ import {
   type LessonGoal,
   type UserProgress,
 } from "./lessons";
+import { showNotification } from "./notifications";
 import { addPoints, checkAndAwardBadges, loadScore, syncScoreToApi } from "./scoring";
 import type { WasmStateDelta } from "./types";
+import { activateWatchMode, deactivateWatchMode, generateNarration, isWatchModeActive } from "./watch-mode";
 
 type LoadSourceOptions = {
   statusMessage?: string;
@@ -28,7 +30,11 @@ type LessonModeDependencies = {
   loadSource: (source: string, options?: LoadSourceOptions) => void;
   assembleSource: (showSpinner: boolean, successMessage: string) => Promise<boolean>;
   getExecutionDeltas: () => WasmStateDelta[];
+  getInstructionCount: () => number;
+  getInstructionText: (pc: number) => string;
   getCurrentSession: () => UserSession | null;
+  stepForward: () => void;
+  setEditorReadOnly: (readOnly: boolean) => void;
   showToast: (message: string) => void;
   setStatusMessage: (message: string) => void;
 };
@@ -170,6 +176,14 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   let runtimeReady = false;
   let completionVisible = lessonProgress.completed;
   let compactTab: "lesson" | "editor" = "lesson";
+  let watchPlaying = false;
+  let watchCompleted = false;
+  let watchSpeed: 0.5 | 1 | 2 = 1;
+  let watchNarration = "";
+  let watchStarterCode = "";
+  let watchLastState = currentState;
+  let watchInstructionCount = 0;
+  let watchTimer: number | null = null;
 
   const simulatorLayout = document.querySelector(".simulator-layout");
   const leftColumn = document.querySelector(".sim-column--left");
@@ -226,6 +240,104 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   brandRow?.appendChild(navIndicator);
 
   const compactMedia = window.matchMedia("(max-width: 1399px)");
+
+  function clearWatchTimer(): void {
+    if (watchTimer !== null) {
+      window.clearTimeout(watchTimer);
+      watchTimer = null;
+    }
+  }
+
+  function currentWatchStepActive(): boolean {
+    return isWatchModeActive();
+  }
+
+  function canWatch(step: LessonStep): boolean {
+    return Boolean((step.solution ?? step.code)?.trim());
+  }
+
+  function syncEditorReadOnly(): void {
+    deps.setEditorReadOnly(currentWatchStepActive());
+  }
+
+  function stopWatchPlayback(): void {
+    watchPlaying = false;
+    clearWatchTimer();
+  }
+
+  function resetWatchState(): void {
+    stopWatchPlayback();
+    watchCompleted = false;
+    watchNarration = "";
+    watchStarterCode = "";
+    watchInstructionCount = 0;
+    watchLastState = getLessonState([]);
+    deactivateWatchMode();
+    syncEditorReadOnly();
+  }
+
+  function queueWatchStep(): void {
+    clearWatchTimer();
+    if (!watchPlaying || watchCompleted) {
+      return;
+    }
+    const delay = Math.round(1500 / watchSpeed);
+    watchTimer = window.setTimeout(() => {
+      deps.stepForward();
+    }, delay);
+  }
+
+  async function enterWatchMode(): Promise<void> {
+    const step = currentStep();
+    const solution = (step.solution ?? step.code ?? "").trim();
+    if (!solution) {
+      return;
+    }
+
+    watchStarterCode = step.code ?? "";
+    watchCompleted = false;
+    watchPlaying = false;
+    watchNarration = "Watch the full solution execute, then switch back to the starter and solve it yourself.";
+    activateWatchMode(lesson.id, step.id);
+    syncEditorReadOnly();
+
+    deps.loadSource(solution, {
+      statusMessage: "",
+      focus: false,
+    });
+
+    if (!runtimeReady) {
+      render();
+      return;
+    }
+
+    const assembled = await deps.assembleSource(false, "Watch mode assembled.");
+    if (assembled) {
+      watchInstructionCount = Math.max(1, deps.getInstructionCount());
+      watchLastState = getLessonState([]);
+      currentState = watchLastState;
+      render();
+      deps.showToast("Watch mode loaded the worked solution");
+    }
+  }
+
+  async function exitWatchMode(loadStarter = true): Promise<void> {
+    const starter = watchStarterCode;
+    resetWatchState();
+    if (!loadStarter) {
+      render();
+      return;
+    }
+    deps.loadSource(starter, {
+      statusMessage: "",
+      focus: false,
+    });
+    if (runtimeReady) {
+      await deps.assembleSource(false, "Starter code restored.");
+    }
+    deps.showToast("Watch mode off · your starter code is ready");
+    render();
+  }
 
   function currentStep(): LessonStep {
     return lesson.steps[Math.min(lessonProgress.currentStepIndex, lesson.steps.length - 1)];
@@ -336,9 +448,11 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     });
   }
 
-  function loadGoalEvaluation(recordAttempt = false): void {
+  function loadGoalEvaluation(options: { recordAttempt?: boolean; allowRewards?: boolean } = {}): void {
     const step = currentStep();
     currentState = getLessonState(deps.getExecutionDeltas());
+    const recordAttempt = options.recordAttempt === true;
+    const allowRewards = options.allowRewards !== false;
     if (!step.goals || step.goals.length === 0) {
       goalEvaluation = { passed: false, results: {} };
       goalFeedback = {};
@@ -378,7 +492,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
       }, 320);
     }
 
-    if (result.passed && !lessonProgress.stepsCompleted.includes(step.id)) {
+    if (allowRewards && result.passed && !lessonProgress.stepsCompleted.includes(step.id)) {
       awardLessonStepPoints(step);
     }
 
@@ -405,7 +519,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
       if (options.toast !== false) {
         deps.showToast("Code loaded for this step");
       }
-      loadGoalEvaluation(false);
+      loadGoalEvaluation({ recordAttempt: false, allowRewards: !currentWatchStepActive() });
     }
   }
 
@@ -427,6 +541,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     goalEvaluation = { passed: false, results: {} };
     completionVisible = false;
     compactTab = "lesson";
+    resetWatchState();
     applyCompactLayout();
     updateNavIndicator();
     render();
@@ -453,6 +568,15 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
       }
     }
     render();
+    showNotification({
+      id: `lesson-${lesson.id}-${lessonProgress.completedAt ?? Date.now()}`,
+      type: "lesson",
+      title: "Lesson Complete!",
+      message: `${lesson.title} · +50 XP`,
+      icon: "🎓",
+      duration: 4000,
+      accentColor: "var(--success)",
+    });
 
     const session = deps.getCurrentSession();
     if (session?.idToken) {
@@ -518,6 +642,49 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
                 }
               </div>`
             : ""
+        }
+      </div>
+    `;
+  }
+
+  function renderWatchMode(step: LessonStep): string {
+    if (!canWatch(step)) {
+      return "";
+    }
+
+    const currentInstruction = currentWatchStepActive()
+      ? escapeHtml(deps.getInstructionText(watchLastState.pc) || "Waiting for the first instruction…")
+      : "Preview the worked solution before you try it yourself.";
+    const progress = watchInstructionCount > 0 ? Math.min(100, (currentState.stepCount / watchInstructionCount) * 100) : 0;
+
+    return `
+      <div class="lesson-watch">
+        <div class="lesson-watch__header">
+          <div class="lesson-watch__title">Watch Mode</div>
+          <button class="lesson-watch__toggle" type="button" data-lesson-action="watch-toggle">
+            ${currentWatchStepActive() ? "Turn off" : "Watch solution"}
+          </button>
+        </div>
+        ${
+          currentWatchStepActive()
+            ? `<div class="lesson-watch__controls">
+                <button class="lesson-watch__button" type="button" data-lesson-action="watch-play" ${watchPlaying || watchCompleted ? "disabled" : ""}>▶ Play</button>
+                <button class="lesson-watch__button" type="button" data-lesson-action="watch-pause" ${!watchPlaying ? "disabled" : ""}>⏸ Pause</button>
+                <button class="lesson-watch__button" type="button" data-lesson-action="watch-reset">⏮ Reset</button>
+                <button class="lesson-watch__button" type="button" data-lesson-action="watch-speed">⏩ ${watchSpeed}x</button>
+              </div>
+              <div class="lesson-watch__progress"><span style="width:${progress}%;"></span></div>
+              <div class="lesson-watch__instruction">${currentInstruction}</div>
+              <div class="lesson-watch__narration">${escapeHtml(watchNarration || "Press Play to watch the solution execute instruction by instruction.")}</div>
+              ${
+                watchCompleted
+                  ? `<div class="lesson-watch__complete">
+                      <div class="lesson-watch__complete-title">You've watched the solution. Now try it yourself.</div>
+                      <button class="lesson-success-banner__button" type="button" data-lesson-action="watch-try">Try It →</button>
+                    </div>`
+                  : ""
+              }`
+            : `<div class="lesson-watch__narration">${escapeHtml(currentInstruction)}</div>`
         }
       </div>
     `;
@@ -606,11 +773,12 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
       </div>
       <div class="lesson-panel__body">
         <div class="lesson-panel__content">${renderContent(step.content)}</div>
+        ${renderWatchMode(step)}
         ${renderGoals(step)}
       </div>
       <div class="lesson-panel__footer">
         ${
-          step.isCheckpoint && step.goals && step.goals.length > 0 && goalEvaluation.passed
+          !currentWatchStepActive() && step.isCheckpoint && step.goals && step.goals.length > 0 && goalEvaluation.passed
             ? `<div class="lesson-success-banner">
                 <div>
                   <div class="lesson-success-banner__title">All goals complete!</div>
@@ -676,6 +844,36 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
             void deps.assembleSource(false, "Annotated starter assembled.");
           }
         }
+        if (action === "watch-toggle") {
+          if (currentWatchStepActive()) {
+            void exitWatchMode(true);
+          } else {
+            void enterWatchMode();
+          }
+        }
+        if (action === "watch-play" && currentWatchStepActive() && !watchCompleted) {
+          watchPlaying = true;
+          queueWatchStep();
+          render();
+        }
+        if (action === "watch-pause" && currentWatchStepActive()) {
+          stopWatchPlayback();
+          render();
+        }
+        if (action === "watch-reset" && currentWatchStepActive()) {
+          stopWatchPlayback();
+          void enterWatchMode();
+        }
+        if (action === "watch-speed" && currentWatchStepActive()) {
+          watchSpeed = watchSpeed === 1 ? 2 : watchSpeed === 2 ? 0.5 : 1;
+          if (watchPlaying) {
+            queueWatchStep();
+          }
+          render();
+        }
+        if (action === "watch-try" && currentWatchStepActive()) {
+          void exitWatchMode(true);
+        }
       });
     });
   }
@@ -728,25 +926,55 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     },
     async initialize() {
       runtimeReady = true;
+      syncEditorReadOnly();
       render();
       await loadStepCode(currentStep(), { toast: false });
-      loadGoalEvaluation(false);
+      loadGoalEvaluation({ recordAttempt: false });
     },
     handleAssembled() {
       completionVisible = lessonProgress.completed;
-      loadGoalEvaluation(false);
+      watchInstructionCount = Math.max(1, deps.getInstructionCount());
+      watchLastState = getLessonState(deps.getExecutionDeltas());
+      loadGoalEvaluation({ recordAttempt: false, allowRewards: !currentWatchStepActive() });
     },
     handleStep(recordAttempt = true) {
-      loadGoalEvaluation(recordAttempt);
+      const before = watchLastState;
+      loadGoalEvaluation({
+        recordAttempt: currentWatchStepActive() ? false : recordAttempt,
+        allowRewards: !currentWatchStepActive(),
+      });
+      if (currentWatchStepActive()) {
+        const instruction = deps.getInstructionText(before.pc);
+        watchNarration = `Step ${currentState.stepCount}: ${instruction.trim() || "instruction"}\n\n${generateNarration(
+          instruction,
+          before,
+          currentState
+        )}`;
+        watchLastState = currentState;
+        if (currentState.halted || currentState.trapFired || currentState.stepCount >= watchInstructionCount) {
+          stopWatchPlayback();
+          watchCompleted = true;
+        } else if (watchPlaying) {
+          queueWatchStep();
+        }
+        render();
+      }
     },
     handleStepBack() {
-      loadGoalEvaluation(false);
+      watchLastState = getLessonState(deps.getExecutionDeltas());
+      loadGoalEvaluation({ recordAttempt: false, allowRewards: !currentWatchStepActive() });
     },
     handleRunEnd() {
-      loadGoalEvaluation(false);
+      stopWatchPlayback();
+      loadGoalEvaluation({ recordAttempt: false, allowRewards: !currentWatchStepActive() });
     },
     handleReset() {
-      loadGoalEvaluation(false);
+      watchLastState = getLessonState([]);
+      if (currentWatchStepActive()) {
+        watchCompleted = false;
+        watchNarration = "Reset the watched program. Press Play to start again.";
+      }
+      loadGoalEvaluation({ recordAttempt: false, allowRewards: !currentWatchStepActive() });
     },
     async handleSessionChange(session: UserSession | null) {
       if (!session?.idToken) {
@@ -769,11 +997,12 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
         }
       }
       completionVisible = lessonProgress.completed;
+      syncEditorReadOnly();
       render();
 
       if (runtimeReady) {
         await loadStepCode(currentStep(), { toast: false });
-        loadGoalEvaluation(false);
+        loadGoalEvaluation({ recordAttempt: false, allowRewards: !currentWatchStepActive() });
       }
     },
   };

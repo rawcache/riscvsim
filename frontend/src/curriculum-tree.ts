@@ -4,21 +4,26 @@ import type { Lesson, UserProgress } from "./lessons";
 type Point = { x: number; y: number };
 
 const TREE_LAYOUT: Record<string, Point> = {
-  "lesson-1-registers": { x: 280, y: 20 },
-  "lesson-2-memory": { x: 280, y: 150 },
-  "lesson-3-branches": { x: 280, y: 280 },
-  "lesson-4-functions": { x: 280, y: 410 },
-  "lesson-6-bitwise": { x: 110, y: 540 },
-  "lesson-7-shifts": { x: 110, y: 670 },
-  "lesson-8-comparison": { x: 110, y: 800 },
-  "lesson-5-sorting": { x: 450, y: 540 },
-  "lesson-9-stack": { x: 450, y: 670 },
-  "lesson-10-mext": { x: 450, y: 800 },
-  "lesson-11-strings": { x: 110, y: 930 },
-  "lesson-12-linkedlist": { x: 110, y: 1060 },
-  "lesson-13-recursion": { x: 280, y: 1190 },
-  "lesson-14-syscall": { x: 280, y: 1320 },
-  "lesson-15-capstone": { x: 280, y: 1450 },
+  "lesson-1-registers": { x: 320, y: 24 },
+  "lesson-2-memory": { x: 320, y: 156 },
+  "lesson-3-branches": { x: 320, y: 288 },
+  "lesson-4-functions": { x: 320, y: 420 },
+  "lesson-6-bitwise": { x: 120, y: 552 },
+  "lesson-7-shifts": { x: 120, y: 684 },
+  "lesson-8-comparison": { x: 120, y: 816 },
+  "lesson-5-sorting": { x: 520, y: 552 },
+  "lesson-9-stack": { x: 520, y: 684 },
+  "lesson-10-mext": { x: 520, y: 816 },
+  "lesson-11-strings": { x: 120, y: 948 },
+  "lesson-12-linkedlist": { x: 120, y: 1080 },
+  "lesson-13-recursion": { x: 320, y: 1212 },
+  "lesson-16-pipeline": { x: 520, y: 1080 },
+  "lesson-17-cache": { x: 520, y: 948 },
+  "lesson-14-syscall": { x: 320, y: 1344 },
+  "lesson-18-floats": { x: 120, y: 1344 },
+  "lesson-15-capstone": { x: 320, y: 1476 },
+  "lesson-19-interrupts": { x: 520, y: 1476 },
+  "lesson-20-minikernel": { x: 320, y: 1708 },
 };
 
 const TREE_EDGES: Array<[string, string]> = [
@@ -38,6 +43,14 @@ const TREE_EDGES: Array<[string, string]> = [
   ["lesson-1-registers", "lesson-10-mext"],
   ["lesson-13-recursion", "lesson-14-syscall"],
   ["lesson-14-syscall", "lesson-15-capstone"],
+  ["lesson-2-memory", "lesson-17-cache"],
+  ["lesson-1-registers", "lesson-16-pipeline"],
+  ["lesson-3-branches", "lesson-16-pipeline"],
+  ["lesson-6-bitwise", "lesson-18-floats"],
+  ["lesson-7-shifts", "lesson-18-floats"],
+  ["lesson-14-syscall", "lesson-19-interrupts"],
+  ["lesson-15-capstone", "lesson-20-minikernel"],
+  ["lesson-19-interrupts", "lesson-20-minikernel"],
 ];
 
 function escapeHtml(value: string): string {
@@ -94,9 +107,10 @@ function nodeArc(progress: number): string {
 export function renderCurriculumTree(container: HTMLElement, lessons: Lesson[], progress: UserProgress): void {
   const compact = container.dataset.compact === "true";
   const readOnly = compact || container.dataset.readonly === "true";
-  const scale = compact ? 0.52 : 1;
-  const width = compact ? 360 : 640;
-  const height = compact ? 820 : 1560;
+  const scaleX = compact ? 0.78 : 1;
+  const scaleY = compact ? 0.42 : 1;
+  const width = compact ? 560 : 720;
+  const height = compact ? 760 : 1820;
   const nodeSize = compact ? 24 : 72;
   const ringRadius = compact ? 11 : 30;
 
@@ -115,8 +129,8 @@ export function renderCurriculumTree(container: HTMLElement, lessons: Lesson[], 
     const completed = fromState === "completed" && (toState === "completed" || toState === "in-progress");
     const from = TREE_LAYOUT[fromId];
     const to = TREE_LAYOUT[toId];
-    const scaledFrom = { x: from.x * scale, y: from.y * scale };
-    const scaledTo = { x: to.x * scale, y: to.y * scale };
+    const scaledFrom = { x: from.x * scaleX, y: from.y * scaleY };
+    const scaledTo = { x: to.x * scaleX, y: to.y * scaleY };
     return `<path d="${edgePath(scaledFrom, scaledTo, compact)}" class="tree-edge${completed ? " tree-edge--completed" : " tree-edge--locked"}" />`;
   }).join("");
 
@@ -136,8 +150,8 @@ export function renderCurriculumTree(container: HTMLElement, lessons: Lesson[], 
               return `<span class="challenge-dot challenge-dot--${status}" aria-hidden="true"></span>`;
             })
             .join("");
-      const x = point.x * scale;
-      const y = point.y * scale;
+      const x = point.x * scaleX;
+      const y = point.y * scaleY;
       const label = compact
         ? ""
         : `<div class="tree-node__label">${escapeHtml(lesson.title)}<div class="tree-node__sublabel">~${lesson.estimatedMinutes} min · ${escapeHtml(

@@ -12,6 +12,7 @@ import {
 } from "./challenges";
 import { escapeHtml } from "./format";
 import { getLessonState, loadProgress } from "./lessons";
+import { showNotification } from "./notifications";
 import { addPoints, checkAndAwardBadges, loadScore } from "./scoring";
 import { WasmRuntime } from "./wasm-runtime";
 
@@ -372,6 +373,15 @@ export function createChallengeMode(deps: ChallengeModeDependencies): ChallengeM
       addPoints(award + (submission.score === submission.maxScore ? 25 : 0), `challenge:${activeChallenge.id}`);
       checkAndAwardBadges(loadProgress(), loadChallengeSubmissions());
       syncScoreToApiFireAndForget(currentSession);
+      showNotification({
+        id: `challenge-${activeChallenge.id}-${submission.submittedAt}`,
+        type: "challenge",
+        title: "Challenge Passed!",
+        message: `${activeChallenge.title} · +${award + (submission.score === submission.maxScore ? 25 : 0)} XP`,
+        icon: "✅",
+        duration: 4000,
+        accentColor: "var(--success)",
+      });
       deps.showToast(`Challenge passed · ${submission.score}/${submission.maxScore}`);
     } else if (passed) {
       deps.showToast("Challenge passed, but answer view reduced this attempt to 0 points.");

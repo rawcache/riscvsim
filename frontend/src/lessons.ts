@@ -2450,7 +2450,7 @@ This is a realistic assembly task: multiple passes over data, multiple outputs, 
       {
         id: "lesson-15-step-6",
         title: "Graduation message",
-        content: `Congratulations. You have completed all 15 lessons in the StudyRISC-V curriculum.
+        content: `Congratulations. You have completed the core application arc of the StudyRISC-V curriculum.
 
 At this point you have written real assembly programs involving:
 - arithmetic and register flow
@@ -2460,6 +2460,8 @@ At this point you have written real assembly programs involving:
 - recursion
 - multiply/divide
 - strings and data structures
+
+Next come the architecture-heavy lessons: pipeline hazards, cache behavior, floating-point representation, interrupts, and a mini-kernel capstone.
 
 The platform tracks your total steps, completed goals, challenge solves, XP, and streaks so you can see how far you have come.`,
         isCheckpoint: false,
@@ -2481,7 +2483,801 @@ You now have the mental model to read assembly, not just type it.`,
   },
 ];
 
-const ALL_LESSONS = [...LESSONS, ...ADDITIONAL_LESSONS];
+const LESSON_EXPANSIONS: Record<string, LessonStep[]> = {
+  "lesson-1-registers": [
+    {
+      id: "lesson-1-step-6",
+      title: "Deep dive: what the ALU actually does",
+      content: `Under the hood, instructions like \`add\` and \`addi\` flow through the CPU's **arithmetic logic unit** (ALU). The ALU takes two 32-bit inputs, performs the requested operation, and places the 32-bit result on an output bus that is written back into the destination register.
+
+That is why register arithmetic feels instant in the simulator: the inputs come directly from the register file, the ALU computes, and the result is written back on the same instruction.
+
+[tip]
+When you step an arithmetic instruction, watch the destination register and the effect log together. You are seeing the architectural result of the ALU's work.
+[/tip]`,
+      isCheckpoint: false,
+    },
+    {
+      id: "lesson-1-step-7",
+      title: "Real-world bridge: computing an array offset",
+      content: `One of the first real uses of arithmetic in systems code is **address calculation**. If an array of 32-bit integers starts at some base address, element \`i\` lives at:
+
+\`base + i * 4\`
+
+**Your goal:** pretend x1 holds an array index of 4. Compute the byte offset for that element and store it in x5. The correct offset is 16.`,
+      code: ["addi x1, x0, 4      # i = 4", "# YOUR CODE HERE: compute i * 4 into x5"].join("\n"),
+      goals: [regGoal("lesson1-array-offset", "x5 should equal 16 bytes", 5, 16, "Use two left shifts or add x1 to itself twice.")],
+      solution: ["addi x1, x0, 4", "slli x5, x1, 2"].join("\n"),
+      annotations: ["Word arrays use 4-byte spacing.", "A left shift by 2 multiplies by 4."],
+      isCheckpoint: true,
+    },
+  ],
+  "lesson-2-memory": [
+    {
+      id: "lesson-2-step-7",
+      title: "Deep dive: why alignment matters",
+      content: `A 32-bit word spans **four consecutive bytes**. Hardware expects word loads and stores to begin on addresses divisible by 4 so the bytes line up with the data path cleanly.
+
+Misaligned access is not just a style issue. In real implementations it can require extra cycles or a trap handler. StudyRISC-V exposes that by trapping on misaligned word access so you build the right habit early.`,
+      isCheckpoint: false,
+    },
+    {
+      id: "lesson-2-step-8",
+      title: "Real-world bridge: struct field access",
+      content: `Memory access gets interesting when multiple fields live next to each other. Imagine this C struct:
+
+\`struct Pair { int left; int right; }\`
+
+If a \`Pair\` starts at address x1, then:
+- \`left\` is at \`0(x1)\`
+- \`right\` is at \`4(x1)\`
+
+**Your goal:** load the second field, 99, from a Pair into x4.`,
+      code: [".data", "pair: .word 42, 99", ".text", "la   x1, pair", "# YOUR CODE HERE: load the right field into x4"].join("\n"),
+      goals: [regGoal("lesson2-struct-field", "x4 should equal 99", 4, 99, "The second word is at offset 4, so use lw x4, 4(x1).")],
+      solution: [".data", "pair: .word 42, 99", ".text", "la   x1, pair", "lw   x4, 4(x1)"].join("\n"),
+      annotations: ["Struct fields are just fixed offsets in memory.", "The second 32-bit field begins 4 bytes after the first."],
+      isCheckpoint: true,
+    },
+  ],
+  "lesson-3-branches": [
+    {
+      id: "lesson-3-step-5",
+      title: "Deep dive: how the PC changes on a branch",
+      content: `Every instruction normally advances the **program counter** by 4 bytes. A branch is different: if the condition is true, the PC becomes the branch target instead of the next sequential instruction.
+
+That is why taken branches feel like a "jump" in the disassembly view. You are watching the PC stop following the normal +4 rhythm and land on a label-defined target instead.`,
+      isCheckpoint: false,
+    },
+    {
+      id: "lesson-3-step-6",
+      title: "Real-world bridge: counting matches",
+      content: `A common loop pattern is "scan and count." Instead of summing every element, you only increment a counter when some condition is true.
+
+**Your goal:** count how many numbers in the array are greater than 4. For \`[2, 7, 5, 1, 9]\`, the answer is 3, so x6 should end at 3.`,
+      code: [
+        ".data",
+        "arr: .word 2, 7, 5, 1, 9",
+        ".text",
+        "la   x1, arr",
+        "addi x2, x0, 5",
+        "addi x6, x0, 0",
+        "scan:",
+        "  # YOUR CODE HERE",
+        "done:",
+      ].join("\n"),
+      goals: [regGoal("lesson3-count-matches", "x6 should equal 3", 6, 3, "Load each element, compare it against 4, and increment x6 only when it is greater.")],
+      solution: [
+        ".data",
+        "arr: .word 2, 7, 5, 1, 9",
+        ".text",
+        "la   x1, arr",
+        "addi x2, x0, 5",
+        "addi x6, x0, 0",
+        "scan:",
+        "  beq  x2, x0, done",
+        "  lw   x3, 0(x1)",
+        "  addi x4, x0, 4",
+        "  bge  x4, x3, skip",
+        "  addi x6, x6, 1",
+        "skip:",
+        "  addi x1, x1, 4",
+        "  addi x2, x2, -1",
+        "  beq  x0, x0, scan",
+        "done:",
+      ].join("\n"),
+      annotations: ["This is a branch-controlled counting loop.", "Only values greater than 4 should bump the counter."],
+      isCheckpoint: true,
+    },
+  ],
+  "lesson-4-functions": [
+    {
+      id: "lesson-4-step-6",
+      title: "Deep dive: what goes wrong when ra is clobbered",
+      content: `The return address is just a register. If a function uses \`jal\` again before saving ra, the original caller address is overwritten.
+
+That failure mode looks dramatic:
+- the function returns to the wrong place
+- control flow loops or jumps unexpectedly
+- the call stack panel no longer makes sense
+
+This is one of the most common bugs in beginner assembly because the code *almost* looks right until the nested call executes.`,
+      isCheckpoint: false,
+    },
+    {
+      id: "lesson-4-step-7",
+      title: "Common mistakes in prologues and epilogues",
+      content: `Three calling-convention mistakes appear constantly:
+
+1. Saving \`ra\` after a nested \`jal\` instead of before it
+2. Writing to \`s0\` before preserving the caller's value
+3. Restoring \`sp\` by the wrong amount, so the frame leaks or overlaps
+
+[warning]
+If your function returns to the wrong instruction, inspect \`ra\`, \`sp\`, and the frame contents first. Those three signals usually tell you exactly which convention rule you broke.
+[/warning]`,
+      isCheckpoint: false,
+    },
+    {
+      id: "lesson-4-step-8",
+      title: "Real-world bridge: a tiny reusable helper",
+      content: `Real programs are built from small helpers. Let's write one that adds 1 to its argument and returns the result in a0.
+
+**Your goal:** complete \`increment\` so calling it with 41 returns 42 in a0.`,
+      code: ["addi a0, x0, 41", "jal  ra, increment", "beq  x0, x0, done", "increment:", "  # YOUR CODE HERE", "  ret", "done:"].join("\n"),
+      goals: [regGoal("lesson4-increment", "a0 should equal 42 after increment returns", 10, 42, "Use addi a0, a0, 1 inside the helper.")],
+      solution: ["addi a0, x0, 41", "jal  ra, increment", "beq  x0, x0, done", "increment:", "  addi a0, a0, 1", "  ret", "done:"].join("\n"),
+      annotations: ["Arguments arrive in a0.", "Return the updated value in the same register."],
+      isCheckpoint: true,
+    },
+  ],
+  "lesson-5-sorting": [
+    {
+      id: "lesson-5-step-4",
+      title: "Deep dive: why adjacent swaps eventually sort the array",
+      content: `Bubble sort works because every pass guarantees one invariant: the largest remaining unsorted element moves to the far right.
+
+That means sorting is not magic. It is just repeated local repair:
+- compare neighbors
+- fix one inversion if needed
+- advance
+
+After enough passes, there are no inversions left, which means the whole array is ordered.`,
+      isCheckpoint: false,
+    },
+    {
+      id: "lesson-5-step-5",
+      title: "Common mistakes when sorting in assembly",
+      content: `Sorting bugs usually come from one of four places:
+
+1. Advancing the pointer by 1 byte instead of 4 bytes
+2. Swapping the registers but forgetting to store them back
+3. Loop bounds that run one iteration too far
+4. Reusing a temporary register before both stores are done
+
+[warning]
+If a sort almost works but corrupts one element, suspect pointer arithmetic first.
+[/warning]`,
+      isCheckpoint: false,
+    },
+    {
+      id: "lesson-5-step-6",
+      title: "Real-world bridge: one compare-and-swap pass",
+      content: `Many sorting routines break naturally into helper operations. The most important one is **compare-and-swap** for a single adjacent pair.
+
+**Your goal:** compare the pair [9, 4] at addresses 0x200 and 0x204 and rewrite memory so the pair becomes [4, 9].`,
+      code: ["addi x1, x0, 0x200", "addi x2, x0, 9", "addi x3, x0, 4", "sw   x2, 0(x1)", "sw   x3, 4(x1)", "# YOUR CODE HERE"].join("\n"),
+      goals: [
+        {
+          id: "lesson5-compare-swap",
+          description: "After one compare-and-swap, mem[0x200]=4 and mem[0x204]=9",
+          check: (state: LessonState) => readWord(state.memory, 0x200) === 4 && readWord(state.memory, 0x204) === 9,
+          hint: "Load both words, compare them, and only store them back in reverse order when the left word is larger.",
+        },
+      ],
+      solution: ["addi x1, x0, 0x200", "addi x2, x0, 9", "addi x3, x0, 4", "sw   x2, 0(x1)", "sw   x3, 4(x1)", "lw   t0, 0(x1)", "lw   t1, 4(x1)", "blt  t1, t0, do_swap", "beq  x0, x0, done", "do_swap:", "sw   t1, 0(x1)", "sw   t0, 4(x1)", "done:"].join("\n"),
+      annotations: ["The pair is out of order because 9 > 4.", "Swap only when the left value is larger."],
+      isCheckpoint: true,
+    },
+  ],
+  "lesson-7-shifts": [
+    {
+      id: "lesson-7-step-6",
+      title: "Deep dive: barrel shifters in hardware",
+      content: `Real CPUs implement shifts with dedicated hardware often called a **barrel shifter**. Instead of shifting one bit per cycle, it can route bits to their new positions combinationally and produce the result in a single instruction.
+
+That matters because shifts are foundational in address generation, masks, fixed-point math, and compiler optimizations.`,
+      isCheckpoint: false,
+    },
+  ],
+  "lesson-8-comparison": [
+    {
+      id: "lesson-8-step-6",
+      title: "Deep dive: comparison is subtraction without keeping the result",
+      content: `At the hardware level, comparison usually looks a lot like subtraction. The ALU checks relationships between the two operands and sets a yes/no outcome that either becomes a branch decision or a 1/0 result for \`slt\`.
+
+That is why compare-and-branch instructions feel so closely related to arithmetic: under the hood, they are.`,
+      isCheckpoint: false,
+    },
+  ],
+  "lesson-9-stack": [
+    {
+      id: "lesson-9-step-7",
+      title: "Common mistakes with stack frames",
+      content: `The three classic stack bugs are:
+
+1. Allocating one frame size and deallocating a different one
+2. Saving \`ra\` or \`s0\` at the wrong offsets and restoring garbage later
+3. Writing locals past the end of the frame
+
+[warning]
+If \`sp\` does not return to \`0x7FFFFFFC\` after a small test program, stop and fix the frame math before doing anything else.
+[/warning]`,
+      isCheckpoint: false,
+    },
+  ],
+  "lesson-12-linkedlist": [
+    {
+      id: "lesson-12-step-6",
+      title: "Deep dive: pointer chasing vs arrays",
+      content: `An array gives you constant-time indexed access because every element is at a predictable offset. A linked list gives you flexible insertion but forces you to **chase pointers** one node at a time.
+
+That tradeoff is visible right in the assembly:
+- arrays use base + offset arithmetic
+- lists use repeated loads of the next pointer`,
+      isCheckpoint: false,
+    },
+  ],
+  "lesson-13-recursion": [
+    {
+      id: "lesson-13-step-7",
+      title: "Common mistakes in recursive assembly",
+      content: `Recursive bugs are almost always one of these:
+
+1. Base case branches are wrong, so recursion never stops
+2. A value needed after the recursive call is not saved first
+3. The epilogue restores \`ra\` or \`sp\` incorrectly during unwind
+
+If the call stack keeps growing forever, suspect the base case before anything else.`,
+      isCheckpoint: false,
+    },
+  ],
+  "lesson-14-syscall": [
+    {
+      id: "lesson-14-step-6",
+      title: "Deep dive: why syscalls use a trap instruction",
+      content: `A user program cannot directly execute privileged OS logic. Instead it uses a **trap instruction** like \`ecall\`, which hands control to privileged software through a carefully defined boundary.
+
+That boundary is what keeps user code isolated from kernel code. The calling convention on registers is the contract on top of that hardware trap mechanism.`,
+      isCheckpoint: false,
+    },
+  ],
+};
+
+function appendExpandedSteps(lesson: Lesson): Lesson {
+  const extras = LESSON_EXPANSIONS[lesson.id];
+  if (!extras || extras.length === 0) {
+    return lesson;
+  }
+
+  const completionIndex = lesson.steps.findIndex((step) => /lesson complete/i.test(step.title));
+  if (completionIndex < 0) {
+    return {
+      ...lesson,
+      steps: [...lesson.steps, ...extras],
+    };
+  }
+
+  return {
+    ...lesson,
+    steps: [
+      ...lesson.steps.slice(0, completionIndex),
+      ...extras,
+      ...lesson.steps.slice(completionIndex),
+    ],
+  };
+}
+
+const ADVANCED_LESSONS: Lesson[] = [
+  {
+    id: "lesson-16-pipeline",
+    title: "Pipeline Hazards and Instruction-Level Parallelism",
+    description: "Understand the classic five-stage pipeline, hazards, stalls, and how instruction reordering improves throughput.",
+    estimatedMinutes: 35,
+    difficulty: "advanced",
+    prerequisites: ["lesson-1-registers", "lesson-3-branches"],
+    tags: ["computer architecture", "pipeline", "hazards", "ILP"],
+    steps: [
+      {
+        id: "lesson-16-step-1",
+        title: "The classic five-stage pipeline",
+        content: `A simple RISC-V pipeline breaks instruction execution into five stages:
+
+1. **IF** fetch the instruction
+2. **ID** decode it and read registers
+3. **EX** run the ALU or address calculation
+4. **MEM** access memory if needed
+5. **WB** write the result back
+
+In the ideal case, one instruction finishes every cycle after the pipeline fills.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-16-step-2",
+        title: "Data hazards: read after write",
+        content: `A **RAW hazard** happens when one instruction needs a value that a previous instruction has not written back yet.
+
+Example:
+\`addi x1, x0, 5\`
+\`add  x2, x1, x1\`
+
+The second instruction depends on x1. Real processors solve this with forwarding/bypassing. A naive fix is to insert NOPs, but reordering is usually better.`,
+        code: ["addi x1, x0, 5", "add  x2, x1, x1"].join("\n"),
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-16-step-3",
+        title: "Control hazards and branch penalty",
+        content: `Branches are dangerous for pipelines because the CPU may already have fetched the next sequential instruction before it knows whether the branch is taken.
+
+If the branch is taken, the wrong-path work must be flushed. That wasted work is the **branch penalty**.
+
+[tip]
+This is why tight loops often benefit from fewer branches and from arranging common cases so the fall-through path is the most likely one.
+[/tip]`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-16-step-4",
+        title: "Load-use hazards and reordering",
+        content: `Loads are especially tricky because the data arrives late in the pipeline. A load followed immediately by a dependent arithmetic instruction often needs a stall.
+
+**Your goal:** reorder the independent instructions so the program still computes x3 = 15 without putting the dependent add immediately after the load.`,
+        code: [".data", "word: .word 10", ".text", "la   x2, word", "lw   x1, 0(x2)", "# move an independent instruction here", "addi x4, x0, 5", "# YOUR CODE HERE: produce x3 = x1 + x4"].join("\n"),
+        goals: [regGoal("pipeline-reorder", "x3 should equal 15 after the reordered sequence", 3, 15, "Place the independent addi between the lw and the dependent add, then compute add x3, x1, x4.")],
+        solution: [".data", "word: .word 10", ".text", "la   x2, word", "lw   x1, 0(x2)", "addi x4, x0, 5", "add  x3, x1, x4"].join("\n"),
+        annotations: ["The load provides 10.", "The independent addi fills the gap before the dependent add uses x1."],
+        isCheckpoint: true,
+      },
+      {
+        id: "lesson-16-step-5",
+        title: "Writing pipeline-friendly loops",
+        content: `Pipeline-friendly code tries to keep useful independent work between dependent instructions.
+
+Compare three loop styles:
+- naive dependency chains
+- explicit NOP padding
+- instruction reordering
+
+Reordering usually wins because it hides latency without wasting instruction slots.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-16-step-6",
+        title: "Out-of-order execution",
+        content: `Modern superscalar CPUs often execute instructions **out of order** when the data dependencies allow it. They dynamically find independent work and issue it early.
+
+You still benefit from understanding hazards because compilers, schedulers, and simple in-order cores all rely on the same dependency structure.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-16-step-7",
+        title: "Lesson complete",
+        content: `You have completed **Pipeline Hazards and Instruction-Level Parallelism**.
+
+You now know:
+- how the five-stage pipeline overlaps work
+- why RAW, control, and structural hazards matter
+- why load-use patterns are special
+- how instruction reordering improves throughput without changing program meaning`,
+        isCheckpoint: false,
+      },
+    ],
+  },
+  {
+    id: "lesson-17-cache",
+    title: "Memory Hierarchy and Cache Behavior",
+    description: "Connect assembly access patterns to cache lines, locality, and the performance gap between registers and RAM.",
+    estimatedMinutes: 40,
+    difficulty: "advanced",
+    prerequisites: ["lesson-2-memory"],
+    tags: ["computer architecture", "cache", "memory hierarchy", "locality"],
+    steps: [
+      {
+        id: "lesson-17-step-1",
+        title: "The memory hierarchy",
+        content: `Real systems have a **memory hierarchy** because fast storage is expensive and small while slow storage is cheap and large.
+
+Typical access ranges:
+- registers: sub-nanosecond
+- L1 cache: roughly 1-4ns
+- L2 cache: roughly 4-12ns
+- L3 cache: roughly 12-40ns
+- RAM: roughly 60-100ns
+
+Cache exists to make the common case feel close to register speed.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-17-step-2",
+        title: "Spatial locality",
+        content: `**Spatial locality** means that if you touch one address, you are likely to touch nearby addresses soon.
+
+That is why sequential row-major array traversal is cache-friendly while strided or column-major traversal often is not: cache lines bring in adjacent bytes automatically.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-17-step-3",
+        title: "Temporal locality",
+        content: `**Temporal locality** means that recently used data is likely to be used again soon.
+
+Loop tiling and blocking are ways to keep the active working set small enough to fit in cache, so repeated accesses hit fast memory instead of going back to RAM.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-17-step-4",
+        title: "Cache lines on a miss",
+        content: `Caches move memory in **lines**, not one byte at a time. A 64-byte line means that touching one word can bring the next 15 words with it for free.
+
+**Your goal:** write the sequential summation loop and leave the total, 36, in x5. This mirrors the most cache-friendly access pattern: straight-line traversal.`,
+        code: [".data", "arr: .word 1, 2, 3, 4, 5, 6, 7, 8", ".text", "la   x1, arr", "addi x2, x0, 8", "addi x5, x0, 0", "loop:", "  # YOUR CODE HERE", "done:"].join("\n"),
+        goals: [regGoal("cache-sequential-sum", "x5 should equal 36 after a sequential scan", 5, 36, "Load each word, add it into x5, advance by 4 bytes, and count down.")],
+        solution: [".data", "arr: .word 1, 2, 3, 4, 5, 6, 7, 8", ".text", "la   x1, arr", "addi x2, x0, 8", "addi x5, x0, 0", "loop:", "  beq  x2, x0, done", "  lw   x3, 0(x1)", "  add  x5, x5, x3", "  addi x1, x1, 4", "  addi x2, x2, -1", "  beq  x0, x0, loop", "done:"].join("\n"),
+        annotations: ["Sequential addresses maximize spatial locality.", "The assembly loop itself is simple; the performance story comes from the access pattern."],
+        isCheckpoint: true,
+      },
+      {
+        id: "lesson-17-step-5",
+        title: "Cache-friendly data layouts",
+        content: `Data layout matters. An **array of structs** is convenient when you need all fields of one record at once. A **struct of arrays** can be better when you stream through one field across many records.
+
+The best layout depends on what the loop actually touches. Cache behavior is a property of both the data and the algorithm.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-17-step-6",
+        title: "Write policies",
+        content: `Caches also differ in how they handle stores:
+- **write-through** updates lower memory immediately
+- **write-back** defers the lower-level write until eviction
+
+Write-back is faster on average but more complex because dirty cache lines must eventually be written back coherently.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-17-step-7",
+        title: "Benchmarking access patterns",
+        content: `Two programs can compute the same answer and still have very different performance if one has strong locality and the other fights the cache.
+
+That is why systems performance is not only about instruction count. The addresses you touch matter just as much.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-17-step-8",
+        title: "Lesson complete",
+        content: `You have completed **Memory Hierarchy and Cache Behavior**.
+
+You now know how locality, line size, and traversal order connect low-level assembly loops to real machine performance.`,
+        isCheckpoint: false,
+      },
+    ],
+  },
+  {
+    id: "lesson-18-floats",
+    title: "Floating Point Concepts (Software Implementation)",
+    description: "Use shifts and masks to reason about IEEE-754 bit layouts and fixed-point math without hardware float instructions.",
+    estimatedMinutes: 35,
+    difficulty: "advanced",
+    prerequisites: ["lesson-7-shifts", "lesson-6-bitwise"],
+    tags: ["floating point", "IEEE 754", "software FP"],
+    steps: [
+      {
+        id: "lesson-18-step-1",
+        title: "IEEE 754 single precision",
+        content: `A single-precision IEEE-754 float is 32 bits:
+
+\`[sign 1][exponent 8][mantissa 23]\`
+
+Examples:
+- \`1.0  = 0x3F800000\`
+- \`2.0  = 0x40000000\`
+- \`0.5  = 0x3F000000\`
+- \`-1.0 = 0xBF800000\`
+
+Even without hardware float instructions, you can still inspect and manipulate those bits with integer instructions.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-18-step-2",
+        title: "Extracting the exponent",
+        content: `The exponent field lives in bits [30:23]. To extract it:
+1. shift right by 23
+2. mask with \`0xFF\`
+
+**Your goal:** given x1 = \`0x40000000\` (2.0), extract the biased exponent into x2. The result should be 128.`,
+        code: ["li   x1, 0x40000000", "# YOUR CODE HERE"].join("\n"),
+        goals: [regGoal("floats-exponent", "x2 should equal the biased exponent 128", 2, 128, "Shift right by 23, then mask with 0xFF.")],
+        solution: ["li   x1, 0x40000000", "srli x2, x1, 23", "andi x2, x2, 0xFF"].join("\n"),
+        annotations: ["The exponent is an 8-bit field.", "Mask after shifting so only those bits remain."],
+        isCheckpoint: true,
+      },
+      {
+        id: "lesson-18-step-3",
+        title: "Extracting the mantissa",
+        content: `The mantissa (fraction field) is the low 23 bits. A simple AND mask is enough to isolate it.
+
+**Your goal:** extract the mantissa of \`0x40400000\` (3.0) into x3. The raw mantissa bits should be \`0x400000\`.`,
+        code: ["li   x1, 0x40400000", "li   x2, 0x7FFFFF", "# YOUR CODE HERE"].join("\n"),
+        goals: [regGoal("floats-mantissa", "x3 should equal 0x400000", 3, 0x400000, "Use AND with a 23-bit mantissa mask.")],
+        solution: ["li   x1, 0x40400000", "li   x2, 0x7FFFFF", "and  x3, x1, x2"].join("\n"),
+        annotations: ["A 23-bit mask keeps the mantissa and clears sign/exponent bits."],
+        isCheckpoint: true,
+      },
+      {
+        id: "lesson-18-step-4",
+        title: "Fixed-point arithmetic",
+        content: `When hardware floating point is unavailable, **fixed-point** is a common substitute. In Q16.16 format, the high 16 bits are the integer part and the low 16 bits are the fraction.
+
+So:
+- 2.0 = \`0x00020000\`
+- 1.5 = \`0x00018000\`
+
+**Your goal:** multiply those Q16.16 values and leave 3.0, or \`0x00030000\`, in x3.`,
+        code: ["li   x1, 0x00020000", "li   x2, 0x00018000", "# YOUR CODE HERE"].join("\n"),
+        goals: [regGoal("floats-fixed-point", "x3 should equal 0x00030000", 3, 0x00030000, "Multiply the raw integers, then shift the product right by 16 bits.")],
+        solution: ["li   x1, 0x00020000", "li   x2, 0x00018000", "mul  x3, x1, x2", "srli x3, x3, 16"].join("\n"),
+        annotations: ["Q16.16 multiplication needs a post-shift to restore the binary point."],
+        isCheckpoint: true,
+      },
+      {
+        id: "lesson-18-step-5",
+        title: "Software float addition",
+        content: `A full software floating-point add is more involved:
+1. extract sign, exponent, and mantissa
+2. align the exponents
+3. add or subtract the mantissas
+4. normalize the result
+5. repack the fields
+
+Even if you never implement all of it by hand, understanding those steps explains what floating-point hardware is doing for you.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-18-step-6",
+        title: "Special values",
+        content: `IEEE-754 reserves special bit patterns for:
+- **infinity**
+- **NaN** (not a number)
+- **denormals/subnormals**
+
+NaN detection is a good bitwise exercise: if all exponent bits are 1 and the mantissa is nonzero, the value is NaN.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-18-step-7",
+        title: "Why RISC-V has an F extension",
+        content: `RV32IM covers integer math only. Hardware floating point lives in the separate **F extension**, which adds float registers and float instructions.
+
+StudyRISC-V focuses on RV32IM, but understanding the bit layout and fixed-point alternatives makes the transition to RV32F much easier.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-18-step-8",
+        title: "Lesson complete",
+        content: `You have completed **Floating Point Concepts (Software Implementation)**.
+
+You now know how to inspect IEEE-754 fields, reason about fixed-point math, and see why floating-point hardware needs its own instruction-set extension.`,
+        isCheckpoint: false,
+      },
+    ],
+  },
+  {
+    id: "lesson-19-interrupts",
+    title: "Interrupt Handling and Privileged Architecture",
+    description: "Learn how traps, CSRs, and interrupt handling connect user code to privileged control flow.",
+    estimatedMinutes: 30,
+    difficulty: "advanced",
+    prerequisites: ["lesson-14-syscall"],
+    tags: ["interrupts", "privileged", "CSR", "trap handling", "operating systems"],
+    steps: [
+      {
+        id: "lesson-19-step-1",
+        title: "Interrupts vs exceptions",
+        content: `An **exception** is synchronous: it happens because of the current instruction, like an illegal opcode or \`ecall\`.
+
+An **interrupt** is asynchronous: hardware signals the CPU about an external event such as a timer tick or device completion.
+
+Both use the same broad trap mechanism, but the source of the event is different.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-19-step-2",
+        title: "The trap path in RISC-V",
+        content: `When a trap fires, privileged RISC-V hardware records state in **CSRs** (control and status registers):
+- save the current PC into \`mepc\`
+- save the cause code into \`mcause\`
+- jump to the trap-vector base in \`mtvec\`
+
+That gives the handler enough context to inspect what happened and decide how to recover.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-19-step-3",
+        title: "Reading mcause",
+        content: `The \`mcause\` CSR tells the handler why the trap happened. Common educational cause codes include:
+- 0 = instruction address misaligned
+- 2 = illegal instruction
+- 8 = environment call from U-mode
+- 11 = environment call from M-mode
+
+Cause codes turn "something went wrong" into a precise software branch.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-19-step-4",
+        title: "A minimal trap handler",
+        content: `A trap handler usually looks like:
+
+\`trap_handler:\`
+\`  csrr t0, mcause\`
+\`  li   t1, 8\`
+\`  beq  t0, t1, handle_ecall\`
+\`  j    panic\`
+
+\`handle_ecall:\`
+\`  csrr t0, mepc\`
+\`  addi t0, t0, 4\`
+\`  csrw mepc, t0\`
+\`  mret\`
+
+The key idea is that the handler decides whether to resume the interrupted program and where to resume it.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-19-step-5",
+        title: "Context switching",
+        content: `A scheduler can only pause one task and resume another if it preserves the full execution context:
+- general-purpose registers
+- stack pointer
+- return address
+- program counter
+
+That saved context is the bridge from one running task to the next.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-19-step-6",
+        title: "StudyRISC-V trap behavior",
+        content: `StudyRISC-V halts on \`ecall\` and other traps so you can inspect the architectural state. A real operating system would instead run a handler, perhaps perform a service, advance \`mepc\`, and return to user code.
+
+That difference is educational rather than conceptual. The important part is recognizing that \`ecall\` crosses a privilege boundary.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-19-step-7",
+        title: "Lesson complete",
+        content: `You have completed **Interrupt Handling and Privileged Architecture**.
+
+You now understand traps, CSRs, cause codes, and why operating systems need privileged control flow that ordinary user code cannot execute directly.`,
+        isCheckpoint: false,
+      },
+    ],
+  },
+  {
+    id: "lesson-20-minikernel",
+    title: "Writing a Mini Operating System Kernel",
+    description: "Pull together traps, context state, and scheduling concepts to reason about a tiny cooperative kernel.",
+    estimatedMinutes: 50,
+    difficulty: "advanced",
+    prerequisites: ["lesson-19-interrupts", "lesson-15-capstone"],
+    tags: ["operating systems", "kernel", "scheduling", "system calls", "capstone"],
+    steps: [
+      {
+        id: "lesson-20-step-1",
+        title: "What a kernel does",
+        content: `A kernel provides the machine-level services that ordinary programs rely on:
+- scheduling
+- memory management
+- device and I/O abstraction
+- system-call handling
+
+This lesson focuses on a minimal cooperative scheduler so the ideas stay concrete.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-20-step-2",
+        title: "Task control blocks",
+        content: `A **task control block** (TCB) stores the kernel's snapshot of a task:
+- saved sp
+- saved pc
+- status
+- task id
+
+If each field is one word, a tiny TCB is just 16 bytes. That is small enough to reason about directly in assembly.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-20-step-3",
+        title: "The task table",
+        content: `A scheduler needs a table of tasks to choose from. In \`.data\`, that can be a simple array of TCBs plus a current-task index.
+
+The core idea is that task management is just memory layout plus disciplined save/restore code.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-20-step-4",
+        title: "Round-robin scheduling",
+        content: `A round-robin scheduler walks the task table and picks the next READY task.
+
+That policy is simple but important because it demonstrates the separation between:
+- scheduler policy (which task should run next?)
+- context switching mechanism (how do we actually resume it?)`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-20-step-5",
+        title: "Context switch helpers",
+        content: `A context switch is only correct if the outgoing task's important registers are saved and the incoming task's registers are restored.
+
+**Your goal:** complete the switch path so the next task id appears in a0 after the restore path completes.`,
+        code: ["addi a0, x0, 2      # next task id should land here", "# YOUR CODE HERE: save/restore path placeholder"].join("\n"),
+        goals: [regGoal("kernel-next-task", "a0 should contain the next task id", 10, 2, "Preserve the selected task id through the context-switch helper and return it in a0.")],
+        solution: ["addi a0, x0, 2", "# save current context", "# load next context", "addi a0, x0, 2"].join("\n"),
+        annotations: ["The lesson goal focuses on the visible architectural handoff: the next task id must survive the switch."],
+        isCheckpoint: true,
+      },
+      {
+        id: "lesson-20-step-6",
+        title: "Yielding control",
+        content: `In a cooperative kernel, a task gives up the CPU voluntarily by calling into the scheduler. That is a **yield**.
+
+No timer interrupt is required. The tradeoff is that a badly behaved task can keep the CPU forever if it never yields.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-20-step-7",
+        title: "Two tasks alternating",
+        content: `Now picture two tasks that each increment their own counter and yield after every increment.
+
+**Your goal:** after three yields per task, x5 and x6 should hold counters whose sum is 6.`,
+        code: ["addi x5, x0, 3", "addi x6, x0, 3", "# YOUR CODE HERE: model the alternating cooperative result"].join("\n"),
+        goals: [
+          {
+            id: "kernel-cooperative-counters",
+            description: "x5 + x6 should equal 6 after the simulated handoff",
+            check: (state: LessonState) => state.registers[5] + state.registers[6] === 6,
+            hint: "Model the final counter state directly first, then reason backward about the scheduler behavior that produced it.",
+          },
+        ],
+        solution: ["addi x5, x0, 3", "addi x6, x0, 3"].join("\n"),
+        annotations: ["The architectural invariant is simple: three yields per task means three increments each."],
+        isCheckpoint: true,
+      },
+      {
+        id: "lesson-20-step-8",
+        title: "What comes next",
+        content: `A real kernel adds much more:
+- preemptive scheduling with timer interrupts
+- system-call dispatch tables
+- virtual memory and page tables
+- protection domains between user and kernel code
+
+But those bigger systems still rest on the same fundamentals you have now seen: saved context, controlled privilege transitions, and disciplined memory layout.`,
+        isCheckpoint: false,
+      },
+      {
+        id: "lesson-20-step-9",
+        title: "Lesson complete",
+        content: `You have completed **Writing a Mini Operating System Kernel** and the full 20-lesson StudyRISC-V platform curriculum.
+
+From registers to traps, from arrays to scheduling, you now have a coherent machine-level mental model that spans the stack, memory hierarchy, and privileged control flow.`,
+        isCheckpoint: false,
+      },
+    ],
+  },
+];
+
+const ALL_LESSONS = [...[...LESSONS, ...ADDITIONAL_LESSONS].map(appendExpandedSteps), ...ADVANCED_LESSONS];
 
 export function getLessons(): Lesson[] {
   return (lessonTestSubsetEnabled() ? LESSONS : ALL_LESSONS).slice();

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quizzes - StudyRISC-V</title>
+    <meta
+      name="description"
+      content="Timed RISC-V quizzes for StudyRISC-V, from quick checks to final-exam style assessments."
+    />
+    <link rel="canonical" href="https://studyriscv.com/quiz/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // ignore theme bootstrap failures
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="../src/styles/global.css" />
+    <link rel="stylesheet" href="../src/styles/nav.css" />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/auth.css" />
+    <link rel="stylesheet" href="../src/styles/landing.css" />
+    <link rel="stylesheet" href="../src/styles/learn.css" />
+    <link rel="icon" type="image/svg+xml" href="../favicon-chip.svg" />
+  </head>
+  <body class="landing-page quiz-page">
+    <nav id="site-nav"></nav>
+    <main class="quiz-main">
+      <section id="quizApp" class="quiz-app"></section>
+    </main>
+    <footer id="site-footer"></footer>
+    <script type="module" src="../src/quiz-page.ts"></script>
+  </body>
+</html>

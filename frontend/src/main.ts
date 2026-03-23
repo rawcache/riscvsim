@@ -22,6 +22,7 @@ import {
   renderRegs,
 } from "./format";
 import { createChallengeMode } from "./challenge-ui";
+import { createLabMode } from "./lab-mode";
 import { createLessonMode } from "./lesson-mode";
 import { DATA_BASE } from "./memory-map";
 import { createMemoryView } from "./memory";
@@ -1588,8 +1589,23 @@ window.addEventListener("DOMContentLoaded", async () => {
     getExecutionDeltas() {
       return history.slice(1, historyIndex + 1).map(snapshotToDelta);
     },
+    getInstructionCount() {
+      const lines = disasmLines ?? [];
+      return new Set(lines.map((line) => line.pc >>> 0)).size;
+    },
+    getInstructionText(pc) {
+      const lines = disasmLines ?? [];
+      return lines.find((line) => (line.pc >>> 0) === (pc >>> 0))?.text ?? "";
+    },
     getCurrentSession() {
       return currentUserSession;
+    },
+    stepForward() {
+      stepBtn.click();
+    },
+    setEditorReadOnly(readOnly) {
+      sourceEl.disabled = readOnly;
+      sourceEl.closest(".editor-container")?.classList.toggle("is-readonly", readOnly);
     },
     showToast(message) {
       showToast(message);
@@ -1623,7 +1639,35 @@ window.addEventListener("DOMContentLoaded", async () => {
     },
   });
 
-  const activeLearningMode = challengeMode.isActive() ? challengeMode : lessonMode;
+  const labMode = createLabMode({
+    loadSource(source, options = {}) {
+      applyEditorSource(source, {
+        statusMessage: options.statusMessage ?? "",
+        focus: options.focus ?? false,
+      });
+    },
+    assembleSource(showSpinner, successMessage) {
+      return assembleCurrentSource(showSpinner, successMessage);
+    },
+    getCurrentSession() {
+      return currentUserSession;
+    },
+    getSource() {
+      return sourceEl.value;
+    },
+    showToast(message) {
+      showToast(message);
+    },
+    setStatusMessage(message) {
+      statusEl.textContent = message;
+    },
+  });
+
+  const activeLearningMode = challengeMode.isActive()
+    ? challengeMode
+    : labMode.isActive()
+      ? labMode
+      : lessonMode;
 
   function loadSample(name: string) {
     applyEditorSource(samplePrograms[name] ?? "", {
