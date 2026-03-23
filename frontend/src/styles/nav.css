@@ -4,6 +4,8 @@
   top: 0;
   z-index: 1000;
   width: 100%;
+  left: 0;
+  right: 0;
 }
 
 .site-nav {
@@ -51,7 +53,6 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  flex: 1;
 }
 
 .nav-link {
