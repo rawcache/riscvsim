@@ -3,17 +3,17 @@
   position: sticky;
   top: 0;
   z-index: 1000;
-  padding: 16px 16px 0;  
+  padding-top: 16px;   
 }
 
 /* === NAV BAR === */
 .site-nav {
   max-width: 1100px;
   margin: 0 auto;
-  width: 100%;
+  width: calc(100% - 32px);  
   height: 52px;
   background: #080808;
-  border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
 }
@@ -27,7 +27,7 @@
 
 /* === INNER === */
 .nav-inner {
-  padding: 0 16px;  /* smaller padding now */
+  padding: 0 16px;
   height: 100%;
   display: flex;
   align-items: center;
