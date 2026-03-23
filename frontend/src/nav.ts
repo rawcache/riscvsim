@@ -161,21 +161,12 @@ function renderNav(config: NavConfig): string {
       </div>
       <div class="nav-mobile-menu" id="nav-mobile-menu">
         <a href="/learn/" class="nav-mobile-link${isLearn ? " nav-link-active" : ""}">Learn</a>
-        <a href="/quiz/" class="nav-mobile-link${isQuiz ? " nav-link-active" : ""}">Quizzes</a>
-        <a href="/labs/" class="nav-mobile-link${isLabs ? " nav-link-active" : ""}">Labs</a>
-        <a href="/challenges/" class="nav-mobile-link${isChallenges ? " nav-link-active" : ""}">Challenges</a>
         <a href="/simulator/" class="nav-mobile-link${isProduct ? " nav-link-active" : ""}">Simulator</a>
-        <a href="/simulator/" class="nav-mobile-link${isProduct ? " nav-link-active" : ""}">Call Stack Visualizer</a>
-        <a href="/simulator/" class="nav-mobile-link${isProduct ? " nav-link-active" : ""}">Pseudo-C Explainer</a>
+        <a href="/quiz/" class="nav-mobile-link">Quizzes</a>
+        <a href="/labs/" class="nav-mobile-link">Labs</a>
+        <a href="/challenges/" class="nav-mobile-link">Challenges</a>
         <a href="/about/" class="nav-mobile-link${config.activePage === "about" ? " nav-link-active" : ""}">About</a>
-        <a href="/docs/" class="nav-mobile-link${config.activePage === "docs" ? " nav-link-active" : ""}">Docs</a>
-        <a href="/leaderboard/" class="nav-mobile-link${isLeaderboard ? " nav-link-active" : ""}">Leaderboard</a>
-        <a href="/docs/#ece-2035" class="nav-mobile-link${docsGuideActive ? " nav-link-active" : ""}">ECE 2035 Guide</a>
-        <a href="https://github.com/rawcache/riscvsim" class="nav-mobile-link${isGithub ? " nav-link-active" : ""}" target="_blank" rel="noopener">GitHub</a>
-        <div class="nav-mobile-theme-row">
-          <span>Theme</span>
-          <button id="nav-mobile-theme-toggle" class="nav-theme-toggle" type="button" aria-label="Toggle theme">${sunMoonSvg()}</button>
-        </div>
+        <a href="https://github.com/rawcache/riscvsim" class="nav-mobile-link" target="_blank" rel="noopener">GitHub</a>
         <div class="nav-mobile-actions">
           <button id="nav-mobile-signin-btn" class="nav-signin-btn" type="button">Sign in</button>
         </div>

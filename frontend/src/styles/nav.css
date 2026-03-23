@@ -509,14 +509,13 @@
   }
 
   .nav-signin-btn {
-    display: inline-flex;
-    height: 30px;
-    padding: 0 12px;
-    font-size: 13px;
-    font-weight: 500;
-    border-radius: 6px;
-    background: var(--accent);
-    color: #fff;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    padding: 0 16px !important;
+    height: 34px !important;
+    vertical-align: middle !important;
   }
 
   .nav-theme-toggle {
