@@ -978,6 +978,8 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
           let reactionResetTimer = 0;
           let fastPinsTimer = 0;
           let annoyedTimer = 0;
+          const BLINK_MAX = 4;
+          const FAST_MAX = 8;
           let chipClickCount = 0;
           let chipClickWindowStartedAt = 0;
 
@@ -1123,20 +1125,29 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
 
           function handleChipClick() {
             const now = performance.now();
+
             if (now - chipClickWindowStartedAt > 2200) {
               chipClickWindowStartedAt = now;
               chipClickCount = 0;
             }
 
             chipClickCount += 1;
-            if (chipClickCount >= 4) {
-              flashChipAnnoyed();
-              chipClickCount = 0;
-              chipClickWindowStartedAt = now;
-            } else {
+
+            if (chipClickCount <= BLINK_MAX) {
               triggerBlink();
+              playChipClickReaction();
+              return;
             }
-            playChipClickReaction();
+
+            if (chipClickCount <= FAST_MAX) {
+              playChipClickReaction({ rapidPins: true });
+              return;
+            }
+
+            flashChipAnnoyed();
+            playChipClickReaction({ rapidPins: true });
+            chipClickCount = 0;
+            chipClickWindowStartedAt = now;
           }
 
           function handleCtaClick() {
