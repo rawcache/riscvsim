@@ -8,7 +8,8 @@ import {
   type Lesson,
   type UserProgress,
 } from "./lessons";
-import { initSiteShell } from "./site-shell";
+import { initFooter } from "./footer";
+import { initNav } from "./nav";
 
 function escapeHtml(value: string): string {
   return value
@@ -148,7 +149,10 @@ function renderPage(progress: UserProgress, isLoggedIn: boolean): void {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  void initSiteShell().then(async () => {
+  initNav({ activePage: "learn" });
+  initFooter();
+
+  void (async () => {
     let progress = loadProgress();
     let session = await getSession();
 
@@ -167,5 +171,5 @@ document.addEventListener("DOMContentLoaded", () => {
     saveProgress(progress);
     session = await getSession();
     renderPage(progress, Boolean(session));
-  });
+  })();
 });

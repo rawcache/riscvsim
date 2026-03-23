@@ -37,7 +37,7 @@ body.docs-page {
 .docs-sidebar__heading {
   margin-bottom: 8px;
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -49,7 +49,7 @@ body.docs-page {
   padding: 4px 8px;
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
 }
 
@@ -74,7 +74,7 @@ body.docs-page {
 .docs-mobile-toc summary {
   padding: 12px 14px;
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
   cursor: pointer;
 }
@@ -105,7 +105,7 @@ body.docs-page {
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 22px;
   font-weight: 700;
 }
@@ -113,7 +113,7 @@ body.docs-page {
 .docs-section h3 {
   margin: 32px 0 12px;
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 16px;
   font-weight: 600;
 }
@@ -121,7 +121,7 @@ body.docs-page {
 .docs-section p,
 .docs-section li {
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 13px;
   line-height: 1.8;
 }
@@ -204,7 +204,7 @@ body.docs-page {
 
 .docs-table-wrap td {
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
 }
 
@@ -254,6 +254,15 @@ body.docs-page {
   font-family: var(--font-mono);
   font-size: 16px;
   font-weight: 700;
+}
+
+.docs-table-wrap td code,
+.docs-table-wrap td .mono,
+.docs-register-table tbody td:first-child,
+.docs-register-table tbody td:nth-child(2),
+.docs-instruction-table tbody td:first-child,
+.docs-instruction-table tbody td:nth-child(2) {
+  font-family: var(--font-mono);
 }
 
 .docs-step p {

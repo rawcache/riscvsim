@@ -49,7 +49,7 @@ body.auth-modal-open {
   border: 0;
   background: transparent;
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
@@ -108,7 +108,7 @@ body.auth-modal-open {
 
 .auth-modal__label {
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
 }
 
@@ -120,7 +120,7 @@ body.auth-modal-open {
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 13px;
 }
 
@@ -134,7 +134,7 @@ body.auth-modal-open {
   align-items: center;
   gap: 8px;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
   cursor: pointer;
 }
@@ -148,7 +148,7 @@ body.auth-modal-open {
 
 .auth-modal__info {
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
   text-align: center;
 }
@@ -156,7 +156,7 @@ body.auth-modal-open {
 .auth-modal__error {
   margin-top: -4px;
   color: var(--danger);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
   text-align: center;
 }
@@ -172,7 +172,7 @@ body.auth-modal-open {
   border-radius: var(--radius-md);
   background: var(--accent);
   color: #fff;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -207,7 +207,7 @@ body.auth-modal-open {
   border: 0;
   background: transparent;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
   text-align: center;
   cursor: pointer;

@@ -19,7 +19,7 @@ body.about-page {
   display: grid;
   gap: 2px;
   margin: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: clamp(32px, 5.4vw, 42px);
   font-weight: 700;
   line-height: 1.08;
@@ -33,7 +33,7 @@ body.about-page {
   max-width: 560px;
   margin: 0;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.8;
 }
@@ -46,7 +46,7 @@ body.about-page {
   display: inline-flex;
   margin-bottom: 20px;
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -64,7 +64,7 @@ body.about-page {
 .about-mission__inner h2 {
   margin: 0;
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 20px;
 }
 
@@ -74,7 +74,7 @@ body.about-page {
 .about-tech__note {
   margin: 16px 0 0;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 13px;
   line-height: 1.8;
 }
@@ -105,7 +105,7 @@ body.about-page {
 .about-quote-card__body {
   margin: 16px 0 0;
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.7;
 }
@@ -113,7 +113,7 @@ body.about-page {
 .about-quote-card__attribution {
   margin: 20px 0 0;
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
 }
 
@@ -148,7 +148,7 @@ body.about-page {
 .about-builder__role {
   margin: 4px 0 0;
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
 }
 
@@ -173,7 +173,7 @@ body.about-page {
   align-items: center;
   gap: 8px;
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
   transition: color 150ms ease;
 }
@@ -211,14 +211,14 @@ body.about-page {
 .about-highlight-card h3 {
   margin: 0;
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 16px;
 }
 
 .about-highlight-card p {
   margin: 0;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 13px;
   line-height: 1.8;
 }

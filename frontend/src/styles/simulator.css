@@ -963,6 +963,10 @@ body.simulator-page {
 }
 
 .sim-select,
+.copy-toast {
+  font-family: var(--font-body);
+}
+
 .source-textarea,
 .disasm-mnemonic,
 .disasm-operands,
@@ -973,8 +977,6 @@ body.simulator-page {
 .reg-value,
 .memory-row__addr,
 .memory-byte,
-.shortcut-hint,
-.copy-toast,
 .effect-entry,
 .effect-entry__label,
 .effect-entry__before,
@@ -999,6 +1001,7 @@ body.simulator-page {
   padding: 0 10px;
   background: var(--bg-surface);
   font-size: 12px;
+  font-family: var(--font-body);
 }
 
 .control-row {
@@ -1028,6 +1031,7 @@ body.simulator-page {
 .shortcut-hint {
   margin: 0;
   color: var(--text-muted);
+  font-family: var(--font-body);
   font-size: 10px;
   line-height: 1.5;
   text-align: center;
@@ -1455,7 +1459,7 @@ body.simulator-page {
   min-height: 14px;
   overflow: hidden;
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
   line-height: 1.2;
   white-space: nowrap;
@@ -1541,7 +1545,7 @@ body.simulator-page {
   border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
   white-space: nowrap;
   transition: all 150ms ease;

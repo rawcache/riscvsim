@@ -1,4 +1,5 @@
-import { initSiteShell } from "./site-shell";
+import { initFooter } from "./footer";
+import { initNav } from "./nav";
 
 function updateActiveLink(id: string): void {
   document.querySelectorAll<HTMLElement>("[data-docs-link]").forEach((link) => {
@@ -74,7 +75,9 @@ function initSignupCta(): void {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  void initSiteShell().then(() => {
+  initNav({ activePage: "docs" });
+  initFooter();
+  queueMicrotask(() => {
     initScrollSpy();
     initMobileToc();
     initSignupCta();

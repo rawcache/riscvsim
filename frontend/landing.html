@@ -41,177 +41,15 @@
         }
       })();
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500;700&display=swap"
-    />
+    <link rel="stylesheet" href="./src/styles/global.css" />
+    <link rel="stylesheet" href="./src/styles/nav.css" />
     <link rel="stylesheet" href="./src/styles/tokens.css" />
     <link rel="stylesheet" href="./src/styles/auth.css" />
     <link rel="stylesheet" href="./src/styles/landing.css" />
     <link rel="icon" type="image/svg+xml" href="./favicon-chip.svg" />
   </head>
   <body class="landing-page landing-home">
-    <header id="landingNav" class="landing-nav" aria-label="Main navigation">
-      <div class="landing-nav__inner">
-        <div class="landing-nav__brand-row">
-          <a class="landing-brand" href="/">StudyRISC-V</a>
-          <button
-            id="landingNavToggle"
-            class="landing-nav__mobile-toggle"
-            type="button"
-            aria-expanded="false"
-            aria-controls="landingNavMobileMenu"
-            aria-label="Toggle navigation"
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
-        </div>
-        <nav class="landing-nav__links">
-          <div class="landing-nav__link-row">
-            <a href="/learn/">Learn</a>
-            <div class="nav-dropdown" data-dropdown>
-              <button class="nav-dropdown__trigger" type="button" aria-expanded="false" aria-haspopup="true">
-                <span>Product</span>
-                <svg class="nav-dropdown__chevron" viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path d="M2.5 4.5 6 8l3.5-3.5"></path>
-                </svg>
-              </button>
-              <div class="nav-dropdown__panel" hidden>
-                <a class="nav-dropdown__item" href="/simulator/">
-                  <span class="nav-dropdown__icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9">
-                      <path d="M4 12h11"></path>
-                      <path d="m11 5 7 7-7 7"></path>
-                      <path d="M4 5v14"></path>
-                    </svg>
-                  </span>
-                  <span class="nav-dropdown__copy">
-                    <span class="nav-dropdown__title">Open Simulator</span>
-                    <span class="nav-dropdown__desc">Step through RISC-V assembly in your browser</span>
-                  </span>
-                </a>
-                <a class="nav-dropdown__item" href="/simulator/">
-                  <span class="nav-dropdown__icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9">
-                      <rect x="5" y="6" width="14" height="4" rx="1.5"></rect>
-                      <rect x="5" y="10" width="14" height="4" rx="1.5"></rect>
-                      <rect x="5" y="14" width="14" height="4" rx="1.5"></rect>
-                    </svg>
-                  </span>
-                  <span class="nav-dropdown__copy">
-                    <span class="nav-dropdown__title">Call Stack Visualizer</span>
-                    <span class="nav-dropdown__desc">Watch stack frames build live</span>
-                  </span>
-                </a>
-                <a class="nav-dropdown__item" href="/simulator/">
-                  <span class="nav-dropdown__icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9">
-                      <path d="M8 8 4 12l4 4"></path>
-                      <path d="m16 8 4 4-4 4"></path>
-                      <path d="M10 19h4"></path>
-                    </svg>
-                  </span>
-                  <span class="nav-dropdown__copy">
-                    <span class="nav-dropdown__title">Pseudo-C Explainer</span>
-                    <span class="nav-dropdown__desc">Assembly translated to readable C</span>
-                  </span>
-                </a>
-              </div>
-            </div>
-            <div class="nav-dropdown" data-dropdown>
-              <button class="nav-dropdown__trigger" type="button" aria-expanded="false" aria-haspopup="true">
-                <span>Resources</span>
-                <svg class="nav-dropdown__chevron" viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path d="M2.5 4.5 6 8l3.5-3.5"></path>
-                </svg>
-              </button>
-              <div class="nav-dropdown__panel" hidden>
-                <a class="nav-dropdown__item" href="/about/">
-                  <span class="nav-dropdown__icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9">
-                      <circle cx="12" cy="8" r="3.5"></circle>
-                      <path d="M5 20c1.8-3.5 4.2-5 7-5s5.2 1.5 7 5"></path>
-                    </svg>
-                  </span>
-                  <span class="nav-dropdown__copy">
-                    <span class="nav-dropdown__title">About</span>
-                    <span class="nav-dropdown__desc">Who built this and why</span>
-                  </span>
-                </a>
-                <a class="nav-dropdown__item" href="/docs/">
-                  <span class="nav-dropdown__icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9">
-                      <path d="M6 4.5A2.5 2.5 0 0 1 8.5 2H20v20H8.5A2.5 2.5 0 0 0 6 24"></path>
-                      <path d="M6 4.5v17"></path>
-                      <path d="M10 7h7M10 11h7M10 15h5"></path>
-                    </svg>
-                  </span>
-                  <span class="nav-dropdown__copy">
-                    <span class="nav-dropdown__title">Docs</span>
-                    <span class="nav-dropdown__desc">Instruction reference and guides</span>
-                  </span>
-                </a>
-                <a class="nav-dropdown__item" href="/docs/#ece-2035">
-                  <span class="nav-dropdown__icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9">
-                      <path d="M5 6h14"></path>
-                      <path d="M7 4v4"></path>
-                      <path d="M17 4v4"></path>
-                      <rect x="4" y="6" width="16" height="14" rx="2"></rect>
-                      <path d="M8 11h8M8 15h5"></path>
-                    </svg>
-                  </span>
-                  <span class="nav-dropdown__copy">
-                    <span class="nav-dropdown__title">ECE 2035 Guide</span>
-                    <span class="nav-dropdown__desc">Georgia Tech course reference</span>
-                  </span>
-                </a>
-              </div>
-            </div>
-            <a href="https://github.com/rawcache" target="_blank" rel="noreferrer">GitHub</a>
-          </div>
-          <div class="auth-nav">
-            <button id="auth-signin-btn" class="auth-signin-btn" type="button">Sign in</button>
-            <div class="auth-menu">
-              <button id="auth-user-btn" class="auth-user-btn" type="button" hidden></button>
-              <div id="auth-dropdown" class="auth-dropdown" hidden>
-                <div id="auth-email" class="auth-dropdown__email"></div>
-                <div id="auth-tier" class="auth-dropdown__tier"></div>
-                <div class="auth-dropdown__divider"></div>
-                <button id="auth-signout-btn" class="auth-dropdown__signout" type="button">Sign out</button>
-              </div>
-            </div>
-          </div>
-          <button id="landingThemeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
-            <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
-                <circle cx="12" cy="12" r="4"></circle>
-                <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path>
-              </svg>
-            </span>
-            <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
-              </svg>
-            </span>
-          </button>
-        </nav>
-        <div id="landingNavMobileMenu" class="landing-nav__mobile-menu" hidden>
-          <a href="/learn/">Learn</a>
-          <a href="/simulator/">Simulator</a>
-          <a href="/simulator/">Call Stack Visualizer</a>
-          <a href="/simulator/">Pseudo-C Explainer</a>
-          <a href="/about/">About</a>
-          <a href="/docs/">Docs</a>
-          <a href="/docs/#ece-2035">ECE 2035 Guide</a>
-          <a href="https://github.com/rawcache" target="_blank" rel="noreferrer">GitHub</a>
-        </div>
-      </div>
-    </header>
+    <nav id="site-nav"></nav>
 
     <main class="landing-main">
       <section class="landing-section landing-section--hero">
@@ -514,40 +352,7 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
       </section>
     </main>
 
-    <footer class="landing-footer">
-      <div class="landing-shell landing-footer__grid">
-        <div class="landing-footer__column landing-footer__column--brand">
-          <div class="landing-footer__brand">StudyRISC-V</div>
-          <p class="landing-footer__tagline">
-            Built for engineers who want to understand the machine.
-          </p>
-        </div>
-
-        <div class="landing-footer__column">
-          <div class="landing-footer__heading">Navigate</div>
-          <div class="landing-footer__links">
-            <a href="/simulator/">Simulator</a>
-            <a href="/about/">About</a>
-            <a href="/docs/">Docs</a>
-            <a href="https://github.com/rawcache" target="_blank" rel="noreferrer">GitHub</a>
-          </div>
-        </div>
-
-        <div class="landing-footer__column">
-          <div class="landing-footer__heading">Legal</div>
-          <div class="landing-footer__links">
-            <a href="/terms/">Terms of service</a>
-            <a href="/privacy/">Privacy policy</a>
-            <a href="/privacy/#do-not-sell">Do not sell my personal information</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="landing-shell landing-footer__bottom">
-        <span>© 2026 StudyRISC-V. Built by Satchit Seth.</span>
-        <span>studyriscv.com</span>
-      </div>
-    </footer>
+    <footer id="site-footer"></footer>
 
     <div id="chip-wrapper" aria-hidden="true">
       <div id="chip-reactor">
@@ -1639,13 +1444,12 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
       })();
     </script>
     <script type="module">
-      import { initSiteShell } from "./src/site-shell.ts";
+      import { initFooter } from "./src/footer.ts";
+      import { initNav } from "./src/nav.ts";
 
       document.addEventListener("DOMContentLoaded", () => {
-        void initSiteShell({
-          bindTheme: false,
-          bindScroll: false,
-        });
+        initNav({ activePage: "landing" });
+        initFooter();
       });
 
       const MINI_PROGRAM = `# Add two numbers

@@ -1165,7 +1165,7 @@ body.loaded .hero__visual {
   max-width: 480px;
   margin: 0 auto;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 13px;
   line-height: 1.8;
 }
@@ -2147,7 +2147,7 @@ body.loaded .hero__visual {
 .landing-home .mini-sim__label {
   justify-self: center;
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
 }
 
@@ -2343,7 +2343,7 @@ body.loaded .hero__visual {
   overflow-x: auto;
   white-space: nowrap;
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
 }
 
@@ -2622,7 +2622,7 @@ body.loaded .hero__visual {
 .landing-home .landing-cta__note {
   margin: 16px 0 0;
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
 }
 

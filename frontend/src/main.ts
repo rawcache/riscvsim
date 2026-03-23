@@ -11,6 +11,7 @@ import {
   setAnimationsEnabled,
 } from "./animator";
 import { renderDisasm } from "./disasm";
+import { initFooter } from "./footer";
 import {
   escapeHtml,
   formatClikeExpression,
@@ -23,6 +24,7 @@ import {
 import { createLessonMode } from "./lesson-mode";
 import { DATA_BASE } from "./memory-map";
 import { createMemoryView } from "./memory";
+import { initNav } from "./nav";
 import { pushToUrl, readFromUrl } from "./permalink";
 import { createProgramsUi, type ProgramsUiController } from "./programs-ui";
 import { renderCallStack, setCallStackExplainer, setCallStackPlaceholder, syncCallStackUi } from "./stack-ui";
@@ -48,7 +50,6 @@ let currentProgram: CurrentProgramState = {
 
 const MAX_RUN_STEPS = 2000;
 const LOCAL_SIM_SESSION = "local-wasm";
-const THEME_KEY = "studyriscv-theme";
 
 type EffectLogFilters = {
   reg: boolean;
@@ -81,6 +82,9 @@ const FOLLOW_REGISTER_MAP: Record<Exclude<MemoryFollowMode, "none">, number> = {
 };
 
 window.addEventListener("DOMContentLoaded", async () => {
+  initNav({ activePage: "simulator" });
+  initFooter();
+
   const assembleProgressEl = document.getElementById("assembleProgress") as HTMLElement | null;
   const assembleBtn = document.getElementById("assemble") as HTMLButtonElement;
   const stepBtn = document.getElementById("step") as HTMLButtonElement;
@@ -111,11 +115,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   const memAddressInput = document.getElementById("memAddressInput") as HTMLInputElement | null;
   const memFollowSelect = document.getElementById("memFollowSelect") as HTMLSelectElement | null;
   const statusEl = document.getElementById("status") as HTMLElement;
-  const statusBadgeEl = document.getElementById("statusBadge") as HTMLElement | null;
+  const statusBadgeEl = document.getElementById("nav-status-badge") as HTMLElement | null;
   const sampleSelect = document.getElementById("sampleSelect") as HTMLSelectElement;
-  const themeToggle = document.getElementById("simThemeToggle") as HTMLButtonElement | null;
-  const simNavToggle = document.getElementById("simNavToggle") as HTMLButtonElement | null;
-  const simNavMobileMenu = document.getElementById("simNavMobileMenu") as HTMLElement | null;
   const savedProgramsPanel = document.getElementById("savedProgramsPanel") as HTMLElement | null;
   const savedProgramsBody = document.getElementById("savedProgramsBody") as HTMLElement | null;
   const savedProgramsToggle = document.getElementById("savedProgramsToggle") as HTMLButtonElement | null;
@@ -243,36 +244,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   const asmTokenPattern =
     /(?:-?0x[0-9a-fA-F]+|-?\d+|\bx(?:[0-9]|[12][0-9]|3[01])\b|\b(?:zero|ra|sp|gp|tp|t[0-6]|s(?:[0-9]|1[01])|a[0-7]|fp)\b|\b[A-Za-z_.$][\w.$]*\b)/g;
   const asmLabelPattern = /^\s*([A-Za-z_.$][\w.$]*):/;
-
-  function applyThemeIcon() {
-    if (!themeToggle) return;
-    const isDark = document.documentElement.dataset.theme === "dark";
-    themeToggle.setAttribute("aria-pressed", String(isDark));
-    themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
-  }
-
-  function closeSimNavMenu() {
-    if (!simNavToggle || !simNavMobileMenu) {
-      return;
-    }
-
-    simNavToggle.setAttribute("aria-expanded", "false");
-    simNavToggle.classList.remove("is-open");
-    simNavMobileMenu.hidden = true;
-    simNavMobileMenu.classList.remove("is-open");
-  }
-
-  function toggleSimNavMenu() {
-    if (!simNavToggle || !simNavMobileMenu) {
-      return;
-    }
-
-    const nextExpanded = simNavToggle.getAttribute("aria-expanded") !== "true";
-    simNavToggle.setAttribute("aria-expanded", String(nextExpanded));
-    simNavToggle.classList.toggle("is-open", nextExpanded);
-    simNavMobileMenu.hidden = !nextExpanded;
-    simNavMobileMenu.classList.toggle("is-open", nextExpanded);
-  }
 
   function setActiveCenterTab(tabId: CenterTabId) {
     activeCenterTab = tabId;
@@ -1688,28 +1659,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
   syncCurrentProgramUi();
 
-  themeToggle?.addEventListener("click", () => {
-    const isDark = document.documentElement.dataset.theme === "dark";
-    if (isDark) {
-      document.documentElement.removeAttribute("data-theme");
-      window.localStorage.setItem(THEME_KEY, "light");
-    } else {
-      document.documentElement.dataset.theme = "dark";
-      window.localStorage.setItem(THEME_KEY, "dark");
-    }
-    applyThemeIcon();
-  });
-
-  simNavToggle?.addEventListener("click", () => {
-    toggleSimNavMenu();
-  });
-
-  simNavMobileMenu?.querySelectorAll("a").forEach((link) => {
-    link.addEventListener("click", () => {
-      closeSimNavMenu();
-    });
-  });
-
   centerTabButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const tabId = button.dataset.centerTab as CenterTabId | undefined;
@@ -1720,32 +1669,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  document.addEventListener("click", (event) => {
-    if (
-      simNavToggle &&
-      simNavMobileMenu &&
-      simNavToggle.getAttribute("aria-expanded") === "true" &&
-      event.target instanceof Node &&
-      !simNavToggle.contains(event.target) &&
-      !simNavMobileMenu.contains(event.target)
-    ) {
-      closeSimNavMenu();
-    }
-  });
-
-  window.addEventListener("resize", () => {
-    if (window.innerWidth > 767) {
-      closeSimNavMenu();
-    }
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      closeSimNavMenu();
-    }
-  });
-
-  applyThemeIcon();
   setActiveCenterTab("disassembly");
   setStatus("ready");
   currentUserSession = await initAuthUi({
@@ -2105,12 +2028,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       if (!runBtn.disabled) {
         void runBtn.click();
       }
-      return;
-    }
-
-    if (event.key === "Escape" && simNavToggle?.getAttribute("aria-expanded") === "true") {
-      event.preventDefault();
-      closeSimNavMenu();
       return;
     }
 
