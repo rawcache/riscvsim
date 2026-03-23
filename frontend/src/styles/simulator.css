@@ -5000,6 +5000,52 @@ body.simulator-page {
   user-select: none !important;
 }
 
+.register-file-section,
+.register-file-panel,
+[class*="register-file"] {
+  display: flex !important;
+  flex-direction: column !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+.register-file-header,
+[class*="register-file-header"] {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.register-format-bar,
+[class*="format-bar"] {
+  margin-top: 0 !important;
+  order: -1 !important;
+}
+
+.register-file-section::before,
+.register-file-panel::before {
+  display: none !important;
+  height: 0 !important;
+}
+
+.memory-section,
+.memory-panel,
+[class*="memory-section"],
+[class*="memory-panel"] {
+  flex: 0 0 260px !important;
+  min-height: 260px !important;
+  max-height: 260px !important;
+  height: 260px !important;
+  overflow-y: auto !important;
+}
+
+.saved-programs,
+[class*="saved-programs"] {
+  flex: 0 0 120px !important;
+  min-height: 120px !important;
+  max-height: 120px !important;
+  overflow-y: auto !important;
+}
+
 .simulator-layout {
   font-size: clamp(11px, 1vw, 13px);
 }
