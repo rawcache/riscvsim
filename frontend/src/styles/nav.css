@@ -18,9 +18,9 @@
   width: min(1100px, calc(100% - 96px));
   margin: 0 auto;
   padding: 0;
-  height: 100%;
+  height: 100%;          /* must be 100% not auto */
   display: flex;
-  align-items: center;
+  align-items: center;   /* this centers content vertically */
   gap: 0;
 }
 
