@@ -171,9 +171,11 @@ export function updateAuthUI(session: UserSession | null): void {
     if (hasSession) {
       elements.authMenu.style.display = "";
       elements.authMenu.setAttribute("data-ready", "true");
+      elements.authMenu.setAttribute("data-init", "1");
     } else {
       elements.authMenu.style.display = "none";
       elements.authMenu.removeAttribute("data-ready");
+      elements.authMenu.setAttribute("data-init", "1");
     }
   }
 

@@ -81,23 +81,6 @@ function resourcesActive(config: NavConfig["activePage"]): boolean {
   return config === "about" || config === "docs";
 }
 
-function loadStreakCount(): number {
-  if (typeof localStorage === "undefined") {
-    return 0;
-  }
-
-  try {
-    const stored = localStorage.getItem("studyriscv_score");
-    if (!stored) {
-      return 0;
-    }
-    const parsed = JSON.parse(stored) as { streak?: unknown };
-    return Number.isFinite(parsed?.streak) ? Math.max(0, Number(parsed.streak)) : 0;
-  } catch {
-    return 0;
-  }
-}
-
 function renderNav(config: NavConfig): string {
   const isLearn = config.activePage === "learn";
   const isQuiz = config.activePage === "quiz";
@@ -162,7 +145,6 @@ function renderNav(config: NavConfig): string {
         </div>
         <div class="nav-actions">
           <div id="nav-status-badge" class="nav-status-badge${config.activePage === "simulator" ? " visible" : ""}"></div>
-          <div id="nav-streak-indicator" class="nav-streak-indicator" hidden></div>
           <button id="auth-signin-btn" class="nav-signin-btn" type="button">Sign in</button>
           <div class="auth-menu">
             <button id="auth-user-btn" class="auth-user-btn nav-user-btn" type="button" hidden></button>
@@ -220,7 +202,6 @@ export function initNav(config: NavConfig): void {
   const desktopSignin = root.querySelector<HTMLButtonElement>("#auth-signin-btn");
   const userButton = root.querySelector<HTMLElement>("#auth-user-btn");
   const authMenu = root.querySelector<HTMLElement>(".auth-menu");
-  const streakIndicator = root.querySelector<HTMLElement>("#nav-streak-indicator");
   const closeTimers = new WeakMap<HTMLElement, number>();
 
   if (desktopSignin) {
@@ -232,6 +213,7 @@ export function initNav(config: NavConfig): void {
   if (authMenu) {
     authMenu.style.display = "none";
     authMenu.removeAttribute("data-ready");
+    authMenu.removeAttribute("data-init");
   }
 
   const closeAllDropdowns = () => {
@@ -322,20 +304,6 @@ export function initNav(config: NavConfig): void {
       desktopSignin.click();
       closeMobileMenu();
     });
-  }
-
-  const streakCount = loadStreakCount();
-  if (streakIndicator) {
-    if (streakCount >= 2) {
-      streakIndicator.hidden = false;
-      streakIndicator.textContent = `🔥 ${streakCount}`;
-      streakIndicator.title = `${streakCount}-day streak! Keep it up.`;
-      streakIndicator.setAttribute("aria-label", `${streakCount}-day streak`);
-    } else {
-      streakIndicator.hidden = true;
-      streakIndicator.textContent = "";
-      streakIndicator.removeAttribute("title");
-    }
   }
 
   const syncMobileSigninVisibility = () => {

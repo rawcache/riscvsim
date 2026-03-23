@@ -183,19 +183,6 @@
   display: block;
 }
 
-.nav-streak-indicator {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, #f97316 12%, transparent);
-  color: #f97316;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-}
-
 .nav-signin-btn {
   font-family: "Geist", sans-serif;
   font-size: 14px;
@@ -236,6 +223,10 @@
   color: var(--text-primary);
 }
 
+.nav-actions > *:not(#nav-status-badge):not(.nav-signin-btn):not(#auth-signin-btn):not(.auth-menu):not(#theme-toggle):not(.nav-hamburger):not(.nav-user-btn):not(#auth-user-btn) {
+  display: none !important;
+}
+
 #auth-user-btn:empty {
   display: none !important;
 }
@@ -263,6 +254,14 @@
 
 .auth-menu {
   position: relative;
+}
+
+.auth-menu:not([data-init]) {
+  visibility: hidden;
+  width: 0;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
 }
 
 .nav-user-btn,
@@ -506,10 +505,6 @@
   }
 
   .nav-status-badge {
-    display: none !important;
-  }
-
-  .nav-streak-indicator {
     display: none !important;
   }
 
