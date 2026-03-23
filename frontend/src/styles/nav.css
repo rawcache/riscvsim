@@ -1,21 +1,30 @@
-.site-nav {
+/* === WRAPPER (NEW) === */
+.nav-shell {
   position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
   z-index: 1000;
+  padding-top: 16px; /* controls spacing from top */
+  background: transparent;
+}
+
+/* === NAV BAR === */
+.site-nav {
+  position: relative; /* no longer sticky itself */
   width: 100%;
   height: 52px;
   background: #080808;
   border-bottom: 1px solid var(--border);
+  border-radius: 10px; /* optional: gives nice floating feel */
 }
 
+/* LIGHT MODE */
 [data-theme="light"] .site-nav,
 :root:not([data-theme="dark"]) .site-nav {
   background: rgba(247, 245, 242, 0.95);
   border-bottom: none;
 }
 
+/* === INNER === */
 .nav-inner {
   width: min(1100px, calc(100% - 96px));
   margin: 0 auto;
@@ -26,6 +35,7 @@
   gap: 0;
 }
 
+/* === LOGO === */
 .nav-logo {
   font-family: "Geist Mono", monospace;
   font-size: 15px;
@@ -38,6 +48,7 @@
   flex-shrink: 0;
 }
 
+/* === LINKS === */
 .nav-links {
   display: flex;
   align-items: center;
@@ -74,6 +85,7 @@
   font-weight: 500;
 }
 
+/* === DROPDOWN === */
 .nav-chevron {
   width: 12px;
   height: 12px;
@@ -162,6 +174,7 @@
   line-height: 1.4;
 }
 
+/* === ACTIONS === */
 .nav-actions {
   display: flex;
   align-items: center;
@@ -193,7 +206,6 @@
 .nav-hamburger {
   width: 34px;
   height: 34px;
-  line-height: 1;
   background: none;
   border: 1px solid var(--border);
   border-radius: 7px;
@@ -211,43 +223,7 @@
   color: var(--text-primary);
 }
 
-.theme-toggle__icon {
-  display: inline-flex;
-}
-
-.theme-toggle__icon--moon {
-  display: none;
-}
-
-[data-theme="dark"] .theme-toggle__icon--sun {
-  display: none;
-}
-
-[data-theme="dark"] .theme-toggle__icon--moon {
-  display: inline-flex;
-}
-
-.nav-status-badge {
-  font-family: "Geist", sans-serif;
-  font-size: 11px;
-  color: var(--text-muted);
-  display: none;
-}
-
-.nav-status-badge.visible {
-  display: block;
-}
-
-.nav-user-btn {
-  display: inline-flex;
-  align-items: center;
-}
-
-.nav-user-btn[hidden],
-.nav-signin-btn[hidden] {
-  display: none !important;
-}
-
+/* === MOBILE === */
 .nav-mobile-shell {
   position: relative;
 }
@@ -277,30 +253,12 @@
   text-decoration: none;
 }
 
-.nav-mobile-link.nav-link-active {
-  font-weight: 500;
-}
-
 .nav-mobile-actions {
   padding: 14px 24px;
 }
 
-.nav-mobile-actions .nav-signin-btn {
-  width: 100%;
-  justify-content: center;
-}
-
 .nav-hamburger {
   display: none;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.nav-hamburger span {
-  width: 20px;
-  height: 2px;
-  border-radius: 999px;
-  background: currentColor;
 }
 
 @media (max-width: 768px) {
@@ -308,16 +266,7 @@
     display: none;
   }
 
-  .nav-actions {
-    gap: 8px;
-  }
-
-  .nav-actions .nav-status-badge,
-  .nav-actions #auth-user-btn {
-    display: none !important;
-  }
-
-  .nav-actions .nav-signin-btn {
+  .nav-signin-btn {
     display: none;
   }
 
