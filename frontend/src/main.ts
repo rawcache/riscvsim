@@ -19,16 +19,20 @@ import {
   hex8,
   hex32,
   renderClikeExpression,
-  renderRegs,
 } from "./format";
+import { BreakpointManager } from "./breakpoints";
 import { createChallengeMode } from "./challenge-ui";
+import { createEditor } from "./editor";
 import { createLabMode } from "./lab-mode";
 import { createLessonMode } from "./lesson-mode";
+import { lintProgram, type LintWarning } from "./linter";
 import { DATA_BASE } from "./memory-map";
-import { createMemoryView } from "./memory";
+import { createMemoryView, type MemoryViewMode, type MemoryWordFormat } from "./memory";
 import { initNav } from "./nav";
+import { showNotification } from "./notifications";
 import { pushToUrl, readFromUrl } from "./permalink";
 import { createProgramsUi, type ProgramsUiController } from "./programs-ui";
+import { createRegistersUi } from "./registers-ui";
 import { renderCallStack, setCallStackExplainer, setCallStackPlaceholder, syncCallStackUi } from "./stack-ui";
 import { setStackLabelResolver, StackTracker, type CallStack, type StackFrame } from "./stack-tracker";
 import type { ApiResponse, Effect, WasmStateDelta } from "./types";
@@ -69,6 +73,7 @@ type MemoryFollowMode = "none" | "sp" | "a0" | "a1" | "ra";
 
 type StatusState = "ready" | "assembled" | "stepping" | "running" | "halted" | "trap";
 type CenterTabId = "disassembly" | "call-stack" | "effects" | "pseudo-c";
+type RunSpeedPreset = 1 | 10 | 50 | 100 | 250 | 500 | -1;
 
 const DEFAULT_EFFECT_FILTERS: EffectLogFilters = {
   reg: true,
@@ -82,6 +87,10 @@ const FOLLOW_REGISTER_MAP: Record<Exclude<MemoryFollowMode, "none">, number> = {
   a1: 11,
   ra: 1,
 };
+
+const RUN_SPEED_PRESETS: RunSpeedPreset[] = [1, 10, 50, 100, 250, 500, -1];
+const RUN_SPEED_STORAGE_KEY = "studyriscv_run_speed";
+const SHORTCUT_HINT_STORAGE_KEY = "studyriscv_hints_dismissed";
 
 window.addEventListener("DOMContentLoaded", async () => {
   initNav({ activePage: "simulator" });
@@ -103,6 +112,20 @@ window.addEventListener("DOMContentLoaded", async () => {
   const sourceEl = document.getElementById("source-input") as HTMLTextAreaElement;
   const sourceLinesEl = document.getElementById("line-numbers") as HTMLElement | null;
   const highlightDisplayEl = document.getElementById("highlight-display") as HTMLElement | null;
+  const runSpeedPanelEl = document.getElementById("runSpeedPanel") as HTMLElement | null;
+  const runSpeedEl = document.getElementById("runSpeed") as HTMLInputElement | null;
+  const runSpeedValueEl = document.getElementById("runSpeedValue") as HTMLElement | null;
+  const runStatsEl = document.getElementById("runStats") as HTMLElement | null;
+  const shortcutHintBarEl = document.getElementById("shortcutHintBar") as HTMLElement | null;
+  const shortcutHintDismissBtn = document.getElementById("shortcutHintDismiss") as HTMLButtonElement | null;
+  const breakpointsPanelEl = document.getElementById("breakpointsPanel") as HTMLElement | null;
+  const breakpointsCountEl = document.getElementById("breakpointsCount") as HTMLElement | null;
+  const breakpointsListEl = document.getElementById("breakpointsList") as HTMLElement | null;
+  const breakpointsClearAllBtn = document.getElementById("breakpointsClearAll") as HTMLButtonElement | null;
+  const warningsPanelEl = document.getElementById("warningsPanel") as HTMLElement | null;
+  const warningsToggleBtn = document.getElementById("warningsToggle") as HTMLButtonElement | null;
+  const warningsHeadingEl = document.getElementById("warningsHeading") as HTMLElement | null;
+  const warningsBodyEl = document.getElementById("warningsBody") as HTMLElement | null;
 
   const clikeEl = document.getElementById("clike") as HTMLElement;
   const effectsEl = document.getElementById("effects") as HTMLElement;
@@ -112,11 +135,22 @@ window.addEventListener("DOMContentLoaded", async () => {
   const regsEl = document.getElementById("regs") as HTMLElement;
   const pcEl = document.getElementById("pc") as HTMLElement;
   const disasmEl = document.getElementById("disasm") as HTMLElement;
+  const goToPcBtn = document.getElementById("goToPc") as HTMLButtonElement | null;
+  const disasmProgressTextEl = document.getElementById("disasmProgressText") as HTMLElement | null;
+  const disasmProgressFillEl = document.getElementById("disasmProgressFill") as HTMLElement | null;
+  const disasmCompleteBadgeEl = document.getElementById("disasmCompleteBadge") as HTMLElement | null;
   const memWritesEl = document.getElementById("memWrites") as HTMLElement;
   const memWindowEl = document.getElementById("memWindow") as HTMLElement;
+  const memWatchesEl = document.getElementById("memWatches") as HTMLElement | null;
+  const memWatchInput = document.getElementById("memWatchInput") as HTMLInputElement | null;
+  const memWatchAddBtn = document.getElementById("memWatchAdd") as HTMLButtonElement | null;
+  const memoryModeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-memory-mode]"));
+  const memoryWordFormatButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-memory-word-format]"));
+  const memoryWordFormatsEl = document.getElementById("memoryWordFormats") as HTMLElement | null;
   const memAddressInput = document.getElementById("memAddressInput") as HTMLInputElement | null;
   const memFollowSelect = document.getElementById("memFollowSelect") as HTMLSelectElement | null;
-  const statusEl = document.getElementById("status") as HTMLElement;
+  const statusPrimaryEl = document.getElementById("statusPrimary") as HTMLElement | null;
+  const statusSecondaryEl = document.getElementById("statusSecondary") as HTMLElement | null;
   const statusBadgeEl = document.getElementById("nav-status-badge") as HTMLElement | null;
   const sampleSelect = document.getElementById("sampleSelect") as HTMLSelectElement;
   const savedProgramsPanel = document.getElementById("savedProgramsPanel") as HTMLElement | null;
@@ -151,101 +185,47 @@ window.addEventListener("DOMContentLoaded", async () => {
   const sampleOptionLabels = new Map<string, string>(
     Array.from(sampleSelect.options).map((option) => [option.value, option.textContent ?? option.value])
   );
-  const asmMnemonics = new Set([
-    "add",
-    "addi",
-    "sub",
-    "and",
-    "andi",
-    "or",
-    "ori",
-    "xor",
-    "xori",
-    "sll",
-    "slli",
-    "srl",
-    "srli",
-    "sra",
-    "srai",
-    "slt",
-    "slti",
-    "sltu",
-    "sltiu",
-    "mul",
-    "mulh",
-    "mulhu",
-    "mulhsu",
-    "div",
-    "divu",
-    "rem",
-    "remu",
-    "lui",
-    "auipc",
-    "jal",
-    "jalr",
-    "beq",
-    "bne",
-    "blt",
-    "bge",
-    "bltu",
-    "bgeu",
-    "lw",
-    "lh",
-    "lb",
-    "lhu",
-    "lbu",
-    "sw",
-    "sh",
-    "sb",
-    "li",
-    "mv",
-    "nop",
-    "j",
-    "ret",
-    "call",
-    "la",
-    "ecall",
-    "ebreak",
-  ]);
-  const asmRegisters = new Set([
-    "zero",
-    "ra",
-    "sp",
-    "gp",
-    "tp",
-    "t0",
-    "t1",
-    "t2",
-    "t3",
-    "t4",
-    "t5",
-    "t6",
-    "s0",
-    "s1",
-    "s2",
-    "s3",
-    "s4",
-    "s5",
-    "s6",
-    "s7",
-    "s8",
-    "s9",
-    "s10",
-    "s11",
-    "a0",
-    "a1",
-    "a2",
-    "a3",
-    "a4",
-    "a5",
-    "a6",
-    "a7",
-    "fp",
-    ...Array.from({ length: 32 }, (_, index) => `x${index}`),
-  ]);
-  const asmTokenPattern =
-    /(?:-?0x[0-9a-fA-F]+|-?\d+|\bx(?:[0-9]|[12][0-9]|3[01])\b|\b(?:zero|ra|sp|gp|tp|t[0-6]|s(?:[0-9]|1[01])|a[0-7]|fp)\b|\b[A-Za-z_.$][\w.$]*\b)/g;
-  const asmLabelPattern = /^\s*([A-Za-z_.$][\w.$]*):/;
+  const breakpointManager = new BreakpointManager();
+  const registersUi = createRegistersUi(regsEl);
+  const editor = createEditor({
+    container: sourceEl.closest(".editor-container") as HTMLElement,
+    textarea: sourceEl,
+    lineNumbers: sourceLinesEl as HTMLElement,
+    highlightDisplay: highlightDisplayEl as HTMLElement,
+    onGutterClick(line) {
+      breakpointManager.toggle(line);
+      renderBreakpointPanel();
+      editor.setBreakpoints(breakpointManager.getAll());
+    },
+  });
+  let currentWarnings: LintWarning[] = [];
+  let warningsExpanded = true;
+  let currentParsedProgram: ReturnType<typeof parseAssembly> | null = null;
+  let memoryMode: MemoryViewMode = "bytes";
+  let memoryWordFormat: MemoryWordFormat = "hex";
+  let memoryWatches: number[] = [];
+  let runSpeed: RunSpeedPreset = loadStoredRunSpeed();
+  let runRequested = false;
+  let isRunning = false;
+  let latestRenderAt = 0;
+  let runStats = {
+    startedAt: 0,
+    elapsedMs: 0,
+    instructions: 0,
+    cycles: 0,
+  };
+
+  function loadStoredRunSpeed(): RunSpeedPreset {
+    try {
+      const stored = window.localStorage.getItem(RUN_SPEED_STORAGE_KEY);
+      if (stored === "1" || stored === "10" || stored === "50" || stored === "100" || stored === "250" || stored === "500" || stored === "-1") {
+        return Number(stored) as RunSpeedPreset;
+      }
+    } catch {
+      // Ignore storage access failures and fall back to the default.
+    }
+    return 100;
+  }
 
   function setActiveCenterTab(tabId: CenterTabId) {
     activeCenterTab = tabId;
@@ -294,140 +274,21 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
 
   function syncHighlightScroll() {
-    if (!highlightDisplayEl) return;
-    highlightDisplayEl.scrollTop = sourceEl.scrollTop;
-    highlightDisplayEl.scrollLeft = sourceEl.scrollLeft;
+    editor.sync();
   }
-
-  function highlightToken(token: string, labels: ReadonlySet<string>): string {
-    const lower = token.toLowerCase();
-    if (asmRegisters.has(lower)) {
-      return `<span class="asm-register">${escapeHtml(token)}</span>`;
-    }
-    if (/^-?(?:0x[0-9a-fA-F]+|\d+)$/.test(token)) {
-      return `<span class="asm-immediate">${escapeHtml(token)}</span>`;
-    }
-    if (labels.has(token)) {
-      return `<span class="asm-label-ref">${escapeHtml(token)}</span>`;
-    }
-    return escapeHtml(token);
-  }
-
-  function highlightTrailingSegment(segment: string, labels: ReadonlySet<string>): string {
-    if (!segment) return "";
-    let html = "";
-    let lastIndex = 0;
-    asmTokenPattern.lastIndex = 0;
-
-    for (const match of segment.matchAll(asmTokenPattern)) {
-      const index = match.index ?? 0;
-      const token = match[0];
-      html += escapeHtml(segment.slice(lastIndex, index));
-      html += highlightToken(token, labels);
-      lastIndex = index + token.length;
-    }
-
-    html += escapeHtml(segment.slice(lastIndex));
-    return html;
-  }
-
-  function highlightCodeSegment(line: string, labels: ReadonlySet<string>): string {
-    if (!line) return "";
-
-    let remainder = line;
-    let highlighted = "";
-    const labelMatch = remainder.match(asmLabelPattern);
-
-    if (labelMatch) {
-      const [fullMatch, labelName] = labelMatch;
-      const prefixLength = fullMatch.indexOf(labelName);
-      const suffixStart = prefixLength + labelName.length + 1;
-      highlighted += escapeHtml(fullMatch.slice(0, prefixLength));
-      highlighted += `<span class="asm-label">${escapeHtml(`${labelName}:`)}</span>`;
-      highlighted += escapeHtml(fullMatch.slice(suffixStart));
-      remainder = remainder.slice(fullMatch.length);
-    }
-
-    const instructionMatch = remainder.match(/^(\s*)(\S+)([\s\S]*)$/);
-    if (!instructionMatch) {
-      return highlighted + escapeHtml(remainder);
-    }
-
-    const [, leadingWhitespace, firstToken, rest] = instructionMatch;
-    highlighted += escapeHtml(leadingWhitespace);
-    if (asmMnemonics.has(firstToken.toLowerCase())) {
-      highlighted += `<span class="asm-mnemonic">${escapeHtml(firstToken)}</span>`;
-    } else {
-      highlighted += highlightToken(firstToken, labels);
-    }
-    highlighted += highlightTrailingSegment(rest, labels);
-    return highlighted;
-  }
-
-  function highlightAssembly(source: string): string {
-    const lines = source.split("\n");
-    const labels = new Set<string>();
-
-    for (const line of lines) {
-      const labelMatch = line.match(asmLabelPattern);
-      if (labelMatch) {
-        labels.add(labelMatch[1]);
-      }
-    }
-
-    return lines
-      .map((line) => {
-        if (/^\s*#/.test(line)) {
-          return `<span class="asm-comment">${escapeHtml(line)}</span>`;
-        }
-
-        const commentIndex = line.indexOf("#");
-        if (commentIndex < 0) {
-          return highlightCodeSegment(line, labels);
-        }
-
-        const code = line.slice(0, commentIndex);
-        const comment = line.slice(commentIndex);
-        return `${highlightCodeSegment(code, labels)}<span class="asm-comment">${escapeHtml(comment)}</span>`;
-      })
-      .join("\n");
-  }
-
   function renderHighlightedSource() {
-    if (!highlightDisplayEl) return;
-    highlightDisplayEl.innerHTML = highlightAssembly(sourceEl.value);
-    syncHighlightScroll();
+    editor.sync();
   }
 
   function updateLineNumbers() {
-    if (!sourceLinesEl) return;
-    const lines = sourceEl.value.split("\n");
-    const lineCount = Math.max(10, lines.length);
-    const currentLine = sourceEl.value.substring(0, sourceEl.selectionStart).split("\n").length;
-
-    sourceLinesEl.innerHTML = Array.from({ length: lineCount }, (_, index) => {
-      const lineNumber = index + 1;
-      const currentLineClass = lineNumber === currentLine ? ' class="current-line"' : "";
-      const label = lineNumber <= lines.length ? String(lineNumber) : "";
-      return `<span${currentLineClass}>${label}</span>`;
-    }).join("");
-
-    sourceLinesEl.scrollTop = sourceEl.scrollTop;
+    editor.sync();
   }
 
   function handleSourceInput() {
-    renderHighlightedSource();
-    updateLineNumbers();
+    editor.sync();
     if (!currentProgram.isDirty) {
       updateCurrentProgramState({ isDirty: true });
     }
-  }
-
-  function insertTextAtSelection(text: string) {
-    const start = sourceEl.selectionStart;
-    const end = sourceEl.selectionEnd;
-    sourceEl.setRangeText(text, start, end, "end");
-    handleSourceInput();
   }
 
   function syncSampleOptionLabels() {
@@ -472,6 +333,167 @@ window.addEventListener("DOMContentLoaded", async () => {
         halted: "Halted",
         trap: "Trap",
       }[state];
+  }
+
+  function setStatusDetails(primary: string, secondary = ""): void {
+    if (statusPrimaryEl) {
+      statusPrimaryEl.textContent = primary;
+    }
+    if (statusSecondaryEl) {
+      statusSecondaryEl.textContent = secondary;
+    }
+  }
+
+  function updateWarningsPanel(warnings: LintWarning[]): void {
+    currentWarnings = warnings;
+    if (!warningsPanelEl || !warningsBodyEl || !warningsHeadingEl || !warningsToggleBtn) {
+      return;
+    }
+    warningsPanelEl.hidden = warnings.length === 0;
+    warningsToggleBtn.setAttribute("aria-expanded", String(warningsExpanded));
+    warningsHeadingEl.textContent = `Warnings (${warnings.length})`;
+    warningsBodyEl.hidden = !warningsExpanded;
+    warningsBodyEl.innerHTML = warnings
+      .map(
+        (warning) => `
+          <div class="warnings-panel__item">
+            <span class="warnings-panel__code">${escapeHtml(warning.code)}</span>
+            <span class="warnings-panel__line">Line ${warning.line}</span>
+            <span class="warnings-panel__message">${escapeHtml(warning.message)}</span>
+          </div>
+        `
+      )
+      .join("");
+  }
+
+  function renderBreakpointPanel(): void {
+    if (!breakpointsPanelEl || !breakpointsCountEl || !breakpointsListEl) {
+      return;
+    }
+    const breakpoints = breakpointManager.getAll();
+    breakpointsPanelEl.hidden = breakpoints.length === 0;
+    breakpointsCountEl.textContent = `BREAKPOINTS (${breakpoints.length})`;
+    breakpointsListEl.innerHTML = breakpoints
+      .map(
+        (breakpoint) => `
+          <div class="breakpoint-row">
+            <span class="breakpoint-row__dot"></span>
+            <span class="breakpoint-row__text">Line ${breakpoint.line}${breakpoint.address !== undefined ? ` · ${hex32(breakpoint.address)}` : ""} · hit ${breakpoint.hitCount}x</span>
+            <button type="button" class="breakpoint-row__remove" data-breakpoint-id="${escapeHtml(breakpoint.id)}" aria-label="Remove breakpoint">🗑</button>
+          </div>
+        `
+      )
+      .join("");
+  }
+
+  function updateRunSpeedUi(): void {
+    if (runSpeedEl) {
+      runSpeedEl.value = String(Math.max(0, RUN_SPEED_PRESETS.indexOf(runSpeed)));
+    }
+    if (runSpeedValueEl) {
+      runSpeedValueEl.textContent = runSpeed === -1 ? "MAX" : `${runSpeed} inst/s`;
+    }
+  }
+
+  function persistRunSpeed(): void {
+    try {
+      window.localStorage.setItem(RUN_SPEED_STORAGE_KEY, String(runSpeed));
+    } catch {
+      // Ignore storage failures.
+    }
+  }
+
+  function updateRunStatsUi(): void {
+    if (!runStatsEl) {
+      return;
+    }
+    const ips = runStats.elapsedMs > 0 ? Math.round((runStats.instructions / runStats.elapsedMs) * 1000) : 0;
+    runStatsEl.hidden = runStats.instructions === 0 && !isRunning;
+    runStatsEl.textContent = `Executed ${runStats.instructions} instructions · ${runStats.cycles} cycles · ${Math.round(
+      runStats.elapsedMs
+    )}ms · ${ips} inst/s`;
+  }
+
+  function updateDisasmProgress(snapshot?: ApiResponse): void {
+    const executableLines = (disasmLines ?? []).filter((line) => !line.label);
+    const total = executableLines.length;
+    const currentPc = snapshot?.pc ?? currentSnapshot()?.pc;
+    const currentIndex = total > 0 && currentPc !== undefined ? executableLines.findIndex((line) => line.pc === currentPc) : -1;
+    const currentStep = currentIndex >= 0 ? currentIndex + 1 : 0;
+    const halted = snapshot?.halted === true || currentSnapshot()?.halted === true;
+    const ratio = total > 0 ? (halted ? 1 : Math.max(0, currentStep) / total) : 0;
+
+    if (disasmProgressTextEl) {
+      disasmProgressTextEl.textContent = total > 0 ? `Step ${Math.max(0, currentStep)} / ${total}` : "";
+    }
+    if (disasmProgressFillEl) {
+      disasmProgressFillEl.style.width = `${ratio * 100}%`;
+      disasmProgressFillEl.classList.toggle("is-complete", halted && total > 0);
+    }
+    if (disasmCompleteBadgeEl) {
+      disasmCompleteBadgeEl.hidden = !(halted && total > 0);
+    }
+  }
+
+  function updateGoToPcButton(pc: number | undefined): void {
+    if (!goToPcBtn) {
+      return;
+    }
+    if (pc === undefined) {
+      goToPcBtn.hidden = true;
+      return;
+    }
+    goToPcBtn.textContent = `▶ PC: ${hex32(pc)}`;
+    const row = disasmEl.querySelector<HTMLElement>(`[data-pc="${pc >>> 0}"]`);
+    if (!row) {
+      goToPcBtn.hidden = true;
+      return;
+    }
+    const viewRect = disasmEl.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    const visible = rowRect.top >= viewRect.top && rowRect.bottom <= viewRect.bottom;
+    goToPcBtn.hidden = visible;
+  }
+
+  function showBreakpointTooltip(message: string): void {
+    showNotification({
+      id: `breakpoint-${Date.now()}`,
+      type: "quiz",
+      title: "Breakpoint hit",
+      message,
+      icon: "⛔",
+      duration: 3000,
+      accentColor: "var(--accent)",
+    });
+  }
+
+  function diagnosticsFromWarnings(
+    warnings: LintWarning[]
+  ): Array<{ line: number; col?: number; code: string; message: string; severity: "warning" }> {
+    return warnings.map((warning) => ({ ...warning, severity: "warning" as const }));
+  }
+
+  function diagnosticFromAssemblyError(
+    message: string
+  ): Array<{ line: number; col?: number; code: string; message: string; severity: "error" }> {
+    const lineMatch = /on line (\d+)/i.exec(message);
+    const tokenMatch = /"([^"]+)"/.exec(message);
+    const line = lineMatch ? Number(lineMatch[1]) : 1;
+    const rawLine = sourceEl.value.split("\n")[line - 1] ?? "";
+    const tokenIndex = tokenMatch ? rawLine.indexOf(tokenMatch[1]) : -1;
+    return [
+      {
+        line,
+        col: tokenIndex >= 0 ? tokenIndex + 1 : undefined,
+        code: "ERROR",
+        message,
+        severity: "error",
+      },
+    ];
+  }
+
+  function breakpointForPc(pc: number): ReturnType<BreakpointManager["getAll"]>[number] | undefined {
+    return breakpointManager.getAll().find((breakpoint) => breakpoint.address !== undefined && (breakpoint.address >>> 0) === (pc >>> 0));
   }
 
   function trapStatusLabel(trap: NonNullable<ApiResponse["trap"]>): string {
@@ -531,6 +553,13 @@ window.addEventListener("DOMContentLoaded", async () => {
       },
       firstLabel,
     };
+  }
+
+  function countLabelsInSource(source: string): number {
+    return source
+      .split("\n")
+      .filter((line) => /^\s*[A-Za-z_.$][\w.$]*:/.test(line))
+      .length;
   }
 
   function snapshotToDelta(snapshot: ApiResponse): WasmStateDelta {
@@ -648,7 +677,19 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   function updateMemoryWindow(regs?: number[]) {
     const base = resolveMemoryWindowBase(regs);
-    memWindowEl.innerHTML = memoryView.renderWindow(base);
+    const sp = regs?.[2] ?? base;
+    memWindowEl.innerHTML = memoryView.renderWindow(base, {
+      mode: memoryMode,
+      wordFormat: memoryWordFormat,
+      sp,
+    });
+    if (memWatchesEl) {
+      memWatchesEl.innerHTML = memoryView.renderWatches(memoryWordFormat);
+      memWatchesEl.hidden = memoryWatches.length === 0;
+    }
+    if (memoryWordFormatsEl) {
+      memoryWordFormatsEl.hidden = !(memoryMode === "words" || memoryMode === "stack");
+    }
     syncMemoryControls(regs);
   }
 
@@ -824,6 +865,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (programDataBytes.length > 0) {
       memoryView.seedBytes(DATA_BASE, programDataBytes);
     }
+    memoryView.setWatchedAddresses(memoryWatches);
     lastPc = undefined;
     setPanelMessage(memWritesEl, "No memory writes yet.");
     updateMemoryWindow(currentSnapshot()?.regs);
@@ -832,7 +874,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   function clearPanels() {
     clikeEl.innerHTML = renderClikeExpression(null);
     effectsEl.innerHTML = effectEmptyState();
-    regsEl.innerHTML = renderRegs();
+    registersUi.render({});
     pcEl.textContent = "";
     disasmEl.innerHTML = renderDisasm(undefined, undefined, []);
     resetMemoryView();
@@ -843,9 +885,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
 
   function stopRun(message?: string) {
+    isRunning = false;
+    runRequested = false;
     runBtn.textContent = "Run";
+    registersUi.setRunningOverlay(false);
     if (message) {
-      statusEl.textContent = message;
+      setStatusDetails(message, statusSecondaryEl?.textContent ?? "");
     }
   }
 
@@ -880,7 +925,10 @@ window.addEventListener("DOMContentLoaded", async () => {
       stepBtn.disabled = false;
       stepBtn.textContent = "Step";
       runBtn.disabled = true;
+      return;
     }
+    stepBtn.disabled = false;
+    runBtn.disabled = false;
   }
 
   function stopAssembleSpinner() {
@@ -988,6 +1036,153 @@ window.addEventListener("DOMContentLoaded", async () => {
     return first.done ? "" : first.value;
   }
 
+  function parseRegisterValue(token: string | undefined, regs?: number[]): number | null {
+    if (!token || !regs) {
+      return null;
+    }
+    const normalized = token.trim().toLowerCase();
+    const aliases: Record<string, number> = {
+      zero: 0,
+      ra: 1,
+      sp: 2,
+      gp: 3,
+      tp: 4,
+      t0: 5,
+      t1: 6,
+      t2: 7,
+      s0: 8,
+      fp: 8,
+      s1: 9,
+      a0: 10,
+      a1: 11,
+      a2: 12,
+      a3: 13,
+      a4: 14,
+      a5: 15,
+      a6: 16,
+      a7: 17,
+      s2: 18,
+      s3: 19,
+      s4: 20,
+      s5: 21,
+      s6: 22,
+      s7: 23,
+      s8: 24,
+      s9: 25,
+      s10: 26,
+      s11: 27,
+      t3: 28,
+      t4: 29,
+      t5: 30,
+      t6: 31,
+    };
+    const index = aliases[normalized] ?? (/^x(?:[0-9]|[12][0-9]|3[01])$/.test(normalized) ? Number.parseInt(normalized.slice(1), 10) : undefined);
+    return index === undefined ? null : regs[index] >>> 0;
+  }
+
+  function parseImmediate(token: string | undefined): number | null {
+    if (!token) {
+      return null;
+    }
+    const normalized = token.trim();
+    const negative = normalized.startsWith("-");
+    const body = negative ? normalized.slice(1) : normalized;
+    const base = body.startsWith("0x") ? 16 : 10;
+    const digits = body.startsWith("0x") ? body.slice(2) : body;
+    if (!digits || !/^[0-9a-fA-F]+$/.test(digits)) {
+      return null;
+    }
+    const value = Number.parseInt(digits, base);
+    return negative ? -value : value;
+  }
+
+  function instructionTextForPc(pc: number | undefined): string {
+    if (pc === undefined) {
+      return "";
+    }
+    return (disasmLines ?? []).find((line) => !line.label && line.pc === pc)?.text ?? "";
+  }
+
+  function renderPseudoCHtml(snapshot: ApiResponse): string {
+    const expression = snapshot.clike && snapshot.clike.trim().length > 0 ? snapshot.clike : snapshot.rv2c ?? "";
+    const pc = snapshot.pc;
+    const regs = snapshot.regs;
+    const instText = instructionTextForPc(pc).trim();
+    const [mnemonic, ...operandParts] = instText.replace(/,/g, " ").split(/\s+/).filter(Boolean);
+    let body = renderClikeExpression(formatClikeExpression(expression));
+
+    if (mnemonic === "beq" || mnemonic === "bne" || mnemonic === "blt" || mnemonic === "bge" || mnemonic === "bltu" || mnemonic === "bgeu") {
+      const [lhs, rhs, target] = operandParts.join(" ").split(/\s+/);
+      const leftValue = parseRegisterValue(lhs, regs);
+      const rightValue = parseRegisterValue(rhs, regs);
+      if (leftValue !== null && rightValue !== null) {
+        let taken = false;
+        switch (mnemonic) {
+          case "beq":
+            taken = leftValue === rightValue;
+            break;
+          case "bne":
+            taken = leftValue !== rightValue;
+            break;
+          case "blt":
+            taken = (leftValue | 0) < (rightValue | 0);
+            break;
+          case "bge":
+            taken = (leftValue | 0) >= (rightValue | 0);
+            break;
+          case "bltu":
+            taken = leftValue < rightValue;
+            break;
+          case "bgeu":
+            taken = leftValue >= rightValue;
+            break;
+        }
+        body = `
+          <div class="clike-branch">
+            <div>if (${escapeHtml(lhs)} ${escapeHtml(mnemonic === "beq" ? "==" : mnemonic === "bne" ? "!=" : mnemonic.includes("lt") ? "<" : ">=")} ${escapeHtml(rhs)})</div>
+            <div class="clike-branch__taken${taken ? " is-active" : ""}">pc = ${escapeHtml(target)};</div>
+            <div class="clike-branch__else">else</div>
+            <div class="clike-branch__fallthrough${taken ? "" : " is-active"}">pc += 4;</div>
+          </div>
+        `;
+      }
+    }
+
+    if (["lw", "lh", "lb", "lhu", "lbu", "sw", "sh", "sb"].includes(mnemonic)) {
+      const memoryOperand = /([^,]+),\s*([^()]+)\(([^)]+)\)/.exec(instText);
+      if (memoryOperand) {
+        const imm = parseImmediate(memoryOperand[2]);
+        const baseRegValue = parseRegisterValue(memoryOperand[3], regs);
+        if (imm !== null && baseRegValue !== null) {
+          body = `
+            <div class="clike-loadstore">
+              <div>${renderClikeExpression(formatClikeExpression(expression))}</div>
+              <div class="clike-loadstore__comment">// ${escapeHtml(memoryOperand[3])} = ${hex32(baseRegValue)}, address = ${hex32(
+                (baseRegValue + imm) >>> 0
+              )}</div>
+            </div>
+          `;
+        }
+      }
+    }
+
+    const historyItems = history
+      .slice(Math.max(0, historyIndex - 4), historyIndex)
+      .map((entry) => entry.clike || entry.rv2c || "")
+      .filter((entry) => entry.trim().length > 0)
+      .reverse()
+      .map(
+        (entry, index) =>
+          `<div class="clike-history__item" data-depth="${index}">${escapeHtml(entry.trim())}</div>`
+      )
+      .join("");
+
+    return `
+      <div class="clike-current">${body}</div>
+      ${historyItems ? `<div class="clike-history">${historyItems}</div>` : ""}
+    `;
+  }
+
   function buildDisasmEncodings(lines: ApiResponse["disasm"]): Map<number, string> {
     const encodings = new Map<number, string>();
     if (!runtime) return encodings;
@@ -1019,16 +1214,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       rv2c: "",
       disasm: disasmLines,
     };
-  }
-
-  function collectChangedRegs(effects: Effect[]): Set<number> {
-    const registers = new Set<number>();
-    for (const effect of effects) {
-      if (effect.kind === "reg") {
-        registers.add(effect.reg);
-      }
-    }
-    return registers;
   }
 
   function effectEntryClasses(baseClass: string, isLatest: boolean): string {
@@ -1111,21 +1296,37 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   function renderAll(data: ApiResponse) {
     const effects = data.effects ?? [];
-    memoryView.applyEffects(effects);
+    memoryView.applyEffects(effects, historyIndex);
     updateLastPc(effects);
 
     const previousEffects = historyIndex > 0 ? history[historyIndex - 1].effects ?? [] : [];
-    const clikeExpression = data.clike && data.clike.trim().length > 0 ? data.clike : data.rv2c ?? "";
-    clikeEl.innerHTML = renderClikeExpression(formatClikeExpression(clikeExpression));
+    clikeEl.innerHTML = renderPseudoCHtml(data);
     effectsEl.innerHTML = renderEffectLog();
-    regsEl.innerHTML = renderRegs(data.regs, collectChangedRegs(effects), collectChangedRegs(previousEffects));
+    registersUi.render({
+      regs: data.regs,
+      effects,
+      previousEffects,
+      running: isRunning && (runSpeed === -1 || runSpeed > 500),
+    });
     pcEl.textContent = data.pc !== undefined ? hex32(data.pc) : "";
-    disasmEl.innerHTML = renderDisasm(data.pc, lastPc, data.disasm, disasmEncodings);
+    disasmEl.innerHTML = renderDisasm(data.pc, lastPc, data.disasm, disasmEncodings, breakpointManager.getAll(), data.regs);
+    updateDisasmProgress(data);
+    updateGoToPcButton(data.pc);
 
     const recentWrites = memoryView.getRecentWrites();
     memWritesEl.innerHTML = recentWrites.length
       ? recentWrites
-          .map((write) => `<div class="memory-write-item">${escapeHtml(write)}</div>`)
+          .map(
+            (write) => `
+              <div class="memory-write-item">
+                <span class="memory-write-item__addr">${hex32(write.address)}</span>
+                <span class="memory-write-item__before">${hex8(write.before)}</span>
+                <span class="memory-write-item__arrow">→</span>
+                <span class="memory-write-item__after">${hex8(write.after)}</span>
+                <span class="memory-write-item__step">step ${write.step}</span>
+              </div>
+            `
+          )
           .join("")
       : '<div class="empty-state">No memory writes yet.</div>';
 
@@ -1143,7 +1344,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       stepBtn.disabled = true;
       stepBtn.textContent = "Halted";
       stopRun(stalled && !halted ? "Halt loop detected." : "Program halted.");
-      statusEl.textContent = stalled && !halted ? "Halt loop detected." : "Program halted.";
+      setStatusDetails(stalled && !halted ? "Halted · stall detected" : "Halted", stalled && !halted ? "PC did not advance on the last step." : `Executed ${runStats.instructions} instructions · ${Math.round(runStats.elapsedMs)}ms`);
       assembleBtn.disabled = false;
       setStatus("halted");
     } else {
@@ -1218,13 +1419,13 @@ window.addEventListener("DOMContentLoaded", async () => {
       );
       let dots = 1;
       const renderAssembleStatus = () => {
-        statusEl.textContent = `${baseMessage}${".".repeat(dots)}`;
+        setStatusDetails(`${baseMessage}${".".repeat(dots)}`, "Parsing source and preparing the local RV32IM session.");
         dots = dots === 3 ? 1 : dots + 1;
       };
       renderAssembleStatus();
       assembleTimer = window.setInterval(renderAssembleStatus, 500);
     } else {
-      statusEl.textContent = "Resetting program…";
+      setStatusDetails("Resetting program…", "Reloading the assembled instructions into the simulator.");
     }
 
     stepBtn.disabled = true;
@@ -1234,6 +1435,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     try {
       const parsed = parseAssembly(sourceEl.value);
+      currentParsedProgram = parsed;
       disasmLines = parsed.disasm;
       const stackLabels = buildStackLabelContext(disasmLines);
       setStackLabelResolver(stackLabels.resolve, stackLabels.firstLabel);
@@ -1244,6 +1446,19 @@ window.addEventListener("DOMContentLoaded", async () => {
       runtime.loadProgram(parsed.instructions);
       runtime.reset();
       disasmEncodings = buildDisasmEncodings(disasmLines);
+      breakpointManager.resolveAddresses(parsed);
+      editor.setBreakpoints(breakpointManager.getAll());
+      renderBreakpointPanel();
+      currentWarnings = lintProgram(sourceEl.value, parsed);
+      updateWarningsPanel(currentWarnings);
+      editor.setDiagnostics(diagnosticsFromWarnings(currentWarnings));
+      runStats = {
+        startedAt: 0,
+        elapsedMs: 0,
+        instructions: 0,
+        cycles: 0,
+      };
+      updateRunStatsUi();
 
       sessionId = LOCAL_SIM_SESSION;
       resetMemoryView();
@@ -1258,11 +1473,19 @@ window.addEventListener("DOMContentLoaded", async () => {
       stepBtn.disabled = !sessionId;
       runBtn.disabled = !sessionId;
       resetBtn.disabled = !sessionId;
-      statusEl.textContent = successMessage;
+      setStatusDetails(
+        successMessage || "Assembled",
+        `${(disasmLines ?? []).filter((line) => !line.label).length} instructions · ${countLabelsInSource(sourceEl.value)} labels · ${currentWarnings.length} warnings`
+      );
       setStatus("assembled");
       succeeded = true;
     } catch (err) {
       const message = (err as Error).message;
+      currentParsedProgram = null;
+      currentWarnings = [];
+      updateWarningsPanel([]);
+      editor.setDiagnostics(diagnosticFromAssemblyError(message));
+      renderBreakpointPanel();
       setPanelMessage(effectsEl, `Error: ${message}`, "danger");
       sessionId = undefined;
       disasmLines = [];
@@ -1278,13 +1501,14 @@ window.addEventListener("DOMContentLoaded", async () => {
       runBtn.disabled = true;
       resetBtn.disabled = true;
       stepBackBtn.disabled = true;
-      statusEl.textContent = "";
+      setStatusDetails("Error", message);
       pcEl.textContent = "";
       disasmEl.innerHTML = renderDisasm(undefined, undefined, []);
       clikeEl.innerHTML = renderClikeExpression(null);
       setCallStackExplainer("Step into a function to see the calling convention.");
       syncCallStackUi(stackTracker.getCallStack());
       resetAnimator();
+      updateDisasmProgress();
       setStatus("ready");
     } finally {
       stopAssembleSpinner();
@@ -1320,6 +1544,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     setSharedBannerVisible(options.keepSharedBanner === true);
     renderHighlightedSource();
     updateLineNumbers();
+    currentParsedProgram = null;
+    currentWarnings = [];
+    updateWarningsPanel([]);
+    editor.clearDiagnostics();
+    editor.setBreakpoints(breakpointManager.getAll());
     clearPanels();
     sessionId = undefined;
     disasmLines = [];
@@ -1327,11 +1556,18 @@ window.addEventListener("DOMContentLoaded", async () => {
     disasmEncodings = new Map<number, string>();
     history = [];
     historyIndex = -1;
+    runStats = {
+      startedAt: 0,
+      elapsedMs: 0,
+      instructions: 0,
+      cycles: 0,
+    };
+    updateRunStatsUi();
     stopRun();
     stopAssembleSpinner();
     setAnimationsEnabled(true);
     resetAnimator();
-    statusEl.textContent = runtime ? options.statusMessage ?? "" : "Initializing Rust/WASM simulator…";
+    setStatusDetails(runtime ? options.statusMessage ?? "Ready" : "Initializing Rust/WASM simulator…", runtime ? "" : "Loading the WebAssembly engine.");
     assembleBtn.disabled = runtime === null;
     resetBtn.disabled = true;
     stepBtn.disabled = true;
@@ -1604,14 +1840,13 @@ window.addEventListener("DOMContentLoaded", async () => {
       stepBtn.click();
     },
     setEditorReadOnly(readOnly) {
-      sourceEl.disabled = readOnly;
-      sourceEl.closest(".editor-container")?.classList.toggle("is-readonly", readOnly);
+      editor.setReadOnly(readOnly);
     },
     showToast(message) {
       showToast(message);
     },
     setStatusMessage(message) {
-      statusEl.textContent = message;
+      setStatusDetails(message, statusSecondaryEl?.textContent ?? "");
     },
   });
 
@@ -1635,7 +1870,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       showToast(message);
     },
     setStatusMessage(message) {
-      statusEl.textContent = message;
+      setStatusDetails(message, statusSecondaryEl?.textContent ?? "");
     },
   });
 
@@ -1659,7 +1894,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       showToast(message);
     },
     setStatusMessage(message) {
-      statusEl.textContent = message;
+      setStatusDetails(message, statusSecondaryEl?.textContent ?? "");
     },
   });
 
@@ -1724,7 +1959,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       showToast(message);
     },
     onMessage(message) {
-      statusEl.textContent = message;
+      setStatusDetails(message, statusSecondaryEl?.textContent ?? "");
       showToast(message);
     },
   });
@@ -1742,6 +1977,19 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   setActiveCenterTab("disassembly");
   setStatus("ready");
+  updateRunSpeedUi();
+  if (runSpeedPanelEl) {
+    runSpeedPanelEl.hidden = false;
+  }
+  if (shortcutHintBarEl) {
+    let dismissed = false;
+    try {
+      dismissed = window.localStorage.getItem(SHORTCUT_HINT_STORAGE_KEY) === "true";
+    } catch {
+      dismissed = false;
+    }
+    shortcutHintBarEl.hidden = dismissed;
+  }
   currentUserSession = await initAuthUi({
     onSession(session) {
       currentUserSession = session;
@@ -1760,13 +2008,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     syncHighlightScroll();
   });
   sourceEl.addEventListener("focus", updateLineNumbers);
-  sourceEl.addEventListener("keydown", (event) => {
-    if (event.key !== "Tab") {
-      return;
-    }
-    event.preventDefault();
-    insertTextAtSelection("  ");
-  });
 
   sampleSelect.onchange = () => {
     loadSample(sampleSelect.value || "arraySum");
@@ -1807,6 +2048,113 @@ window.addEventListener("DOMContentLoaded", async () => {
     updateMemoryWindow(currentSnapshot()?.regs);
   });
 
+  runSpeedEl?.addEventListener("input", () => {
+    runSpeed = RUN_SPEED_PRESETS[Number(runSpeedEl.value)] ?? 100;
+    persistRunSpeed();
+    updateRunSpeedUi();
+  });
+
+  shortcutHintDismissBtn?.addEventListener("click", () => {
+    shortcutHintBarEl?.setAttribute("hidden", "true");
+    try {
+      window.localStorage.setItem(SHORTCUT_HINT_STORAGE_KEY, "true");
+    } catch {
+      // Ignore storage failures.
+    }
+  });
+
+  warningsToggleBtn?.addEventListener("click", () => {
+    warningsExpanded = !warningsExpanded;
+    updateWarningsPanel(currentWarnings);
+  });
+
+  breakpointsClearAllBtn?.addEventListener("click", () => {
+    breakpointManager.clear();
+    editor.setBreakpoints([]);
+    renderBreakpointPanel();
+    if (currentParsedProgram) {
+      breakpointManager.resolveAddresses(currentParsedProgram);
+    }
+  });
+
+  breakpointsListEl?.addEventListener("click", (event) => {
+    const target = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-breakpoint-id]");
+    if (!target) {
+      return;
+    }
+    breakpointManager.remove(target.dataset.breakpointId ?? "");
+    editor.setBreakpoints(breakpointManager.getAll());
+    renderBreakpointPanel();
+  });
+
+  goToPcBtn?.addEventListener("click", () => {
+    const currentPc = currentSnapshot()?.pc;
+    if (currentPc === undefined) {
+      return;
+    }
+    const row = disasmEl.querySelector<HTMLElement>(`[data-pc="${currentPc >>> 0}"]`);
+    row?.scrollIntoView({ block: "center", behavior: "smooth" });
+  });
+
+  disasmEl.addEventListener("scroll", () => {
+    updateGoToPcButton(currentSnapshot()?.pc);
+  });
+
+  memoryModeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      memoryMode = (button.dataset.memoryMode as MemoryViewMode) || "bytes";
+      memoryModeButtons.forEach((candidate) => candidate.classList.toggle("is-active", candidate === button));
+      updateMemoryWindow(currentSnapshot()?.regs);
+    });
+  });
+
+  memoryWordFormatButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      memoryWordFormat = (button.dataset.memoryWordFormat as MemoryWordFormat) || "hex";
+      memoryWordFormatButtons.forEach((candidate) => candidate.classList.toggle("is-active", candidate === button));
+      updateMemoryWindow(currentSnapshot()?.regs);
+    });
+  });
+
+  function commitWatchAddress() {
+    if (!memWatchInput) {
+      return;
+    }
+    const raw = memWatchInput.value.trim();
+    const normalized = raw.startsWith("0x") || raw.startsWith("0X") ? raw.slice(2) : raw;
+    if (!/^[0-9a-fA-F]+$/.test(normalized)) {
+      return;
+    }
+    const parsed = Number.parseInt(normalized, 16);
+    if (!Number.isFinite(parsed)) {
+      return;
+    }
+    const next = Array.from(new Set([...memoryWatches, parsed >>> 0])).slice(0, 4);
+    memoryWatches = next;
+    memoryView.setWatchedAddresses(memoryWatches);
+    memWatchInput.value = "";
+    updateMemoryWindow(currentSnapshot()?.regs);
+  }
+
+  memWatchAddBtn?.addEventListener("click", commitWatchAddress);
+  memWatchInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitWatchAddress();
+    }
+  });
+
+  memWatchesEl?.addEventListener("click", (event) => {
+    const target = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-remove-watch]");
+    if (!target) {
+      return;
+    }
+    const address = Number(target.dataset.removeWatch ?? "-1");
+    memoryWatches = memoryWatches.filter((candidate) => candidate !== address);
+    memoryView.setWatchedAddresses(memoryWatches);
+    updateMemoryWindow(currentSnapshot()?.regs);
+  });
+
   dismissSharedBannerBtn?.addEventListener("click", () => {
     if (sharedLinkBannerEl) {
       sharedLinkBannerEl.style.display = "none";
@@ -1843,13 +2191,13 @@ window.addEventListener("DOMContentLoaded", async () => {
   resetEffectFilters();
   resetMemoryControls(0);
 
-  statusEl.textContent = "Initializing Rust/WASM simulator…";
+  setStatusDetails("Initializing Rust/WASM simulator…", "Loading the local RV32IM runtime.");
   assembleBtn.disabled = true;
   WasmRuntime.create()
     .then(async (rt) => {
       runtime = rt;
       rt.setAlignmentChecks(true);
-      statusEl.textContent = "Rust/WASM simulator ready.";
+      setStatusDetails("Ready", "Rust/WASM simulator ready.");
       assembleBtn.disabled = false;
       if (activeLearningMode.isActive()) {
         await activeLearningMode.initialize();
@@ -1858,7 +2206,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       }
     })
     .catch((err) => {
-      statusEl.textContent = `Failed to initialize WASM: ${(err as Error).message}`;
+      setStatusDetails("Initialization failed", `Failed to initialize WASM: ${(err as Error).message}`);
       assembleBtn.disabled = true;
       setStatus("ready");
     });
@@ -1892,7 +2240,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     stackTracker.stepBack();
     renderFromHistory(historyIndex, false);
     resetAnimator();
-    statusEl.textContent = "Viewing previous state.";
+    setStatusDetails("Viewing previous state", "Use Step to move forward again or Reset to reassemble.");
     activeLearningMode.handleStepBack();
   };
 
@@ -1911,7 +2259,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       stackTracker.applyDelta(snapshotToDelta(history[historyIndex]));
       renderFromHistory(historyIndex, false);
       maybeSwitchToDisassembly(history[historyIndex].effects ?? []);
-      statusEl.textContent = "Viewing recorded state.";
+      setStatusDetails("Viewing recorded state", "This is a previously executed snapshot from the current run.");
       setStatus("assembled");
       activeLearningMode.handleStep(false);
       return;
@@ -1919,10 +2267,15 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     try {
       setStatus("stepping");
+      const stepStartedAt = performance.now();
       const beforeCallStack = stackTracker.getCallStack();
       const delta = runtime.step();
       const data = buildSnapshot(delta);
       pushHistory(data);
+      runStats.instructions += 1;
+      runStats.cycles += 1;
+      runStats.elapsedMs += performance.now() - stepStartedAt;
+      updateRunStatsUi();
       stackTracker.applyDelta(delta);
       const afterCallStack = stackTracker.getCallStack();
       const pushedFrame =
@@ -1959,17 +2312,25 @@ window.addEventListener("DOMContentLoaded", async () => {
         });
       }
       if (!data.halted && !data.trap) {
-        statusEl.textContent = "Step completed.";
+        setStatusDetails(
+          `Step ${historyIndex} of ${Math.max(1, (disasmLines ?? []).filter((line) => !line.label).length)}`,
+          `PC = ${hex32(data.pc ?? 0)} · sp = ${hex32(data.regs?.[2] ?? 0)}`
+        );
         setStatus("stepping");
       }
       activeLearningMode.handleStep(true);
     } catch (err) {
       setPanelMessage(effectsEl, `Error: ${(err as Error).message}`, "danger");
+      setStatusDetails("Error", (err as Error).message);
       setStatus("ready");
     }
   };
 
   runBtn.onclick = async () => {
+    if (isRunning) {
+      runRequested = false;
+      return;
+    }
     if (!runtime) {
       setPanelMessage(effectsEl, "WASM module not initialized yet.", "danger");
       return;
@@ -1984,13 +2345,25 @@ window.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    runStats = {
+      startedAt: performance.now(),
+      elapsedMs: 0,
+      instructions: 0,
+      cycles: 0,
+    };
+    updateRunStatsUi();
     assembleBtn.disabled = true;
     stepBtn.disabled = true;
-    runBtn.disabled = true;
-    runBtn.textContent = "Running…";
-    statusEl.textContent = "Running locally (WASM)…";
+    resetBtn.disabled = true;
+    runBtn.disabled = false;
+    runBtn.textContent = "Stop";
+    isRunning = true;
+    runRequested = true;
+    latestRenderAt = 0;
+    setStatusDetails("Running", "Executing locally in the browser via WASM.");
     setStatus("running");
     setAnimationsEnabled(false);
+    registersUi.setRunningOverlay(runSpeed === -1 || runSpeed > 500);
 
     await new Promise<void>((resolve) => {
       window.requestAnimationFrame(() => resolve());
@@ -1998,38 +2371,117 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     let lastDelta: WasmStateDelta | null = null;
     let finalMessage = `Run stopped after ${MAX_RUN_STEPS} steps.`;
+    let skipBreakpointPc = breakpointManager.isBreakpointAt(activeRuntime.pc()) ? activeRuntime.pc() : null;
 
     try {
-      for (let stepIndex = 0; stepIndex < MAX_RUN_STEPS; stepIndex++) {
-        const delta = activeRuntime.step();
-        lastDelta = delta;
-        const data = buildSnapshot(delta);
-        pushHistory(data);
+      await new Promise<void>((resolve) => {
+        const tick = () => {
+          const speed = runSpeed;
+          const batchSize =
+            speed === -1 ? 300 : speed > 500 ? 120 : speed <= 50 ? 1 : Math.max(2, Math.round(speed / 10));
+          let shouldRender = speed <= 50;
 
-        if (data.trap) {
-          finalMessage = fmtTrap(data.trap);
-          break;
-        }
-        if (data.halted) {
-          finalMessage = "Program halted.";
-          break;
-        }
-        if (isPcStalled(data.effects ?? [])) {
-          finalMessage = "Halt loop detected.";
-          break;
-        }
-      }
+          for (let batchIndex = 0; batchIndex < batchSize; batchIndex += 1) {
+            if (!runRequested) {
+              finalMessage = "Run paused.";
+              break;
+            }
+            if (runStats.instructions >= MAX_RUN_STEPS) {
+              finalMessage = `Run stopped after ${MAX_RUN_STEPS} steps.`;
+              runRequested = false;
+              break;
+            }
+
+            const currentPc = activeRuntime.pc();
+            const ignoreCurrentBreakpoint = skipBreakpointPc !== null && currentPc === skipBreakpointPc;
+            if (!ignoreCurrentBreakpoint && breakpointManager.isBreakpointAt(currentPc)) {
+              const breakpoint = breakpointForPc(currentPc);
+              breakpointManager.recordHit(currentPc);
+              renderBreakpointPanel();
+              finalMessage = `Paused at breakpoint · Line ${breakpoint?.line ?? "?"} · ${hex32(currentPc)}`;
+              showBreakpointTooltip(`Breakpoint hit at ${hex32(currentPc)} · Line ${breakpoint?.line ?? "?"}`);
+              runRequested = false;
+              shouldRender = true;
+              break;
+            }
+            skipBreakpointPc = null;
+
+            const delta = activeRuntime.step();
+            lastDelta = delta;
+            const data = buildSnapshot(delta);
+            pushHistory(data);
+            stackTracker.applyDelta(delta);
+            runStats.instructions += 1;
+            runStats.cycles += 1;
+            runStats.elapsedMs = performance.now() - runStats.startedAt;
+
+            if (data.trap) {
+              finalMessage = fmtTrap(data.trap);
+              runRequested = false;
+              shouldRender = true;
+              break;
+            }
+            if (data.halted) {
+              finalMessage = "Program halted.";
+              runRequested = false;
+              shouldRender = true;
+              break;
+            }
+            if (isPcStalled(data.effects ?? [])) {
+              finalMessage = "Halt loop detected.";
+              runRequested = false;
+              shouldRender = true;
+              break;
+            }
+          }
+
+          const now = performance.now();
+          if (speed > 50 && speed <= 500 && now - latestRenderAt >= 100) {
+            shouldRender = true;
+          }
+          if ((speed > 500 || speed === -1) && now - latestRenderAt >= 200) {
+            shouldRender = true;
+          }
+
+          if (shouldRender && historyIndex >= 0) {
+            renderFromHistory(historyIndex);
+            updateRunStatsUi();
+            latestRenderAt = now;
+          } else {
+            updateRunStatsUi();
+          }
+
+          if (!runRequested) {
+            resolve();
+            return;
+          }
+
+          if (speed <= 50) {
+            window.setTimeout(tick, Math.max(1, Math.round(1000 / speed)));
+            return;
+          }
+          if (speed <= 500) {
+            window.setTimeout(tick, 100);
+            return;
+          }
+          window.requestAnimationFrame(tick);
+        };
+
+        tick();
+      });
 
       stopRun();
       if (historyIndex >= 0) {
         renderFromHistory(historyIndex);
       }
-      statusEl.textContent = finalMessage;
+      updateRunStatsUi();
+      setStatusDetails(finalMessage, `Executed ${runStats.instructions} instructions · ${Math.round(runStats.elapsedMs)}ms`);
       activeLearningMode.handleRunEnd();
       setAnimationsEnabled(true);
-      if (lastDelta) {
-        animateStep(lastDelta);
-        if (!lastDelta.halted && !lastDelta.trap && !isPcStalled(lastDelta.effects ?? [])) {
+      const finalDelta = historyIndex >= 0 ? snapshotToDelta(history[historyIndex]) : lastDelta;
+      if (finalDelta) {
+        animateStep(finalDelta);
+        if (!finalDelta.halted && !finalDelta.trap && !isPcStalled(finalDelta.effects ?? [])) {
           setStatus("assembled");
         }
       } else {
@@ -2042,11 +2494,13 @@ window.addEventListener("DOMContentLoaded", async () => {
       assembleBtn.disabled = false;
       stepBtn.disabled = !sessionId;
       runBtn.disabled = !sessionId;
+      resetBtn.disabled = !sessionId;
       setStatus("ready");
       return;
     }
 
     assembleBtn.disabled = false;
+    resetBtn.disabled = !sessionId;
   };
 
   function isEditableTarget(target: EventTarget | null): boolean {

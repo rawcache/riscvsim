@@ -1,55 +1,87 @@
 import type { Effect } from "./types";
-import { fmtBytes, hex32, hex8 } from "./format";
+import { hex32, hex8 } from "./format";
 
 const WINDOW_BYTES = 32;
 const BYTES_PER_ROW = 8;
-const MAX_RECENT_WRITES = 8;
+const MAX_RECENT_WRITES = 10;
+const MAX_WATCHES = 4;
+
+export type MemoryViewMode = "bytes" | "words" | "ascii" | "stack";
+export type MemoryWordFormat = "hex" | "dec" | "uint";
+
+export type RecentWrite = {
+  address: number;
+  before: number;
+  after: number;
+  step: number;
+};
 
 type MemoryView = {
   reset: () => void;
   seedBytes: (start: number, bytes: Uint8Array) => void;
-  applyEffects: (effects: Effect[]) => void;
-  renderWindow: (base: number) => string;
-  getRecentWrites: () => string[];
+  applyEffects: (effects: Effect[], stepNumber?: number) => void;
+  renderWindow: (
+    base: number,
+    options?: {
+      mode?: MemoryViewMode;
+      wordFormat?: MemoryWordFormat;
+      sp?: number;
+    }
+  ) => string;
+  renderWatches: (wordFormat?: MemoryWordFormat) => string;
+  setWatchedAddresses: (addresses: number[]) => void;
+  getWatchedAddresses: () => number[];
+  getRecentWrites: () => RecentWrite[];
   getLastAddr: () => number | undefined;
+  readByte: (addr: number) => number | undefined;
+  readWord: (addr: number) => number;
 };
+
+function formatWord(value: number, format: MemoryWordFormat): string {
+  switch (format) {
+    case "dec":
+      return String(value | 0);
+    case "uint":
+      return String(value >>> 0);
+    case "hex":
+    default:
+      return hex32(value);
+  }
+}
+
+function printable(byte: number | undefined): string {
+  if (byte === undefined || byte < 32 || byte > 126) {
+    return ".";
+  }
+  return String.fromCharCode(byte);
+}
 
 export function createMemoryView(): MemoryView {
   const memBytes = new Map<number, number>();
-  let recentWrites: string[] = [];
+  let recentWrites: RecentWrite[] = [];
   let lastMemAddr: number | undefined;
   let currentWriteAddrs = new Set<number>();
   let previousWriteAddrs = new Set<number>();
+  let watchedAddresses: number[] = [];
 
   function isMemEffect(effect: Effect): effect is Extract<Effect, { kind: "mem" }> {
     return effect.kind === "mem";
   }
 
-  function formatWriteEffects(effects: Extract<Effect, { kind: "mem" }>[]): string {
-    if (effects.length === 0) return "";
-
-    const sorted = [...effects].sort((a, b) => a.addr - b.addr);
-    const segments: Extract<Effect, { kind: "mem" }>[][] = [];
-    for (const effect of sorted) {
-      const current = segments[segments.length - 1];
-      if (!current || effect.addr !== current[current.length - 1].addr + 1) {
-        segments.push([effect]);
-      } else {
-        current.push(effect);
-      }
-    }
-
-    return segments
-      .map((segment) => {
-        const addr = segment[0].addr;
-        const beforeBytes = segment.map((effect) => effect.before);
-        const afterBytes = segment.map((effect) => effect.after);
-        return `mem[${hex32(addr)}] ${fmtBytes(beforeBytes)} → ${fmtBytes(afterBytes)}`;
-      })
-      .join(" · ");
+  function readByte(addr: number): number | undefined {
+    return memBytes.get(addr >>> 0);
   }
 
-  function applyEffects(effects: Effect[]) {
+  function readWord(addr: number): number {
+    const base = addr >>> 0;
+    const b0 = memBytes.get(base) ?? 0;
+    const b1 = memBytes.get((base + 1) >>> 0) ?? 0;
+    const b2 = memBytes.get((base + 2) >>> 0) ?? 0;
+    const b3 = memBytes.get((base + 3) >>> 0) ?? 0;
+    return (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)) >>> 0;
+  }
+
+  function applyEffects(effects: Effect[], stepNumber = 0): void {
     const memEffects = effects.filter(isMemEffect);
     previousWriteAddrs = currentWriteAddrs;
     currentWriteAddrs = new Set<number>();
@@ -58,37 +90,42 @@ export function createMemoryView(): MemoryView {
       const addr = effect.addr >>> 0;
       memBytes.set(addr, effect.after & 0xff);
       currentWriteAddrs.add(addr);
+      recentWrites.unshift({
+        address: addr,
+        before: effect.before & 0xff,
+        after: effect.after & 0xff,
+        step: stepNumber,
+      });
+    }
+
+    if (recentWrites.length > MAX_RECENT_WRITES) {
+      recentWrites = recentWrites.slice(0, MAX_RECENT_WRITES);
     }
 
     if (memEffects.length > 0) {
       const sorted = [...memEffects].sort((a, b) => a.addr - b.addr);
-      recentWrites.unshift(formatWriteEffects(sorted));
-      if (recentWrites.length > MAX_RECENT_WRITES) {
-        recentWrites = recentWrites.slice(0, MAX_RECENT_WRITES);
-      }
       lastMemAddr = sorted[0].addr >>> 0;
     }
   }
 
-  function seedBytes(start: number, bytes: Uint8Array) {
+  function seedBytes(start: number, bytes: Uint8Array): void {
     const base = start >>> 0;
-    for (let index = 0; index < bytes.length; index++) {
+    for (let index = 0; index < bytes.length; index += 1) {
       memBytes.set((base + index) >>> 0, bytes[index] & 0xff);
     }
   }
 
-  function renderWindow(base: number): string {
+  function renderBytesWindow(base: number): string {
     const windowStart = (base >>> 0) & ~0x7;
     const rows: string[] = [];
 
     for (let rowOffset = 0; rowOffset < WINDOW_BYTES; rowOffset += BYTES_PER_ROW) {
       const rowAddr = (windowStart + rowOffset) >>> 0;
       const cells: string[] = [];
-      for (let column = 0; column < BYTES_PER_ROW; column++) {
+      for (let column = 0; column < BYTES_PER_ROW; column += 1) {
         const addr = (rowAddr + column) >>> 0;
         const value = memBytes.get(addr);
         const classes = ["memory-byte"];
-        const display = value === undefined ? "--" : hex8(value);
         if (value === undefined) {
           classes.push("memory-byte--empty");
         }
@@ -98,7 +135,7 @@ export function createMemoryView(): MemoryView {
           classes.push("memory-byte--prev");
         }
         cells.push(
-          `<span class="${classes.join(" ")}" data-byte-addr="${addr}" title="${hex32(addr)} = ${value === undefined ? "uninitialized" : `0x${hex8(value)}`}">${display}</span>`
+          `<span class="${classes.join(" ")}" title="${hex32(addr)}">${value === undefined ? "--" : hex8(value)}</span>`
         );
       }
 
@@ -113,12 +150,101 @@ export function createMemoryView(): MemoryView {
     return rows.join("");
   }
 
-  function reset() {
+  function renderWordsWindow(base: number, format: MemoryWordFormat): string {
+    const start = (base >>> 0) & ~0x3;
+    return Array.from({ length: 8 }, (_, index) => {
+      const addr = (start + index * 4) >>> 0;
+      const classes = ["memory-word-row"];
+      if ([0, 1, 2, 3].some((offset) => currentWriteAddrs.has((addr + offset) >>> 0))) {
+        classes.push("is-current");
+      }
+      const value = readWord(addr);
+      return `
+        <div class="${classes.join(" ")}">
+          <span class="memory-word-row__addr">${hex32(addr)}</span>
+          <span class="memory-word-row__value">${formatWord(value, format)}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderAsciiWindow(base: number): string {
+    const start = (base >>> 0) & ~0x3;
+    return Array.from({ length: 8 }, (_, index) => {
+      const addr = (start + index * 4) >>> 0;
+      const bytes = Array.from({ length: 4 }, (_, byteIndex) => memBytes.get((addr + byteIndex) >>> 0));
+      return `
+        <div class="memory-ascii-row">
+          <span class="memory-ascii-row__addr">${hex32(addr)}</span>
+          <span class="memory-ascii-row__hex">${bytes.map((byte) => (byte === undefined ? "--" : hex8(byte))).join(" ")}</span>
+          <span class="memory-ascii-row__text">${bytes.map((byte) => printable(byte)).join("")}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderStackWindow(sp: number, format: MemoryWordFormat): string {
+    const base = sp >>> 0;
+    return Array.from({ length: 32 }, (_, index) => {
+      const addr = (base + index * 4) >>> 0;
+      const value = readWord(addr);
+      return `
+        <div class="memory-word-row memory-word-row--stack">
+          <span class="memory-word-row__addr">sp+${index * 4}</span>
+          <span class="memory-word-row__value">${formatWord(value, format)}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderWindow(
+    base: number,
+    options: {
+      mode?: MemoryViewMode;
+      wordFormat?: MemoryWordFormat;
+      sp?: number;
+    } = {}
+  ): string {
+    const mode = options.mode ?? "bytes";
+    const wordFormat = options.wordFormat ?? "hex";
+    if (mode === "words") {
+      return renderWordsWindow(base, wordFormat);
+    }
+    if (mode === "ascii") {
+      return renderAsciiWindow(base);
+    }
+    if (mode === "stack") {
+      return renderStackWindow(options.sp ?? base, wordFormat);
+    }
+    return renderBytesWindow(base);
+  }
+
+  function renderWatches(wordFormat: MemoryWordFormat = "hex"): string {
+    return watchedAddresses
+      .map((address) => {
+        const normalized = address >>> 0;
+        return `
+          <div class="memory-watch-row" data-watch-address="${normalized}">
+            <span class="memory-watch-row__addr">${hex32(normalized)}</span>
+            <span class="memory-watch-row__value">${formatWord(readWord(normalized), wordFormat)}</span>
+            <button type="button" class="memory-watch-row__remove" data-remove-watch="${normalized}" aria-label="Remove watch">✕</button>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  function setWatchedAddresses(addresses: number[]): void {
+    watchedAddresses = addresses.slice(0, MAX_WATCHES).map((address) => address >>> 0);
+  }
+
+  function reset(): void {
     memBytes.clear();
     recentWrites = [];
     lastMemAddr = undefined;
     currentWriteAddrs = new Set<number>();
     previousWriteAddrs = new Set<number>();
+    watchedAddresses = [];
   }
 
   return {
@@ -126,7 +252,12 @@ export function createMemoryView(): MemoryView {
     seedBytes,
     applyEffects,
     renderWindow,
-    getRecentWrites: () => recentWrites,
+    renderWatches,
+    setWatchedAddresses,
+    getWatchedAddresses: () => [...watchedAddresses],
+    getRecentWrites: () => [...recentWrites],
     getLastAddr: () => lastMemAddr,
+    readByte,
+    readWord,
   };
 }

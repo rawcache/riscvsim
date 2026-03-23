@@ -1692,32 +1692,110 @@ body.loaded .hero__visual {
   padding-top: 64px;
 }
 
-.landing-curriculum-card {
-  margin: 32px auto 0;
+.curriculum-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 32px;
+}
+
+.curriculum-preview-col {
   display: flex;
-  justify-content: center;
-  padding: 28px 24px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.curriculum-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background:
-    radial-gradient(circle at top center, color-mix(in srgb, var(--accent) 8%, transparent), transparent 46%),
-    var(--bg-surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.landing-home #landingCurriculumTree {
-  margin-top: 0;
-  max-width: 560px;
-}
-
-.landing-home #landingCurriculumTree .tree-node {
+  background: var(--bg-surface);
+  transition: border-color 150ms ease, background 150ms ease;
   cursor: default;
+  text-decoration: none;
 }
 
-.landing-home #landingCurriculumTree .tree-node:not(:disabled):hover {
-  transform: none;
-  border-color: var(--border);
-  box-shadow: none;
+.curriculum-preview-item:hover {
+  background: var(--bg-elevated);
+  border-color: var(--accent-border);
+}
+
+.cp-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Geist Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.cp-beginner .cp-num {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border: 1.5px solid rgba(34, 197, 94, 0.25);
+}
+
+.cp-intermediate .cp-num {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border: 1.5px solid var(--accent-border);
+}
+
+.cp-advanced .cp-num {
+  background: rgba(251, 146, 60, 0.12);
+  color: #fb923c;
+  border: 1.5px solid rgba(251, 146, 60, 0.25);
+}
+
+.cp-title {
+  font-family: "Geist", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex: 1;
+  line-height: 1.3;
+}
+
+.cp-meta {
+  font-family: "Geist", sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.curriculum-preview-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: "Geist", sans-serif;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.curriculum-preview-cta {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.curriculum-preview-cta:hover {
+  text-decoration: underline;
 }
 
 .landing-home .feature-card {
@@ -1965,6 +2043,12 @@ body.loaded .hero__visual {
   }
 }
 
+@media (max-width: 640px) {
+  .curriculum-preview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .landing-home .landing-section--hero {
     padding-top: 16px;
@@ -2028,5 +2112,11 @@ body.loaded .hero__visual {
 
   .landing-home .hero__title {
     font-size: 36px;
+  }
+
+  .curriculum-preview-footer {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
   }
 }

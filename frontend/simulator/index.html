@@ -122,7 +122,29 @@
                 <button id="run" class="sim-button sim-button--outline" type="button" disabled>Run</button>
                 <button id="reset" class="sim-button sim-button--danger" type="button" disabled>Reset</button>
               </div>
-              <p class="shortcut-hint">Enter: Assemble · ↓: Step · Shift+↓: Step Back · R: Run</p>
+
+              <div id="runSpeedPanel" class="run-speed-panel">
+                <div class="run-speed-panel__row">
+                  <span class="run-speed-panel__label">Run speed</span>
+                  <span id="runSpeedValue" class="run-speed-panel__value">100 inst/s</span>
+                </div>
+                <input id="runSpeed" class="run-speed-panel__slider" type="range" min="0" max="6" step="1" value="3" />
+                <div class="run-speed-panel__ticks" aria-hidden="true">
+                  <span>1x</span>
+                  <span>10x</span>
+                  <span>100x</span>
+                  <span>MAX</span>
+                </div>
+              </div>
+
+              <div id="runStats" class="run-stats" hidden></div>
+
+              <div id="shortcutHintBar" class="shortcut-hint-bar">
+                <span>Enter: Assemble · ↓: Step · Shift+↓: Step Back · R: Run · Esc: Reset</span>
+                <button id="shortcutHintDismiss" class="shortcut-hint-bar__dismiss" type="button" aria-label="Dismiss keyboard shortcuts">
+                  ×
+                </button>
+              </div>
 
               <div class="editor-container">
                 <div class="line-numbers" id="line-numbers" aria-hidden="true"></div>
@@ -141,7 +163,32 @@
                 </div>
               </div>
 
-              <div id="status" class="status-line" aria-live="polite"></div>
+              <section id="breakpointsPanel" class="breakpoints-panel" hidden>
+                <div class="breakpoints-panel__header">
+                  <span id="breakpointsCount">BREAKPOINTS (0)</span>
+                </div>
+                <div id="breakpointsList" class="breakpoints-panel__list"></div>
+                <button id="breakpointsClearAll" class="breakpoints-panel__clear" type="button">Clear all</button>
+              </section>
+
+              <section id="warningsPanel" class="warnings-panel" hidden>
+                <button
+                  id="warningsToggle"
+                  class="warnings-panel__toggle"
+                  type="button"
+                  aria-expanded="true"
+                  aria-controls="warningsBody"
+                >
+                  <span id="warningsHeading">Warnings</span>
+                  <span class="warnings-panel__chevron">⌄</span>
+                </button>
+                <div id="warningsBody" class="warnings-panel__body"></div>
+              </section>
+
+              <div id="status" class="status-line" aria-live="polite">
+                <div id="statusPrimary" class="status-line__primary">Ready</div>
+                <div id="statusSecondary" class="status-line__secondary"></div>
+              </div>
             </div>
           </section>
 
@@ -241,9 +288,19 @@
                 aria-labelledby="centerTabDisassembly"
                 data-center-panel="disassembly"
               >
-                <div class="center-tab-panel__header">
-                  <span>Disassembly</span>
-                  <span id="pc" class="pc-pill"></span>
+                <div class="center-tab-panel__header center-tab-panel__header--disasm">
+                  <div class="disasm-header-main">
+                    <span>Disassembly</span>
+                    <span id="pc" class="pc-pill"></span>
+                  </div>
+                  <button id="goToPc" class="disasm-go-to-pc" type="button" hidden>▶ PC: 0x00000000</button>
+                </div>
+                <div class="disasm-progress-meta">
+                  <span id="disasmProgressText" class="disasm-progress-text"></span>
+                  <span id="disasmCompleteBadge" class="disasm-complete-badge" hidden>✓ Complete</span>
+                </div>
+                <div class="disasm-progress-bar">
+                  <span id="disasmProgressFill" class="disasm-progress-bar__fill"></span>
                 </div>
                 <div class="center-tab-panel__body center-tab-panel__body--disassembly">
                   <div id="disasm" class="disasm-view" aria-live="polite"></div>
@@ -339,6 +396,24 @@
               </div>
             </div>
             <div class="panel-body">
+              <div class="memory-panel-toolbar">
+                <div class="memory-view-tabs" role="tablist" aria-label="Memory view mode">
+                  <button type="button" class="memory-view-tab is-active" data-memory-mode="bytes">Bytes</button>
+                  <button type="button" class="memory-view-tab" data-memory-mode="words">Words</button>
+                  <button type="button" class="memory-view-tab" data-memory-mode="ascii">ASCII</button>
+                  <button type="button" class="memory-view-tab" data-memory-mode="stack">Stack</button>
+                </div>
+                <div id="memoryWordFormats" class="memory-word-formats" hidden>
+                  <button type="button" class="memory-word-format is-active" data-memory-word-format="hex">HEX</button>
+                  <button type="button" class="memory-word-format" data-memory-word-format="dec">DEC</button>
+                  <button type="button" class="memory-word-format" data-memory-word-format="uint">UINT</button>
+                </div>
+              </div>
+              <div class="memory-watch-controls">
+                <input id="memWatchInput" class="memory-address-input" type="text" inputmode="text" placeholder="0x00000000" />
+                <button id="memWatchAdd" class="sim-button sim-button--outline sim-button--compact" type="button">+ Watch</button>
+              </div>
+              <div id="memWatches" class="memory-watches" hidden></div>
               <div class="memory-stack">
                 <div class="memory-section">
                   <span class="memory-section__label">Recent Writes</span>
