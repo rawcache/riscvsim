@@ -92,7 +92,6 @@ const FOLLOW_REGISTER_MAP: Record<Exclude<MemoryFollowMode, "none">, number> = {
 
 const RUN_SPEED_PRESETS: RunSpeedPreset[] = [1, 10, 50, 100, 250, 500, -1];
 const RUN_SPEED_STORAGE_KEY = "studyriscv_run_speed";
-const SHORTCUT_HINT_STORAGE_KEY = "studyriscv_hints_dismissed";
 
 window.addEventListener("DOMContentLoaded", async () => {
   initNav({ activePage: "simulator" });
@@ -233,6 +232,16 @@ window.addEventListener("DOMContentLoaded", async () => {
       // Ignore storage access failures and fall back to the default.
     }
     return 100;
+  }
+
+  function removeShortcutHintsBar(): void {
+    const hintsBar =
+      shortcutHintBarEl ??
+      document.querySelector<HTMLElement>(".hints-bar") ??
+      document.querySelector<HTMLElement>("[class*='hint-bar']") ??
+      document.querySelector<HTMLElement>("[class*='shortcuts-bar']") ??
+      document.querySelector<HTMLElement>("[class*='keyboard-hint']");
+    hintsBar?.remove();
   }
 
   function setActiveCenterTab(tabId: CenterTabId) {
@@ -2260,14 +2269,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   if (runSpeedPanelEl) {
     runSpeedPanelEl.hidden = false;
   }
-  if (shortcutHintBarEl) {
-    let dismissed = false;
-    try {
-      dismissed = window.localStorage.getItem(SHORTCUT_HINT_STORAGE_KEY) === "true";
-    } catch {
-      dismissed = false;
+  try {
+    if (window.localStorage.getItem("studyriscv_hints_dismissed")) {
+      removeShortcutHintsBar();
     }
-    shortcutHintBarEl.hidden = dismissed;
+  } catch {
+    // Ignore storage failures and leave the bar visible.
   }
   currentUserSession = await initAuthUi({
     onSession(session) {
@@ -2334,9 +2341,21 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
 
   shortcutHintDismissBtn?.addEventListener("click", () => {
-    shortcutHintBarEl?.setAttribute("hidden", "true");
+    const hintsBar =
+      shortcutHintBarEl ??
+      document.querySelector<HTMLElement>(".hints-bar") ??
+      document.querySelector<HTMLElement>("[class*='hint-bar']") ??
+      document.querySelector<HTMLElement>("[class*='shortcuts-bar']") ??
+      document.querySelector<HTMLElement>("[class*='keyboard-hint']");
+    if (hintsBar) {
+      hintsBar.style.transition = "opacity 200ms ease";
+      hintsBar.style.opacity = "0";
+      window.setTimeout(() => {
+        hintsBar.remove();
+      }, 200);
+    }
     try {
-      window.localStorage.setItem(SHORTCUT_HINT_STORAGE_KEY, "true");
+      window.localStorage.setItem("studyriscv_hints_dismissed", "1");
     } catch {
       // Ignore storage failures.
     }

@@ -38,6 +38,53 @@
     <link rel="stylesheet" href="../src/styles/tokens.css" />
     <link rel="stylesheet" href="../src/styles/auth.css" />
     <link rel="stylesheet" href="../src/styles/simulator.css" />
+    <style>
+      .shortcut-hint-bar {
+        display: flex !important;
+        align-items: flex-start !important;
+        justify-content: space-between !important;
+        gap: 12px !important;
+        padding: 10px 12px !important;
+        min-height: 0 !important;
+      }
+
+      .shortcut-hint-bar > span,
+      .shortcut-hint-bar > p {
+        flex: 1 !important;
+        min-width: 0 !important;
+        font-size: 11px !important;
+        line-height: 1.5 !important;
+        color: var(--text-muted) !important;
+      }
+
+      .shortcut-hint-bar > button,
+      .shortcut-hint-bar > .dismiss {
+        min-width: 28px !important;
+        min-height: 28px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        background: none !important;
+        border: none !important;
+        color: var(--text-muted) !important;
+        font-size: 16px !important;
+        border-radius: 4px !important;
+        transition:
+          color 150ms ease,
+          background 150ms ease !important;
+        flex-shrink: 0 !important;
+        pointer-events: all !important;
+        align-self: flex-start !important;
+        margin-top: -2px !important;
+      }
+
+      .shortcut-hint-bar > button:hover,
+      .shortcut-hint-bar > .dismiss:hover {
+        color: var(--text-primary) !important;
+        background: var(--bg-surface) !important;
+      }
+    </style>
     <link rel="icon" type="image/svg+xml" href="../favicon-chip.svg" />
   </head>
   <body class="simulator-page">
