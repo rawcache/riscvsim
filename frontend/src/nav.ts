@@ -17,6 +17,7 @@ export interface NavConfig {
 
 const THEME_KEY = "studyriscv-theme";
 const CLOSE_DELAY_MS = 80;
+let searchShortcutBound = false;
 
 function chevronSvg(): string {
   return `<svg class="nav-chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"></path></svg>`;
@@ -87,9 +88,11 @@ function renderNav(config: NavConfig): string {
   const isLabs = config.activePage === "labs";
   const isChallenges = config.activePage === "challenges";
   const isGithub = config.activePage === "github";
+  const isDocs = config.activePage === "docs";
   const isProduct = productActive(config.activePage);
   const isResources = resourcesActive(config.activePage);
   const docsGuideActive = config.activePage === "docs";
+  const showSearchTrigger = isLearn || isDocs;
 
   return `
     <div class="nav-mobile-shell">
@@ -143,6 +146,20 @@ function renderNav(config: NavConfig): string {
           <a href="https://github.com/rawcache/riscvsim" class="nav-link${isGithub ? " nav-link-active" : ""}" target="_blank" rel="noopener">GitHub</a>
         </div>
         <div class="nav-actions">
+          ${
+            showSearchTrigger
+              ? `
+                <button id="nav-search-trigger" class="nav-search-trigger" type="button" aria-label="Search">
+                  <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <circle cx="9" cy="9" r="5.5"></circle>
+                    <path d="m13.5 13.5 4 4"></path>
+                  </svg>
+                  <span class="nav-search-trigger__text">Search...</span>
+                  <kbd class="nav-search-trigger__kbd">⌘K</kbd>
+                </button>
+              `
+              : ""
+          }
           <div id="nav-status-badge" class="nav-status-badge${config.activePage === "simulator" ? " visible" : ""}"></div>
           <button id="auth-signin-btn" class="nav-signin-btn" type="button">Sign in</button>
           <div class="auth-menu">
@@ -174,6 +191,16 @@ function renderNav(config: NavConfig): string {
   `;
 }
 
+function isEditableSearchTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+    return true;
+  }
+  return target.isContentEditable || Boolean(target.closest("[contenteditable='true']"));
+}
+
 export function initNav(config: NavConfig): void {
   const root = document.getElementById("site-nav");
   if (!root) {
@@ -188,6 +215,7 @@ export function initNav(config: NavConfig): void {
   const hamburger = root.querySelector<HTMLButtonElement>("#nav-hamburger");
   const themeToggle = root.querySelector<HTMLButtonElement>("#theme-toggle");
   const mobileThemeToggle = root.querySelector<HTMLButtonElement>("#nav-mobile-theme-toggle");
+  const searchTrigger = root.querySelector<HTMLButtonElement>("#nav-search-trigger");
   const mobileSignin = root.querySelector<HTMLButtonElement>("#nav-mobile-signin-btn");
   const desktopSignin = root.querySelector<HTMLButtonElement>("#auth-signin-btn");
   const userButton = root.querySelector<HTMLElement>("#auth-user-btn");
@@ -288,6 +316,23 @@ export function initNav(config: NavConfig): void {
   mobileThemeToggle?.addEventListener("click", () => {
     toggleTheme([themeToggle, mobileThemeToggle]);
   });
+
+  searchTrigger?.addEventListener("click", () => {
+    void import("./search-ui").then((module) => module.openSearch());
+  });
+
+  if (!searchShortcutBound) {
+    document.addEventListener("keydown", (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        if (isEditableSearchTarget(event.target)) {
+          return;
+        }
+        event.preventDefault();
+        void import("./search-ui").then((module) => module.openSearch());
+      }
+    });
+    searchShortcutBound = true;
+  }
 
   if (desktopSignin && mobileSignin) {
     mobileSignin.addEventListener("click", () => {

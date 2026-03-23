@@ -112,21 +112,6 @@
         </div>
       </section>
 
-      <section class="proof-strip" aria-label="What StudyRISC-V is built for">
-        <div class="landing-shell">
-          <div class="proof-strip__row">
-            <span>Used in ECE 2035 at Georgia Tech</span>
-            <span>No install · runs in your browser</span>
-            <span>Step back through execution</span>
-            <span>Free for GT students</span>
-            <span>Calling convention visualizer</span>
-            <span>Pseudo-C translation</span>
-            <span>Permalink sharing</span>
-            <span>Dark + light mode</span>
-          </div>
-        </div>
-      </section>
-
       <section class="landing-section landing-section--features">
         <div class="landing-shell">
           <div class="section-intro section-intro--center">
@@ -454,6 +439,43 @@
           <p class="landing-cta__note">Free · No account required · Runs in your browser</p>
         </div>
       </section>
+
+      <div class="ticker-strip">
+        <div class="ticker-track">
+          <span class="ticker-item"><span>📍</span> Used in ECE 2035 at Georgia Tech</span>
+          <span class="ticker-item"><span>🌐</span> Runs entirely in your browser</span>
+          <span class="ticker-item"><span>⏪</span> Step back through execution</span>
+          <span class="ticker-item"><span>🐝</span> Free for GT students</span>
+          <span class="ticker-item"><span>📚</span> Calling convention visualizer</span>
+          <span class="ticker-item"><span>💡</span> Pseudo-C translation</span>
+          <span class="ticker-item"><span>🔗</span> Permalink sharing</span>
+          <span class="ticker-item"><span>🦀</span> Rust + WebAssembly core</span>
+          <span class="ticker-item"><span>🔒</span> No server processes your code</span>
+          <span class="ticker-item"><span>📊</span> Live leaderboard</span>
+          <span class="ticker-item"><span>🎯</span> 20 guided lessons</span>
+          <span class="ticker-item"><span>⚡</span> 20 coding challenges</span>
+          <span class="ticker-item"><span>🔬</span> 5 ECE 2035 labs</span>
+          <span class="ticker-item"><span>🧠</span> Call stack visualizer</span>
+          <span class="ticker-item"><span>🌙</span> Dark and light mode</span>
+          <span class="ticker-item"><span>📱</span> Works on mobile</span>
+          <span class="ticker-item"><span>📍</span> Used in ECE 2035 at Georgia Tech</span>
+          <span class="ticker-item"><span>🌐</span> Runs entirely in your browser</span>
+          <span class="ticker-item"><span>⏪</span> Step back through execution</span>
+          <span class="ticker-item"><span>🐝</span> Free for GT students</span>
+          <span class="ticker-item"><span>📚</span> Calling convention visualizer</span>
+          <span class="ticker-item"><span>💡</span> Pseudo-C translation</span>
+          <span class="ticker-item"><span>🔗</span> Permalink sharing</span>
+          <span class="ticker-item"><span>🦀</span> Rust + WebAssembly core</span>
+          <span class="ticker-item"><span>🔒</span> No server processes your code</span>
+          <span class="ticker-item"><span>📊</span> Live leaderboard</span>
+          <span class="ticker-item"><span>🎯</span> 20 guided lessons</span>
+          <span class="ticker-item"><span>⚡</span> 20 coding challenges</span>
+          <span class="ticker-item"><span>🔬</span> 5 ECE 2035 labs</span>
+          <span class="ticker-item"><span>🧠</span> Call stack visualizer</span>
+          <span class="ticker-item"><span>🌙</span> Dark and light mode</span>
+          <span class="ticker-item"><span>📱</span> Works on mobile</span>
+        </div>
+      </div>
     </main>
 
     <footer id="site-footer"></footer>
@@ -1391,6 +1413,8 @@
       })();
     </script>
     <script type="module">
+      import { getClipLine } from "./src/clip-dialogue.ts";
+      import { initClipBubble, showClipLine } from "./src/clip-ui.ts";
       import { initFooter } from "./src/footer.ts";
       import { getLesson, getLessons, loadProgress } from "./src/lessons.ts";
       import { initNav } from "./src/nav.ts";
@@ -1443,6 +1467,21 @@
         initNav({ activePage: "landing" });
         initFooter();
         renderLandingResume();
+        initClipBubble();
+        let isFirstVisit = false;
+        try {
+          isFirstVisit = !window.localStorage.getItem("studyriscv_visited");
+          window.localStorage.setItem("studyriscv_visited", "1");
+        } catch {
+          isFirstVisit = false;
+        }
+        const event = isFirstVisit ? "first-visit" : "landing-load";
+        const clipLine = getClipLine(event, { isFirstVisit });
+        if (clipLine) {
+          window.setTimeout(() => {
+            showClipLine(clipLine);
+          }, 1800);
+        }
       });
 
       const MINI_PROGRAM = `# Add two numbers

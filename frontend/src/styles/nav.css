@@ -403,6 +403,421 @@
   color: var(--danger);
 }
 
+.nav-search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-family: "Geist", sans-serif;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  min-width: 180px;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.nav-search-trigger:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-surface);
+}
+
+.nav-search-trigger__text {
+  white-space: nowrap;
+}
+
+.nav-search-trigger__kbd {
+  font-family: "Geist Mono", monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: auto;
+}
+
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+
+.search-overlay[hidden] {
+  display: none;
+}
+
+.search-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.search-overlay__panel {
+  position: absolute;
+  top: 15vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, calc(100vw - 32px));
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  animation: search-panel-in 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes search-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-overlay__panel {
+    animation: search-panel-fade 120ms ease-out forwards;
+  }
+}
+
+@keyframes search-panel-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.search-overlay__input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-overlay__icon {
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.search-overlay__input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-family: "Geist", sans-serif;
+  font-size: 16px;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.search-overlay__input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-overlay__esc {
+  font-family: "Geist Mono", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+.search-overlay__results {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.search-overlay__results[hidden],
+.search-overlay__empty[hidden] {
+  display: none;
+}
+
+.search-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 100ms ease;
+  cursor: pointer;
+}
+
+.search-result:hover,
+.search-result.is-selected {
+  background: var(--bg-surface);
+}
+
+.search-result__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.search-result__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.search-result__title {
+  font-family: "Geist", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-result__title mark {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border-radius: 2px;
+  padding: 0 1px;
+  font-weight: 600;
+}
+
+.search-result__desc {
+  font-family: "Geist", sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-result__category {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.search-result__cat-label {
+  font-family: "Geist Mono", monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.search-result[data-category="lesson"] .search-result__cat-label {
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-subtle);
+}
+
+.search-result[data-category="instruction"] .search-result__cat-label {
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.search-result[data-category="register"] .search-result__cat-label {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.search-result[data-category="concept"] .search-result__cat-label {
+  color: #a855f7;
+  border-color: rgba(168, 85, 247, 0.25);
+  background: rgba(168, 85, 247, 0.08);
+}
+
+.search-result[data-category="challenge"] .search-result__cat-label {
+  color: #f97316;
+  border-color: rgba(249, 115, 22, 0.25);
+  background: rgba(249, 115, 22, 0.08);
+}
+
+.search-result__arrow {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+}
+
+.search-overlay__footer {
+  display: flex;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-base);
+}
+
+.search-overlay__footer span {
+  font-family: "Geist Mono", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.search-overlay__empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-family: "Geist", sans-serif;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.clip-chip-anchor {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.clip-chip-anchor__image {
+  width: 36px;
+  height: 36px;
+  display: block;
+}
+
+#clip-bubble {
+  position: fixed;
+  right: 32px;
+  bottom: 130px;
+  z-index: 1001;
+  max-width: 220px;
+  min-width: 120px;
+}
+
+#clip-bubble[hidden] {
+  display: none;
+}
+
+.clip-bubble__text {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 28px 10px 12px;
+  font-family: "Geist Mono", monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.clip-bubble__dismiss {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 16px;
+  height: 16px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.clip-bubble__dismiss:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface);
+}
+
+.clip-bubble__tail {
+  width: 12px;
+  height: 8px;
+  position: absolute;
+  bottom: -8px;
+  right: 32px;
+  overflow: hidden;
+}
+
+.clip-bubble__tail::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transform: rotate(45deg);
+}
+
+@keyframes clip-bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes clip-bubble-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.clip-bubble.is-entering {
+  animation: clip-bubble-in 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.clip-bubble.is-leaving {
+  animation: clip-bubble-out 200ms ease-in forwards;
+}
+
 .theme-toggle__icon--sun {
   display: inline-flex !important;
 }
@@ -527,6 +942,10 @@
     border-radius: 6px;
     border: 1px solid var(--border);
     background: none;
+  }
+
+  .nav-search-trigger {
+    display: none;
   }
 
   .nav-hamburger {

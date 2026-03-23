@@ -22,6 +22,8 @@ import {
 } from "./format";
 import { BreakpointManager, parseBreakpointCondition } from "./breakpoints";
 import { createChallengeMode } from "./challenge-ui";
+import { getClipLine, recordStep as recordClipStep, shouldSpeak, type ClipContext, type ClipEvent } from "./clip-dialogue";
+import { initClipBubble, showClipLine } from "./clip-ui";
 import { createEditor } from "./editor";
 import { createLabMode } from "./lab-mode";
 import { createLessonMode } from "./lesson-mode";
@@ -95,6 +97,7 @@ const SHORTCUT_HINT_STORAGE_KEY = "studyriscv_hints_dismissed";
 window.addEventListener("DOMContentLoaded", async () => {
   initNav({ activePage: "simulator" });
   initFooter();
+  initClipBubble();
 
   const assembleProgressEl = document.getElementById("assembleProgress") as HTMLElement | null;
   const assembleBtn = document.getElementById("assemble") as HTMLButtonElement;
@@ -346,6 +349,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
     if (statusSecondaryEl) {
       statusSecondaryEl.textContent = secondary;
+    }
+  }
+
+  function maybeShowClip(event: ClipEvent, context: ClipContext): void {
+    const line = getClipLine(event, context);
+    if (line && shouldSpeak(line.priority)) {
+      showClipLine(line);
     }
   }
 
@@ -632,6 +642,141 @@ window.addEventListener("DOMContentLoaded", async () => {
         }
         return `TRAP ${trap.cause.replace(/_/g, " ")}`;
     }
+  }
+
+  function parseRegisterIndex(token: string | undefined): number | null {
+    if (!token) {
+      return null;
+    }
+    const normalized = token.trim().toLowerCase();
+    const aliases: Record<string, number> = {
+      zero: 0,
+      ra: 1,
+      sp: 2,
+      gp: 3,
+      tp: 4,
+      t0: 5,
+      t1: 6,
+      t2: 7,
+      s0: 8,
+      fp: 8,
+      s1: 9,
+      a0: 10,
+      a1: 11,
+      a2: 12,
+      a3: 13,
+      a4: 14,
+      a5: 15,
+      a6: 16,
+      a7: 17,
+      s2: 18,
+      s3: 19,
+      s4: 20,
+      s5: 21,
+      s6: 22,
+      s7: 23,
+      s8: 24,
+      s9: 25,
+      s10: 26,
+      s11: 27,
+      t3: 28,
+      t4: 29,
+      t5: 30,
+      t6: 31,
+    };
+    if (normalized in aliases) {
+      return aliases[normalized];
+    }
+    if (/^x(?:[0-9]|[12][0-9]|3[01])$/.test(normalized)) {
+      return Number.parseInt(normalized.slice(1), 10);
+    }
+    return null;
+  }
+
+  function instructionMnemonic(instText: string): string {
+    return instText.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+  }
+
+  function destRegisterForInstruction(instText: string): number | null {
+    const normalized = instText.trim();
+    if (!normalized) {
+      return null;
+    }
+    const op = instructionMnemonic(normalized);
+    const writesRd = new Set([
+      "add",
+      "addi",
+      "sub",
+      "lui",
+      "auipc",
+      "and",
+      "andi",
+      "or",
+      "ori",
+      "xor",
+      "xori",
+      "sll",
+      "slli",
+      "srl",
+      "srli",
+      "sra",
+      "srai",
+      "slt",
+      "slti",
+      "sltu",
+      "sltiu",
+      "lw",
+      "lh",
+      "lb",
+      "lhu",
+      "lbu",
+      "jal",
+      "jalr",
+      "mul",
+      "mulh",
+      "mulhu",
+      "mulhsu",
+      "div",
+      "divu",
+      "rem",
+      "remu",
+      "li",
+      "mv",
+      "la",
+      "nop",
+      "call",
+    ]);
+    if (!writesRd.has(op) || op === "ret" || op === "j" || op === "ecall" || op === "ebreak") {
+      return null;
+    }
+    const operands = normalized.replace(/^[^\s]+\s*/, "");
+    const firstOperand = operands.split(",")[0]?.trim();
+    return parseRegisterIndex(firstOperand);
+  }
+
+  function findChangedRegister(currentRegs: number[] | undefined, previousRegs: number[] | undefined): number | undefined {
+    if (!currentRegs || !previousRegs) {
+      return undefined;
+    }
+    for (let index = 0; index < Math.min(currentRegs.length, previousRegs.length); index += 1) {
+      if ((currentRegs[index] >>> 0) !== (previousRegs[index] >>> 0)) {
+        return index;
+      }
+    }
+    return undefined;
+  }
+
+  function countExecutableInstructions(lines: ApiResponse["disasm"]): number {
+    return (lines ?? []).filter((line) => !line.label).length;
+  }
+
+  function detectRecursivePattern(source: string): boolean {
+    const labels = Array.from(source.matchAll(/^\s*([A-Za-z_.$][\w.$]*):/gm)).map((match) => match[1]);
+    if (labels.length === 0) {
+      return false;
+    }
+    const callTargets = Array.from(source.matchAll(/\bjal\b\s+\w+\s*,\s*([A-Za-z_.$][\w.$]*)/g)).map((match) => match[1]);
+    return callTargets.some((target) => labels.includes(target) && source.includes(`${target}:`) && source.includes(`jal  ra, ${target}`));
   }
 
   function alignMemoryBase(address: number): number {
@@ -1602,9 +1747,15 @@ window.addEventListener("DOMContentLoaded", async () => {
         `${(disasmLines ?? []).filter((line) => !line.label).length} instructions · ${countLabelsInSource(sourceEl.value)} labels · ${currentWarnings.length} warnings`
       );
       setStatus("assembled");
+      maybeShowClip("assemble-success", {
+        totalInstructions: countExecutableInstructions(disasmLines),
+        hasDataSegment: programDataBytes.length > 0,
+        recursivePatternDetected: detectRecursivePattern(sourceEl.value),
+      });
       succeeded = true;
     } catch (err) {
       const message = (err as Error).message;
+      const lineMatch = /on line (\d+)/i.exec(message);
       currentParsedProgram = null;
       currentWarnings = [];
       updateWarningsPanel([]);
@@ -1626,6 +1777,10 @@ window.addEventListener("DOMContentLoaded", async () => {
       resetBtn.disabled = true;
       stepBackBtn.disabled = true;
       setStatusDetails("Error", message);
+      maybeShowClip("assemble-error", {
+        errorMessage: message,
+        errorLine: lineMatch ? Number(lineMatch[1]) : undefined,
+      });
       pcEl.textContent = "";
       disasmEl.innerHTML = renderDisasm(undefined, undefined, []);
       clikeEl.innerHTML = renderClikeExpression(null);
@@ -2389,6 +2544,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     resetAnimator();
     setStatusDetails("Viewing previous state", "Use Step to move forward again or Reset to reassemble.");
     activeLearningMode.handleStepBack();
+    maybeShowClip("step-back", {});
   };
 
   stepBtn.onclick = async () => {
@@ -2415,6 +2571,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     try {
       setStatus("stepping");
       const stepStartedAt = performance.now();
+      const previousSnapshot = currentSnapshot();
+      const previousRegs = previousSnapshot?.regs ? Array.from(previousSnapshot.regs) : runtime.readRegisters();
+      const previousPc = previousSnapshot?.pc ?? runtime.pc();
+      const executedInstruction = instructionTextForPc(previousPc);
+      const executedMnemonic = instructionMnemonic(executedInstruction);
       const beforeCallStack = stackTracker.getCallStack();
       const delta = runtime.step();
       const data = buildSnapshot(delta);
@@ -2465,6 +2626,25 @@ window.addEventListener("DOMContentLoaded", async () => {
         );
         setStatus("stepping");
       }
+      recordClipStep();
+      const changedReg = findChangedRegister(data.regs, previousRegs);
+      const branchInstruction = ["beq", "bne", "blt", "bge", "bltu", "bgeu"].includes(executedMnemonic);
+      maybeShowClip("step", {
+        pc: data.pc,
+        registers: data.regs,
+        prevRegisters: previousRegs,
+        spDelta: (data.regs?.[2] ?? 0) - (previousRegs?.[2] ?? 0),
+        raDelta: (data.regs?.[1] ?? 0) !== (previousRegs?.[1] ?? 0),
+        changedReg,
+        changedRegValue: changedReg !== undefined ? data.regs?.[changedReg] : undefined,
+        branchTaken: branchInstruction && ((data.pc ?? 0) >>> 0) !== (((previousPc ?? 0) + 4) >>> 0),
+        branchNotTaken: branchInstruction && ((data.pc ?? 0) >>> 0) === (((previousPc ?? 0) + 4) >>> 0),
+        destIsX0: destRegisterForInstruction(executedInstruction) === 0,
+        instructionType: executedMnemonic,
+        instructionText: executedInstruction,
+        stepNumber: runStats.instructions,
+        totalInstructions: countExecutableInstructions(disasmLines),
+      });
       activeLearningMode.handleStep(true);
     } catch (err) {
       setPanelMessage(effectsEl, `Error: ${(err as Error).message}`, "danger");
@@ -2518,6 +2698,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     let lastDelta: WasmStateDelta | null = null;
     let finalMessage = `Run stopped after ${MAX_RUN_STEPS} steps.`;
+    let stoppedAtBreakpoint = false;
     const initialRegs = activeRuntime.readRegisters();
     let skipBreakpointPc = breakpointManager.isBreakpointAt(activeRuntime.pc(), initialRegs) ? activeRuntime.pc() : null;
 
@@ -2549,7 +2730,9 @@ window.addEventListener("DOMContentLoaded", async () => {
               renderBreakpointPanel();
               finalMessage = `Paused at breakpoint · Line ${breakpoint?.line ?? "?"} · ${hex32(currentPc)}`;
               showBreakpointTooltip(`Breakpoint hit at ${hex32(currentPc)} · Line ${breakpoint?.line ?? "?"}`);
+              maybeShowClip("run-breakpoint", { pc: currentPc });
               runRequested = false;
+              stoppedAtBreakpoint = true;
               shouldRender = true;
               break;
             }
@@ -2625,6 +2808,14 @@ window.addEventListener("DOMContentLoaded", async () => {
       }
       updateRunStatsUi();
       setStatusDetails(finalMessage, `Executed ${runStats.instructions} instructions · ${Math.round(runStats.elapsedMs)}ms`);
+      if (!stoppedAtBreakpoint && finalMessage !== "Run paused.") {
+        const finalTrap = currentSnapshot()?.trap ?? null;
+        maybeShowClip("run-halt", {
+          pc: currentSnapshot()?.pc,
+          stepNumber: runStats.instructions,
+          errorMessage: finalTrap ? fmtTrap(finalTrap) : undefined,
+        });
+      }
       activeLearningMode.handleRunEnd();
       setAnimationsEnabled(true);
       const finalDelta = historyIndex >= 0 ? snapshotToDelta(history[historyIndex]) : lastDelta;

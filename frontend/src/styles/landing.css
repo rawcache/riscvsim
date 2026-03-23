@@ -945,7 +945,7 @@ body.loaded .hero__visual {
   position: fixed;
   right: 24px;
   bottom: 24px;
-  z-index: 9999;
+  z-index: 1000;
   width: 82px;
   height: 82px;
   opacity: 0;
@@ -1639,6 +1639,90 @@ body.loaded .hero__visual {
 
 .landing-home .proof-strip__row::-webkit-scrollbar {
   height: 0;
+}
+
+.ticker-strip {
+  width: 100%;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  padding: 10px 0;
+  position: relative;
+}
+
+.ticker-strip::before,
+.ticker-strip::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.ticker-strip::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bg-elevated), transparent);
+}
+
+.ticker-strip::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bg-elevated), transparent);
+}
+
+.ticker-track {
+  display: flex;
+  gap: 0;
+  width: max-content;
+  animation: ticker-scroll 35s linear infinite;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 28px;
+  font-family: "Geist", sans-serif;
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.ticker-item::after {
+  content: "·";
+  color: var(--border);
+  margin-left: 0;
+}
+
+.ticker-item span {
+  color: var(--accent);
+  font-size: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: center;
+    gap: 16px;
+  }
 }
 
 .landing-home .section-intro {
