@@ -22,8 +22,14 @@ const CORS_HEADERS = {
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 let leaderboardCache = {
-  expiresAt: 0,
-  data: [],
+  alltime: {
+    expiresAt: 0,
+    data: [],
+  },
+  weekly: {
+    expiresAt: 0,
+    data: [],
+  },
 };
 
 function response(statusCode, body) {
@@ -82,6 +88,11 @@ function getProgramId(event) {
 
 function getPath(event) {
   return event.requestContext?.http?.path ?? event.rawPath ?? event.path ?? "";
+}
+
+function getQueryParam(event, key) {
+  const value = event.queryStringParameters?.[key];
+  return typeof value === "string" ? value : "";
 }
 
 function toProgram(item) {
@@ -358,8 +369,11 @@ function displayNameFromClaims(claims) {
 function normalizeLeaderboardBody(body) {
   return {
     totalPoints: Number.isFinite(body?.totalPoints) ? Math.max(0, Number(body.totalPoints)) : 0,
+    weeklyPoints: Number.isFinite(body?.weeklyPoints) ? Math.max(0, Number(body.weeklyPoints)) : 0,
     lessonsCompleted: Number.isFinite(body?.lessonsCompleted) ? Math.max(0, Number(body.lessonsCompleted)) : 0,
     challengesPassed: Number.isFinite(body?.challengesPassed) ? Math.max(0, Number(body.challengesPassed)) : 0,
+    streak: Number.isFinite(body?.streak) ? Math.max(0, Number(body.streak)) : 0,
+    weeklyStartDate: typeof body?.weeklyStartDate === "string" ? body.weeklyStartDate : "",
     badges: Array.isArray(body?.badges)
       ? body.badges
           .map((badge) => {
@@ -375,9 +389,27 @@ function normalizeLeaderboardBody(body) {
   };
 }
 
-async function handleGetLeaderboard() {
-  if (leaderboardCache.expiresAt > Date.now() && Array.isArray(leaderboardCache.data)) {
-    return response(200, leaderboardCache.data);
+function currentWeekStartUtc() {
+  const now = new Date();
+  const utcDay = now.getUTCDay();
+  const offset = utcDay === 0 ? 6 : utcDay - 1;
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  start.setUTCDate(start.getUTCDate() - offset);
+  return start.toISOString().slice(0, 10);
+}
+
+function activeWeeklyPoints(item) {
+  const storedStart = typeof item.weeklyStartDate === "string" ? item.weeklyStartDate : "";
+  if (storedStart !== currentWeekStartUtc()) {
+    return 0;
+  }
+  return Number.isFinite(item.weeklyPoints) ? Number(item.weeklyPoints) : 0;
+}
+
+async function handleGetLeaderboard(period = "alltime") {
+  const cacheKey = period === "weekly" ? "weekly" : "alltime";
+  if (leaderboardCache[cacheKey].expiresAt > Date.now() && Array.isArray(leaderboardCache[cacheKey].data)) {
+    return response(200, leaderboardCache[cacheKey].data);
   }
 
   const result = await ddb.send(
@@ -392,16 +424,21 @@ async function handleGetLeaderboard() {
 
   const ranked = (result.Items ?? [])
     .map((item) => ({
+      userId: typeof item.userId === "string" ? item.userId : "",
       displayName: typeof item.displayName === "string" && item.displayName.trim() ? item.displayName.trim() : "anonymous",
       totalPoints: Number.isFinite(item.totalPoints) ? Number(item.totalPoints) : 0,
+      weeklyPoints: activeWeeklyPoints(item),
       lessonsCompleted: Number.isFinite(item.lessonsCompleted) ? Number(item.lessonsCompleted) : 0,
       challengesPassed: Number.isFinite(item.challengesPassed) ? Number(item.challengesPassed) : 0,
+      streak: Number.isFinite(item.streak) ? Number(item.streak) : 0,
       badges: Array.isArray(item.badges) ? item.badges : [],
       updatedAt: typeof item.updatedAt === "string" ? item.updatedAt : "",
     }))
     .sort((left, right) => {
-      if (right.totalPoints !== left.totalPoints) {
-        return right.totalPoints - left.totalPoints;
+      const leftScore = period === "weekly" ? left.weeklyPoints : left.totalPoints;
+      const rightScore = period === "weekly" ? right.weeklyPoints : right.totalPoints;
+      if (rightScore !== leftScore) {
+        return rightScore - leftScore;
       }
       return right.updatedAt.localeCompare(left.updatedAt);
     })
@@ -410,12 +447,14 @@ async function handleGetLeaderboard() {
       rank: index + 1,
       displayName: entry.displayName,
       totalPoints: entry.totalPoints,
+      weeklyPoints: entry.weeklyPoints,
       lessonsCompleted: entry.lessonsCompleted,
       challengesPassed: entry.challengesPassed,
       badges: entry.badges,
+      streak: entry.streak,
     }));
 
-  leaderboardCache = {
+  leaderboardCache[cacheKey] = {
     expiresAt: Date.now() + 60_000,
     data: ranked,
   };
@@ -435,8 +474,11 @@ async function handleSaveLeaderboardScore(event, caller, claims) {
         programId: "score",
         displayName: displayNameFromClaims(claims),
         totalPoints: body.totalPoints,
+        weeklyPoints: body.weeklyPoints,
+        weeklyStartDate: body.weeklyStartDate || currentWeekStartUtc(),
         lessonsCompleted: body.lessonsCompleted,
         challengesPassed: body.challengesPassed,
+        streak: body.streak,
         badgeCount: body.badges.length,
         badges: body.badges,
         updatedAt,
@@ -444,8 +486,10 @@ async function handleSaveLeaderboardScore(event, caller, claims) {
     })
   );
 
-  leaderboardCache.expiresAt = 0;
-  leaderboardCache.data = [];
+  leaderboardCache.alltime.expiresAt = 0;
+  leaderboardCache.alltime.data = [];
+  leaderboardCache.weekly.expiresAt = 0;
+  leaderboardCache.weekly.data = [];
 
   return response(200, { saved: true });
 }
@@ -459,7 +503,7 @@ exports.handler = async (event) => {
 
     if (path === "/leaderboard" || path.endsWith("/leaderboard")) {
       if (method === "GET") {
-        return await handleGetLeaderboard();
+        return await handleGetLeaderboard(getQueryParam(event, "period"));
       }
     }
 
