@@ -3,10 +3,16 @@
   top: 16px;
   z-index: 100;
   height: 52px;
-  background: rgba(8, 8, 8, 0.88);
+  background: #080808;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
+}
+
+[data-theme="light"] .site-nav,
+:root:not([data-theme="dark"]) .site-nav {
+  background: rgba(247, 245, 242, 0.95);
+  border-bottom: none;
 }
 
 .nav-inner {
