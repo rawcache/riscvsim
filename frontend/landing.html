@@ -41,9 +41,9 @@
         }
       })();
     </script>
+    <link rel="stylesheet" href="./src/styles/tokens.css" />
     <link rel="stylesheet" href="./src/styles/global.css" />
     <link rel="stylesheet" href="./src/styles/nav.css" />
-    <link rel="stylesheet" href="./src/styles/tokens.css" />
     <link rel="stylesheet" href="./src/styles/auth.css" />
     <link rel="stylesheet" href="./src/styles/landing.css" />
     <link rel="icon" type="image/svg+xml" href="./favicon-chip.svg" />
@@ -427,12 +427,8 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
 
     <script>
       (() => {
-        const themeKey = "studyriscv-theme";
         const root = document.documentElement;
         const body = document.body;
-        const nav = document.getElementById("landingNav");
-        const themeToggle = document.getElementById("landingThemeToggle");
-        const dropdowns = Array.from(document.querySelectorAll("[data-dropdown]"));
         const heroCodeWindow = document.getElementById("heroCodeWindow");
         const heroCode = document.getElementById("heroCode");
         const heroCodeLabel = document.getElementById("heroCodeLabel");
@@ -594,58 +590,6 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
             .replace(/>/g, "&gt;")
             .replace(/\"/g, "&quot;")
             .replace(/'/g, "&#39;");
-        }
-
-        function syncThemeToggle() {
-          if (!themeToggle) return;
-          const isDark = root.dataset.theme === "dark";
-          themeToggle.setAttribute("aria-pressed", String(isDark));
-          themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
-        }
-
-        const dropdownTimers = new WeakMap();
-
-        function setDropdownOpen(dropdown, isOpen) {
-          const trigger = dropdown.querySelector(".nav-dropdown__trigger");
-          const panel = dropdown.querySelector(".nav-dropdown__panel");
-          if (!(trigger instanceof HTMLButtonElement) || !(panel instanceof HTMLElement)) {
-            return;
-          }
-          dropdown.classList.toggle("is-open", isOpen);
-          trigger.setAttribute("aria-expanded", String(isOpen));
-          panel.hidden = !isOpen;
-        }
-
-        function clearDropdownTimer(dropdown) {
-          const existing = dropdownTimers.get(dropdown);
-          if (existing) {
-            window.clearTimeout(existing);
-            dropdownTimers.delete(dropdown);
-          }
-        }
-
-        function closeAllDropdowns(except = null) {
-          dropdowns.forEach((dropdown) => {
-            if (dropdown === except) {
-              return;
-            }
-            clearDropdownTimer(dropdown);
-            setDropdownOpen(dropdown, false);
-          });
-        }
-
-        function closeDropdownWithDelay(dropdown, delay = 100) {
-          clearDropdownTimer(dropdown);
-          const timer = window.setTimeout(() => {
-            setDropdownOpen(dropdown, false);
-            dropdownTimers.delete(dropdown);
-          }, delay);
-          dropdownTimers.set(dropdown, timer);
-        }
-
-        function handleScroll() {
-          if (!nav) return;
-          nav.classList.toggle("is-scrolled", window.scrollY > 8);
         }
 
         function clearHeroTimers() {
@@ -1320,18 +1264,6 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
           window.addEventListener("resize", requestCoveredStateUpdate);
         }
 
-        themeToggle?.addEventListener("click", () => {
-          const isDark = root.dataset.theme === "dark";
-          if (isDark) {
-            root.removeAttribute("data-theme");
-            window.localStorage.setItem(themeKey, "light");
-          } else {
-            root.dataset.theme = "dark";
-            window.localStorage.setItem(themeKey, "dark");
-          }
-          syncThemeToggle();
-        });
-
         heroCodeClose?.addEventListener("click", (event) => {
           event.preventDefault();
           closeHeroTerminal();
@@ -1351,10 +1283,7 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
           body.classList.add("loaded");
           body.classList.add("hero-loaded");
           startHeroProgram(0);
-          syncThemeToggle();
-          handleScroll();
           initChipPet();
-          window.addEventListener("scroll", handleScroll, { passive: true });
 
           const cards = document.querySelectorAll(".js-reveal");
           const observer = new IntersectionObserver(
@@ -1393,53 +1322,6 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
             );
             pillObserver.observe(coverageStrip);
           }
-
-          const hoverCapable = window.matchMedia("(hover: hover)");
-          dropdowns.forEach((dropdown) => {
-            const trigger = dropdown.querySelector(".nav-dropdown__trigger");
-            const panel = dropdown.querySelector(".nav-dropdown__panel");
-            if (!(trigger instanceof HTMLButtonElement) || !(panel instanceof HTMLElement)) {
-              return;
-            }
-
-            dropdown.addEventListener("mouseenter", () => {
-              if (!hoverCapable.matches) {
-                return;
-              }
-              clearDropdownTimer(dropdown);
-              closeAllDropdowns(dropdown);
-              setDropdownOpen(dropdown, true);
-            });
-
-            dropdown.addEventListener("mouseleave", () => {
-              if (!hoverCapable.matches) {
-                return;
-              }
-              closeDropdownWithDelay(dropdown, 100);
-            });
-
-            trigger.addEventListener("click", (event) => {
-              event.preventDefault();
-              const isOpen = dropdown.classList.contains("is-open");
-              closeAllDropdowns(isOpen ? null : dropdown);
-              setDropdownOpen(dropdown, !isOpen);
-            });
-          });
-
-          document.addEventListener("click", (event) => {
-            if (!(event.target instanceof Node)) {
-              return;
-            }
-            if (!dropdowns.some((dropdown) => dropdown.contains(event.target))) {
-              closeAllDropdowns();
-            }
-          });
-
-          document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-              closeAllDropdowns();
-            }
-          });
         });
       })();
     </script>
