@@ -1387,16 +1387,17 @@ body.loaded .hero__visual {
 }
 
 .landing-home .landing-section--hero {
-  padding: 48px 0 96px;
+  padding: 32px 0 96px;
 }
 
 .landing-home .hero {
   background: var(--bg-base);
-  min-height: calc(100vh - 136px);
+  min-height: auto;
   display: grid;
   grid-template-columns: 480px minmax(0, 1fr);
-  align-items: center;
+  align-items: flex-start;
   gap: 56px;
+  padding-top: 0;
 }
 
 .landing-home .hero__copy {
@@ -1605,245 +1606,6 @@ body.loaded .hero__visual {
   font-size: 13px;
   line-height: 1.7;
   padding: 16px;
-}
-
-.landing-home .hero-mini-sim-section {
-  padding-top: 0;
-}
-
-.landing-home .hero-mini-sim-section .landing-shell {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.landing-home .mini-sim {
-  width: min(100%, 560px);
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg-surface);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 32px 64px rgba(0, 0, 0, 0.4);
-}
-
-.landing-home .mini-sim__bar {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  height: 36px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-elevated);
-}
-
-.landing-home .mini-sim__dots {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.landing-home .mini-sim__dots span {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.landing-home .mini-sim__dots span:nth-child(1) {
-  background: #ff5f57;
-}
-
-.landing-home .mini-sim__dots span:nth-child(2) {
-  background: #ffbd2e;
-}
-
-.landing-home .mini-sim__dots span:nth-child(3) {
-  background: #28c840;
-}
-
-.landing-home .mini-sim__label {
-  justify-self: center;
-  color: var(--text-muted);
-  font-family: var(--font-body);
-  font-size: 11px;
-}
-
-.landing-home .mini-sim__editor {
-  display: block;
-  width: 100%;
-  min-height: 228px;
-  padding: 12px;
-  border: 0;
-  outline: 0;
-  resize: none;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.landing-home .mini-sim__controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-elevated);
-}
-
-.landing-home .mini-sim__button-row {
-  display: flex;
-  gap: 8px;
-}
-
-.landing-home .mini-sim__button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  cursor: pointer;
-  transition:
-    border-color 150ms ease,
-    background-color 150ms ease,
-    color 150ms ease,
-    opacity 150ms ease;
-}
-
-.landing-home .mini-sim__button:hover:not(:disabled) {
-  border-color: var(--border-hover);
-}
-
-.landing-home .mini-sim__button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.landing-home .mini-sim__button--primary {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: #fff;
-}
-
-.landing-home .mini-sim__button--primary:hover:not(:disabled) {
-  border-color: var(--accent-hover);
-  background: var(--accent-hover);
-}
-
-.landing-home .mini-sim__status {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-align: right;
-}
-
-.landing-home .mini-sim__status.is-error {
-  color: var(--danger);
-}
-
-.landing-home .mini-sim__registers,
-.landing-home .mini-sim__pseudo {
-  padding: 8px 12px;
-}
-
-.landing-home .mini-sim__registers-header,
-.landing-home .mini-sim__pseudo-header {
-  margin-bottom: 8px;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.landing-home .mini-sim__register-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.landing-home .mini-sim__register {
-  display: grid;
-  gap: 4px;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--bg-input) 86%, transparent);
-}
-
-.landing-home .mini-sim__register.is-changed {
-  animation: mini-register-flash 600ms ease;
-}
-
-@keyframes mini-register-flash {
-  0% {
-    background: var(--accent-subtle);
-    border-color: var(--accent-border);
-  }
-  100% {
-    background: color-mix(in srgb, var(--bg-input) 86%, transparent);
-    border-color: var(--border);
-  }
-}
-
-.landing-home .mini-sim__register-name {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
-
-.landing-home .mini-sim__register-name span {
-  color: var(--text-muted);
-}
-
-.landing-home .mini-sim__register-value {
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
-
-.landing-home .mini-sim__pseudo {
-  border-top: 1px solid var(--border);
-}
-
-.landing-home .mini-sim__pseudo-value {
-  min-height: 22px;
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-
-.landing-home .mini-sim__empty {
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-.landing-home .mini-sim__error {
-  color: var(--danger);
-}
-
-.landing-home .mini-sim__pseudo-value .pc-dest {
-  color: var(--accent);
-}
-
-.landing-home .mini-sim__pseudo-value .pc-op {
-  color: var(--text-muted);
-}
-
-.landing-home .mini-sim__pseudo-value .pc-src {
-  color: var(--text-primary);
 }
 
 .landing-home .proof-strip {
@@ -2195,9 +1957,6 @@ body.loaded .hero__visual {
     display: none;
   }
 
-  .landing-home .hero-mini-sim-section {
-    display: none;
-  }
 }
 
 @media (max-width: 960px) {
@@ -2208,7 +1967,7 @@ body.loaded .hero__visual {
 
 @media (max-width: 768px) {
   .landing-home .landing-section--hero {
-    padding-top: 24px;
+    padding-top: 16px;
     padding-bottom: 48px;
   }
 
@@ -2263,7 +2022,7 @@ body.loaded .hero__visual {
   }
 
   .landing-home .landing-section--hero {
-    padding-top: 24px;
+    padding-top: 16px;
     padding-bottom: 48px;
   }
 
