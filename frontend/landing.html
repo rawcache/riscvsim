@@ -93,50 +93,68 @@
 
           <div class="hero__visual">
             <div class="hero__visual-stack">
-              <section class="mini-sim" aria-label="Interactive mini RISC-V simulator">
-                <div class="mini-sim__bar">
-                  <div class="mini-sim__dots" aria-hidden="true">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+              <div id="heroCodeWindow" class="hero-code">
+                <div class="hero-code__bar">
+                  <div class="hero-code__dots">
+                    <button class="hero-code__window-btn hero-code__window-btn--close" id="heroCodeClose" aria-label="Close"></button>
+                    <button class="hero-code__window-btn hero-code__window-btn--minimize" aria-label="Minimize"></button>
+                    <button class="hero-code__window-btn hero-code__window-btn--maximize" id="heroCodeNext" aria-label="Next program"></button>
                   </div>
-                  <span class="mini-sim__label">try it →</span>
+                  <span class="hero-code__label" id="heroCodeLabel">sum_loop.s</span>
+                  <div class="hero-code__bar-spacer"></div>
                 </div>
-                <textarea
-                  id="landingMiniSource"
-                  class="mini-sim__editor"
-                  spellcheck="false"
-                  rows="10"
-                  aria-label="Mini simulator source code"
-                ># Add two numbers
+                <div class="hero-code__body">
+                  <div id="heroCode" class="hero-code__content" aria-live="polite" aria-label="Animated assembly code"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="landing-section hero-mini-sim-section" aria-label="Interactive mini RISC-V simulator">
+        <div class="landing-shell">
+          <section class="mini-sim">
+            <div class="mini-sim__bar">
+              <div class="mini-sim__dots" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <span class="mini-sim__label">try it →</span>
+            </div>
+            <textarea
+              id="landingMiniSource"
+              class="mini-sim__editor"
+              spellcheck="false"
+              rows="10"
+              aria-label="Mini simulator source code"
+            ># Add two numbers
 addi x1, x0, 10    # x1 = 10
 addi x2, x0, 20    # x2 = 20
 add  x3, x1, x2    # x3 = x1 + x2</textarea>
-                <div class="mini-sim__controls">
-                  <div class="mini-sim__button-row">
-                    <button id="landingMiniAssemble" class="mini-sim__button mini-sim__button--primary" type="button">
-                      Assemble
-                    </button>
-                    <button id="landingMiniStep" class="mini-sim__button mini-sim__button--secondary" type="button">
-                      Step
-                    </button>
-                  </div>
-                  <div id="landingMiniStatus" class="mini-sim__status">Loading runtime…</div>
-                </div>
-                <div class="mini-sim__registers">
-                  <div class="mini-sim__registers-header">x0-x7</div>
-                  <div id="landingMiniRegs" class="mini-sim__register-grid" role="status" aria-live="polite"></div>
-                </div>
-                <div class="mini-sim__pseudo">
-                  <div class="mini-sim__pseudo-header">Pseudo-C</div>
-                  <div id="landingMiniPseudo" class="mini-sim__pseudo-value">
-                    <span class="mini-sim__empty">assemble to begin</span>
-                  </div>
-                </div>
-              </section>
-
+            <div class="mini-sim__controls">
+              <div class="mini-sim__button-row">
+                <button id="landingMiniAssemble" class="mini-sim__button mini-sim__button--primary" type="button">
+                  Assemble
+                </button>
+                <button id="landingMiniStep" class="mini-sim__button mini-sim__button--secondary" type="button">
+                  Step
+                </button>
+              </div>
+              <div id="landingMiniStatus" class="mini-sim__status">Loading runtime…</div>
             </div>
-          </div>
+            <div class="mini-sim__registers">
+              <div class="mini-sim__registers-header">x0-x7</div>
+              <div id="landingMiniRegs" class="mini-sim__register-grid" role="status" aria-live="polite"></div>
+            </div>
+            <div class="mini-sim__pseudo">
+              <div class="mini-sim__pseudo-header">Pseudo-C</div>
+              <div id="landingMiniPseudo" class="mini-sim__pseudo-value">
+                <span class="mini-sim__empty">assemble to begin</span>
+              </div>
+            </div>
+          </section>
         </div>
       </section>
 

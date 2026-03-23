@@ -3097,17 +3097,17 @@ body.simulator-page {
 
 @media (min-width: 1400px) {
   .simulator-layout {
-    grid-template-columns: 300px 1fr 340px;
+    grid-template-columns: 360px 1fr 340px;
   }
 
   .simulator-layout.has-lesson-column {
-    grid-template-columns: 280px 300px 1fr 340px;
+    grid-template-columns: 280px 360px 1fr 340px;
   }
 }
 
 @media (min-width: 1200px) and (max-width: 1399px) {
   .simulator-layout {
-    grid-template-columns: 300px 1fr 340px;
+    grid-template-columns: 360px 1fr 340px;
   }
 }
 
