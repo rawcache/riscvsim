@@ -85,7 +85,6 @@ function renderNav(config: NavConfig): string {
   const isLearn = config.activePage === "learn";
   const isQuiz = config.activePage === "quiz";
   const isLabs = config.activePage === "labs";
-  const isLeaderboard = config.activePage === "leaderboard";
   const isChallenges = config.activePage === "challenges";
   const isGithub = config.activePage === "github";
   const isProduct = productActive(config.activePage);
