@@ -1,6 +1,6 @@
 .site-nav {
   position: sticky;
-  top: 8px;
+  top: 16px;
   z-index: 100;
   height: 52px;
   background: rgba(8, 8, 8, 0.88);
