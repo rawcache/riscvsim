@@ -943,9 +943,9 @@ body.loaded .hero__visual {
 
 #chip-wrapper {
   position: fixed;
-  right: 32px;
-  bottom: 32px;
-  z-index: 0;
+  right: 24px;
+  bottom: 24px;
+  z-index: 9999;
   width: 82px;
   height: 82px;
   opacity: 0;

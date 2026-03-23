@@ -977,16 +977,9 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
           let reactionOpenTimer = 0;
           let reactionResetTimer = 0;
           let fastPinsTimer = 0;
-          let coverFrame = 0;
           let annoyedTimer = 0;
-          let chipCovered = false;
           let chipClickCount = 0;
           let chipClickWindowStartedAt = 0;
-          const chipCoverTargets = Array.from(
-            document.querySelectorAll(
-              ".mini-sim, .mini-sim-mock, .hero-code, .feature-card, .proof-strip, .comparison-card, .coverage-section, .landing-cta, .landing-footer"
-            )
-          );
 
           function setPupils(angle, offset) {
             chipLeftPupil.setAttribute("cx", (27 + Math.cos(angle) * offset).toFixed(2));
@@ -1000,46 +993,6 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
             chipLeftPupil.setAttribute("cy", "30");
             chipRightPupil.setAttribute("cx", "37");
             chipRightPupil.setAttribute("cy", "30");
-          }
-
-          function updateCoveredState() {
-            const chipRect = chipWrapper.getBoundingClientRect();
-            const covered = chipCoverTargets.some((target) => {
-              if (!(target instanceof HTMLElement)) {
-                return false;
-              }
-
-              const rect = target.getBoundingClientRect();
-              if (rect.bottom <= 0 || rect.top >= window.innerHeight || rect.right <= 0 || rect.left >= window.innerWidth) {
-                return false;
-              }
-
-              const overlapX = Math.min(chipRect.right, rect.right) - Math.max(chipRect.left, rect.left);
-              const overlapY = Math.min(chipRect.bottom, rect.bottom) - Math.max(chipRect.top, rect.top);
-              return overlapX > 18 && overlapY > 18;
-            });
-
-            if (covered === chipCovered) {
-              return;
-            }
-
-            chipCovered = covered;
-            chipWrapper.classList.toggle("is-covered", covered);
-
-            if (!chipCovered && eyeLockUntil <= performance.now()) {
-              updateEyes(lastPointerX, lastPointerY);
-            }
-          }
-
-          function requestCoveredStateUpdate() {
-            if (coverFrame) {
-              return;
-            }
-
-            coverFrame = window.requestAnimationFrame(() => {
-              coverFrame = 0;
-              updateCoveredState();
-            });
           }
 
           function updateEyes(cursorX, cursorY) {
@@ -1199,7 +1152,8 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
             triggerBlink();
           }
 
-          chipWrapper.addEventListener("click", () => {
+          chipWrapper.addEventListener("click", (e) => {
+            e.stopPropagation();
             handleChipClick();
           });
 
@@ -1256,11 +1210,8 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
           }
 
           updateEyes(lastPointerX, lastPointerY);
-          requestCoveredStateUpdate();
           scheduleBlink();
           schedulePeek();
-          window.addEventListener("scroll", requestCoveredStateUpdate, { passive: true });
-          window.addEventListener("resize", requestCoveredStateUpdate);
         }
 
         heroCodeClose?.addEventListener("click", (event) => {
