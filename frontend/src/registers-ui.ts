@@ -13,6 +13,15 @@ type RenderPayload = {
 const FORMAT_STORAGE_KEY = "studyriscv_reg_format";
 const BEGINNER_STORAGE_KEY = "studyriscv_beginner_mode";
 const BEGINNER_REGS = [0, 1, 2, 10, 11, 12, 5, 6, 7];
+const FULL_GROUPS = [
+  { label: "Special", registers: [0, 1, 2, 3, 4] },
+  { label: "Temp", registers: [5, 6, 7] },
+  { label: "Saved", registers: [8, 9] },
+  { label: "Args", registers: [10, 11, 12, 13, 14, 15] },
+  { label: "Args (cont)", registers: [16, 17] },
+  { label: "Saved (cont)", registers: [18, 19, 20, 21, 22, 23, 24, 25, 26, 27] },
+  { label: "Temp (cont)", registers: [28, 29, 30, 31] },
+] as const;
 const ABI_NAMES = [
   "zero",
   "ra",
@@ -159,13 +168,6 @@ function tooltipLines(value: number): string[] {
   ];
 }
 
-function formatDiff(effect: Extract<Effect, { kind: "reg" }> | undefined): string {
-  if (!effect) {
-    return "";
-  }
-  return `<div class="reg-diff-old">${hex32(effect.before)}</div>`;
-}
-
 function directionBadge(index: number, effect: Extract<Effect, { kind: "reg" }> | undefined): string {
   if (!effect) {
     return "";
@@ -183,6 +185,40 @@ function directionBadge(index: number, effect: Extract<Effect, { kind: "reg" }> 
     return `<span class="reg-diff-ra">→ ${hex32(effect.after)}</span>`;
   }
   return "";
+}
+
+function renderRegisterCell(
+  index: number,
+  regs: number[],
+  currentEffects: Map<number, Extract<Effect, { kind: "reg" }>>,
+  previousRegs: Set<number>,
+  format: RegisterFormat
+): string {
+  const value = regs[index] >>> 0;
+  const effect = currentEffects.get(index);
+  const classes = ["register-cell"];
+  if (effect) {
+    classes.push("is-changed");
+  } else if (previousRegs.has(index)) {
+    classes.push("was-changed");
+  }
+
+  return `
+    <div class="${classes.join(" ")}" data-reg="${index}">
+      <div class="register-cell__name-row">
+        <div class="register-cell__abi">${escapeHtml(ABI_NAMES[index])}</div>
+        <div class="register-cell__xnum">x${index}</div>
+      </div>
+      ${effect ? `<div class="register-cell__old-value">${hex32(effect.before)}</div>` : ""}
+      <div class="register-cell__value">${escapeHtml(formatPrimary(value, format))}</div>
+      ${directionBadge(index, effect)}
+      <div class="register-cell__tooltip">
+        ${tooltipLines(value)
+          .map((line) => `<div>${escapeHtml(line)}</div>`)
+          .join("")}
+      </div>
+    </div>
+  `;
 }
 
 export function createRegistersUi(root: HTMLElement) {
@@ -213,77 +249,64 @@ export function createRegistersUi(root: HTMLElement) {
         window.clearTimeout(hiddenChangeTimer);
       }
       hiddenChangeTimer = window.setTimeout(() => {
-        root.querySelector(".regs-show-all")?.classList.remove("is-flashing");
+        root.querySelector(".register-show-all")?.classList.remove("is-flashing");
         hiddenChangeTimer = null;
       }, 1000);
     }
 
-    const visible = beginnerMode ? BEGINNER_REGS : Array.from({ length: 32 }, (_, index) => index);
-    const viewClass = beginnerMode ? "regs-grid regs-grid--beginner" : "regs-grid regs-grid--full";
+    const hiddenRegisterChanged = Array.from(currentEffects.keys()).some((index) => !BEGINNER_REGS.includes(index));
 
+    const gridMarkup = beginnerMode
+      ? BEGINNER_REGS.map((index) => renderRegisterCell(index, regs, currentEffects, previousRegs, format)).join("")
+      : FULL_GROUPS.map(
+          (group, groupIndex) => `
+            <div class="register-section-label${groupIndex === 0 ? " register-section-label--first" : ""}">
+              ${escapeHtml(group.label)}
+            </div>
+            ${group.registers
+              .map((index) => renderRegisterCell(index, regs, currentEffects, previousRegs, format))
+              .join("")}
+          `
+        ).join("");
+
+    root.className = "registers-root";
     root.innerHTML = `
-      <div class="regs-toolbar">
-        <div class="regs-format-toggle" role="tablist" aria-label="Register display format">
+      <div class="register-file-panel">
+        <div class="register-file-header">
+          <div class="register-file-header__title">REGISTER FILE</div>
+        </div>
+        <div class="register-format-bar" role="tablist" aria-label="Register display format">
           ${(["hex", "dec", "uint", "asc", "flt"] as RegisterFormat[])
             .map(
               (candidate) => `
                 <button
                   type="button"
-                  class="regs-format-button${candidate === format ? " is-active" : ""}"
+                  class="register-format-btn${candidate === format ? " active" : ""}"
                   data-format="${candidate}"
                 >${candidate.toUpperCase()}</button>
               `
             )
             .join("")}
         </div>
-        <button type="button" class="regs-beginner-toggle${beginnerMode ? " is-active" : ""}">
-          👁 Beginner
-        </button>
+        <div class="register-beginner-bar">
+          <span class="register-beginner-label">Beginner mode</span>
+          <button type="button" class="register-beginner-toggle">${beginnerMode ? "On" : "Off"}</button>
+        </div>
+        <div class="register-grid-wrapper">
+          <div class="register-running-overlay${payload.running ? " is-visible" : ""}">Running…</div>
+          <div class="register-grid${beginnerMode ? " register-grid--beginner" : " register-grid--full"}">
+            ${gridMarkup}
+          </div>
+        </div>
+        ${
+          beginnerMode
+            ? `<button type="button" class="register-show-all${hiddenRegisterChanged ? " is-flashing" : ""}">Show all 32 registers ↓</button>`
+            : ""
+        }
       </div>
-      <div class="regs-running-overlay${payload.running ? " is-visible" : ""}">Running…</div>
-      <div class="${viewClass}">
-        ${visible
-          .map((index) => {
-            const value = regs[index] >>> 0;
-            const effect = currentEffects.get(index);
-            const classes = ["reg-card"];
-            if (effect) {
-              classes.push("is-changed");
-            } else if (previousRegs.has(index)) {
-              classes.push("was-changed");
-            }
-            if (index === 0) {
-              classes.push("is-zero");
-            }
-            return `
-              <div class="${classes.join(" ")}" data-reg="${index}">
-                <div class="reg-card__meta">
-                  <div class="reg-card__abi">${ABI_NAMES[index]}</div>
-                  <div class="reg-card__x">x${index}</div>
-                </div>
-                <div class="reg-card__value-wrap">
-                  ${formatDiff(effect)}
-                  <div class="reg-card__value">${escapeHtml(formatPrimary(value, format))}</div>
-                  ${directionBadge(index, effect)}
-                </div>
-                <div class="reg-card__tooltip">
-                  ${tooltipLines(value)
-                    .map((line) => `<div>${escapeHtml(line)}</div>`)
-                    .join("")}
-                </div>
-              </div>
-            `;
-          })
-          .join("")}
-      </div>
-      ${
-        beginnerMode
-          ? `<button type="button" class="regs-show-all${Array.from(currentEffects.keys()).some((index) => !BEGINNER_REGS.includes(index)) ? " is-flashing" : ""}">Show all 32 registers ↓</button>`
-          : ""
-      }
     `;
 
-    root.querySelectorAll<HTMLButtonElement>(".regs-format-button").forEach((button) => {
+    root.querySelectorAll<HTMLButtonElement>(".register-format-btn").forEach((button) => {
       button.addEventListener("click", () => {
         format = button.dataset.format as RegisterFormat;
         saveFormat(format);
@@ -291,13 +314,13 @@ export function createRegistersUi(root: HTMLElement) {
       });
     });
 
-    root.querySelector<HTMLButtonElement>(".regs-beginner-toggle")?.addEventListener("click", () => {
+    root.querySelector<HTMLButtonElement>(".register-beginner-toggle")?.addEventListener("click", () => {
       beginnerMode = !beginnerMode;
       saveBeginnerMode(beginnerMode);
       render(lastPayload);
     });
 
-    root.querySelector<HTMLButtonElement>(".regs-show-all")?.addEventListener("click", () => {
+    root.querySelector<HTMLButtonElement>(".register-show-all")?.addEventListener("click", () => {
       beginnerMode = false;
       saveBeginnerMode(false);
       render(lastPayload);

@@ -169,6 +169,7 @@
   gap: 10px;
   margin-left: auto;
   flex-shrink: 0;
+  min-width: 120px;
 }
 
 .nav-status-badge {
@@ -239,6 +240,10 @@
   display: none !important;
 }
 
+#auth-user-btn:not([data-initialized]) {
+  display: none !important;
+}
+
 .nav-user-btn:empty {
   display: none !important;
 }
@@ -250,6 +255,153 @@
 
 .auth-menu:has(#auth-user-btn[hidden]) {
   display: none;
+}
+
+.auth-menu:not([data-ready]) {
+  display: none !important;
+}
+
+.auth-menu {
+  position: relative;
+}
+
+.nav-user-btn,
+.auth-user-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px 0 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+  font-family: "Geist", sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.nav-user-btn:hover,
+.auth-user-btn:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-surface);
+}
+
+.nav-user-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  font-family: "Geist", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nav-user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-tier-pill {
+  font-family: "Geist Mono", monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.nav-tier-pill--pro {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.nav-tier-pill--free {
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.nav-user-chevron {
+  width: 10px;
+  height: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 200ms ease;
+}
+
+.auth-menu.is-open .nav-user-chevron {
+  transform: rotate(180deg);
+}
+
+.auth-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  padding: 6px;
+  z-index: 300;
+}
+
+.auth-dropdown__email {
+  padding: 8px 12px;
+  font-family: "Geist", sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+.auth-dropdown__tier {
+  padding: 4px 12px 8px;
+  font-family: "Geist Mono", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.auth-dropdown__divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.auth-dropdown__signout {
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font-family: "Geist", sans-serif;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.auth-dropdown__signout:hover {
+  background: var(--bg-surface);
+  color: var(--danger);
 }
 
 .theme-toggle__icon--sun {

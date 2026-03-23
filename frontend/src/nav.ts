@@ -223,6 +223,17 @@ export function initNav(config: NavConfig): void {
   const streakIndicator = root.querySelector<HTMLElement>("#nav-streak-indicator");
   const closeTimers = new WeakMap<HTMLElement, number>();
 
+  if (desktopSignin) {
+    desktopSignin.hidden = true;
+  }
+  if (userButton) {
+    userButton.hidden = true;
+  }
+  if (authMenu) {
+    authMenu.style.display = "none";
+    authMenu.removeAttribute("data-ready");
+  }
+
   const closeAllDropdowns = () => {
     wrappers.forEach((wrapper) => {
       const trigger = wrapper.querySelector<HTMLButtonElement>(".nav-dropdown-trigger");
@@ -353,6 +364,11 @@ export function initNav(config: NavConfig): void {
       window.getComputedStyle(userButton).display === "none";
 
     authMenu.style.display = userHidden ? "none" : "";
+    if (userHidden) {
+      authMenu.removeAttribute("data-ready");
+    } else {
+      authMenu.setAttribute("data-ready", "true");
+    }
   };
 
   syncMobileSigninVisibility();
