@@ -276,6 +276,41 @@
 }
 
 @media (max-width: 768px) {
+  .nav-inner {
+    padding: 0 20px;
+  }
+
+  .nav-logo {
+    margin-right: 0;
+    font-size: 15px;
+  }
+
+  .nav-links {
+    display: none !important;
+  }
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .nav-status-badge {
+    display: none !important;
+  }
+
+  .nav-signin-btn {
+    display: inline-flex;
+    height: 30px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    background: var(--accent);
+    color: #fff;
+  }
+
   .nav-theme-toggle {
     display: inline-flex;
     align-items: center;
@@ -301,5 +336,26 @@
 
   [data-theme="dark"] .theme-toggle__icon--moon {
     display: inline-flex;
+  }
+
+  .nav-hamburger {
+    display: inline-flex !important;
+    flex-direction: column;
+    gap: 4px;
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-hamburger span {
+    width: 18px;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--text-primary);
+    display: block;
   }
 }

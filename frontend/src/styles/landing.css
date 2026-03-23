@@ -1387,7 +1387,7 @@ body.loaded .hero__visual {
 }
 
 .landing-home .landing-section--hero {
-  padding: 80px 0 96px;
+  padding: 48px 0 96px;
 }
 
 .landing-home .hero {
@@ -2207,11 +2207,26 @@ body.loaded .hero__visual {
 }
 
 @media (max-width: 768px) {
+  .landing-home .landing-section--hero {
+    padding-top: 24px;
+    padding-bottom: 48px;
+  }
+
+  .landing-home .hero {
+    min-height: auto;
+    padding-top: 0;
+  }
+
+  .landing-home .hero__eyebrow {
+    margin-top: 0;
+  }
+
   .landing-home .landing-shell {
     width: min(100%, calc(100% - 48px));
   }
 
   .landing-home .hero__title {
+    margin-top: 12px;
     font-size: 36px;
   }
 
@@ -2248,7 +2263,8 @@ body.loaded .hero__visual {
   }
 
   .landing-home .landing-section--hero {
-    padding-top: 72px;
+    padding-top: 24px;
+    padding-bottom: 48px;
   }
 
   .landing-home .hero__title {
