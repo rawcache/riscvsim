@@ -192,25 +192,6 @@
             </div>
           </section>
 
-          <section id="savedProgramsPanel" class="sim-panel programs-panel" hidden>
-            <div class="panel-header panel-header--collapsible">
-              <span>SAVED PROGRAMS</span>
-              <button
-                id="savedProgramsToggle"
-                class="panel-toggle"
-                type="button"
-                aria-expanded="true"
-                aria-controls="savedProgramsBody"
-                title="Collapse saved programs"
-              >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path d="m6 9 6 6 6-6"></path>
-                </svg>
-              </button>
-            </div>
-            <div id="savedProgramsBody" class="panel-body programs-panel__body"></div>
-          </section>
-
           <section id="historyPanel" class="sim-panel programs-panel" hidden>
             <div class="panel-header panel-header--collapsible">
               <span>HISTORY</span>
@@ -371,18 +352,9 @@
               </section>
             </div>
           </section>
-        </div>
 
-        <div class="sim-column sim-column--right">
-          <section class="sim-panel sim-panel--regs">
-            <div class="panel-header">Register File</div>
-            <div class="panel-body">
-              <div id="regs" class="regs-view"></div>
-            </div>
-          </section>
-
-          <section class="sim-panel sim-panel--memory">
-            <div class="panel-header panel-header--memory">
+          <section class="sim-panel sim-panel--memory memory-panel">
+            <div class="panel-header panel-header--memory memory-header-row">
               <span>Memory</span>
               <div class="memory-header-controls">
                 <input id="memAddressInput" class="memory-address-input" type="text" inputmode="text" placeholder="0x00000000" />
@@ -424,6 +396,33 @@
                   <div id="memWindow" class="memory-window"></div>
                 </div>
               </div>
+            </div>
+          </section>
+
+          <section id="savedProgramsPanel" class="sim-panel programs-panel saved-programs" hidden>
+            <div class="panel-header panel-header--collapsible">
+              <span>SAVED PROGRAMS</span>
+              <button
+                id="savedProgramsToggle"
+                class="panel-toggle"
+                type="button"
+                aria-expanded="false"
+                aria-controls="savedProgramsBody"
+                title="Expand saved programs"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="m6 9 6 6 6-6"></path>
+                </svg>
+              </button>
+            </div>
+            <div id="savedProgramsBody" class="panel-body programs-panel__body" hidden></div>
+          </section>
+        </div>
+
+        <div class="sim-column sim-column--right">
+          <section class="sim-panel sim-panel--regs register-file-section">
+            <div class="panel-body">
+              <div id="regs" class="regs-view"></div>
             </div>
           </section>
         </div>

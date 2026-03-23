@@ -4827,6 +4827,179 @@ body.simulator-page {
   font-size: 9px !important;
 }
 
+.sim-column--center,
+.simulator-center-col {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
+.center-tabs,
+.simulator-tabs,
+.tab-bar,
+.center-tab-bar {
+  flex-shrink: 0 !important;
+  height: 38px !important;
+  overflow: hidden !important;
+}
+
+.center-tabs__content,
+.tab-content,
+.tab-panels,
+.center-tab-content,
+.disasm-panel,
+[class*="tab-content"] {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.sim-panel--center-tabs {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.memory-section,
+.memory-panel,
+[class*="memory-section"],
+[class*="memory-panel"] {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: 200px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  border-top: 1px solid var(--border) !important;
+  flex-shrink: 0 !important;
+}
+
+.saved-programs,
+[class*="saved-programs"] {
+  flex: 0 0 auto !important;
+  max-height: 140px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  border-top: 1px solid var(--border) !important;
+  flex-shrink: 0 !important;
+}
+
+.sim-column--right,
+.simulator-right-col,
+[class*="right-col"] {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
+.register-file-section,
+.register-file-panel,
+[class*="register-file"] {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: 100% !important;
+}
+
+.sim-column--right .memory-section,
+.sim-column--right [class*="memory-section"],
+.sim-column--right [class*="memory-panel"] {
+  display: none !important;
+}
+
+.sim-column--right .saved-programs,
+.sim-column--right [class*="saved-programs"] {
+  display: none !important;
+}
+
+@media (min-width: 1400px) {
+  .simulator-layout {
+    grid-template-columns: minmax(280px, 320px) 1fr 260px;
+    height: calc(100vh - 56px);
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .simulator-layout {
+    grid-template-columns: minmax(260px, 300px) 1fr 240px;
+    height: calc(100vh - 56px);
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1199px) {
+  .simulator-layout {
+    grid-template-columns: minmax(220px, 260px) 1fr 220px;
+    height: calc(100vh - 56px);
+    overflow: hidden;
+  }
+}
+
+.register-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 3px !important;
+  padding: 6px !important;
+}
+
+.register-cell {
+  padding: 4px 6px !important;
+  min-height: 34px !important;
+  min-width: 0 !important;
+  gap: 1px !important;
+}
+
+.register-cell__abi {
+  font-size: clamp(9px, 0.75vw, 11px) !important;
+  line-height: 1 !important;
+}
+
+.register-cell__xnum {
+  font-size: 8px !important;
+  line-height: 1 !important;
+}
+
+.register-cell__value {
+  font-size: clamp(9px, 0.75vw, 10px) !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.memory-panel .memory-header-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 6px 12px !important;
+  border-bottom: 1px solid var(--border) !important;
+  flex-wrap: wrap !important;
+}
+
+.memory-view-tabs {
+  padding: 4px 12px !important;
+  gap: 4px !important;
+  flex-wrap: nowrap !important;
+}
+
+.memory-view-tab {
+  font-size: 10px !important;
+  padding: 2px 8px !important;
+  height: 20px !important;
+}
+
+.saved-programs .panel-header,
+[class*="saved-programs"] [class*="panel-header"] {
+  cursor: pointer !important;
+  user-select: none !important;
+}
+
 .simulator-layout {
   font-size: clamp(11px, 1vw, 13px);
 }
