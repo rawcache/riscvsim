@@ -549,11 +549,26 @@
   max-height: 400px;
   overflow-y: auto;
   padding: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 .search-overlay__results[hidden],
 .search-overlay__empty[hidden] {
   display: none;
+}
+
+.search-overlay__results::-webkit-scrollbar {
+  width: 4px;
+}
+
+.search-overlay__results::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.search-overlay__results::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .search-result {

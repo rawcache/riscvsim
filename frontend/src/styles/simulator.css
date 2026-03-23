@@ -5253,6 +5253,65 @@ body.simulator-page {
   border-radius: 999px;
 }
 
+/* Keep Recent Writes visible above the memory window. */
+.memory-panel .panel-body {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.memory-panel .memory-panel-toolbar,
+.memory-panel .memory-watch-controls,
+.memory-panel .memory-watches {
+  flex: 0 0 auto !important;
+}
+
+.memory-stack {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-rows: minmax(88px, auto) minmax(0, 1fr) !important;
+  gap: 10px !important;
+  padding: 8px 12px 12px !important;
+  overflow: hidden !important;
+}
+
+.memory-stack .memory-section {
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.memory-stack .memory-section__label {
+  margin-bottom: 6px !important;
+  flex: 0 0 auto !important;
+}
+
+.memory-writes {
+  flex: 0 0 auto !important;
+  max-height: 88px !important;
+  min-height: 56px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 2px !important;
+}
+
+.memory-window {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 2px !important;
+}
+
+.saved-programs {
+  margin-top: 12px !important;
+}
+
 .simulator-layout {
   font-size: clamp(11px, 1vw, 13px);
 }
