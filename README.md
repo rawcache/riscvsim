@@ -42,7 +42,7 @@ The visualizer derives all state from the step delta stream -- no changes to the
 
 ## Guided Learning
 
-Five structured lessons live at `/learn/`, covering the full ECE 2035 path from registers to sorting algorithms.
+Fifteen structured lessons live at `/learn/`, covering the full ECE 2035 path from registers to a capstone program.
 
 Each lesson has:
 - Explanatory content with tips and warnings
@@ -51,7 +51,20 @@ Each lesson has:
 - Hints after multiple failed attempts
 - Progress saved to account or localStorage for guests
 
-Lessons: Registers · Memory · Branches · Functions · Sorting
+Lessons: Registers · Memory · Branches · Functions · Sorting · Bitwise · Shifts · Comparison · Stack · M Extension · Strings · Linked Lists · Recursion · Syscalls · Capstone
+
+## Challenges
+
+Fifteen graded challenges live at `/challenges/`, with one challenge attached to each lesson.
+
+Each challenge includes:
+- A standalone problem statement
+- Starter assembly code
+- Multiple hidden test cases
+- Point scoring, retries, and best-score tracking
+- Hint and answer reveal controls inside the simulator
+
+The `/learn/` page also includes a public leaderboard powered by the backend API.
 
 ## Frontend Rewrites
 
@@ -61,6 +74,8 @@ If you deploy on Amplify or another static host, add rewrites for the multi-page
 |---|---|---|
 | `/learn/` | `/learn/index.html` | `200` |
 | `/learn` | `/learn/index.html` | `200` |
+| `/challenges/` | `/challenges/index.html` | `200` |
+| `/challenges` | `/challenges/index.html` | `200` |
 | `/about/` | `/about/index.html` | `200` |
 | `/about` | `/about/index.html` | `200` |
 | `/docs/` | `/docs/index.html` | `200` |
