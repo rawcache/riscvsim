@@ -26,13 +26,12 @@
 
 /* === INNER === */
 .nav-inner {
-  width: min(1100px, calc(100% - 96px));
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 0;
+  padding: 0 24px;
   height: 100%;
   display: flex;
   align-items: center;
-  gap: 0;
 }
 
 /* === LOGO === */
