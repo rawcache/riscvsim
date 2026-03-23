@@ -40,12 +40,27 @@ Load the "Function call (calling convention)" or "Recursive factorial" sample pr
 
 The visualizer derives all state from the step delta stream -- no changes to the Rust core were required.
 
+## Guided Learning
+
+Five structured lessons live at `/learn/`, covering the full ECE 2035 path from registers to sorting algorithms.
+
+Each lesson has:
+- Explanatory content with tips and warnings
+- Pre-loaded assembly programs
+- Specific goals with pass/fail checking
+- Hints after multiple failed attempts
+- Progress saved to account or localStorage for guests
+
+Lessons: Registers · Memory · Branches · Functions · Sorting
+
 ## Frontend Rewrites
 
 If you deploy on Amplify or another static host, add rewrites for the multi-page routes:
 
 | Source | Target | Status |
 |---|---|---|
+| `/learn/` | `/learn/index.html` | `200` |
+| `/learn` | `/learn/index.html` | `200` |
 | `/about/` | `/about/index.html` | `200` |
 | `/about` | `/about/index.html` | `200` |
 | `/docs/` | `/docs/index.html` | `200` |

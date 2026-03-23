@@ -75,6 +75,10 @@ function getProgramId(event) {
   return typeof rawId === "string" && rawId.trim().length > 0 ? decodeURIComponent(rawId) : null;
 }
 
+function getPath(event) {
+  return event.requestContext?.http?.path ?? event.rawPath ?? event.path ?? "";
+}
+
 function toProgram(item) {
   return {
     programId: item.programId,
@@ -129,7 +133,7 @@ async function listPrograms(userId) {
     })
   );
 
-  return sortPrograms((result.Items ?? []).map(toProgram));
+  return sortPrograms((result.Items ?? []).filter((item) => item.programId !== "progress").map(toProgram));
 }
 
 async function readProgram(userId, programId) {
@@ -284,6 +288,52 @@ async function handleDeleteProgram(caller, programId) {
   return noContent();
 }
 
+async function handleGetProgress(caller) {
+  const result = await ddb.send(
+    new GetCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        userId: caller.userId,
+        programId: "progress",
+      },
+    })
+  );
+
+  if (!result.Item?.data) {
+    return response(200, { lessons: {}, totalCompleted: 0 });
+  }
+
+  try {
+    return response(200, JSON.parse(result.Item.data));
+  } catch {
+    return response(200, { lessons: {}, totalCompleted: 0 });
+  }
+}
+
+async function handleSaveProgress(event, caller) {
+  const body = parseBody(event);
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return response(400, {
+      error: "VALIDATION_ERROR",
+      message: "Progress payload must be an object.",
+    });
+  }
+
+  await ddb.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        userId: caller.userId,
+        programId: "progress",
+        data: JSON.stringify(body),
+        updatedAt: new Date().toISOString(),
+      },
+    })
+  );
+
+  return response(200, { saved: true });
+}
+
 exports.handler = async (event) => {
   try {
     const caller = getCaller(event);
@@ -295,7 +345,18 @@ exports.handler = async (event) => {
     }
 
     const method = getMethod(event).toUpperCase();
+    const path = getPath(event);
     const programId = getProgramId(event);
+
+    if (path === "/progress" || path.endsWith("/progress")) {
+      if (method === "GET") {
+        return await handleGetProgress(caller);
+      }
+
+      if (method === "POST") {
+        return await handleSaveProgress(event, caller);
+      }
+    }
 
     if (method === "GET" && !programId) {
       return await handleGetPrograms(caller);

@@ -155,6 +155,13 @@ export class StudyRiscvStack extends Stack {
       authorizer: programsAuthorizer,
     });
 
+    httpApi.addRoutes({
+      path: "/progress",
+      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
+      integration: programsIntegration,
+      authorizer: programsAuthorizer,
+    });
+
     new CfnOutput(this, "UserPoolId", {
       value: userPool.userPoolId,
     });
