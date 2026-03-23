@@ -4762,3 +4762,67 @@ body.simulator-page {
   border-bottom: 1px solid var(--border) !important;
   flex-shrink: 0 !important;
 }
+
+.register-cell {
+  padding: 4px 6px !important;
+  min-height: 36px !important;
+  gap: 1px !important;
+}
+
+.register-cell__abi,
+.register-cell__name {
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+.register-cell__xnum {
+  font-size: 8px !important;
+  line-height: 1 !important;
+}
+
+.register-cell__value {
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+.register-grid {
+  gap: 3px !important;
+  padding: 6px !important;
+}
+
+.register-section-label {
+  padding: 4px 4px 2px !important;
+  font-size: 8px !important;
+  margin-top: 2px !important;
+}
+
+.register-format-bar {
+  padding: 4px 8px !important;
+  gap: 3px !important;
+  min-height: 30px !important;
+}
+
+.register-format-btn {
+  font-size: 9px !important;
+  padding: 2px 6px !important;
+  height: 18px !important;
+}
+
+.register-beginner-bar {
+  padding: 3px 8px !important;
+  min-height: 26px !important;
+}
+
+.register-beginner-label,
+.register-beginner-toggle {
+  font-size: 10px !important;
+}
+
+.register-file-header {
+  min-height: 28px !important;
+  padding: 4px 8px !important;
+}
+
+.register-file-header__title {
+  font-size: 9px !important;
+}
