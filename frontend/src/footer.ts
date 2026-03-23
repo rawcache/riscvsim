@@ -25,10 +25,11 @@ export function initFooter(): void {
           <div class="site-footer__heading">Navigate</div>
           <div class="site-footer__links">
             <a href="/learn/">Learn</a>
+            <a href="/challenges/">Challenges</a>
             <a href="/simulator/">Simulator</a>
             <a href="/about/">About</a>
             <a href="/docs/">Docs</a>
-            <a href="https://github.com/rawcache" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://github.com/rawcache/riscvsim" target="_blank" rel="noopener">GitHub</a>
           </div>
         </div>
         <div>

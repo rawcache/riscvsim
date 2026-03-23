@@ -6,6 +6,7 @@ const {
   GetCommand,
   PutCommand,
   QueryCommand,
+  ScanCommand,
   UpdateCommand,
   DeleteCommand,
 } = require("@aws-sdk/lib-dynamodb");
@@ -20,6 +21,10 @@ const CORS_HEADERS = {
 };
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+let leaderboardCache = {
+  expiresAt: 0,
+  data: [],
+};
 
 function response(statusCode, body) {
   return {
@@ -133,7 +138,7 @@ async function listPrograms(userId) {
     })
   );
 
-  return sortPrograms((result.Items ?? []).filter((item) => item.programId !== "progress").map(toProgram));
+  return sortPrograms((result.Items ?? []).filter((item) => item.programId !== "progress" && item.programId !== "score").map(toProgram));
 }
 
 async function readProgram(userId, programId) {
@@ -334,8 +339,130 @@ async function handleSaveProgress(event, caller) {
   return response(200, { saved: true });
 }
 
+function displayNameFromClaims(claims) {
+  if (typeof claims.name === "string" && claims.name.trim()) {
+    return claims.name.trim();
+  }
+  if (typeof claims.preferred_username === "string" && claims.preferred_username.trim()) {
+    return claims.preferred_username.trim();
+  }
+  if (typeof claims.email === "string" && claims.email.includes("@")) {
+    return claims.email.split("@")[0];
+  }
+  if (typeof claims["cognito:username"] === "string" && claims["cognito:username"].trim()) {
+    return claims["cognito:username"].trim();
+  }
+  return "anonymous";
+}
+
+function normalizeLeaderboardBody(body) {
+  return {
+    totalPoints: Number.isFinite(body?.totalPoints) ? Math.max(0, Number(body.totalPoints)) : 0,
+    lessonsCompleted: Number.isFinite(body?.lessonsCompleted) ? Math.max(0, Number(body.lessonsCompleted)) : 0,
+    challengesPassed: Number.isFinite(body?.challengesPassed) ? Math.max(0, Number(body.challengesPassed)) : 0,
+    badges: Array.isArray(body?.badges)
+      ? body.badges
+          .map((badge) => {
+            if (!badge || typeof badge !== "object") {
+              return null;
+            }
+            const id = typeof badge.id === "string" ? badge.id : "";
+            const name = typeof badge.name === "string" ? badge.name : id;
+            return id ? { id, name } : null;
+          })
+          .filter(Boolean)
+      : [],
+  };
+}
+
+async function handleGetLeaderboard() {
+  if (leaderboardCache.expiresAt > Date.now() && Array.isArray(leaderboardCache.data)) {
+    return response(200, leaderboardCache.data);
+  }
+
+  const result = await ddb.send(
+    new ScanCommand({
+      TableName: TABLE_NAME,
+      FilterExpression: "programId = :programId",
+      ExpressionAttributeValues: {
+        ":programId": "score",
+      },
+    })
+  );
+
+  const ranked = (result.Items ?? [])
+    .map((item) => ({
+      displayName: typeof item.displayName === "string" && item.displayName.trim() ? item.displayName.trim() : "anonymous",
+      totalPoints: Number.isFinite(item.totalPoints) ? Number(item.totalPoints) : 0,
+      lessonsCompleted: Number.isFinite(item.lessonsCompleted) ? Number(item.lessonsCompleted) : 0,
+      challengesPassed: Number.isFinite(item.challengesPassed) ? Number(item.challengesPassed) : 0,
+      badges: Array.isArray(item.badges) ? item.badges : [],
+      updatedAt: typeof item.updatedAt === "string" ? item.updatedAt : "",
+    }))
+    .sort((left, right) => {
+      if (right.totalPoints !== left.totalPoints) {
+        return right.totalPoints - left.totalPoints;
+      }
+      return right.updatedAt.localeCompare(left.updatedAt);
+    })
+    .slice(0, 50)
+    .map((entry, index) => ({
+      rank: index + 1,
+      displayName: entry.displayName,
+      totalPoints: entry.totalPoints,
+      lessonsCompleted: entry.lessonsCompleted,
+      challengesPassed: entry.challengesPassed,
+      badges: entry.badges,
+    }));
+
+  leaderboardCache = {
+    expiresAt: Date.now() + 60_000,
+    data: ranked,
+  };
+
+  return response(200, ranked);
+}
+
+async function handleSaveLeaderboardScore(event, caller, claims) {
+  const body = normalizeLeaderboardBody(parseBody(event));
+  const updatedAt = new Date().toISOString();
+
+  await ddb.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        userId: caller.userId,
+        programId: "score",
+        displayName: displayNameFromClaims(claims),
+        totalPoints: body.totalPoints,
+        lessonsCompleted: body.lessonsCompleted,
+        challengesPassed: body.challengesPassed,
+        badgeCount: body.badges.length,
+        badges: body.badges,
+        updatedAt,
+      },
+    })
+  );
+
+  leaderboardCache.expiresAt = 0;
+  leaderboardCache.data = [];
+
+  return response(200, { saved: true });
+}
+
 exports.handler = async (event) => {
   try {
+    const method = getMethod(event).toUpperCase();
+    const path = getPath(event);
+    const programId = getProgramId(event);
+    const claims = getClaims(event);
+
+    if (path === "/leaderboard" || path.endsWith("/leaderboard")) {
+      if (method === "GET") {
+        return await handleGetLeaderboard();
+      }
+    }
+
     const caller = getCaller(event);
     if (!caller.userId || !caller.email) {
       return response(401, {
@@ -344,10 +471,6 @@ exports.handler = async (event) => {
       });
     }
 
-    const method = getMethod(event).toUpperCase();
-    const path = getPath(event);
-    const programId = getProgramId(event);
-
     if (path === "/progress" || path.endsWith("/progress")) {
       if (method === "GET") {
         return await handleGetProgress(caller);
@@ -355,6 +478,12 @@ exports.handler = async (event) => {
 
       if (method === "POST") {
         return await handleSaveProgress(event, caller);
+      }
+    }
+
+    if (path === "/leaderboard/score" || path.endsWith("/leaderboard/score")) {
+      if (method === "POST") {
+        return await handleSaveLeaderboardScore(event, caller, claims);
       }
     }
 

@@ -2,7 +2,7 @@ import "./auth-page";
 import { initAuthUi } from "./auth-ui";
 
 export interface NavConfig {
-  activePage: "landing" | "learn" | "simulator" | "about" | "docs" | "github";
+  activePage: "landing" | "learn" | "challenges" | "simulator" | "about" | "docs" | "github";
 }
 
 const THEME_KEY = "studyriscv-theme";
@@ -50,6 +50,19 @@ function setThemeToggleState(themeToggle: HTMLButtonElement | null): void {
   themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
 }
 
+function toggleTheme(themeToggles: Array<HTMLButtonElement | null>): void {
+  const isDark = document.documentElement.dataset.theme === "dark";
+  if (isDark) {
+    document.documentElement.removeAttribute("data-theme");
+    window.localStorage.setItem(THEME_KEY, "light");
+  } else {
+    document.documentElement.dataset.theme = "dark";
+    window.localStorage.setItem(THEME_KEY, "dark");
+  }
+
+  themeToggles.forEach((toggle) => setThemeToggleState(toggle));
+}
+
 function productActive(config: NavConfig["activePage"]): boolean {
   return config === "simulator";
 }
@@ -60,6 +73,7 @@ function resourcesActive(config: NavConfig["activePage"]): boolean {
 
 function renderNav(config: NavConfig): string {
   const isLearn = config.activePage === "learn";
+  const isChallenges = config.activePage === "challenges";
   const isGithub = config.activePage === "github";
   const isProduct = productActive(config.activePage);
   const isResources = resourcesActive(config.activePage);
@@ -71,6 +85,7 @@ function renderNav(config: NavConfig): string {
         <a href="/" class="nav-logo">StudyRISC-V</a>
         <div class="nav-links">
           <a href="/learn/" class="nav-link${isLearn ? " nav-link-active" : ""}">Learn</a>
+          <a href="/challenges/" class="nav-link${isChallenges ? " nav-link-active" : ""}">Challenges</a>
           <div class="nav-dropdown-wrapper" data-nav-dropdown="product">
             <button class="nav-link nav-dropdown-trigger${isProduct ? " nav-link-active" : ""}" type="button" aria-expanded="false" aria-controls="nav-dropdown-product">
               Product
@@ -131,6 +146,7 @@ function renderNav(config: NavConfig): string {
       </div>
       <div class="nav-mobile-menu" id="nav-mobile-menu">
         <a href="/learn/" class="nav-mobile-link${isLearn ? " nav-link-active" : ""}">Learn</a>
+        <a href="/challenges/" class="nav-mobile-link${isChallenges ? " nav-link-active" : ""}">Challenges</a>
         <a href="/simulator/" class="nav-mobile-link${isProduct ? " nav-link-active" : ""}">Simulator</a>
         <a href="/simulator/" class="nav-mobile-link${isProduct ? " nav-link-active" : ""}">Call Stack Visualizer</a>
         <a href="/simulator/" class="nav-mobile-link${isProduct ? " nav-link-active" : ""}">Pseudo-C Explainer</a>
@@ -138,6 +154,10 @@ function renderNav(config: NavConfig): string {
         <a href="/docs/" class="nav-mobile-link${config.activePage === "docs" ? " nav-link-active" : ""}">Docs</a>
         <a href="/docs/#ece-2035" class="nav-mobile-link${docsGuideActive ? " nav-link-active" : ""}">ECE 2035 Guide</a>
         <a href="https://github.com/rawcache/riscvsim" class="nav-mobile-link${isGithub ? " nav-link-active" : ""}" target="_blank" rel="noopener">GitHub</a>
+        <div class="nav-mobile-theme-row">
+          <span>Theme</span>
+          <button id="nav-mobile-theme-toggle" class="nav-theme-toggle" type="button" aria-label="Toggle theme">${sunMoonSvg()}</button>
+        </div>
         <div class="nav-mobile-actions">
           <button id="nav-mobile-signin-btn" class="nav-signin-btn" type="button">Sign in</button>
         </div>
@@ -159,6 +179,7 @@ export function initNav(config: NavConfig): void {
   const mobileMenu = root.querySelector<HTMLElement>("#nav-mobile-menu");
   const hamburger = root.querySelector<HTMLButtonElement>("#nav-hamburger");
   const themeToggle = root.querySelector<HTMLButtonElement>("#theme-toggle");
+  const mobileThemeToggle = root.querySelector<HTMLButtonElement>("#nav-mobile-theme-toggle");
   const mobileSignin = root.querySelector<HTMLButtonElement>("#nav-mobile-signin-btn");
   const desktopSignin = root.querySelector<HTMLButtonElement>("#auth-signin-btn");
   const closeTimers = new WeakMap<HTMLElement, number>();
@@ -238,16 +259,12 @@ export function initNav(config: NavConfig): void {
   });
 
   setThemeToggleState(themeToggle ?? null);
+  setThemeToggleState(mobileThemeToggle ?? null);
   themeToggle?.addEventListener("click", () => {
-    const isDark = document.documentElement.dataset.theme === "dark";
-    if (isDark) {
-      document.documentElement.removeAttribute("data-theme");
-      window.localStorage.setItem(THEME_KEY, "light");
-    } else {
-      document.documentElement.dataset.theme = "dark";
-      window.localStorage.setItem(THEME_KEY, "dark");
-    }
-    setThemeToggleState(themeToggle);
+    toggleTheme([themeToggle, mobileThemeToggle]);
+  });
+  mobileThemeToggle?.addEventListener("click", () => {
+    toggleTheme([themeToggle, mobileThemeToggle]);
   });
 
   if (desktopSignin && mobileSignin) {
@@ -257,5 +274,23 @@ export function initNav(config: NavConfig): void {
     });
   }
 
-  void initAuthUi();
+  const syncMobileSigninVisibility = () => {
+    if (!desktopSignin || !mobileSignin) {
+      return;
+    }
+
+    const desktopHidden =
+      desktopSignin.hidden ||
+      desktopSignin.hasAttribute("hidden") ||
+      window.getComputedStyle(desktopSignin).display === "none";
+
+    mobileSignin.hidden = desktopHidden;
+    mobileSignin.style.display = desktopHidden ? "none" : "";
+  };
+
+  syncMobileSigninVisibility();
+
+  void initAuthUi().then(() => {
+    syncMobileSigninVisibility();
+  });
 }

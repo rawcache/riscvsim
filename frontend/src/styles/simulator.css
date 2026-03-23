@@ -784,6 +784,53 @@ body.simulator-page {
   line-height: 1.5;
 }
 
+.lesson-goal__feedback {
+  color: var(--text-muted);
+  font-family: "Geist", var(--font-body);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.lesson-struggle-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--warning) 26%, var(--border));
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+}
+
+.lesson-struggle-box__title {
+  color: var(--text-primary);
+  font-family: "Geist", var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lesson-struggle-box__body {
+  color: var(--text-secondary);
+  font-family: "Geist", var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.lesson-struggle-box__link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--warning);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lesson-struggle-box__link:hover {
+  color: color-mix(in srgb, var(--warning) 72%, var(--text-primary));
+}
+
 .lesson-panel__footer {
   padding: 12px;
   border-top: 1px solid var(--border);
@@ -869,6 +916,65 @@ body.simulator-page {
   font-size: 13px;
 }
 
+.lesson-complete__challenges {
+  width: min(100%, 360px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  text-align: left;
+}
+
+.lesson-complete__challenges-title {
+  color: var(--text-primary);
+  font-family: "Geist", var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.lesson-complete__challenge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.lesson-complete__challenge:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.lesson-complete__challenge-title {
+  color: var(--text-primary);
+  font-family: "Geist", var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lesson-complete__challenge-meta {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.lesson-complete__challenge-link {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.lesson-complete__challenge-link:hover {
+  color: var(--text-primary);
+}
+
 .lesson-complete__confetti-layer {
   position: absolute;
   inset: 0;
@@ -883,6 +989,183 @@ body.simulator-page {
   background: var(--accent);
   animation: lesson-confetti 2s linear forwards;
   animation-delay: var(--confetti-delay, 0ms);
+}
+
+.challenge-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.challenge-panel__description {
+  color: var(--text-secondary);
+  font-family: "Geist", var(--font-body);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.challenge-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.challenge-panel__section-title {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.challenge-panel__tests {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  font-family: "Geist", var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.challenge-panel__timer {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.challenge-panel__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.challenge-submit-button {
+  margin-bottom: 2px;
+}
+
+.challenge-secondary-button {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: "Geist", var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition), background-color var(--transition);
+}
+
+.challenge-secondary-button:hover {
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.challenge-answer {
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--warning) 22%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+}
+
+.challenge-answer__label {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.challenge-answer__code {
+  margin-top: 10px;
+  overflow: auto;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.challenge-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.challenge-results.is-passed {
+  border-color: color-mix(in srgb, var(--success) 26%, var(--border));
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+}
+
+.challenge-results.is-failed {
+  border-color: color-mix(in srgb, var(--warning) 22%, var(--border));
+}
+
+.challenge-results__score {
+  color: var(--text-primary);
+  font-family: "Geist", var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.challenge-results__time {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.challenge-results__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.challenge-results__row {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 8px;
+  color: var(--text-secondary);
+  font-family: "Geist", var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.challenge-results__row.is-passed {
+  color: var(--success);
+}
+
+.challenge-results__row.is-failed {
+  color: var(--warning);
+}
+
+.challenge-panel__related {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.challenge-panel__related-label {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.challenge-panel__related-link {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.challenge-panel__related-link:hover {
+  color: var(--text-primary);
 }
 
 .panel-toggle {

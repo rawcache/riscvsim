@@ -162,6 +162,19 @@ export class StudyRiscvStack extends Stack {
       authorizer: programsAuthorizer,
     });
 
+    httpApi.addRoutes({
+      path: "/leaderboard",
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: programsIntegration,
+    });
+
+    httpApi.addRoutes({
+      path: "/leaderboard/score",
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: programsIntegration,
+      authorizer: programsAuthorizer,
+    });
+
     new CfnOutput(this, "UserPoolId", {
       value: userPool.userPoolId,
     });

@@ -1187,6 +1187,17 @@ body.loaded .hero__visual {
     width: min(100%, calc(100% - 2 * var(--space-4)));
   }
 
+  .landing-resume-bar__inner {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 10px 0;
+  }
+
+  .landing-resume-bar {
+    min-height: 0;
+  }
+
   .hero__actions {
     flex-direction: column;
     align-items: stretch;
@@ -1329,6 +1340,46 @@ body.loaded .hero__visual {
 .landing-home .landing-shell {
   width: min(1100px, calc(100% - 96px));
   margin: 0 auto;
+}
+
+.landing-resume-bar {
+  min-height: 48px;
+  border-bottom: 1px solid var(--accent-border);
+  background: var(--accent-subtle);
+}
+
+.landing-resume-bar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 48px;
+}
+
+.landing-resume-bar__copy {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.landing-resume-bar__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.landing-resume-bar__button:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 .landing-home .landing-section {
@@ -1846,6 +1897,38 @@ body.loaded .hero__visual {
 .landing-home .feature-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
+}
+
+.landing-home .landing-section--curriculum {
+  padding-top: 64px;
+}
+
+.landing-curriculum-card {
+  margin: 32px auto 0;
+  display: flex;
+  justify-content: center;
+  padding: 28px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at top center, color-mix(in srgb, var(--accent) 8%, transparent), transparent 46%),
+    var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.landing-home #landingCurriculumTree {
+  margin-top: 0;
+  max-width: 560px;
+}
+
+.landing-home #landingCurriculumTree .tree-node {
+  cursor: default;
+}
+
+.landing-home #landingCurriculumTree .tree-node:not(:disabled):hover {
+  transform: none;
+  border-color: var(--border);
+  box-shadow: none;
 }
 
 .landing-home .feature-card {

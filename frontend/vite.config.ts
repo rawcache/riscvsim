@@ -31,6 +31,7 @@ export default defineConfig({
       input: {
         landing: resolve(__dirname, "landing.html"),
         learn: resolve(__dirname, "learn/index.html"),
+        challenges: resolve(__dirname, "challenges/index.html"),
         about: resolve(__dirname, "about/index.html"),
         docs: resolve(__dirname, "docs/index.html"),
         terms: resolve(__dirname, "terms/index.html"),

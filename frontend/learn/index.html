@@ -6,7 +6,7 @@
     <title>Learn - StudyRISC-V</title>
     <meta
       name="description"
-      content="Five guided StudyRISC-V lessons covering registers, memory, branches, functions, and sorting for ECE 2035."
+      content="StudyRISC-V guided learning platform with 15 lessons, 15 challenges, leaderboard progress, and ECE 2035-aligned curriculum."
     />
     <link rel="canonical" href="https://studyriscv.com/learn/" />
     <script>
@@ -18,7 +18,7 @@
             document.documentElement.dataset.theme = "dark";
           }
         } catch {
-          // Ignore storage access failures and fall back to the default theme.
+          // Ignore theme bootstrap errors.
         }
       })();
     </script>
@@ -34,21 +34,24 @@
     <nav id="site-nav"></nav>
 
     <main class="learn-main">
-      <section class="learn-hero">
-        <h1 class="learn-hero__title">Learn RISC-V.</h1>
-        <p class="learn-hero__subhead">
-          Five lessons from zero to sorting algorithms. Built for ECE 2035 at Georgia Tech.
-        </p>
-        <div id="learnProgressShell" class="learn-progress" hidden>
-          <div class="learn-progress__track" aria-hidden="true">
-            <div id="learnProgressFill" class="learn-progress__fill"></div>
-          </div>
-          <div id="learnProgressLabel" class="learn-progress__label">0 of 5 lessons complete</div>
-        </div>
-      </section>
+      <section class="learn-hero" id="learnHeroShell"></section>
 
-      <section class="learn-curriculum">
-        <div id="learnLessonsList" class="learn-lessons" aria-live="polite"></div>
+      <section class="stats-strip" id="learnStatsStrip" aria-label="Learning progress stats"></section>
+
+      <section class="learn-platform">
+        <div class="learn-platform__main">
+          <section class="learn-panel">
+            <div class="learn-panel__header-row">
+              <h2 class="learn-panel__title">Curriculum map</h2>
+              <div class="learn-panel__meta">Follow the prerequisite tree from registers to the capstone.</div>
+            </div>
+            <div id="learnCurriculumTree" class="curriculum-tree" aria-live="polite"></div>
+          </section>
+
+          <section class="learn-panel learn-panel--summary" id="learnChallengeSummary"></section>
+        </div>
+
+        <aside id="leaderboardSidebar" class="leaderboard-sidebar" aria-label="Leaderboard"></aside>
       </section>
     </main>
 

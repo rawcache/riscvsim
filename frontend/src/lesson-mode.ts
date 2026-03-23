@@ -1,5 +1,6 @@
 import type { UserSession } from "./auth";
-import { escapeHtml } from "./format";
+import { getBestSubmission, getChallengesForLesson, loadChallengeSubmissions } from "./challenges";
+import { escapeHtml, hex32 } from "./format";
 import {
   checkGoals,
   getLesson,
@@ -12,8 +13,10 @@ import {
   type Lesson,
   type LessonProgress,
   type LessonStep,
+  type LessonGoal,
   type UserProgress,
 } from "./lessons";
+import { addPoints, checkAndAwardBadges, loadScore, syncScoreToApi } from "./scoring";
 import type { WasmStateDelta } from "./types";
 
 type LoadSourceOptions = {
@@ -159,6 +162,8 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     }
   }
   let goalEvaluation: GoalEvaluation = { passed: false, results: {} };
+  let currentState = getLessonState([]);
+  let goalFeedback: Record<string, string> = {};
   let justPassedGoalIds = new Set<string>();
   let hintVisibility = new Set<string>();
   let stepAttemptCounts = new Map<string, number>();
@@ -248,15 +253,63 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   }
 
   function markStepCompleted(stepId: string): void {
+    const alreadyCompleted = lessonProgress.stepsCompleted.includes(stepId);
     lessonProgress = {
       ...lessonProgress,
       stepsCompleted: uniqueStepIds([...lessonProgress.stepsCompleted, stepId]),
     };
     persistProgress();
+
+    if (!alreadyCompleted) {
+      const completedStep = lesson.steps.find((step) => step.id === stepId);
+      if (completedStep && !completedStep.isCheckpoint) {
+        awardLessonStepPoints(completedStep);
+      }
+    }
   }
 
   function completedStepCount(): number {
     return lessonProgress.stepsCompleted.length;
+  }
+
+  function buildGoalFeedback(goal: LessonGoal, state: ReturnType<typeof getLessonState>): string {
+    if (goal.targetRegister !== undefined && goal.expectedValue !== undefined) {
+      return `x${goal.targetRegister} is currently ${hex32(state.registers[goal.targetRegister] ?? 0)} · expected ${hex32(
+        goal.expectedValue
+      )}`;
+    }
+
+    if (goal.targetMemoryAddress !== undefined && goal.expectedValue !== undefined) {
+      const actual = state.memory.get(goal.targetMemoryAddress) ?? 0;
+      return `mem[${hex32(goal.targetMemoryAddress)}] is ${hex32(actual)} · expected ${hex32(goal.expectedValue)}`;
+    }
+
+    return "Goal not yet met · keep stepping";
+  }
+
+  function buildAnnotatedCode(step: LessonStep): string {
+    const lines = (step.code ?? "").split("\n");
+    const annotations = step.annotations ?? [];
+    if (lines.length === 0) {
+      return step.solution ?? step.code ?? "";
+    }
+
+    return lines
+      .map((line, index) => {
+        const note = annotations[index];
+        return note ? `# ${note}\n${line}` : line;
+      })
+      .join("\n");
+  }
+
+  function awardLessonStepPoints(step: LessonStep): void {
+    const basePoints = step.isCheckpoint ? 15 : 5;
+    addPoints(basePoints, `lesson:${lesson.id}:${step.id}`);
+    checkAndAwardBadges(loadProgress(), loadChallengeSubmissions());
+    const session = deps.getCurrentSession();
+    if (session?.idToken) {
+      void syncScoreToApi(loadScore(), session.idToken);
+    }
   }
 
   function applyCompactLayout(): void {
@@ -285,14 +338,16 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
 
   function loadGoalEvaluation(recordAttempt = false): void {
     const step = currentStep();
+    currentState = getLessonState(deps.getExecutionDeltas());
     if (!step.goals || step.goals.length === 0) {
       goalEvaluation = { passed: false, results: {} };
+      goalFeedback = {};
       render();
       return;
     }
 
     const previousResults = { ...goalEvaluation.results };
-    const result = checkGoals(step.goals, getLessonState(deps.getExecutionDeltas()));
+    const result = checkGoals(step.goals, currentState);
     const nextResults = Object.fromEntries(result.results.map((entry) => [entry.goalId, entry.passed]));
     const newlyPassed = result.results
       .filter((entry) => entry.passed && !previousResults[entry.goalId])
@@ -311,6 +366,9 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
       passed: result.passed,
       results: nextResults,
     };
+    goalFeedback = Object.fromEntries(
+      step.goals.map((goal) => [goal.id, nextResults[goal.id] ? "" : buildGoalFeedback(goal, currentState)])
+    );
 
     if (newlyPassed.length > 0) {
       justPassedGoalIds = new Set(newlyPassed);
@@ -318,6 +376,10 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
         justPassedGoalIds = new Set<string>();
         render();
       }, 320);
+    }
+
+    if (result.passed && !lessonProgress.stepsCompleted.includes(step.id)) {
+      awardLessonStepPoints(step);
     }
 
     render();
@@ -372,6 +434,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   }
 
   async function finishLesson(): Promise<void> {
+    const wasCompleted = lessonProgress.completed;
     markStepCompleted(currentStep().id);
     lessonProgress = {
       ...lessonProgress,
@@ -381,6 +444,14 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     };
     persistProgress();
     completionVisible = true;
+    if (!wasCompleted) {
+      addPoints(50, `lesson-complete:${lesson.id}`);
+      checkAndAwardBadges(loadProgress(), loadChallengeSubmissions());
+      const session = deps.getCurrentSession();
+      if (session?.idToken) {
+        void syncScoreToApi(loadScore(), session.idToken);
+      }
+    }
     render();
 
     const session = deps.getCurrentSession();
@@ -396,6 +467,8 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
 
     const attempts = stepAttemptCounts.get(step.id) ?? 0;
     const showHints = attempts >= 3;
+    const showBreakdown = attempts >= 5;
+    const strugglingHint = step.goals.find((goal) => goal.hint)?.hint ?? "Work through one instruction at a time and verify the destination register after every step.";
 
     return `
       <div class="lesson-goals">
@@ -412,6 +485,11 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
                   <div class="lesson-goal__content">
                     <div class="lesson-goal__text">${escapeHtml(goal.description)}</div>
                     ${
+                      !passed && goalFeedback[goal.id]
+                        ? `<div class="lesson-goal__feedback">${escapeHtml(goalFeedback[goal.id])}</div>`
+                        : ""
+                    }
+                    ${
                       canShowHint
                         ? `<button class="lesson-goal__hint-toggle" type="button" data-lesson-hint="${escapeHtml(goal.id)}">Show hint</button>`
                         : ""
@@ -427,6 +505,20 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
             })
             .join("")}
         </div>
+        ${
+          showHints && !goalEvaluation.passed
+            ? `<div class="lesson-struggle-box">
+                <div class="lesson-struggle-box__title">Struggling?</div>
+                <div class="lesson-struggle-box__body">Hint: ${escapeHtml(strugglingHint)}</div>
+                <button class="lesson-struggle-box__link" type="button" data-lesson-action="show-solution">Show solution</button>
+                ${
+                  showBreakdown
+                    ? '<button class="lesson-struggle-box__link" type="button" data-lesson-action="breakdown">Break it down</button>'
+                    : ""
+                }
+              </div>`
+            : ""
+        }
       </div>
     `;
   }
@@ -434,6 +526,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   function renderCompletion(): string {
     const lessonIndex = allLessons.findIndex((entry) => entry.id === lesson.id);
     const nextLesson = allLessons[lessonIndex + 1];
+    const relatedChallenges = getChallengesForLesson(lesson.id);
     const confetti = Array.from({ length: 12 }, (_, index) => {
       const delay = `${(index % 6) * 90}ms`;
       const left = `${8 + index * 7}%`;
@@ -450,6 +543,27 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
                 nextLesson.title
               )} unlocked</a>`
             : '<div class="lesson-complete__next">You finished the full learning path.</div>'
+        }
+        ${
+          relatedChallenges.length > 0
+            ? `<div class="lesson-complete__challenges">
+                <div class="lesson-complete__challenges-title">Practice Challenges</div>
+                ${relatedChallenges
+                  .map((entry) => {
+                    const best = getBestSubmission(entry.id);
+                    return `<div class="lesson-complete__challenge">
+                      <div>
+                        <div class="lesson-complete__challenge-title">${escapeHtml(entry.title)}</div>
+                        <div class="lesson-complete__challenge-meta">${escapeHtml(entry.difficulty)} · ${entry.points} pts · best ${
+                          best ? `${best.score}/${best.maxScore}` : "none"
+                        }</div>
+                      </div>
+                      <a class="lesson-complete__challenge-link" href="/simulator/?challenge=${encodeURIComponent(entry.id)}">Start Challenge →</a>
+                    </div>`;
+                  })
+                  .join("")}
+              </div>`
+            : ""
         }
         <a class="lesson-complete__back" href="/learn/">Back to Learn</a>
       </div>
@@ -540,6 +654,28 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
         if (action === "finish") {
           void finishLesson();
         }
+        if (action === "show-solution") {
+          const step = currentStep();
+          const replacement = step.solution ?? step.code;
+          if (replacement) {
+            deps.loadSource(replacement, {
+              statusMessage: "Solution loaded for this step.",
+              focus: false,
+            });
+            void deps.assembleSource(false, "Solution assembled.");
+          }
+        }
+        if (action === "breakdown") {
+          const step = currentStep();
+          const annotated = buildAnnotatedCode(step);
+          if (annotated) {
+            deps.loadSource(annotated, {
+              statusMessage: "Annotated starter code loaded.",
+              focus: false,
+            });
+            void deps.assembleSource(false, "Annotated starter assembled.");
+          }
+        }
       });
     });
   }
@@ -559,6 +695,12 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   });
 
   lessonProgress = createLessonProgress(lesson, progress.lessons[lesson.id]);
+  if (requestedStepId) {
+    const requestedStepIndex = lesson.steps.findIndex((step) => step.id === requestedStepId);
+    if (requestedStepIndex >= 0) {
+      lessonProgress.currentStepIndex = requestedStepIndex;
+    }
+  }
   progress = {
     ...progress,
     lessons: {
@@ -620,6 +762,12 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
       saveProgress(merged);
       progress = merged;
       lessonProgress = createLessonProgress(lesson, merged.lessons[lesson.id]);
+      if (requestedStepId) {
+        const requestedStepIndex = lesson.steps.findIndex((step) => step.id === requestedStepId);
+        if (requestedStepIndex >= 0) {
+          lessonProgress.currentStepIndex = requestedStepIndex;
+        }
+      }
       completionVisible = lessonProgress.completed;
       render();
 
