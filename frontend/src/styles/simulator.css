@@ -1749,8 +1749,8 @@ body.simulator-page {
   display: flex;
   flex-direction: column;
   padding: 12px 0;
-  min-width: 40px;
-  width: 40px;
+  min-width: 36px;
+  width: 36px;
   flex-shrink: 0;
   border-right: 0;
   background: color-mix(in srgb, var(--bg-base) 92%, var(--bg-elevated));
@@ -1771,8 +1771,8 @@ body.simulator-page {
   font-size: 12px;
   color: var(--text-muted);
   text-align: right;
-  padding-right: 10px;
-  padding-left: 6px;
+  padding-right: 8px;
+  padding-left: 4px;
 }
 
 .line-numbers span.current-line {
@@ -1790,7 +1790,7 @@ body.simulator-page {
 .highlight-display {
   position: absolute;
   inset: 0;
-  padding: 12px 12px 12px 10px;
+  padding: 12px 10px 12px 8px;
   color: var(--text-primary);
   font-family: "DM Mono", monospace;
   font-size: 12px;
@@ -1808,7 +1808,7 @@ body.simulator-page {
   inset: 0;
   width: 100%;
   min-height: 420px;
-  padding: 12px 12px 12px 10px;
+  padding: 12px 10px 12px 8px;
   border: 0;
   outline: none;
   resize: none;
@@ -5288,18 +5288,18 @@ body.simulator-page {
 
 @media (min-width: 1400px) {
   .simulator-layout {
-    grid-template-columns: minmax(280px, 320px) 1fr minmax(260px, 300px);
+    grid-template-columns: minmax(340px, 380px) 1fr minmax(240px, 280px);
   }
 }
 
 @media (min-width: 1200px) and (max-width: 1399px) {
   .simulator-layout {
-    grid-template-columns: minmax(260px, 300px) 1fr minmax(240px, 280px);
+    grid-template-columns: minmax(320px, 360px) 1fr minmax(220px, 250px);
   }
 }
 
 @media (min-width: 900px) and (max-width: 1199px) {
   .simulator-layout {
-    grid-template-columns: minmax(220px, 260px) 1fr minmax(220px, 260px);
+    grid-template-columns: minmax(300px, 340px) 1fr minmax(200px, 220px);
   }
 }
