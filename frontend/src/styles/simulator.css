@@ -4580,56 +4580,37 @@ body.simulator-page {
 }
 
 .simulator-layout,
-.simulator-grid,
-#simulator-root,
-.simulator-main {
-  margin-top: 0;
-  padding-top: 12px;
-}
-
-body.simulator-page {
-  padding-top: 0;
-}
-
-.simulator-container {
-  height: calc(100vh - 56px);
-  margin-top: 0;
+.simulator-grid {
+  margin-top: 12px;
+  height: calc(100vh - 68px);
   overflow: hidden;
+}
+
+.simulator-layout *,
+.simulator-grid * {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .simulator-layout,
 .simulator-grid,
 .simulator-left-col,
 .simulator-center-col,
-.simulator-right-col,
-.simulator-panel,
-.panel-body,
-.panel-content {
+.simulator-right-col {
   overflow-x: hidden !important;
-  max-width: 100%;
 }
 
-.editor-container,
-.code-editor,
-#source-editor,
-textarea.source-input {
-  overflow-x: auto;
+.simulator-left-col,
+.simulator-center-col,
+.simulator-right-col {
+  height: 100%;
   overflow-y: auto;
-  max-width: 100%;
-  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .disasm-row,
-.disasm-table,
-.disasm-content {
-  overflow-x: hidden;
-  max-width: 100%;
-  min-width: 0;
-}
-
-.disasm-row td,
-.disasm-row span,
-.disasm-cell {
+.disasm-table tr,
+.disasm-table td {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4637,222 +4618,66 @@ textarea.source-input {
 }
 
 .register-cell,
-.register-grid,
-.register-file-panel {
-  overflow-x: hidden;
-  min-width: 0;
-}
-
 .register-cell__value {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.memory-section,
-.memory-panel,
-.memory-window,
-.memory-row {
-  overflow-x: hidden;
   max-width: 100%;
-}
-
-.memory-row {
-  display: grid;
-  grid-template-columns: 80px repeat(8, 1fr);
   min-width: 0;
-  gap: 2px;
 }
 
-.effect-log,
 .effect-row,
-.effect-entry {
-  overflow-x: hidden;
+.effect-entry,
+.effect-log-item {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   max-width: 100%;
 }
 
-.effect-row span,
-.effect-entry span {
+.memory-row,
+.memory-window-row {
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .simulator-tabs,
-.tab-bar {
+.tab-bar,
+.center-tab-bar {
   overflow-x: hidden;
-  flex-wrap: nowrap;
+  overflow-y: hidden;
 }
 
-.panel-header,
-.panel-label {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.simulator-panel {
-  border-radius: 0;
-  border: none;
-  border-right: 1px solid var(--border);
-}
-
-.simulator-panel:last-child {
-  border-right: none;
-}
-
+.simulator-panel,
 .panel-body {
   box-shadow: none;
-  border-radius: 0;
 }
 
-.simulator-tabs {
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-base);
-  padding: 0 12px;
-  gap: 0;
-  height: 38px;
-}
-
-.simulator-tab {
-  font-family: "Geist", sans-serif;
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--text-muted);
-  padding: 0 14px;
-  height: 38px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: none;
-  cursor: pointer;
-  transition: color 150ms ease, border-color 150ms ease;
-  white-space: nowrap;
-}
-
-.simulator-tab:hover {
-  color: var(--text-secondary);
-}
-
-.simulator-tab.active {
-  color: var(--text-primary);
-  border-bottom-color: var(--accent);
-  font-weight: 500;
-}
-
-.simulator-controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.btn-assemble {
-  flex: 1;
-  height: 32px;
-  font-family: "Geist", sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: 6px;
-  border: none;
-  background: var(--accent);
-  color: white;
-  cursor: pointer;
-  transition: background 150ms ease;
-}
-
-.btn-assemble:hover {
-  background: var(--accent-hover);
-}
-
-.btn-step,
-.btn-step-back,
-.btn-run,
-.btn-reset {
-  height: 32px;
-  padding: 0 12px;
-  font-family: "Geist", sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 150ms ease;
-}
-
-.btn-step:hover,
-.btn-step-back:hover,
-.btn-run:hover {
-  border-color: var(--border-hover);
-  color: var(--text-primary);
-  background: var(--bg-surface);
-}
-
-.btn-reset {
-  color: var(--danger);
-  border-color: var(--danger);
-  background: transparent;
-  opacity: 0.7;
-}
-
-.btn-reset:hover {
-  opacity: 1;
-  background: rgba(239, 68, 68, 0.08);
-}
-
-.panel-header {
-  font-family: "Geist Mono", monospace;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 0 12px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.simulator-panel *::-webkit-scrollbar {
+.simulator-left-col::-webkit-scrollbar,
+.simulator-center-col::-webkit-scrollbar,
+.simulator-right-col::-webkit-scrollbar,
+.register-grid-wrapper::-webkit-scrollbar,
+.disasm-body::-webkit-scrollbar,
+.effect-log-body::-webkit-scrollbar {
   width: 4px;
-  height: 4px;
 }
 
-.simulator-panel *::-webkit-scrollbar-thumb {
+.simulator-left-col::-webkit-scrollbar-thumb,
+.simulator-center-col::-webkit-scrollbar-thumb,
+.simulator-right-col::-webkit-scrollbar-thumb,
+.register-grid-wrapper::-webkit-scrollbar-thumb,
+.disasm-body::-webkit-scrollbar-thumb,
+.effect-log-body::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 999px;
 }
 
-.simulator-panel *::-webkit-scrollbar-track {
+.simulator-left-col::-webkit-scrollbar-track,
+.simulator-center-col::-webkit-scrollbar-track,
+.simulator-right-col::-webkit-scrollbar-track,
+.register-grid-wrapper::-webkit-scrollbar-track,
+.disasm-body::-webkit-scrollbar-track,
+.effect-log-body::-webkit-scrollbar-track {
   background: transparent;
-}
-
-@media (min-width: 1400px) {
-  .simulator-layout {
-    grid-template-columns: 360px 1fr 320px;
-    height: calc(100vh - 56px);
-    overflow: hidden;
-  }
-}
-
-@media (min-width: 1200px) and (max-width: 1399px) {
-  .simulator-layout {
-    grid-template-columns: 320px 1fr 300px;
-    height: calc(100vh - 56px);
-    overflow: hidden;
-  }
-}
-
-@media (max-width: 1199px) {
-  .simulator-layout {
-    grid-template-columns: 280px 1fr 280px;
-    height: calc(100vh - 56px);
-    overflow: hidden;
-  }
 }
