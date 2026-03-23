@@ -4826,3 +4826,54 @@ body.simulator-page {
 .register-file-header__title {
   font-size: 9px !important;
 }
+
+.simulator-layout {
+  font-size: clamp(11px, 1vw, 13px);
+}
+
+.register-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 3px !important;
+}
+
+.register-cell {
+  min-width: 0 !important;
+  padding: 4px 6px !important;
+  min-height: 34px !important;
+}
+
+.register-cell__value {
+  font-size: clamp(9px, 0.8vw, 11px) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.register-cell__abi {
+  font-size: clamp(9px, 0.8vw, 11px) !important;
+}
+
+.memory-section {
+  flex: 0 0 260px !important;
+  height: 260px !important;
+  min-height: 260px !important;
+  max-height: 260px !important;
+}
+
+@media (min-width: 1400px) {
+  .simulator-layout {
+    grid-template-columns: minmax(280px, 320px) 1fr minmax(260px, 300px);
+  }
+}
+
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .simulator-layout {
+    grid-template-columns: minmax(260px, 300px) 1fr minmax(240px, 280px);
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1199px) {
+  .simulator-layout {
+    grid-template-columns: minmax(220px, 260px) 1fr minmax(220px, 260px);
+  }
+}
