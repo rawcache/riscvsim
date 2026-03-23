@@ -3247,7 +3247,7 @@ body.simulator-page {
 
 @media (min-width: 1400px) {
   .simulator-layout {
-    grid-template-columns: 360px 1fr 340px;
+    grid-template-columns: 420px 1fr 260px;
   }
 
   .simulator-layout.has-lesson-column {
@@ -3257,11 +3257,11 @@ body.simulator-page {
 
 @media (min-width: 1200px) and (max-width: 1399px) {
   .simulator-layout {
-    grid-template-columns: 360px 1fr 340px;
+    grid-template-columns: 380px 1fr 240px;
   }
 }
 
-@media (min-width: 768px) and (max-width: 1199px) {
+@media (min-width: 900px) and (max-width: 1199px) {
   .simulator-layout {
     grid-template-columns: minmax(420px, 500px) minmax(0, 1fr);
     align-items: start;
