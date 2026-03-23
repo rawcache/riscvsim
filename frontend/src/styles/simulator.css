@@ -4681,3 +4681,84 @@ body.simulator-page {
 .effect-log-body::-webkit-scrollbar-track {
   background: transparent;
 }
+
+.memory-section,
+.memory-panel,
+[class*="memory-section"],
+[class*="memory-panel"] {
+  flex-shrink: 0 !important;
+  min-height: 280px !important;
+  height: 280px !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.simulator-right-col,
+[class*="right-col"],
+[class*="register-memory-col"] {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
+.register-file-section,
+.register-file-panel,
+[class*="register-file-section"],
+[class*="register-section"] {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.memory-section,
+.memory-panel,
+[class*="memory-section"] {
+  flex: 0 0 280px !important;
+  height: 280px !important;
+  min-height: 280px !important;
+  max-height: 280px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+.disasm-header,
+.disassembly-header,
+[class*="disasm-header"],
+[class*="disassembly-label"] {
+  padding: 8px 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  min-height: 36px !important;
+  font-family: "Geist Mono", monospace !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  border-bottom: 1px solid var(--border) !important;
+  flex-shrink: 0 !important;
+}
+
+.call-stack-header,
+.effects-header,
+.pseudo-c-header,
+[class*="stack-header"],
+[class*="effects-header"],
+[class*="pseudo-header"] {
+  padding: 8px 12px !important;
+  min-height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  font-family: "Geist Mono", monospace !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  border-bottom: 1px solid var(--border) !important;
+  flex-shrink: 0 !important;
+}
