@@ -5046,6 +5046,70 @@ body.simulator-page {
   overflow-y: auto !important;
 }
 
+.register-file-header,
+.register-format-bar,
+.register-beginner-bar {
+  flex: 0 0 auto !important;
+  margin-top: 0 !important;
+}
+
+.register-file-header {
+  height: auto !important;
+}
+
+.register-file-header__title {
+  flex: 0 0 auto !important;
+}
+
+.register-grid-wrapper {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  margin-top: 0 !important;
+  padding-top: 6px !important;
+}
+
+.register-format-bar,
+[class*="format-bar"] {
+  order: 0 !important;
+}
+
+.memory-panel,
+.saved-programs {
+  overflow: hidden !important;
+}
+
+.memory-panel .panel-body,
+.memory-stack,
+.saved-programs .panel-body,
+.programs-panel__body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.memory-panel .panel-body::-webkit-scrollbar,
+.memory-stack::-webkit-scrollbar,
+.saved-programs .panel-body::-webkit-scrollbar,
+.programs-panel__body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.memory-panel .panel-body::-webkit-scrollbar-track,
+.memory-stack::-webkit-scrollbar-track,
+.saved-programs .panel-body::-webkit-scrollbar-track,
+.programs-panel__body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.memory-panel .panel-body::-webkit-scrollbar-thumb,
+.memory-stack::-webkit-scrollbar-thumb,
+.saved-programs .panel-body::-webkit-scrollbar-thumb,
+.programs-panel__body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
 .simulator-layout {
   font-size: clamp(11px, 1vw, 13px);
 }
