@@ -1308,14 +1308,17 @@ body.loaded .hero__visual {
   --chip-die-fill: #080808;
 }
 
-.landing-home,
-.landing-home a,
-.landing-home button,
-.landing-home input,
-.landing-home textarea {
+.landing-home {
   font-family: var(--font-body);
 }
 
+.landing-home main,
+.landing-home main a,
+.landing-home main button,
+.landing-home main input,
+.landing-home main textarea {
+  font-family: var(--font-body);
+}
 .landing-home main {
   width: 100%;
   max-width: none;

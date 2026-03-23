@@ -23,6 +23,7 @@
   font-family: "Geist Mono", monospace;
   font-size: 15px;
   font-weight: 600;
+  line-height: 1;
   color: var(--text-primary);
   text-decoration: none;
   letter-spacing: -0.01em;
@@ -41,6 +42,7 @@
   font-family: "Geist", sans-serif;
   font-size: 14px;
   font-weight: 400;
+  line-height: 1;
   color: var(--text-secondary);
   text-decoration: none;
   padding: 6px 10px;
@@ -164,6 +166,7 @@
   font-family: "Geist", sans-serif;
   font-size: 14px;
   font-weight: 500;
+  line-height: 1;
   color: #fff;
   background: var(--accent);
   border: none;
@@ -183,6 +186,7 @@
 .nav-hamburger {
   width: 34px;
   height: 34px;
+  line-height: 1;
   background: none;
   border: 1px solid var(--border);
   border-radius: 7px;
