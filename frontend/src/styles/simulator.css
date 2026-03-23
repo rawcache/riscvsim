@@ -1320,8 +1320,9 @@ body.simulator-page {
   display: flex;
   flex-direction: row;
   position: relative;
-  flex: 1;
-  min-height: 340px;
+  flex: 1 1 auto;
+  flex-grow: 1;
+  min-height: 420px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--bg-base);
@@ -1396,7 +1397,7 @@ body.simulator-page {
   position: absolute;
   inset: 0;
   width: 100%;
-  min-height: 340px;
+  min-height: 420px;
   padding: 12px 12px 12px 10px;
   border: 0;
   outline: none;
@@ -2359,7 +2360,7 @@ body.simulator-page {
 
 .reg-abi {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1;
 }
 
@@ -2371,7 +2372,7 @@ body.simulator-page {
 
 .reg-value {
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 11px;
   text-align: right;
 }
 
@@ -2813,13 +2814,17 @@ body.simulator-page {
 
 @media (min-width: 1400px) {
   .simulator-layout {
-    grid-template-columns: 280px minmax(500px, 580px) minmax(0, 1fr) 280px;
+    grid-template-columns: 300px 1fr 340px;
+  }
+
+  .simulator-layout.has-lesson-column {
+    grid-template-columns: 280px 300px 1fr 340px;
   }
 }
 
 @media (min-width: 1200px) and (max-width: 1399px) {
   .simulator-layout {
-    grid-template-columns: minmax(500px, 580px) minmax(0, 1fr) 280px;
+    grid-template-columns: 300px 1fr 340px;
   }
 }
 

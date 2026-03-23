@@ -128,7 +128,9 @@ function buttonArrow(direction: "left" | "right"): string {
 }
 
 export function createLessonMode(deps: LessonModeDependencies): LessonModeController {
-  const lessonId = new URLSearchParams(window.location.search).get("lesson");
+  const searchParams = new URLSearchParams(window.location.search);
+  const lessonId = searchParams.get("lesson");
+  const requestedStepId = searchParams.get("step");
   const resolvedLesson = lessonId ? getLesson(lessonId) : null;
 
   if (!resolvedLesson) {
@@ -150,6 +152,12 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   const allLessons = getLessons();
   let progress = loadProgress();
   let lessonProgress = createLessonProgress(lesson, progress.lessons[lesson.id]);
+  if (requestedStepId) {
+    const requestedStepIndex = lesson.steps.findIndex((step) => step.id === requestedStepId);
+    if (requestedStepIndex >= 0) {
+      lessonProgress.currentStepIndex = requestedStepIndex;
+    }
+  }
   let goalEvaluation: GoalEvaluation = { passed: false, results: {} };
   let justPassedGoalIds = new Set<string>();
   let hintVisibility = new Set<string>();
@@ -177,6 +185,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     };
   }
 
+  const simulatorLayoutEl = simulatorLayout;
   const editorPanelEl = editorPanel;
 
   const desktopColumn = document.createElement("div");
@@ -252,6 +261,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
 
   function applyCompactLayout(): void {
     const compact = compactMedia.matches;
+    simulatorLayoutEl.classList.toggle("has-lesson-column", !compact);
     compactShell.hidden = !compact;
     desktopColumn.hidden = compact;
 

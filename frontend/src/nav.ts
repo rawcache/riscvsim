@@ -111,7 +111,7 @@ function renderNav(config: NavConfig): string {
               </a>
             </div>
           </div>
-          <a href="https://github.com/rawcache" class="nav-link${isGithub ? " nav-link-active" : ""}" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/rawcache/riscvsim" class="nav-link${isGithub ? " nav-link-active" : ""}" target="_blank" rel="noopener">GitHub</a>
         </div>
         <div class="nav-actions">
           <div id="nav-status-badge" class="nav-status-badge${config.activePage === "simulator" ? " visible" : ""}"></div>
@@ -137,7 +137,7 @@ function renderNav(config: NavConfig): string {
         <a href="/about/" class="nav-mobile-link${config.activePage === "about" ? " nav-link-active" : ""}">About</a>
         <a href="/docs/" class="nav-mobile-link${config.activePage === "docs" ? " nav-link-active" : ""}">Docs</a>
         <a href="/docs/#ece-2035" class="nav-mobile-link${docsGuideActive ? " nav-link-active" : ""}">ECE 2035 Guide</a>
-        <a href="https://github.com/rawcache" class="nav-mobile-link${isGithub ? " nav-link-active" : ""}" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/rawcache/riscvsim" class="nav-mobile-link${isGithub ? " nav-link-active" : ""}" target="_blank" rel="noopener">GitHub</a>
         <div class="nav-mobile-actions">
           <button id="nav-mobile-signin-btn" class="nav-signin-btn" type="button">Sign in</button>
         </div>

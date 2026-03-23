@@ -1199,6 +1199,10 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
             triggerBlink();
           }
 
+          chipWrapper.addEventListener("click", () => {
+            handleChipClick();
+          });
+
           document.addEventListener(
             "mousemove",
             (event) => {
@@ -1223,11 +1227,6 @@ add  x3, x1, x2    # x3 = x1 + x2</textarea>
           document.addEventListener("click", (event) => {
             const target = event.target;
             if (!(target instanceof Element)) {
-              return;
-            }
-
-            if (target.closest("#chip-wrapper")) {
-              handleChipClick();
               return;
             }
 

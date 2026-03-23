@@ -14,6 +14,13 @@
   --font-mono: "Geist Mono", "DM Mono", monospace;
 }
 
+html,
+body {
+  background: #080808;
+  margin: 0;
+  padding: 0;
+}
+
 html {
   font-family: "Geist", system-ui, -apple-system, sans-serif;
   font-size: 16px;

@@ -428,10 +428,10 @@ window.addEventListener("DOMContentLoaded", async () => {
     handleSourceInput();
   }
 
-  function syncSampleOptionLabels(selectedName: string) {
+  function syncSampleOptionLabels() {
     for (const option of Array.from(sampleSelect.options)) {
       const baseLabel = sampleOptionLabels.get(option.value) ?? option.value;
-      option.textContent = option.value === selectedName ? `✓ ${baseLabel}` : baseLabel;
+      option.textContent = baseLabel;
     }
   }
 
@@ -1305,7 +1305,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       keepSharedBanner?: boolean;
     } = {}
   ) {
-    syncSampleOptionLabels(options.sampleName ?? "__custom__");
+    syncSampleOptionLabels();
     setStackLabelResolver(null, "main");
     setCallStackPlaceholder("main");
     setCallStackExplainer("Step into a function to see the calling convention.");
