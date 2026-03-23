@@ -56,6 +56,50 @@ type GoalEvaluation = {
   results: Record<string, boolean>;
 };
 
+type StepPhase = "reading" | "watching" | "trying";
+
+const REGISTER_ABI_NAMES = [
+  "zero",
+  "ra",
+  "sp",
+  "gp",
+  "tp",
+  "t0",
+  "t1",
+  "t2",
+  "s0/fp",
+  "s1",
+  "a0",
+  "a1",
+  "a2",
+  "a3",
+  "a4",
+  "a5",
+  "a6",
+  "a7",
+  "s2",
+  "s3",
+  "s4",
+  "s5",
+  "s6",
+  "s7",
+  "s8",
+  "s9",
+  "s10",
+  "s11",
+  "t3",
+  "t4",
+  "t5",
+  "t6",
+] as const;
+
+const LESSON_INSTRUCTION_PATTERN =
+  /^(?<mnemonic>[a-z.][a-z0-9.]*)\s+(?<operands>.+)$/i;
+
+function getRegisterAbiName(index: number): string {
+  return REGISTER_ABI_NAMES[index] ?? `x${index}`;
+}
+
 function createLessonProgress(lesson: Lesson, existing?: LessonProgress): LessonProgress {
   return {
     lessonId: lesson.id,
@@ -91,7 +135,27 @@ function renderInline(text: string): string {
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
 }
 
-function renderContent(content: string): string {
+function renderInstructionLine(line: string): string | null {
+  const match = LESSON_INSTRUCTION_PATTERN.exec(line.trim());
+  if (!match?.groups) {
+    return null;
+  }
+
+  const { mnemonic, operands } = match.groups;
+  if (!/[,(]|x\d+|\b(?:ra|sp|gp|tp|a[0-7]|s(?:[0-9]|1[01]|0\/fp)|t[0-6])\b/i.test(operands)) {
+    return null;
+  }
+
+  const operandHtml = escapeHtml(operands)
+    .replace(/\b(x(?:[12]?\d|3[01])|zero|ra|sp|gp|tp|a[0-7]|s(?:0\/fp|[0-9]|1[01])|t[0-6])\b/g, '<span class="lesson-instruction__rs">$1</span>')
+    .replace(/\b(-?(?:0x[0-9a-f]+|\d+))\b/gi, '<span class="lesson-instruction__imm">$1</span>');
+
+  return `<div class="lesson-instruction"><span class="lesson-instruction__mnemonic">${escapeHtml(
+    mnemonic
+  )}</span><span class="lesson-instruction__rs">${operandHtml}</span></div>`;
+}
+
+function renderStepContent(content: string): string {
   const blocks = content
     .trim()
     .split(/\n{2,}/)
@@ -106,12 +170,17 @@ function renderContent(content: string): string {
 
       if (block.startsWith("[tip]") && block.endsWith("[/tip]")) {
         const inner = block.slice(5, -6).trim();
-        return `<div class="lesson-callout lesson-callout--tip"><div class="lesson-callout__label">Tip</div><div class="lesson-callout__body">${renderInline(inner).replace(/\n/g, "<br />")}</div></div>`;
+        return `<div class="lesson-tip"><span class="lesson-tip__icon">💡</span><div class="lesson-tip__text">${renderInline(inner).replace(
+          /\n/g,
+          "<br />"
+        )}</div></div>`;
       }
 
       if (block.startsWith("[warning]") && block.endsWith("[/warning]")) {
         const inner = block.slice(9, -10).trim();
-        return `<div class="lesson-callout lesson-callout--warning"><div class="lesson-callout__label">Warning</div><div class="lesson-callout__body">${renderInline(inner).replace(/\n/g, "<br />")}</div></div>`;
+        return `<div class="lesson-tip lesson-warning"><span class="lesson-tip__icon">⚠️</span><div class="lesson-tip__text">${renderInline(
+          inner
+        ).replace(/\n/g, "<br />")}</div></div>`;
       }
 
       const lines = block.split("\n").map((line) => line.trimEnd());
@@ -127,13 +196,16 @@ function renderContent(content: string): string {
           .join("")}</ol>`;
       }
 
+      const renderedInstructions = lines
+        .map((line) => renderInstructionLine(line))
+        .filter((line): line is string => Boolean(line));
+      if (renderedInstructions.length === lines.length && renderedInstructions.length > 0) {
+        return renderedInstructions.join("");
+      }
+
       return `<p>${lines.map((line) => renderInline(line)).join("<br />")}</p>`;
     })
     .join("");
-}
-
-function buttonArrow(direction: "left" | "right"): string {
-  return direction === "left" ? "←" : "→";
 }
 
 export function createLessonMode(deps: LessonModeDependencies): LessonModeController {
@@ -170,12 +242,10 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   let goalEvaluation: GoalEvaluation = { passed: false, results: {} };
   let currentState = getLessonState([]);
   let goalFeedback: Record<string, string> = {};
-  let justPassedGoalIds = new Set<string>();
   let hintVisibility = new Set<string>();
   let stepAttemptCounts = new Map<string, number>();
   let runtimeReady = false;
   let completionVisible = lessonProgress.completed;
-  let compactTab: "lesson" | "editor" = "lesson";
   let watchPlaying = false;
   let watchCompleted = false;
   let watchSpeed: 0.5 | 1 | 2 = 1;
@@ -184,13 +254,31 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   let watchLastState = currentState;
   let watchInstructionCount = 0;
   let watchTimer: number | null = null;
+  let stepPhase: StepPhase = "reading";
 
   const simulatorLayout = document.querySelector(".simulator-layout");
   const leftColumn = document.querySelector(".sim-column--left");
+  const centerColumn = document.querySelector(".sim-column--center");
+  const rightColumn = document.querySelector(".sim-column--right");
   const editorPanel = document.querySelector(".sim-panel--editor") as HTMLElement | null;
   const brandRow = document.querySelector(".sim-nav__brand-row");
+  const simulatorApp = document.querySelector(".simulator-app");
+  const sampleSelect = document.querySelector<HTMLSelectElement>("#sampleSelect");
+  const assembleButton = document.querySelector<HTMLButtonElement>("#assemble");
+  const stepButton = document.querySelector<HTMLButtonElement>("#step");
+  const stepBackButton = document.querySelector<HTMLButtonElement>("#stepBack");
+  const runButton = document.querySelector<HTMLButtonElement>("#run");
+  const resetButton = document.querySelector<HTMLButtonElement>("#reset");
+  const sourceTextarea = document.querySelector<HTMLTextAreaElement>("#source-input");
 
-  if (!(simulatorLayout instanceof HTMLElement) || !(leftColumn instanceof HTMLElement) || !(editorPanel instanceof HTMLElement)) {
+  if (
+    !(simulatorLayout instanceof HTMLElement) ||
+    !(leftColumn instanceof HTMLElement) ||
+    !(centerColumn instanceof HTMLElement) ||
+    !(rightColumn instanceof HTMLElement) ||
+    !(editorPanel instanceof HTMLElement) ||
+    !(simulatorApp instanceof HTMLElement)
+  ) {
     return {
       isActive: () => false,
       prefillSource: () => {},
@@ -205,6 +293,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   }
 
   const simulatorLayoutEl = simulatorLayout;
+  const simulatorAppEl = simulatorApp;
   const editorPanelEl = editorPanel;
 
   const desktopColumn = document.createElement("div");
@@ -227,8 +316,6 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     <div class="lesson-compact-host" id="lessonCompactHost"></div>
   `;
 
-  const compactHost = compactShell.querySelector("#lessonCompactHost") as HTMLElement;
-
   desktopColumn.appendChild(panel);
   simulatorLayout.insertBefore(desktopColumn, leftColumn);
   leftColumn.insertBefore(compactShell, leftColumn.firstChild);
@@ -238,8 +325,6 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   navIndicator.href = "/learn/";
   navIndicator.hidden = false;
   brandRow?.appendChild(navIndicator);
-
-  const compactMedia = window.matchMedia("(max-width: 1399px)");
 
   function clearWatchTimer(): void {
     if (watchTimer !== null) {
@@ -256,8 +341,76 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     return Boolean((step.solution ?? step.code)?.trim());
   }
 
+  function isCheckpointStep(step: LessonStep): boolean {
+    return step.isCheckpoint === true && Array.isArray(step.goals) && step.goals.length > 0;
+  }
+
+  function showFullRegisters(step: LessonStep): boolean {
+    const lessonNumber = allLessons.findIndex((entry) => entry.id === lesson.id) + 1;
+    return (
+      lessonNumber >= 6 ||
+      step.goals?.some((goal) => goal.description.toLowerCase().includes("register")) === true && lessonNumber >= 3
+    );
+  }
+
+  function resolvePhaseForStep(step: LessonStep, phase: string | null): StepPhase {
+    if (!isCheckpointStep(step)) {
+      return "reading";
+    }
+    if (phase === "watching" && canWatch(step)) {
+      return "watching";
+    }
+    if (phase === "trying") {
+      return "trying";
+    }
+    return "reading";
+  }
+
+  function updateUrl(push = false): void {
+    const url = new URL(window.location.href);
+    url.searchParams.set("lesson", lesson.id);
+    url.searchParams.set("step", currentStep().id);
+    url.searchParams.set("phase", stepPhase);
+    const method = push ? "pushState" : "replaceState";
+    window.history[method]({}, "", url);
+  }
+
+  function applyPhaseClasses(): void {
+    const wantsRegisters = stepPhase !== "reading" && showFullRegisters(currentStep());
+    document.body.classList.add("lesson-mode");
+    document.body.classList.toggle("lesson-phase-reading", stepPhase === "reading");
+    document.body.classList.toggle("lesson-phase-watching", stepPhase === "watching");
+    document.body.classList.toggle("lesson-phase-trying", stepPhase === "trying");
+    document.body.classList.toggle("lesson-show-registers", wantsRegisters);
+    simulatorAppEl.classList.add("lesson-mode");
+    simulatorAppEl.classList.toggle("lesson-phase-reading", stepPhase === "reading");
+    simulatorAppEl.classList.toggle("lesson-phase-watching", stepPhase === "watching");
+    simulatorAppEl.classList.toggle("lesson-phase-trying", stepPhase === "trying");
+    simulatorAppEl.classList.toggle("lesson-show-registers", wantsRegisters);
+    simulatorLayoutEl.classList.add("has-lesson-column", "lesson-mode");
+    simulatorLayoutEl.classList.toggle("lesson-phase-reading", stepPhase === "reading");
+    simulatorLayoutEl.classList.toggle("lesson-phase-watching", stepPhase === "watching");
+    simulatorLayoutEl.classList.toggle("lesson-phase-trying", stepPhase === "trying");
+    simulatorLayoutEl.classList.toggle("lesson-show-registers", wantsRegisters);
+  }
+
+  function syncPhaseControls(): void {
+    const interactive = stepPhase === "trying";
+    const watching = stepPhase === "watching";
+    sampleSelect?.toggleAttribute("disabled", !interactive);
+    assembleButton?.toggleAttribute("disabled", !interactive);
+    stepButton?.toggleAttribute("disabled", !interactive && !watching);
+    stepBackButton?.toggleAttribute("disabled", !interactive);
+    runButton?.toggleAttribute("disabled", !interactive);
+    resetButton?.toggleAttribute("disabled", !interactive && !watching);
+    if (sourceTextarea) {
+      sourceTextarea.readOnly = watching || !interactive;
+    }
+  }
+
   function syncEditorReadOnly(): void {
-    deps.setEditorReadOnly(currentWatchStepActive());
+    deps.setEditorReadOnly(currentWatchStepActive() || stepPhase !== "trying");
+    syncPhaseControls();
   }
 
   function stopWatchPlayback(): void {
@@ -343,6 +496,8 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     return lesson.steps[Math.min(lessonProgress.currentStepIndex, lesson.steps.length - 1)];
   }
 
+  stepPhase = resolvePhaseForStep(currentStep(), searchParams.get("phase"));
+
   function persistProgress(): void {
     progress = {
       ...progress,
@@ -378,10 +533,6 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
         awardLessonStepPoints(completedStep);
       }
     }
-  }
-
-  function completedStepCount(): number {
-    return lessonProgress.stepsCompleted.length;
   }
 
   function buildGoalFeedback(goal: LessonGoal, state: ReturnType<typeof getLessonState>): string {
@@ -425,27 +576,11 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   }
 
   function applyCompactLayout(): void {
-    const compact = compactMedia.matches;
-    simulatorLayoutEl.classList.toggle("has-lesson-column", !compact);
-    compactShell.hidden = !compact;
-    desktopColumn.hidden = compact;
-
-    if (!compact) {
-      desktopColumn.appendChild(panel);
-      editorPanelEl.hidden = false;
-      compactShell.classList.remove("is-editor-active");
-      return;
-    }
-
-    compactHost.appendChild(panel);
-    const showLesson = compactTab === "lesson";
-    editorPanelEl.hidden = showLesson;
-    compactShell.classList.toggle("is-editor-active", !showLesson);
-    compactShell.querySelectorAll<HTMLButtonElement>("[data-lesson-compact-tab]").forEach((button) => {
-      const active = button.dataset.lessonCompactTab === compactTab;
-      button.classList.toggle("is-active", active);
-      button.setAttribute("aria-selected", String(active));
-    });
+    simulatorLayoutEl.classList.add("has-lesson-column");
+    compactShell.hidden = true;
+    desktopColumn.hidden = false;
+    desktopColumn.appendChild(panel);
+    editorPanelEl.hidden = false;
   }
 
   function loadGoalEvaluation(options: { recordAttempt?: boolean; allowRewards?: boolean } = {}): void {
@@ -485,9 +620,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     );
 
     if (newlyPassed.length > 0) {
-      justPassedGoalIds = new Set(newlyPassed);
       window.setTimeout(() => {
-        justPassedGoalIds = new Set<string>();
         render();
       }, 320);
     }
@@ -540,12 +673,50 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     hintVisibility = new Set<string>();
     goalEvaluation = { passed: false, results: {} };
     completionVisible = false;
-    compactTab = "lesson";
+    stepPhase = resolvePhaseForStep(currentStep(), "reading");
     resetWatchState();
     applyCompactLayout();
+    updateUrl(true);
     updateNavIndicator();
     render();
-    await loadStepCode(currentStep());
+    if (stepPhase !== "reading") {
+      await loadStepCode(currentStep());
+    }
+  }
+
+  async function enterPhase(nextPhase: StepPhase, pushHistory = true): Promise<void> {
+    const step = currentStep();
+    const resolvedPhase = resolvePhaseForStep(step, nextPhase);
+    if (resolvedPhase === stepPhase && resolvedPhase !== "trying") {
+      return;
+    }
+
+    stopWatchPlayback();
+    if (resolvedPhase !== "watching" && currentWatchStepActive()) {
+      await exitWatchMode(true);
+    }
+
+    stepPhase = resolvedPhase;
+    applyPhaseClasses();
+    syncEditorReadOnly();
+    updateUrl(pushHistory);
+    render();
+
+    if (resolvedPhase === "reading") {
+      return;
+    }
+
+    if (resolvedPhase === "watching") {
+      await enterWatchMode();
+      render();
+      return;
+    }
+
+    if (currentWatchStepActive()) {
+      await exitWatchMode(true);
+    }
+    await loadStepCode(step, { toast: false });
+    render();
   }
 
   async function finishLesson(): Promise<void> {
@@ -584,45 +755,57 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     }
   }
 
-  function renderGoals(step: LessonStep): string {
+  function renderMiniRegister(goal: LessonGoal): string {
+    if (goal.targetRegister === undefined) {
+      return "";
+    }
+    const value = currentState.registers[goal.targetRegister] ?? 0;
+    const isTargetMet = goal.expectedValue !== undefined && value === goal.expectedValue;
+    return `<div class="lesson-mini-reg">
+      <span class="lesson-mini-reg__name">x${goal.targetRegister}</span>
+      <span class="lesson-mini-reg__abi">${escapeHtml(getRegisterAbiName(goal.targetRegister))}</span>
+      <span class="lesson-mini-reg__value${isTargetMet ? " is-target-met" : ""}">${hex32(value)}</span>
+    </div>`;
+  }
+
+  function renderGoalPanel(step: LessonStep, lessonNumber: number): string {
     if (!step.goals || step.goals.length === 0) {
       return "";
     }
 
     const attempts = stepAttemptCounts.get(step.id) ?? 0;
     const showHints = attempts >= 3;
-    const showBreakdown = attempts >= 5;
-    const strugglingHint = step.goals.find((goal) => goal.hint)?.hint ?? "Work through one instruction at a time and verify the destination register after every step.";
+    const showSolution = attempts >= 5;
+    const showMiniRegisters = lessonNumber <= 5;
+    const primaryHint = step.goals.find((goal) => goal.hint)?.hint;
 
     return `
-      <div class="lesson-goals">
-        <div class="lesson-goals__heading">Goals</div>
-        <div class="lesson-goals__list">
+      <div class="lesson-goal-panel">
+        <button class="lesson-goal-panel__back" type="button" data-lesson-action="back-to-reading">← Back to explanation</button>
+        <div class="lesson-goal-panel__title">Your goal</div>
+        <div class="lesson-goals-list">
           ${step.goals
             .map((goal) => {
               const passed = goalEvaluation.results[goal.id] === true;
+              const failing = !passed && (stepAttemptCounts.get(step.id) ?? 0) > 0;
               const hintVisible = hintVisibility.has(goal.id);
-              const canShowHint = !passed && showHints && Boolean(goal.hint);
               return `
-                <div class="lesson-goal${passed ? " is-passed" : ""}${justPassedGoalIds.has(goal.id) ? " lesson-goal--just-passed" : ""}">
-                  <div class="lesson-goal__status" aria-hidden="true">${passed ? "✓" : "○"}</div>
-                  <div class="lesson-goal__content">
-                    <div class="lesson-goal__text">${escapeHtml(goal.description)}</div>
+                <div class="lesson-goal-item${passed ? " is-passing" : ""}${failing ? " is-failing" : ""}">
+                  <div class="lesson-goal-item__circle">${passed ? "✓" : ""}</div>
+                  <div class="lesson-goal-item__body">
+                    <div class="lesson-goal-item__desc">${escapeHtml(goal.description)}</div>
+                    ${showMiniRegisters ? renderMiniRegister(goal) : ""}
                     ${
                       !passed && goalFeedback[goal.id]
-                        ? `<div class="lesson-goal__feedback">${escapeHtml(goalFeedback[goal.id])}</div>`
+                        ? `<div class="lesson-goal-item__feedback">${escapeHtml(goalFeedback[goal.id])}</div>`
                         : ""
                     }
                     ${
-                      canShowHint
+                      showHints && goal.hint && !hintVisible
                         ? `<button class="lesson-goal__hint-toggle" type="button" data-lesson-hint="${escapeHtml(goal.id)}">Show hint</button>`
                         : ""
                     }
-                    ${
-                      hintVisible && goal.hint
-                        ? `<div class="lesson-goal__hint">${escapeHtml(goal.hint)}</div>`
-                        : ""
-                    }
+                    ${hintVisible && goal.hint ? `<div class="lesson-goal__hint">${escapeHtml(goal.hint)}</div>` : ""}
                   </div>
                 </div>
               `;
@@ -630,16 +813,19 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
             .join("")}
         </div>
         ${
-          showHints && !goalEvaluation.passed
-            ? `<div class="lesson-struggle-box">
-                <div class="lesson-struggle-box__title">Struggling?</div>
-                <div class="lesson-struggle-box__body">Hint: ${escapeHtml(strugglingHint)}</div>
-                <button class="lesson-struggle-box__link" type="button" data-lesson-action="show-solution">Show solution</button>
-                ${
-                  showBreakdown
-                    ? '<button class="lesson-struggle-box__link" type="button" data-lesson-action="breakdown">Break it down</button>'
-                    : ""
-                }
+          showHints && primaryHint
+            ? `<div class="lesson-hint${hintVisibility.size > 0 ? "" : " is-visible"}">
+                <div class="lesson-hint__label">Hint</div>
+                <div class="lesson-hint__text">${escapeHtml(primaryHint)}</div>
+              </div>`
+            : ""
+        }
+        ${showSolution ? '<button class="lesson-show-solution" type="button" data-lesson-action="show-solution">Show solution</button>' : ""}
+        ${
+          goalEvaluation.passed
+            ? `<div class="lesson-success-banner">
+                <div class="lesson-success-banner__title">All goals complete.</div>
+                <button class="lesson-success-banner__button" type="button" data-lesson-action="continue">Continue →</button>
               </div>`
             : ""
         }
@@ -647,45 +833,97 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     `;
   }
 
-  function renderWatchMode(step: LessonStep): string {
-    if (!canWatch(step)) {
-      return "";
-    }
+  function renderStepDots(): string {
+    return lesson.steps
+      .map((entry, index) => {
+        const isCompleted = lessonProgress.stepsCompleted.includes(entry.id);
+        const isCurrent = index === lessonProgress.currentStepIndex;
+        const isClickable = isCompleted || isCurrent;
+        return `<button
+          class="lesson-step-dot${isCompleted ? " is-completed" : ""}${isCurrent ? " is-current" : ""}${
+            entry.isCheckpoint ? " is-checkpoint" : ""
+          }"
+          type="button"
+          data-lesson-step-dot="${index}"
+          ${isClickable ? "" : "disabled"}
+          aria-label="Step ${index + 1}: ${escapeHtml(entry.title)}"
+        ></button>`;
+      })
+      .join("");
+  }
 
-    const currentInstruction = currentWatchStepActive()
-      ? escapeHtml(deps.getInstructionText(watchLastState.pc) || "Waiting for the first instruction…")
-      : "Preview the worked solution before you try it yourself.";
-    const progress = watchInstructionCount > 0 ? Math.min(100, (currentState.stepCount / watchInstructionCount) * 100) : 0;
+  function renderReadingView(step: LessonStep, lessonNumber: number): string {
+    const progressPercent = lesson.steps.length === 0 ? 0 : ((lessonProgress.currentStepIndex + 1) / lesson.steps.length) * 100;
+    const canGoPrevious = lessonProgress.currentStepIndex > 0;
+    const isCheckpoint = isCheckpointStep(step);
+    const hasWatch = canWatch(step);
+    const isLastStep = lessonProgress.currentStepIndex >= lesson.steps.length - 1;
 
     return `
-      <div class="lesson-watch">
-        <div class="lesson-watch__header">
-          <div class="lesson-watch__title">Watch Mode</div>
-          <button class="lesson-watch__toggle" type="button" data-lesson-action="watch-toggle">
-            ${currentWatchStepActive() ? "Turn off" : "Watch solution"}
-          </button>
+      <div class="lesson-reading-view">
+        <div class="lesson-breadcrumb">
+          <a href="/learn/" class="lesson-breadcrumb__back">← Curriculum</a>
+          <span class="lesson-breadcrumb__sep">·</span>
+          <span class="lesson-breadcrumb__lesson">Lesson ${lessonNumber} of ${allLessons.length}</span>
+          <span class="lesson-breadcrumb__sep">·</span>
+          <span class="lesson-breadcrumb__step">Step ${lessonProgress.currentStepIndex + 1} of ${lesson.steps.length}</span>
         </div>
-        ${
-          currentWatchStepActive()
-            ? `<div class="lesson-watch__controls">
-                <button class="lesson-watch__button" type="button" data-lesson-action="watch-play" ${watchPlaying || watchCompleted ? "disabled" : ""}>▶ Play</button>
-                <button class="lesson-watch__button" type="button" data-lesson-action="watch-pause" ${!watchPlaying ? "disabled" : ""}>⏸ Pause</button>
-                <button class="lesson-watch__button" type="button" data-lesson-action="watch-reset">⏮ Reset</button>
-                <button class="lesson-watch__button" type="button" data-lesson-action="watch-speed">⏩ ${watchSpeed}x</button>
-              </div>
-              <div class="lesson-watch__progress"><span style="width:${progress}%;"></span></div>
-              <div class="lesson-watch__instruction">${currentInstruction}</div>
-              <div class="lesson-watch__narration">${escapeHtml(watchNarration || "Press Play to watch the solution execute instruction by instruction.")}</div>
-              ${
-                watchCompleted
-                  ? `<div class="lesson-watch__complete">
-                      <div class="lesson-watch__complete-title">You've watched the solution. Now try it yourself.</div>
-                      <button class="lesson-success-banner__button" type="button" data-lesson-action="watch-try">Try It →</button>
-                    </div>`
-                  : ""
-              }`
-            : `<div class="lesson-watch__narration">${escapeHtml(currentInstruction)}</div>`
-        }
+        <div class="lesson-progress-bar">
+          <div class="lesson-progress-bar__fill" style="width:${progressPercent}%;"></div>
+        </div>
+        <div class="lesson-step-dots">${renderStepDots()}</div>
+        <div class="lesson-content-card">
+          <h2 class="lesson-step-title">${escapeHtml(step.title)}</h2>
+          <div class="lesson-step-body">${renderStepContent(step.content)}</div>
+        </div>
+        <div class="lesson-action-bar">
+          <button class="lesson-btn-prev" type="button" data-lesson-action="prev"${canGoPrevious ? "" : " disabled"}>← Previous</button>
+          <div class="lesson-action-bar__right">
+            ${
+              isCheckpoint && hasWatch
+                ? '<button class="lesson-btn-watch-link" type="button" data-lesson-action="start-watch">Watch solution first</button>'
+                : ""
+            }
+            ${
+              isCheckpoint
+                ? '<button class="lesson-btn-try" type="button" data-lesson-action="start-trying">Try it in the simulator →</button>'
+                : isLastStep
+                  ? '<button class="lesson-btn-continue" type="button" data-lesson-action="finish">Finish lesson →</button>'
+                  : '<button class="lesson-btn-continue" type="button" data-lesson-action="next-reading">Continue →</button>'
+            }
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderWatchingView(lessonNumber: number): string {
+    const progress =
+      watchInstructionCount > 0 ? Math.min(100, (currentState.stepCount / watchInstructionCount) * 100) : 0;
+    const currentInstruction = escapeHtml(deps.getInstructionText(watchLastState.pc) || "Waiting for the first instruction…");
+
+    return `
+      <div class="lesson-goal-panel lesson-watch-panel">
+        <button class="lesson-goal-panel__back" type="button" data-lesson-action="back-to-reading">← Back to explanation</button>
+        <div class="lesson-panel__eyebrow">Lesson ${lessonNumber} · Watch</div>
+        <div class="lesson-goal-panel__title">Watch the solution</div>
+        <div class="lesson-watch">
+          <div class="lesson-watch__controls">
+            <button class="lesson-watch__button" type="button" data-lesson-action="watch-play" ${watchPlaying || watchCompleted ? "disabled" : ""}>▶ Play</button>
+            <button class="lesson-watch__button" type="button" data-lesson-action="watch-pause" ${!watchPlaying ? "disabled" : ""}>⏸ Pause</button>
+            <button class="lesson-watch__button" type="button" data-lesson-action="watch-reset">⏮ Reset</button>
+            <button class="lesson-watch__button" type="button" data-lesson-action="watch-speed">⏩ ${watchSpeed}x</button>
+          </div>
+          <div class="lesson-watch__progress"><span style="width:${progress}%;"></span></div>
+          <div class="lesson-watch__instruction">${currentInstruction}</div>
+          <div class="lesson-watch__narration">${escapeHtml(
+            watchNarration || "Watch the worked solution execute. The editor is locked while this phase is active."
+          )}</div>
+        </div>
+        <div class="lesson-action-stack">
+          <button class="lesson-btn-try" type="button" data-lesson-action="watch-try">Now you try →</button>
+          <button class="lesson-btn-watch-link" type="button" data-lesson-action="skip-watch">Skip to try it</button>
+        </div>
       </div>
     `;
   }
@@ -740,6 +978,8 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   function render(): void {
     updateNavIndicator();
     applyCompactLayout();
+    applyPhaseClasses();
+    syncEditorReadOnly();
 
     if (completionVisible) {
       panel.innerHTML = renderCompletion();
@@ -747,50 +987,13 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     }
 
     const step = currentStep();
-    const previousDisabled = lessonProgress.currentStepIndex === 0;
-    const nextDisabled = step.isCheckpoint || lessonProgress.currentStepIndex >= lesson.steps.length - 1;
     const lessonNumber = allLessons.findIndex((entry) => entry.id === lesson.id) + 1;
-    const progressPercent = lesson.steps.length === 0 ? 0 : (completedStepCount() / lesson.steps.length) * 100;
-
-    panel.innerHTML = `
-      <div class="panel-header lesson-panel__header">
-        <div>
-          <div class="lesson-panel__eyebrow">Lesson ${lessonNumber} of ${allLessons.length}</div>
-          <div class="lesson-panel__title">${escapeHtml(lesson.title)}</div>
-        </div>
-      </div>
-      <div class="lesson-panel__progress">
-        <div class="lesson-panel__progress-track"><div class="lesson-panel__progress-fill" style="width: ${progressPercent}%;"></div></div>
-      </div>
-      <div class="lesson-panel__nav">
-        <button class="lesson-panel__nav-button" type="button" data-lesson-action="prev" ${previousDisabled ? "disabled" : ""}>${buttonArrow(
-          "left"
-        )}</button>
-        <div class="lesson-panel__nav-title">${escapeHtml(step.title)}</div>
-        <button class="lesson-panel__nav-button" type="button" data-lesson-action="next" ${nextDisabled ? "disabled" : ""}>${buttonArrow(
-          "right"
-        )}</button>
-      </div>
-      <div class="lesson-panel__body">
-        <div class="lesson-panel__content">${renderContent(step.content)}</div>
-        ${renderWatchMode(step)}
-        ${renderGoals(step)}
-      </div>
-      <div class="lesson-panel__footer">
-        ${
-          !currentWatchStepActive() && step.isCheckpoint && step.goals && step.goals.length > 0 && goalEvaluation.passed
-            ? `<div class="lesson-success-banner">
-                <div>
-                  <div class="lesson-success-banner__title">All goals complete!</div>
-                </div>
-                <button class="lesson-success-banner__button" type="button" data-lesson-action="continue">Continue →</button>
-              </div>`
-            : lessonProgress.currentStepIndex === lesson.steps.length - 1
-              ? `<button class="lesson-finish-button" type="button" data-lesson-action="finish">Finish lesson →</button>`
-              : ""
-        }
-      </div>
-    `;
+    panel.innerHTML =
+      stepPhase === "reading"
+        ? renderReadingView(step, lessonNumber)
+        : stepPhase === "watching"
+          ? renderWatchingView(lessonNumber)
+          : renderGoalPanel(step, lessonNumber);
 
     panel.querySelectorAll<HTMLElement>("[data-lesson-hint]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -809,8 +1012,23 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
         if (action === "prev" && lessonProgress.currentStepIndex > 0) {
           void navigateToStep(lessonProgress.currentStepIndex - 1);
         }
-        if (action === "next" && !currentStep().isCheckpoint && lessonProgress.currentStepIndex < lesson.steps.length - 1) {
+        if (action === "next" && !isCheckpointStep(currentStep()) && lessonProgress.currentStepIndex < lesson.steps.length - 1) {
           void navigateToStep(lessonProgress.currentStepIndex + 1, { markCurrentComplete: true });
+        }
+        if (action === "next-reading" && lessonProgress.currentStepIndex < lesson.steps.length - 1) {
+          void navigateToStep(lessonProgress.currentStepIndex + 1, { markCurrentComplete: true });
+        }
+        if (action === "start-trying") {
+          void enterPhase("trying");
+        }
+        if (action === "start-watch") {
+          void enterPhase("watching");
+        }
+        if (action === "back-to-reading") {
+          void enterPhase("reading");
+        }
+        if (action === "skip-watch") {
+          void enterPhase("trying");
         }
         if (action === "continue" && goalEvaluation.passed) {
           if (lessonProgress.currentStepIndex >= lesson.steps.length - 1) {
@@ -872,25 +1090,29 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
           render();
         }
         if (action === "watch-try" && currentWatchStepActive()) {
-          void exitWatchMode(true);
+          void enterPhase("trying");
         }
       });
     });
-  }
 
-  compactShell.querySelectorAll<HTMLButtonElement>("[data-lesson-compact-tab]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const nextTab = button.dataset.lessonCompactTab;
-      if (nextTab === "lesson" || nextTab === "editor") {
-        compactTab = nextTab;
-        applyCompactLayout();
-      }
+    panel.querySelectorAll<HTMLButtonElement>("[data-lesson-step-dot]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const rawIndex = Number(button.dataset.lessonStepDot);
+        if (!Number.isInteger(rawIndex)) {
+          return;
+        }
+        const targetStep = lesson.steps[rawIndex];
+        if (!targetStep) {
+          return;
+        }
+        const isCompleted = lessonProgress.stepsCompleted.includes(targetStep.id);
+        if (!isCompleted && rawIndex !== lessonProgress.currentStepIndex) {
+          return;
+        }
+        void navigateToStep(rawIndex);
+      });
     });
-  });
-
-  compactMedia.addEventListener("change", () => {
-    applyCompactLayout();
-  });
+  }
 
   lessonProgress = createLessonProgress(lesson, progress.lessons[lesson.id]);
   if (requestedStepId) {
@@ -912,7 +1134,31 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     lastActiveLesson: lesson.id,
   };
   saveProgress(progress);
+  applyPhaseClasses();
+  updateUrl(false);
   render();
+
+  window.addEventListener("popstate", () => {
+    const params = new URLSearchParams(window.location.search);
+    const nextStepId = params.get("step");
+    const nextStepIndex = nextStepId ? lesson.steps.findIndex((entry) => entry.id === nextStepId) : -1;
+    if (nextStepIndex >= 0) {
+      lessonProgress = {
+        ...lessonProgress,
+        currentStepIndex: nextStepIndex,
+      };
+    }
+    hintVisibility = new Set<string>();
+    completionVisible = lessonProgress.completed;
+    stepPhase = resolvePhaseForStep(currentStep(), params.get("phase"));
+    if (stepPhase === "reading") {
+      resetWatchState();
+    }
+    render();
+    if (runtimeReady && stepPhase !== "reading") {
+      void loadStepCode(currentStep(), { toast: false });
+    }
+  });
 
   return {
     isActive() {
@@ -928,8 +1174,11 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
       runtimeReady = true;
       syncEditorReadOnly();
       render();
-      await loadStepCode(currentStep(), { toast: false });
-      loadGoalEvaluation({ recordAttempt: false });
+      if (stepPhase === "watching") {
+        await enterPhase("watching", false);
+      } else if (stepPhase === "trying") {
+        await enterPhase("trying", false);
+      }
     },
     handleAssembled() {
       completionVisible = lessonProgress.completed;
@@ -997,12 +1246,15 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
         }
       }
       completionVisible = lessonProgress.completed;
+      stepPhase = resolvePhaseForStep(currentStep(), new URLSearchParams(window.location.search).get("phase"));
       syncEditorReadOnly();
       render();
 
       if (runtimeReady) {
-        await loadStepCode(currentStep(), { toast: false });
-        loadGoalEvaluation({ recordAttempt: false, allowRewards: !currentWatchStepActive() });
+        if (stepPhase !== "reading") {
+          await loadStepCode(currentStep(), { toast: false });
+          loadGoalEvaluation({ recordAttempt: false, allowRewards: !currentWatchStepActive() });
+        }
       }
     },
   };

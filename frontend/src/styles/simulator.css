@@ -5253,6 +5253,675 @@ body.simulator-page {
   border-radius: 999px;
 }
 
+/* Progressive lesson mode */
+.lesson-mode .lesson-compact-shell {
+  display: none !important;
+}
+
+.lesson-mode .simulator-layout.has-lesson-column {
+  gap: 0;
+  align-items: stretch;
+}
+
+.lesson-mode .sim-column--lesson {
+  min-width: 0;
+  z-index: 2;
+}
+
+.lesson-mode .lesson-panel {
+  min-height: calc(100vh - 56px);
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  background: var(--bg-base);
+}
+
+.lesson-mode.lesson-phase-reading .simulator-layout.has-lesson-column {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.lesson-mode.lesson-phase-reading .sim-column--lesson {
+  grid-column: 1 / -1;
+}
+
+.lesson-mode.lesson-phase-reading .sim-column--left,
+.lesson-mode.lesson-phase-reading .sim-column--center,
+.lesson-mode.lesson-phase-reading .sim-column--right {
+  display: none !important;
+}
+
+.lesson-mode.lesson-phase-reading .lesson-panel {
+  position: relative;
+  overflow: visible;
+}
+
+.lesson-mode.lesson-phase-reading .lesson-reading-view {
+  min-height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 24px 96px;
+  background: var(--bg-base);
+}
+
+.lesson-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 680px;
+  margin-bottom: 24px;
+  color: var(--text-muted);
+  font-family: "Geist", var(--font-body);
+  font-size: 13px;
+}
+
+.lesson-breadcrumb__back {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.lesson-breadcrumb__back:hover {
+  opacity: 0.84;
+}
+
+.lesson-breadcrumb__sep {
+  color: var(--border);
+}
+
+.lesson-progress-bar {
+  width: 100%;
+  max-width: 680px;
+  height: 3px;
+  margin-bottom: 32px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--border);
+}
+
+.lesson-progress-bar__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lesson-step-dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 32px;
+}
+
+.lesson-step-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--border);
+  cursor: pointer;
+  transition: background-color 200ms ease, transform 200ms ease;
+}
+
+.lesson-step-dot.is-checkpoint {
+  border-radius: 3px;
+}
+
+.lesson-step-dot.is-completed,
+.lesson-step-dot.is-current {
+  background: var(--accent);
+}
+
+.lesson-step-dot.is-current {
+  transform: scale(1.4);
+}
+
+.lesson-step-dot:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.lesson-content-card {
+  width: 100%;
+  max-width: 680px;
+  flex: 1 1 auto;
+}
+
+.lesson-step-title {
+  margin: 0 0 24px;
+  color: var(--text-primary);
+  font-family: "Geist", var(--font-body);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.lesson-step-body {
+  color: var(--text-secondary);
+  font-family: "Geist", var(--font-body);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.lesson-step-body p {
+  margin: 0 0 20px;
+}
+
+.lesson-step-body p:last-child {
+  margin-bottom: 0;
+}
+
+.lesson-step-body .lesson-rich-code {
+  min-height: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--accent-border);
+  border-radius: 4px;
+  background: var(--accent-subtle);
+  font-family: "Geist Mono", var(--font-mono);
+  font-size: 14px;
+}
+
+.lesson-step-body pre,
+.lesson-step-body .lesson-instruction {
+  margin: 20px 0;
+}
+
+.lesson-step-body pre {
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  overflow-x: auto;
+}
+
+.lesson-step-body pre code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.lesson-tip {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--accent-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent-subtle);
+}
+
+.lesson-tip__icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.lesson-tip__text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.lesson-warning {
+  border-color: color-mix(in srgb, var(--warning) 24%, var(--border));
+  border-left-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+
+.lesson-instruction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  font-family: "Geist Mono", var(--font-mono);
+  font-size: 15px;
+}
+
+.lesson-instruction__mnemonic {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.lesson-instruction__rs {
+  color: var(--text-primary);
+}
+
+.lesson-instruction__imm {
+  color: var(--warning);
+}
+
+.lesson-action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-base);
+  z-index: 20;
+}
+
+.lesson-action-bar__right,
+.lesson-action-stack {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lesson-btn-prev,
+.lesson-btn-watch-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: "Geist", var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.lesson-btn-prev:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.lesson-btn-continue,
+.lesson-btn-try,
+.lesson-success-banner__button,
+.lesson-show-solution {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: color-mix(in srgb, var(--bg-base) 88%, var(--text-primary));
+  font-family: "Geist", var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lesson-btn-continue:hover,
+.lesson-btn-try:hover,
+.lesson-success-banner__button:hover,
+.lesson-show-solution:hover {
+  background: var(--accent-hover);
+}
+
+.lesson-mode.lesson-phase-watching .simulator-layout.has-lesson-column,
+.lesson-mode.lesson-phase-trying .simulator-layout.has-lesson-column {
+  grid-template-columns: 400px minmax(0, 1fr) !important;
+  grid-template-rows: minmax(260px, 1fr) minmax(260px, 1fr);
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.lesson-mode.lesson-phase-watching .sim-column--lesson,
+.lesson-mode.lesson-phase-trying .sim-column--lesson {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.lesson-mode.lesson-phase-watching .sim-column--left,
+.lesson-mode.lesson-phase-trying .sim-column--left {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.lesson-mode.lesson-phase-watching .sim-column--center,
+.lesson-mode.lesson-phase-trying .sim-column--center {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.lesson-mode.lesson-phase-watching .sim-column--right,
+.lesson-mode.lesson-phase-trying .sim-column--right {
+  display: none !important;
+}
+
+.lesson-mode.lesson-phase-watching.lesson-show-registers .simulator-layout.has-lesson-column,
+.lesson-mode.lesson-phase-trying.lesson-show-registers .simulator-layout.has-lesson-column {
+  grid-template-columns: 340px minmax(0, 1fr) 250px !important;
+}
+
+.lesson-mode.lesson-phase-watching.lesson-show-registers .sim-column--right,
+.lesson-mode.lesson-phase-trying.lesson-show-registers .sim-column--right {
+  display: flex !important;
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
+.lesson-mode .memory-panel,
+.lesson-mode .saved-programs,
+.lesson-mode .breakpoints-panel,
+.lesson-mode .warnings-panel,
+.lesson-mode #historyPanel,
+.lesson-mode .run-speed-panel,
+.lesson-mode .field-label,
+.lesson-mode #sampleSelect {
+  display: none !important;
+}
+
+.lesson-mode .sim-panel--editor .panel-header__actions,
+.lesson-mode .shared-link-banner,
+.lesson-mode .shortcut-hint-bar {
+  display: none !important;
+}
+
+.lesson-mode.lesson-phase-watching .control-row--editor-primary,
+.lesson-mode.lesson-phase-watching .control-row--editor-secondary {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.lesson-goal-panel,
+.lesson-watch-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 68px);
+  padding: 24px;
+  background: var(--bg-base);
+}
+
+.lesson-goal-panel__back {
+  margin-bottom: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: "Geist", var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.lesson-goal-panel__title {
+  margin-bottom: 16px;
+  color: var(--text-primary);
+  font-family: "Geist", var(--font-body);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.lesson-goals-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.lesson-goal-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.lesson-goal-item__circle {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lesson-goal-item.is-passing .lesson-goal-item__circle {
+  border-color: var(--success);
+  background: var(--success);
+  color: color-mix(in srgb, var(--bg-base) 88%, var(--text-primary));
+}
+
+.lesson-goal-item__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.lesson-goal-item__desc {
+  color: var(--text-primary);
+  font-family: "Geist", var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.lesson-goal-item.is-passing .lesson-goal-item__desc {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.lesson-goal-item__feedback {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-family: "Geist Mono", var(--font-mono);
+  font-size: 11px;
+}
+
+.lesson-goal-item.is-failing .lesson-goal-item__feedback {
+  color: var(--warning);
+}
+
+.lesson-mini-reg {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  font-family: "Geist Mono", var(--font-mono);
+  font-size: 12px;
+}
+
+.lesson-mini-reg__name {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.lesson-mini-reg__abi {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.lesson-mini-reg__value.is-target-met {
+  color: var(--success);
+}
+
+.lesson-hint {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--warning) 24%, var(--border));
+  border-left: 3px solid var(--warning);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+
+.lesson-hint__label {
+  margin-bottom: 6px;
+  color: var(--warning);
+  font-family: "Geist Mono", var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lesson-hint__text {
+  color: var(--text-secondary);
+  font-family: "Geist", var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.lesson-show-solution {
+  margin-top: 16px;
+  width: 100%;
+}
+
+.lesson-watch-panel .lesson-watch {
+  margin-top: 0;
+}
+
+.lesson-watch__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lesson-watch__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-family: "Geist", var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.lesson-watch__instruction {
+  color: var(--text-primary);
+  font-family: "Geist Mono", var(--font-mono);
+  font-size: 12px;
+}
+
+.lesson-watch__narration {
+  color: var(--text-secondary);
+  font-family: "Geist", var(--font-body);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+.lesson-mode .lesson-success-banner {
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--success) 24%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.lesson-mode .lesson-success-banner__title {
+  color: var(--success);
+}
+
+.lesson-mode .lesson-success-banner__button {
+  background: var(--success);
+  color: color-mix(in srgb, var(--bg-base) 88%, var(--text-primary));
+}
+
+.lesson-mode .lesson-success-banner__button:hover {
+  background: color-mix(in srgb, var(--success) 82%, var(--text-primary));
+}
+
+.lesson-mode .sim-column--left,
+.lesson-mode .sim-column--center,
+.lesson-mode .sim-column--right,
+.lesson-mode .sim-column--lesson {
+  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1), opacity 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lesson-mode.lesson-phase-reading .sim-column--lesson {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.lesson-mode.lesson-phase-watching .sim-column--lesson,
+.lesson-mode.lesson-phase-trying .sim-column--lesson {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-mode .sim-column--left,
+  .lesson-mode .sim-column--center,
+  .lesson-mode .sim-column--right,
+  .lesson-mode .sim-column--lesson,
+  .lesson-progress-bar__fill,
+  .lesson-step-dot {
+    transition: none !important;
+  }
+}
+
+@media (max-width: 1199px) {
+  .lesson-mode.lesson-phase-watching .simulator-layout.has-lesson-column,
+  .lesson-mode.lesson-phase-trying .simulator-layout.has-lesson-column,
+  .lesson-mode.lesson-phase-watching.lesson-show-registers .simulator-layout.has-lesson-column,
+  .lesson-mode.lesson-phase-trying.lesson-show-registers .simulator-layout.has-lesson-column {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto auto auto !important;
+  }
+
+  .lesson-mode.lesson-phase-watching .sim-column--lesson,
+  .lesson-mode.lesson-phase-trying .sim-column--lesson,
+  .lesson-mode.lesson-phase-watching .sim-column--left,
+  .lesson-mode.lesson-phase-trying .sim-column--left,
+  .lesson-mode.lesson-phase-watching .sim-column--center,
+  .lesson-mode.lesson-phase-trying .sim-column--center,
+  .lesson-mode.lesson-phase-watching.lesson-show-registers .sim-column--right,
+  .lesson-mode.lesson-phase-trying.lesson-show-registers .sim-column--right {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .lesson-action-bar {
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  .lesson-reading-view {
+    padding: 24px 16px 104px;
+  }
+
+  .lesson-step-title {
+    font-size: 24px;
+  }
+
+  .lesson-step-body {
+    font-size: 15px;
+  }
+
+  .lesson-action-bar,
+  .lesson-action-bar__right,
+  .lesson-action-stack {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lesson-btn-continue,
+  .lesson-btn-try,
+  .lesson-success-banner__button,
+  .lesson-show-solution {
+    width: 100%;
+  }
+}
+
 /* Keep Recent Writes visible above the memory window. */
 .memory-panel .panel-body {
   display: flex !important;
