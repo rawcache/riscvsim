@@ -218,6 +218,8 @@ export function initNav(config: NavConfig): void {
   const mobileThemeToggle = root.querySelector<HTMLButtonElement>("#nav-mobile-theme-toggle");
   const mobileSignin = root.querySelector<HTMLButtonElement>("#nav-mobile-signin-btn");
   const desktopSignin = root.querySelector<HTMLButtonElement>("#auth-signin-btn");
+  const userButton = root.querySelector<HTMLElement>("#auth-user-btn");
+  const authMenu = root.querySelector<HTMLElement>(".auth-menu");
   const streakIndicator = root.querySelector<HTMLElement>("#nav-streak-indicator");
   const closeTimers = new WeakMap<HTMLElement, number>();
 
@@ -339,9 +341,38 @@ export function initNav(config: NavConfig): void {
     mobileSignin.style.display = desktopHidden ? "none" : "";
   };
 
+  const syncAuthMenuVisibility = () => {
+    if (!userButton || !authMenu) {
+      return;
+    }
+
+    const userHidden =
+      userButton.hidden ||
+      userButton.hasAttribute("hidden") ||
+      userButton.textContent?.trim() === "" ||
+      window.getComputedStyle(userButton).display === "none";
+
+    authMenu.style.display = userHidden ? "none" : "";
+  };
+
   syncMobileSigninVisibility();
+  syncAuthMenuVisibility();
 
   void initAuthUi().then(() => {
     syncMobileSigninVisibility();
+    syncAuthMenuVisibility();
+
+    if (userButton) {
+      const observer = new MutationObserver(() => {
+        syncMobileSigninVisibility();
+        syncAuthMenuVisibility();
+      });
+      observer.observe(userButton, {
+        attributes: true,
+        attributeFilter: ["hidden", "style", "class"],
+        childList: true,
+        subtree: true,
+      });
+    }
   });
 }

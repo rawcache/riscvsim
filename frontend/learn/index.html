@@ -33,26 +33,30 @@
   <body class="landing-page learn-page">
     <nav id="site-nav"></nav>
 
-    <main class="learn-main">
+    <main class="learn-shell">
       <section class="learn-hero" id="learnHeroShell"></section>
 
-      <section class="stats-strip" id="learnStatsStrip" aria-label="Learning progress stats"></section>
+      <div class="learn-content-wrapper">
+        <div class="learn-main">
+          <section class="stats-strip" id="learnStatsStrip" aria-label="Learning progress stats"></section>
 
-      <section class="learn-platform">
-        <div class="learn-platform__main">
-          <section class="learn-panel">
-            <div class="learn-panel__header-row">
-              <h2 class="learn-panel__title">Curriculum map</h2>
-              <div class="learn-panel__meta">Follow the learning path from registers to the mini kernel.</div>
+          <section class="learn-platform">
+            <div class="learn-platform__main">
+              <section class="learn-panel">
+                <div class="learn-panel__header-row">
+                  <h2 class="learn-panel__title">Curriculum map</h2>
+                  <div class="learn-panel__meta">Follow the learning path from registers to the mini kernel.</div>
+                </div>
+                <div id="learnCurriculumTree" class="curriculum-tree" aria-live="polite"></div>
+              </section>
+
+              <section class="learn-panel learn-panel--summary" id="learnChallengeSummary"></section>
             </div>
-            <div id="learnCurriculumTree" class="curriculum-tree" aria-live="polite"></div>
           </section>
-
-          <section class="learn-panel learn-panel--summary" id="learnChallengeSummary"></section>
         </div>
 
         <aside id="leaderboardSidebar" class="leaderboard-sidebar" aria-label="Leaderboard"></aside>
-      </section>
+      </div>
     </main>
 
     <footer id="site-footer"></footer>
