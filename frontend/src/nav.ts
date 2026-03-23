@@ -19,6 +19,16 @@ const THEME_KEY = "studyriscv-theme";
 const CLOSE_DELAY_MS = 80;
 let searchShortcutBound = false;
 
+function getSearchKbd(): string {
+  if (typeof navigator === "undefined") {
+    return "⌘K";
+  }
+  const isMac =
+    navigator.platform.toLowerCase().includes("mac") ||
+    navigator.userAgent.includes("Mac");
+  return isMac ? "⌘K" : "Ctrl+K";
+}
+
 function chevronSvg(): string {
   return `<svg class="nav-chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"></path></svg>`;
 }
@@ -88,11 +98,9 @@ function renderNav(config: NavConfig): string {
   const isLabs = config.activePage === "labs";
   const isChallenges = config.activePage === "challenges";
   const isGithub = config.activePage === "github";
-  const isDocs = config.activePage === "docs";
   const isProduct = productActive(config.activePage);
   const isResources = resourcesActive(config.activePage);
   const docsGuideActive = config.activePage === "docs";
-  const showSearchTrigger = isLearn || isDocs;
 
   return `
     <div class="nav-mobile-shell">
@@ -144,22 +152,16 @@ function renderNav(config: NavConfig): string {
             </div>
           </div>
           <a href="https://github.com/rawcache/riscvsim" class="nav-link${isGithub ? " nav-link-active" : ""}" target="_blank" rel="noopener">GitHub</a>
+          <button id="nav-search-btn" class="nav-search-btn" type="button" aria-label="Search site">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <span class="nav-search-btn__text">Search</span>
+            <kbd class="nav-search-btn__kbd">${getSearchKbd()}</kbd>
+          </button>
         </div>
         <div class="nav-actions">
-          ${
-            showSearchTrigger
-              ? `
-                <button id="nav-search-trigger" class="nav-search-trigger" type="button" aria-label="Search">
-                  <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <circle cx="9" cy="9" r="5.5"></circle>
-                    <path d="m13.5 13.5 4 4"></path>
-                  </svg>
-                  <span class="nav-search-trigger__text">Search...</span>
-                  <kbd class="nav-search-trigger__kbd">⌘K</kbd>
-                </button>
-              `
-              : ""
-          }
           <div id="nav-status-badge" class="nav-status-badge${config.activePage === "simulator" ? " visible" : ""}"></div>
           <button id="auth-signin-btn" class="nav-signin-btn" type="button">Sign in</button>
           <div class="auth-menu">
@@ -201,6 +203,30 @@ function isEditableSearchTarget(target: EventTarget | null): boolean {
   return target.isContentEditable || Boolean(target.closest("[contenteditable='true']"));
 }
 
+async function openSearchOverlay(): Promise<void> {
+  const windowWithSearch = window as Window & {
+    __searchUI?: {
+      openSearch?: () => void;
+    };
+  };
+
+  if (windowWithSearch.__searchUI?.openSearch) {
+    windowWithSearch.__searchUI.openSearch();
+    return;
+  }
+
+  try {
+    const module = await import("./search-ui");
+    windowWithSearch.__searchUI = module;
+    module.openSearch();
+  } catch {
+    const query = window.prompt("Search StudyRISC-V:");
+    if (query) {
+      window.location.href = `/docs/?q=${encodeURIComponent(query)}`;
+    }
+  }
+}
+
 export function initNav(config: NavConfig): void {
   const root = document.getElementById("site-nav");
   if (!root) {
@@ -215,7 +241,7 @@ export function initNav(config: NavConfig): void {
   const hamburger = root.querySelector<HTMLButtonElement>("#nav-hamburger");
   const themeToggle = root.querySelector<HTMLButtonElement>("#theme-toggle");
   const mobileThemeToggle = root.querySelector<HTMLButtonElement>("#nav-mobile-theme-toggle");
-  const searchTrigger = root.querySelector<HTMLButtonElement>("#nav-search-trigger");
+  const searchBtn = root.querySelector<HTMLButtonElement>("#nav-search-btn");
   const mobileSignin = root.querySelector<HTMLButtonElement>("#nav-mobile-signin-btn");
   const desktopSignin = root.querySelector<HTMLButtonElement>("#auth-signin-btn");
   const userButton = root.querySelector<HTMLElement>("#auth-user-btn");
@@ -317,8 +343,8 @@ export function initNav(config: NavConfig): void {
     toggleTheme([themeToggle, mobileThemeToggle]);
   });
 
-  searchTrigger?.addEventListener("click", () => {
-    void import("./search-ui").then((module) => module.openSearch());
+  searchBtn?.addEventListener("click", () => {
+    void openSearchOverlay();
   });
 
   if (!searchShortcutBound) {
@@ -328,7 +354,7 @@ export function initNav(config: NavConfig): void {
           return;
         }
         event.preventDefault();
-        void import("./search-ui").then((module) => module.openSearch());
+        void openSearchOverlay();
       }
     });
     searchShortcutBound = true;
