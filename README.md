@@ -114,10 +114,24 @@ If you deploy on Amplify or another static host, add rewrites for the multi-page
 | `/challenges` | `/challenges/index.html` | `200` |
 | `/leaderboard/` | `/leaderboard/index.html` | `200` |
 | `/leaderboard` | `/leaderboard/index.html` | `200` |
+| `/profile/` | `/profile/index.html` | `200` |
+| `/profile` | `/profile/index.html` | `200` |
+| `/groups/` | `/groups/index.html` | `200` |
+| `/groups` | `/groups/index.html` | `200` |
 | `/about/` | `/about/index.html` | `200` |
 | `/about` | `/about/index.html` | `200` |
 | `/docs/` | `/docs/index.html` | `200` |
 | `/docs` | `/docs/index.html` | `200` |
+
+Weekly digest data is already structured on the client. To turn the digest preview into real weekly email delivery later, add an SES-backed Lambda that reads the same summary fields now rendered on `/leaderboard/`.
+
+Open Graph workflow:
+- `frontend/public/og-image.svg` is the editable source asset.
+- Generate `frontend/public/og-image.png` once with:
+  `npx sharp-cli -i public/og-image.svg -o public/og-image.png --width 1200 --height 630`
+
+Future enhancement:
+- Permalink-specific Open Graph cards for `/simulator/#p=...` still need an edge worker or Lambda@Edge because crawlers do not execute the client-side hash renderer.
 
 ## Development Setup
 
