@@ -2,12 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <title>StudyRISC-V Simulator</title>
     <meta
       name="description"
       content="Assemble, step, and inspect RISC-V programs in a local-first browser simulator."
     />
+    <meta property="og:title" content="StudyRISC-V Simulator" />
+    <meta property="og:description" content="Step through RISC-V assembly with live register inspection and pseudo-C translation." />
+    <meta property="og:image" content="https://studyriscv.com/og-image.png" />
+    <meta property="og:url" content="https://studyriscv.com/simulator/" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="canonical" href="https://studyriscv.com/simulator/" />
     <script>
       (() => {
@@ -91,7 +96,7 @@
     <div id="assembleProgress" class="assemble-progress" aria-hidden="true"></div>
     <nav id="site-nav"></nav>
 
-    <main class="simulator-app">
+    <main class="simulator-app" id="simulator-root">
       <div class="simulator-layout">
         <div class="sim-column sim-column--left">
           <section class="sim-panel sim-panel--editor">
@@ -474,7 +479,147 @@
           </section>
         </div>
       </div>
+
+      <div class="mobile-sim" id="mobile-sim">
+        <div class="mobile-sim__header">
+          <a href="/" class="mobile-sim__logo">StudyRISC-V</a>
+          <div class="mobile-sim__status" id="mobile-status">Ready</div>
+          <button class="mobile-sim__menu-btn" id="mobile-menu-btn" type="button" aria-label="Open simulator menu">···</button>
+        </div>
+
+        <div class="mobile-sim__tabs">
+          <button class="mobile-tab active" type="button" data-tab="editor" aria-label="Editor">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M4 6h16M4 12h16M4 18h10"></path>
+            </svg>
+            <span>Editor</span>
+          </button>
+          <button class="mobile-tab" type="button" data-tab="registers" aria-label="Registers">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <rect x="4" y="4" width="6" height="6" rx="1.5"></rect>
+              <rect x="14" y="4" width="6" height="6" rx="1.5"></rect>
+              <rect x="4" y="14" width="6" height="6" rx="1.5"></rect>
+              <rect x="14" y="14" width="6" height="6" rx="1.5"></rect>
+            </svg>
+            <span>Registers</span>
+          </button>
+          <button class="mobile-tab" type="button" data-tab="disasm" aria-label="Disassembly">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M6 7h12M6 12h12M6 17h12"></path>
+              <circle cx="4" cy="7" r="1"></circle>
+              <circle cx="4" cy="12" r="1"></circle>
+              <circle cx="4" cy="17" r="1"></circle>
+            </svg>
+            <span>Disasm</span>
+          </button>
+          <button class="mobile-tab" type="button" data-tab="pseudo" aria-label="Pseudo-C">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M8 6 4 12l4 6"></path>
+              <path d="m16 6 4 6-4 6"></path>
+              <path d="M13 4 11 20"></path>
+            </svg>
+            <span>Pseudo-C</span>
+          </button>
+        </div>
+
+        <div class="mobile-sim__content">
+          <div class="mobile-panel" id="mobile-panel-editor">
+            <div class="mobile-sample-row">
+              <select id="mobile-sample-select" class="mobile-sample-select">
+                <option value="">Sample programs...</option>
+              </select>
+            </div>
+            <div class="mobile-editor-wrapper">
+              <textarea
+                id="mobile-source"
+                class="mobile-editor"
+                spellcheck="false"
+                autocorrect="off"
+                autocapitalize="off"
+                autocomplete="off"
+              ></textarea>
+            </div>
+            <div class="mobile-keyboard-row" id="mobile-keyboard-row"></div>
+          </div>
+
+          <div class="mobile-panel" id="mobile-panel-registers" hidden>
+            <div class="mobile-reg-format-bar">
+              <button class="mobile-format-btn active" type="button" data-format="hex">HEX</button>
+              <button class="mobile-format-btn" type="button" data-format="dec">DEC</button>
+              <button class="mobile-format-btn" type="button" data-format="uint">UINT</button>
+            </div>
+            <div class="mobile-reg-grid" id="mobile-reg-grid"></div>
+          </div>
+
+          <div class="mobile-panel" id="mobile-panel-disasm" hidden>
+            <div class="mobile-disasm-list" id="mobile-disasm-list"></div>
+          </div>
+
+          <div class="mobile-panel" id="mobile-panel-pseudo" hidden>
+            <div class="mobile-pseudo-display" id="mobile-pseudo-display">
+              <div class="mobile-pseudo-current" id="mobile-pseudo-current">
+                <span class="mobile-pseudo-empty">Assemble a program and step to see the translation.</span>
+              </div>
+              <div class="mobile-pseudo-history" id="mobile-pseudo-history"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mobile-sim__toolbar">
+          <button class="mobile-toolbar-btn mobile-toolbar-btn--assemble" id="mobile-assemble-btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="m8 5 10 7-10 7z"></path>
+            </svg>
+            <span>Assemble</span>
+          </button>
+          <button class="mobile-toolbar-btn" id="mobile-step-back-btn" type="button" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="m11 6-6 6 6 6"></path>
+              <path d="M19 6 13 12l6 6"></path>
+            </svg>
+            <span>Back</span>
+          </button>
+          <button class="mobile-toolbar-btn mobile-toolbar-btn--step" id="mobile-step-btn" type="button" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M8 5v14"></path>
+              <path d="m10 5 9 7-9 7z"></path>
+            </svg>
+            <span>Step</span>
+          </button>
+          <button class="mobile-toolbar-btn" id="mobile-run-btn" type="button" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="m4 6 7 6-7 6z"></path>
+              <path d="m13 6 7 6-7 6z"></path>
+            </svg>
+            <span>Run</span>
+          </button>
+          <button class="mobile-toolbar-btn mobile-toolbar-btn--reset" id="mobile-reset-btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M20 11a8 8 0 1 1-2.34-5.66"></path>
+              <path d="M20 4v7h-7"></path>
+            </svg>
+            <span>Reset</span>
+          </button>
+        </div>
+      </div>
     </main>
+
+    <div id="lesson-reading-overlay-root"></div>
+
+    <div class="mobile-menu-backdrop" id="mobile-menu-backdrop" hidden></div>
+    <div class="mobile-menu-sheet" id="mobile-menu-sheet" hidden>
+      <div class="mobile-menu-sheet__handle"></div>
+      <div class="mobile-menu-sheet__content">
+        <a href="/learn/" class="mobile-menu-item">📖 Lessons</a>
+        <a href="/challenges/" class="mobile-menu-item">⚡ Challenges</a>
+        <a href="/quiz/" class="mobile-menu-item">📝 Quizzes</a>
+        <div class="mobile-menu-divider"></div>
+        <button class="mobile-menu-item" id="mobile-menu-permalink" type="button">🔗 Copy permalink</button>
+        <button class="mobile-menu-item" id="mobile-menu-clear" type="button">🗑 Clear editor</button>
+        <div class="mobile-menu-divider"></div>
+        <a href="/" class="mobile-menu-item">← Back to site</a>
+      </div>
+    </div>
 
     <footer id="site-footer"></footer>
     <div id="copyToast" class="copy-toast" role="status" aria-live="polite">Copied!</div>

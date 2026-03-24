@@ -13,7 +13,10 @@ import {
 import { escapeHtml } from "./format";
 import { getLessonState, loadProgress } from "./lessons";
 import { showNotification } from "./notifications";
-import { addPoints, checkAndAwardBadges, loadScore } from "./scoring";
+import { buildReferralLink } from "./referrals";
+import { addPoints, checkAndAwardBadges, loadScore, recordRecentActivity } from "./scoring";
+import { createShareSection } from "./share-card-ui";
+import { getCurrentWeekNumber, getWeeklyChallengeId } from "./weekly-challenge";
 import { WasmRuntime } from "./wasm-runtime";
 
 type LoadSourceOptions = {
@@ -52,7 +55,7 @@ function formatDuration(totalSeconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-function syncScoreToApiFireAndForget(session: UserSession | null): void {
+function syncScoreToApiFireAndForget(session: UserSession | null, extraBody?: Record<string, unknown>): void {
   if (!session || !API_ENDPOINT) {
     return;
   }
@@ -63,7 +66,10 @@ function syncScoreToApiFireAndForget(session: UserSession | null): void {
       "Content-Type": "application/json",
       Authorization: `Bearer ${session.idToken}`,
     },
-    body: JSON.stringify(score),
+    body: JSON.stringify({
+      ...score,
+      ...extraBody,
+    }),
   }).catch(() => {});
 }
 
@@ -206,6 +212,12 @@ export function createChallengeMode(deps: ChallengeModeDependencies): ChallengeM
   let answerVisible = false;
   let submissionResults: ChallengeSubmission | null = getBestSubmission(activeChallenge.id);
   let currentSession: UserSession | null = deps.getCurrentSession();
+  const weeklyChallengeId = getWeeklyChallengeId();
+  const currentWeekNumber = getCurrentWeekNumber();
+
+  function weeklyBonusStorageKey(): string {
+    return `studyriscv_weekly_challenge_bonus:${currentWeekNumber}:${activeChallenge.id}`;
+  }
 
   function elapsedSeconds(): number {
     const now = pausedAt || performance.now();
@@ -299,6 +311,7 @@ export function createChallengeMode(deps: ChallengeModeDependencies): ChallengeM
             : ""
         }
         ${resultListMarkup()}
+        ${submissionResults?.passed ? '<div id="challengeShareMount"></div>' : ""}
         ${practiceLinksMarkup()}
       </div>
       <div class="lesson-panel__footer challenge-panel__footer">
@@ -334,6 +347,31 @@ export function createChallengeMode(deps: ChallengeModeDependencies): ChallengeM
         render();
       }
     });
+
+    if (submissionResults?.passed) {
+      const shareMount = panel.querySelector<HTMLElement>("#challengeShareMount");
+      if (shareMount) {
+        shareMount.appendChild(
+          createShareSection({
+            card: {
+              variant: "challenge",
+              title: activeChallenge.title,
+              subtitle: "Challenge cleared",
+              stats: [
+                { label: "Score", value: `${submissionResults.score}/${submissionResults.maxScore}` },
+                { label: "Time", value: formatDuration(submissionResults.timeSpentSeconds) },
+                { label: "Attempt", value: `${submissionCountForChallenge(activeChallenge.id)}` },
+              ],
+              badge: "⚡",
+              streakDays: loadScore().streak,
+              accentColor: "var(--success)",
+            },
+            filename: `${activeChallenge.id}.png`,
+            link: currentSession ? buildReferralLink(currentSession.userId, "/challenges/") : "https://studyriscv.com/challenges/",
+          })
+        );
+      }
+    }
   }
 
   async function submitCurrentCode(): Promise<void> {
@@ -370,14 +408,45 @@ export function createChallengeMode(deps: ChallengeModeDependencies): ChallengeM
       const attemptCount = submissionCountForChallenge(activeChallenge.id);
       const firstTry = attemptCount === 1;
       const award = firstTry ? Math.round(activeChallenge.points * 1.5) : activeChallenge.points;
-      addPoints(award + (submission.score === submission.maxScore ? 25 : 0), `challenge:${activeChallenge.id}`);
+      let bonus = award + (submission.score === submission.maxScore ? 25 : 0);
+      if (activeChallenge.id === weeklyChallengeId && typeof localStorage !== "undefined" && !localStorage.getItem(weeklyBonusStorageKey())) {
+        localStorage.setItem(weeklyBonusStorageKey(), submission.submittedAt);
+        bonus += 50;
+        showNotification({
+          id: `challenge-weekly-${activeChallenge.id}-${submission.submittedAt}`,
+          type: "xp",
+          title: "Weekly challenge complete",
+          message: "+50 XP bonus",
+          icon: "🏆",
+          duration: 4000,
+          accentColor: "var(--accent)",
+        });
+      }
+
+      addPoints(bonus, `challenge:${activeChallenge.id}`);
+      recordRecentActivity({
+        type: "challenge",
+        title: activeChallenge.title,
+        completedAt: submission.submittedAt,
+        score: submission.score,
+      });
       checkAndAwardBadges(loadProgress(), loadChallengeSubmissions());
-      syncScoreToApiFireAndForget(currentSession);
+      syncScoreToApiFireAndForget(currentSession, {
+        weeklyChallengeCompletion:
+          activeChallenge.id === weeklyChallengeId
+            ? {
+                challengeId: activeChallenge.id,
+                score: submission.score,
+                timeSeconds: submission.timeSpentSeconds,
+                weekNumber: currentWeekNumber,
+              }
+            : undefined,
+      });
       showNotification({
         id: `challenge-${activeChallenge.id}-${submission.submittedAt}`,
         type: "challenge",
         title: "Challenge Passed!",
-        message: `${activeChallenge.title} · +${award + (submission.score === submission.maxScore ? 25 : 0)} XP`,
+        message: `${activeChallenge.title} · +${bonus} XP`,
         icon: "✅",
         duration: 4000,
         accentColor: "var(--success)",

@@ -94,6 +94,27 @@ const RUN_SPEED_PRESETS: RunSpeedPreset[] = [1, 10, 50, 100, 250, 500, -1];
 const RUN_SPEED_STORAGE_KEY = "studyriscv_run_speed";
 
 window.addEventListener("DOMContentLoaded", async () => {
+  const detectMobile = (): boolean =>
+    window.innerWidth < 768 || ("ontouchstart" in window && window.innerWidth < 1024);
+
+  const syncMobileBodyClass = (): void => {
+    document.body.classList.toggle("is-mobile", detectMobile());
+  };
+
+  syncMobileBodyClass();
+
+  if (detectMobile()) {
+    window.addEventListener("orientationchange", () => {
+      window.setTimeout(() => {
+        syncMobileBodyClass();
+      }, 100);
+    });
+    import("./mobile-sim").then((module) => {
+      void module.initMobileSim();
+    });
+    return;
+  }
+
   initNav({ activePage: "simulator" });
   initFooter();
   initClipBubble();

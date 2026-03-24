@@ -1,6 +1,7 @@
 import { AUTH_CONFIG } from "./auth-config";
 import { storeSessionTokens } from "./auth";
 import type { AuthConfig, UserSession } from "./auth";
+import { PRESET_AVATARS, savePendingAvatarChoice } from "./profile-avatar";
 const faviconChipUrl = new URL("../favicon-chip.svg", import.meta.url).href;
 
 type Mode = "sign-in" | "sign-up" | "confirm-sign-up" | "forgot-password" | "reset-password";
@@ -18,6 +19,8 @@ type ModalState = {
   loading: boolean;
   allowClose: boolean;
   config: AuthConfig;
+  avatarType: "" | "preset" | "upload";
+  avatarValue: string;
 };
 
 type ShowOptions = {
@@ -55,6 +58,8 @@ let state: ModalState = {
   loading: false,
   allowClose: false,
   config: AUTH_CONFIG,
+  avatarType: "",
+  avatarValue: "",
 };
 
 function handleDocumentKeydown(event: KeyboardEvent): void {
@@ -206,6 +211,35 @@ function renderFields(): string {
             </label>`
           : ""
       }
+      ${
+        state.mode === "sign-up"
+          ? `<div class="auth-modal__avatar-section">
+              <div class="auth-modal__label">Profile picture</div>
+              <div class="auth-modal__avatar-presets">
+                ${PRESET_AVATARS.map(
+                  (avatar) => `
+                    <button
+                      class="auth-modal__avatar-option${state.avatarType === "preset" && state.avatarValue === avatar ? " is-selected" : ""}"
+                      type="button"
+                      data-auth-avatar-preset="${escapeHtml(avatar)}"
+                    >${escapeHtml(avatar)}</button>
+                  `
+                ).join("")}
+              </div>
+              <label class="auth-modal__upload">
+                <span>Or upload a picture</span>
+                <input data-auth-avatar-upload type="file" accept="image/*" />
+              </label>
+              ${
+                state.avatarType === "upload" && state.avatarValue
+                  ? '<div class="auth-modal__avatar-preview"><img class="auth-modal__avatar-preview-image" src="' +
+                    escapeHtml(state.avatarValue) +
+                    '" alt="" /></div>'
+                  : ""
+              }
+            </div>`
+          : ""
+      }
     `;
   }
 
@@ -227,6 +261,21 @@ function renderFields(): string {
         : ""
     }
   `;
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Could not read image."));
+      }
+    };
+    reader.onerror = () => reject(new Error("Could not read image."));
+    reader.readAsDataURL(file);
+  });
 }
 
 function actionLabel(): string {
@@ -363,6 +412,41 @@ function render(): void {
     });
   });
 
+  overlayEl.querySelectorAll<HTMLButtonElement>("[data-auth-avatar-preset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state = {
+        ...state,
+        avatarType: "preset",
+        avatarValue: button.dataset.authAvatarPreset ?? "",
+      };
+      render();
+    });
+  });
+
+  overlayEl.querySelector<HTMLInputElement>("[data-auth-avatar-upload]")?.addEventListener("change", (event) => {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+    void readFileAsDataUrl(file)
+      .then((dataUrl) => {
+        state = {
+          ...state,
+          avatarType: "upload",
+          avatarValue: dataUrl,
+        };
+        render();
+      })
+      .catch((error) => {
+        state = {
+          ...state,
+          error: cleanErrorMessage((error as Error).message),
+        };
+        render();
+      });
+  });
+
   overlayEl.querySelector("form[data-auth-action='submit']")?.addEventListener("submit", (event) => {
     event.preventDefault();
     void submit();
@@ -445,6 +529,13 @@ async function signIn(): Promise<void> {
 }
 
 async function signUp(): Promise<void> {
+  if (state.avatarType && state.avatarValue) {
+    savePendingAvatarChoice(state.email.trim(), {
+      type: state.avatarType,
+      value: state.avatarValue,
+    });
+  }
+
   const payload = await cognitoRequest("SignUp", {
     ClientId: state.config.clientId,
     Username: state.email.trim(),
@@ -666,6 +757,8 @@ export function show(options: ShowOptions = {}): void {
     loading: false,
     allowClose: options.allowClose ?? false,
     config: options.config ?? AUTH_CONFIG,
+    avatarType: state.avatarType,
+    avatarValue: state.avatarValue,
   };
 
   ensureOverlay();

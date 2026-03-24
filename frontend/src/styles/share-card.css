@@ -1,0 +1,188 @@
+.share-card {
+  --share-card-accent: var(--accent);
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 28px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--text-primary) 8%, transparent);
+  background: var(--bg-base);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-primary) 4%, transparent);
+  color: var(--text-primary);
+  font-family: "Geist", sans-serif;
+}
+
+.share-card[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+.share-card--capture {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  z-index: -1;
+}
+
+.share-card__header,
+.share-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.share-card__brand,
+.share-card__url {
+  font-family: "Geist Mono", monospace;
+  font-size: 13px;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.share-card__badge {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.share-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.share-card__check {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--share-card-accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--share-card-accent) 36%, transparent);
+  color: var(--share-card-accent);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.share-card__title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.share-card__subtitle {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.share-card__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.share-card__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.share-card__stat-label {
+  font-family: "Geist Mono", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.share-card__stat-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.share-card__streak {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.share-card-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.share-card-section__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.share-card-section__meta {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.share-card-preview {
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  padding: 12px;
+}
+
+.share-card-preview__inner {
+  transform: scale(0.6);
+  transform-origin: top left;
+  width: 240px;
+  height: 228px;
+  margin-bottom: -92px;
+}
+
+.share-card-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.share-card-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-family: "Geist", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.share-card-action--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg-surface);
+}
+
+.share-card-action--primary:hover {
+  background: var(--accent-hover);
+}

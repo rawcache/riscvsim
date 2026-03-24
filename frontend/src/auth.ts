@@ -139,6 +139,18 @@ function clearStoredTokens(): void {
   sessionStorageRef?.removeItem(REFRESH_TOKEN_KEY);
 }
 
+function dispatchAuthChanged(session: UserSession | null): void {
+  if (!hasWindow() || typeof window.dispatchEvent !== "function" || typeof CustomEvent === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent<UserSession | null>("studyriscv-auth-changed", {
+      detail: session,
+    })
+  );
+}
+
 function capitalizeWord(word: string): string {
   return word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : "";
 }
@@ -359,18 +371,18 @@ export function login(config: AuthConfig = AUTH_CONFIG): void {
   });
 }
 
-export function logout(config: AuthConfig): void {
+export function logout(_config: AuthConfig): void {
   clearStoredTokens();
+  dispatchAuthChanged(null);
   if (!hasWindow()) {
     return;
   }
-
-  const logoutUri = config.redirectUri?.trim() || new URL("/", window.location.origin).toString();
-  const params = new URLSearchParams({
-    client_id: config.clientId,
-    logout_uri: logoutUri,
-  });
-  window.location.assign(hostedUiUrl(config.hostedUiDomain, `/logout?${params.toString()}`));
+  try {
+    window.history.replaceState({}, "", "/");
+  } catch {
+    // Ignore environments that do not expose history mutation.
+  }
+  window.location.href = "/";
 }
 
 export function isLoggedIn(): boolean {

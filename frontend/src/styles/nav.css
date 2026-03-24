@@ -301,6 +301,18 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.nav-user-avatar__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.nav-user-avatar__emoji {
+  font-size: 13px;
+  line-height: 1;
 }
 
 .nav-user-name {
@@ -384,6 +396,32 @@
   margin: 4px 0;
 }
 
+.auth-dropdown__link {
+  width: 100%;
+  display: block;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-family: "Geist", sans-serif;
+  font-size: 13px;
+  text-decoration: none;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.auth-dropdown__link:hover,
+.auth-dropdown__link--button:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.auth-dropdown__link--button {
+  appearance: none;
+}
+
 .auth-dropdown__signout {
   width: 100%;
   padding: 8px 12px;
@@ -401,6 +439,105 @@
 .auth-dropdown__signout:hover {
   background: var(--bg-surface);
   color: var(--danger);
+}
+
+.badge-manager-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+}
+
+.badge-manager-modal[hidden] {
+  display: none;
+}
+
+.badge-manager-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg-base) 40%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.badge-manager-modal__card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 32px));
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  box-shadow: 0 12px 48px color-mix(in srgb, var(--text-primary) 18%, transparent);
+}
+
+.badge-manager-modal__close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.badge-manager-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.badge-manager-modal__badge {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.badge-manager-modal__badge.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.badge-manager-modal__badge-icon {
+  font-size: 22px;
+}
+
+.badge-manager-modal__badge-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.badge-manager-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.badge-manager-modal__action {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-family: "Geist", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.badge-manager-modal__action--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg-surface);
 }
 
 .nav-search-btn {

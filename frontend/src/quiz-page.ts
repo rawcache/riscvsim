@@ -5,7 +5,8 @@ import { escapeHtml } from "./format";
 import { getLessonState } from "./lessons";
 import { initNav } from "./nav";
 import { showNotification } from "./notifications";
-import { addPoints, loadScore, syncScoreToApi } from "./scoring";
+import { buildReferralLink } from "./referrals";
+import { addPoints, loadScore, recordRecentActivity, syncScoreToApi } from "./scoring";
 import {
   autoSubmitQuiz,
   getBestQuizAttempt,
@@ -17,6 +18,7 @@ import {
   type QuizAttempt,
   type QuizQuestion,
 } from "./quiz";
+import { createShareSection } from "./share-card-ui";
 import { WasmRuntime } from "./wasm-runtime";
 
 const EXECUTION_LIMIT = 2000;
@@ -180,6 +182,12 @@ async function completeQuiz(state: QuizRuntimeState): Promise<void> {
   const award = attempt.passed ? attempt.score : Math.round(attempt.score * 0.5);
   if (award > 0) {
     addPoints(award, `quiz:${state.quiz.id}`);
+    recordRecentActivity({
+      type: "quiz",
+      title: state.quiz.title,
+      completedAt: attempt.completedAt,
+      score: percent(attempt.score, attempt.maxScore),
+    });
     const session = await getSession();
     if (session?.idToken) {
       void syncScoreToApi(loadScore(), session.idToken);
@@ -213,6 +221,7 @@ function renderReview(state: QuizRuntimeState): string {
         <a class="learn-panel__link" href="/quiz/">Back to Quizzes</a>
         <a class="learn-panel__link" href="/quiz/?take=${encodeURIComponent(state.quiz.id)}">Retake Quiz</a>
       </div>
+      <div id="quizShareMount"></div>
       <div class="quiz-review">
         ${state.quiz.questions
           .map((question) => {
@@ -309,6 +318,30 @@ function renderQuizRuntime(state: QuizRuntimeState): void {
 
   if (state.completed) {
     root.innerHTML = renderReview(state);
+    const shareMount = root.querySelector<HTMLElement>("#quizShareMount");
+    if (shareMount) {
+      void getSession().then((session) => {
+        shareMount.innerHTML = "";
+        shareMount.appendChild(
+          createShareSection({
+            card: {
+              variant: "quiz",
+              title: state.quiz.title,
+              subtitle: `${percent(state.completed!.score, state.completed!.maxScore)}% · ${state.completed!.passed ? "Passed" : "Review complete"}`,
+              stats: [
+                { label: "Score", value: `${percent(state.completed!.score, state.completed!.maxScore)}%` },
+                { label: "Time", value: `${state.completed!.totalTimeSeconds}s` },
+              ],
+              badge: "📝",
+              streakDays: loadScore().streak,
+              accentColor: state.completed!.passed ? "var(--success)" : "var(--accent)",
+            },
+            filename: `${state.quiz.id}.png`,
+            link: session ? buildReferralLink(session.userId, "/quiz/") : "https://studyriscv.com/quiz/",
+          })
+        );
+      });
+    }
     return;
   }
 

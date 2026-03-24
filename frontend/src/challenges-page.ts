@@ -3,8 +3,25 @@ import { initFooter } from "./footer";
 import { getLesson } from "./lessons";
 import { initNav } from "./nav";
 import { loadScore } from "./scoring";
+import { formatWeeklyCountdown, getCurrentWeekNumber, getMsUntilWeeklyReset, getWeeklyChallengeId } from "./weekly-challenge";
 
 type DifficultyFilter = "all" | "easy" | "medium" | "hard";
+type WeeklyChallengePayload = {
+  challengeId: string;
+  weekNumber: number;
+  startDate: string;
+  endDate: string;
+  totalAttempts: number;
+  totalPassed: number;
+  topScorers: Array<{
+    displayName: string;
+    score: number;
+    timeSeconds: number;
+  }>;
+};
+
+const DEFAULT_API_ENDPOINT = "https://api.studyriscv.com";
+const API_ENDPOINT = (import.meta.env.VITE_API_ENDPOINT as string | undefined)?.trim() || DEFAULT_API_ENDPOINT;
 
 function escapeHtml(value: string): string {
   return value
@@ -43,6 +60,66 @@ function renderChallengeCard(challenge: Challenge): string {
   `;
 }
 
+async function fetchWeeklyChallenge(challengeId: string): Promise<WeeklyChallengePayload | null> {
+  try {
+    const response = await fetch(
+      `${API_ENDPOINT}/leaderboard/weekly-challenge?challengeId=${encodeURIComponent(challengeId)}&weekNumber=${getCurrentWeekNumber()}`
+    );
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as WeeklyChallengePayload;
+  } catch {
+    return null;
+  }
+}
+
+function renderWeeklyChallengeCard(challenge: Challenge, payload: WeeklyChallengePayload | null): string {
+  const attempts = payload?.totalAttempts ?? 0;
+  const passed = payload?.totalPassed ?? 0;
+  const passRate = attempts > 0 ? Math.round((passed / attempts) * 100) : 0;
+  const topScorers = payload?.topScorers?.slice(0, 5) ?? [];
+
+  return `
+    <section class="weekly-challenge-card">
+      <div class="weekly-challenge-card__header">
+        <div>
+          <div class="weekly-challenge-card__eyebrow">🏆 Challenge of the Week</div>
+          <div class="weekly-challenge-card__reset">Resets Monday · <span id="weeklyChallengeCountdown">${escapeHtml(
+            formatWeeklyCountdown(getMsUntilWeeklyReset())
+          )}</span></div>
+        </div>
+      </div>
+      <div class="weekly-challenge-card__title">${escapeHtml(challenge.title)}</div>
+      <div class="weekly-challenge-card__meta">${escapeHtml(challenge.difficulty)} · ${challenge.points} pts · ${challenge.estimatedMinutes} min</div>
+      <div class="weekly-challenge-card__stats">
+        <div class="weekly-challenge-card__stat"><span>Attempted</span><strong>${attempts}</strong></div>
+        <div class="weekly-challenge-card__stat"><span>Passed</span><strong>${passed} (${passRate}%)</strong></div>
+      </div>
+      <a class="learn-panel__link weekly-challenge-card__cta" href="/simulator/?challenge=${encodeURIComponent(challenge.id)}">Start Challenge →</a>
+      <div class="weekly-challenge-card__leaderboard">
+        <div class="weekly-challenge-card__leaderboard-title">This week's top scores</div>
+        ${
+          topScorers.length
+            ? topScorers
+                .map(
+                  (entry, index) => `
+                    <div class="weekly-challenge-card__row${index < 3 ? ` weekly-challenge-card__row--top-${index + 1}` : ""}">
+                      <span>#${index + 1}</span>
+                      <span>${escapeHtml(entry.displayName)}</span>
+                      <span>${entry.score}</span>
+                      <span>${entry.timeSeconds}s</span>
+                    </div>
+                  `
+                )
+                .join("")
+            : '<div class="learn-badges__empty">No weekly completions yet.</div>'
+        }
+      </div>
+    </section>
+  `;
+}
+
 function applyFilters(challenges: Challenge[], difficulty: DifficultyFilter, lessonFilter: string): Challenge[] {
   return challenges.filter((challenge) => {
     if (difficulty !== "all" && challenge.difficulty !== difficulty) {
@@ -64,6 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const lessonFilter = document.getElementById("challengeLessonFilter") as HTMLSelectElement | null;
   const solvedLabel = document.getElementById("challengesSolved");
   const xpLabel = document.getElementById("challengesXp");
+  const weeklyMount = document.getElementById("weeklyChallengeMount");
 
   if (!list || !lessonFilter || !solvedLabel || !xpLabel) {
     return;
@@ -75,6 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const xpLabelEl = xpLabel;
 
   const challenges = getChallenges();
+  const weeklyChallenge = challenges.find((challenge) => challenge.id === getWeeklyChallengeId());
   const lessons = Array.from(new Set(challenges.map((challenge) => challenge.lessonId)));
   let activeDifficulty: DifficultyFilter = "all";
 
@@ -85,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function render() {
     const filtered = applyFilters(challenges, activeDifficulty, lessonFilterEl.value);
     challengesGrid.innerHTML = filtered.map((challenge) => renderChallengeCard(challenge)).join("");
-    solvedLabelEl.textContent = `${challenges.filter((challenge) => getChallengeStatus(challenge.id) === "passed").length}/15 solved`;
+    solvedLabelEl.textContent = `${challenges.filter((challenge) => getChallengeStatus(challenge.id) === "passed").length}/${challenges.length} solved`;
     xpLabelEl.textContent = `${loadScore().totalPoints.toLocaleString("en-US")} XP`;
 
     filterButtons.forEach((button) => {
@@ -104,4 +183,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   lessonFilterEl.addEventListener("change", render);
   render();
+
+  if (weeklyMount && weeklyChallenge) {
+    void fetchWeeklyChallenge(weeklyChallenge.id).then((payload) => {
+      weeklyMount.innerHTML = renderWeeklyChallengeCard(weeklyChallenge, payload);
+      window.setInterval(() => {
+        const countdown = document.getElementById("weeklyChallengeCountdown");
+        if (countdown) {
+          countdown.textContent = formatWeeklyCountdown(getMsUntilWeeklyReset());
+        }
+      }, 60_000);
+    });
+  }
 });

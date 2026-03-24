@@ -1360,3 +1360,529 @@
     display: none;
   }
 }
+
+.learn-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.leaderboard-digest {
+  margin-bottom: 24px;
+}
+
+.leaderboard-announcement {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--accent-border);
+  background: linear-gradient(135deg, var(--accent-subtle), var(--bg-elevated));
+}
+
+.leaderboard-announcement__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.leaderboard-announcement__copy {
+  display: grid;
+  gap: 4px;
+}
+
+.leaderboard-announcement__copy strong {
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.leaderboard-announcement__copy span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.leaderboard-digest__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.leaderboard-digest__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.leaderboard-digest__metric span,
+.leaderboard-digest__label {
+  font-family: "Geist Mono", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.leaderboard-digest__metric strong,
+.leaderboard-digest__rows strong {
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.leaderboard-digest__rows {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.leaderboard-digest__rows > div {
+  display: grid;
+  gap: 6px;
+}
+
+.leaderboard-digest__cta {
+  display: inline-flex;
+  margin-top: 16px;
+}
+
+.weekly-challenge-card {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 24px;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid var(--accent);
+  background: linear-gradient(135deg, var(--accent-subtle), var(--bg-elevated));
+}
+
+.weekly-challenge-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  border-radius: inherit;
+  animation: weekly-card-shimmer 4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes weekly-card-shimmer {
+  from {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.45;
+  }
+}
+
+.weekly-challenge-card__eyebrow {
+  font-family: "Geist Mono", monospace;
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.weekly-challenge-card__reset,
+.weekly-challenge-card__meta {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.weekly-challenge-card__title {
+  margin-top: 18px;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.15;
+}
+
+.weekly-challenge-card__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.weekly-challenge-card__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.weekly-challenge-card__stat span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.weekly-challenge-card__stat strong {
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+.weekly-challenge-card__cta {
+  display: inline-flex;
+  margin-top: 18px;
+}
+
+.weekly-challenge-card__leaderboard-title {
+  margin: 22px 0 10px;
+  font-family: "Geist Mono", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.weekly-challenge-card__row {
+  display: grid;
+  grid-template-columns: 44px 1fr 64px 64px;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.weekly-challenge-card__row:last-child {
+  border-bottom: none;
+}
+
+.weekly-challenge-card__row--top-1 {
+  color: var(--warning);
+}
+
+.weekly-challenge-card__row--top-2 {
+  color: var(--accent);
+}
+
+.weekly-challenge-card__row--top-3 {
+  color: var(--success);
+}
+
+.learn-study-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.learn-study-groups__list {
+  display: grid;
+  gap: 10px;
+}
+
+.learn-study-groups__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  text-decoration: none;
+}
+
+.learn-study-groups__name {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.learn-study-groups__meta {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.profile-app,
+.groups-app {
+  display: grid;
+  gap: 24px;
+}
+
+.profile-hero__avatar {
+  width: 76px;
+  height: 76px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.profile-hero__avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-hero__eyebrow {
+  font-family: "Geist Mono", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.profile-grid__wide {
+  grid-column: 1 / -1;
+}
+
+.profile-badges {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.profile-badge-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.profile-badge-card--featured {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-subtle) 60%, var(--bg-surface));
+}
+
+.profile-badge-card__icon {
+  font-size: 24px;
+}
+
+.profile-badge-card__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.profile-badge-card__meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.profile-activity-list {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-activity-item {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-activity-item:last-child {
+  border-bottom: none;
+}
+
+.profile-activity-item__type {
+  font-family: "Geist Mono", monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.profile-activity-item__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.profile-activity-item__meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.groups-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.groups-action-card {
+  display: grid;
+  gap: 14px;
+}
+
+.groups-form-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.groups-code-input {
+  font-family: "Geist Mono", monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.groups-list,
+.group-card__members {
+  display: grid;
+  gap: 12px;
+}
+
+.group-card {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.group-card.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.group-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.group-card__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.group-card__meta,
+.group-detail__lead {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.group-member-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.group-member-card__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.group-member-card__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.group-member-card__meta {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.group-detail__toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.group-detail__table {
+  display: grid;
+  gap: 0;
+  margin-top: 16px;
+}
+
+.group-notification-banner {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+  background: var(--accent-subtle);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.quiz-choice {
+  appearance: none;
+}
+
+.quiz-choice span:first-child {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-base);
+  color: var(--text-muted);
+  font-family: "Geist Mono", monospace;
+  font-size: 11px;
+}
+
+.quiz-choice.is-selected span:first-child {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg-surface);
+}
+
+@media (max-width: 1199px) {
+  .learn-sidebar {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .groups-actions,
+  .profile-grid,
+  .weekly-challenge-card__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-challenge-card__row {
+    grid-template-columns: 36px 1fr 56px 56px;
+  }
+}

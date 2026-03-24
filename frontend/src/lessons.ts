@@ -1,6 +1,8 @@
 import type { WasmStateDelta } from "./types";
 
 const LESSON_PROGRESS_STORAGE_KEY = "studyriscv_lesson_progress";
+const LEGACY_LESSON_PROGRESS_STORAGE_KEY = "studyriscv_lesson_progress";
+const ID_TOKEN_KEY = "studyriscv_id_token";
 const DEFAULT_API_ENDPOINT = "https://api.studyriscv.com";
 const API_ENDPOINT = (import.meta.env.VITE_API_ENDPOINT as string | undefined)?.trim() || DEFAULT_API_ENDPOINT;
 
@@ -127,6 +129,59 @@ function emptyProgress(): UserProgress {
     lessons: {},
     totalCompleted: 0,
   };
+}
+
+function decodeJwtUserId(token: string): string | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) {
+      return null;
+    }
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+    const maybeBuffer = (globalThis as typeof globalThis & {
+      Buffer?: { from(input: string, encoding: string): { toString(encoding: string): string } };
+    }).Buffer;
+    const json =
+      typeof atob === "function"
+        ? atob(padded)
+        : maybeBuffer?.from(padded, "base64").toString("utf8") ?? "";
+    const payload = JSON.parse(json) as { sub?: unknown };
+    return typeof payload.sub === "string" && payload.sub.trim().length > 0 ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+function currentProgressUserId(): string | null {
+  if (typeof localStorage === "undefined" || typeof sessionStorage === "undefined") {
+    return null;
+  }
+
+  const token = localStorage.getItem(ID_TOKEN_KEY) ?? sessionStorage.getItem(ID_TOKEN_KEY);
+  return token ? decodeJwtUserId(token) : null;
+}
+
+export function getProgressStorageKey(userId?: string | null): string {
+  const scopedUserId = userId === undefined ? currentProgressUserId() : userId;
+  return scopedUserId ? `${LESSON_PROGRESS_STORAGE_KEY}:${scopedUserId}` : `${LESSON_PROGRESS_STORAGE_KEY}:guest`;
+}
+
+function readStoredProgress(storageKey: string): UserProgress {
+  if (typeof localStorage === "undefined") {
+    return emptyProgress();
+  }
+
+  const stored = localStorage.getItem(storageKey);
+  if (!stored) {
+    return emptyProgress();
+  }
+
+  try {
+    return normalizeProgress(JSON.parse(stored) as unknown);
+  } catch {
+    return emptyProgress();
+  }
 }
 
 function normalizeProgress(input: unknown): UserProgress {
@@ -3368,7 +3423,11 @@ export function saveProgress(progress: UserProgress): void {
   }
 
   const normalized = normalizeProgress(progress);
-  localStorage.setItem(LESSON_PROGRESS_STORAGE_KEY, JSON.stringify(normalized));
+  const storageKey = getProgressStorageKey();
+  localStorage.setItem(storageKey, JSON.stringify(normalized));
+  if (storageKey !== LEGACY_LESSON_PROGRESS_STORAGE_KEY) {
+    localStorage.removeItem(LEGACY_LESSON_PROGRESS_STORAGE_KEY);
+  }
 }
 
 export function loadProgress(): UserProgress {
@@ -3376,16 +3435,22 @@ export function loadProgress(): UserProgress {
     return emptyProgress();
   }
 
-  const stored = localStorage.getItem(LESSON_PROGRESS_STORAGE_KEY);
-  if (!stored) {
-    return emptyProgress();
+  const storageKey = getProgressStorageKey();
+  const scopedProgress = readStoredProgress(storageKey);
+  if (Object.keys(scopedProgress.lessons).length > 0 || scopedProgress.lastActiveLesson) {
+    return scopedProgress;
   }
 
-  try {
-    return normalizeProgress(JSON.parse(stored) as unknown);
-  } catch {
-    return emptyProgress();
+  if (storageKey === `${LESSON_PROGRESS_STORAGE_KEY}:guest`) {
+    const legacyProgress = readStoredProgress(LEGACY_LESSON_PROGRESS_STORAGE_KEY);
+    if (Object.keys(legacyProgress.lessons).length > 0 || legacyProgress.lastActiveLesson) {
+      localStorage.setItem(storageKey, JSON.stringify(legacyProgress));
+      localStorage.removeItem(LEGACY_LESSON_PROGRESS_STORAGE_KEY);
+      return legacyProgress;
+    }
   }
+
+  return emptyProgress();
 }
 
 export async function syncProgressToApi(progress: UserProgress, idToken: string): Promise<void> {

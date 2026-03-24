@@ -217,6 +217,60 @@ body.auth-modal-open {
   color: var(--text-primary);
 }
 
+.auth-modal__avatar-section {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-modal__avatar-presets {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.auth-modal__avatar-option {
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.auth-modal__avatar-option.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.auth-modal__upload {
+  display: grid;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 12px;
+}
+
+.auth-modal__upload input {
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 12px;
+}
+
+.auth-modal__avatar-preview {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.auth-modal__avatar-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 @media (max-width: 480px) {
   .auth-modal__card {
     padding: 28px 20px 24px;

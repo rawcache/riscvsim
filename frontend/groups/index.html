@@ -3,17 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quizzes - StudyRISC-V</title>
+    <title>Study Groups - StudyRISC-V</title>
     <meta
       name="description"
-      content="Timed RISC-V quizzes for StudyRISC-V, from quick checks to final-exam style assessments."
+      content="StudyRISC-V study groups let Georgia Tech students share progress, compare XP, and stay accountable."
     />
-    <meta property="og:title" content="StudyRISC-V Quizzes" />
-    <meta property="og:description" content="Timed RISC-V quizzes with review, scoring, and curriculum-aligned practice." />
+    <meta property="og:title" content="StudyRISC-V Study Groups" />
+    <meta property="og:description" content="Create or join a StudyRISC-V group to compare lessons, XP, streaks, and challenge progress." />
     <meta property="og:image" content="https://studyriscv.com/og-image.png" />
-    <meta property="og:url" content="https://studyriscv.com/quiz/" />
+    <meta property="og:url" content="https://studyriscv.com/groups/" />
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="canonical" href="https://studyriscv.com/quiz/" />
+    <link rel="canonical" href="https://studyriscv.com/groups/" />
     <script>
       (() => {
         try {
@@ -23,7 +23,7 @@
             document.documentElement.dataset.theme = "dark";
           }
         } catch {
-          // ignore theme bootstrap failures
+          // Ignore theme bootstrap failures.
         }
       })();
     </script>
@@ -35,12 +35,12 @@
     <link rel="stylesheet" href="../src/styles/learn.css" />
     <link rel="icon" type="image/svg+xml" href="../favicon-chip.svg" />
   </head>
-  <body class="landing-page quiz-page">
+  <body class="landing-page groups-page">
     <nav id="site-nav"></nav>
-    <main class="quiz-main">
-      <section id="quizApp" class="quiz-app"></section>
+    <main class="leaderboard-main">
+      <section id="groupsApp" class="groups-app"></section>
     </main>
     <footer id="site-footer"></footer>
-    <script type="module" src="../src/quiz-page.ts"></script>
+    <script type="module" src="../src/groups-page.ts"></script>
   </body>
 </html>

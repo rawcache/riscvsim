@@ -35,6 +35,8 @@ export default defineConfig({
         labs: resolve(__dirname, "labs/index.html"),
         leaderboard: resolve(__dirname, "leaderboard/index.html"),
         challenges: resolve(__dirname, "challenges/index.html"),
+        profile: resolve(__dirname, "profile/index.html"),
+        groups: resolve(__dirname, "groups/index.html"),
         about: resolve(__dirname, "about/index.html"),
         docs: resolve(__dirname, "docs/index.html"),
         terms: resolve(__dirname, "terms/index.html"),

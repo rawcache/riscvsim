@@ -1,5 +1,6 @@
 import "./auth-page";
 import { initAuthUi } from "./auth-ui";
+import { captureReferralParam } from "./referrals";
 
 export interface NavConfig {
   activePage:
@@ -12,6 +13,8 @@ export interface NavConfig {
     | "simulator"
     | "about"
     | "docs"
+    | "profile"
+    | "groups"
     | "github";
 }
 
@@ -169,6 +172,9 @@ function renderNav(config: NavConfig): string {
             <div id="auth-dropdown" class="auth-dropdown" hidden>
               <div id="auth-email" class="auth-dropdown__email"></div>
               <div id="auth-tier" class="auth-dropdown__tier"></div>
+              <a id="auth-profile-link" class="auth-dropdown__link" href="/profile/">View profile →</a>
+              <a class="auth-dropdown__link" href="/groups/">Study groups →</a>
+              <button id="auth-manage-badges-btn" class="auth-dropdown__link auth-dropdown__link--button" type="button">Manage badges</button>
               <div class="auth-dropdown__divider"></div>
               <button id="auth-signout-btn" class="auth-dropdown__signout" type="button">Sign out</button>
             </div>
@@ -233,6 +239,8 @@ export function initNav(config: NavConfig): void {
     return;
   }
 
+  captureReferralParam();
+
   root.className = "site-nav";
   root.innerHTML = renderNav(config);
 
@@ -246,6 +254,7 @@ export function initNav(config: NavConfig): void {
   const desktopSignin = root.querySelector<HTMLButtonElement>("#auth-signin-btn");
   const userButton = root.querySelector<HTMLElement>("#auth-user-btn");
   const authMenu = root.querySelector<HTMLElement>(".auth-menu");
+  const statusBadge = root.querySelector<HTMLElement>("#nav-status-badge");
   const closeTimers = new WeakMap<HTMLElement, number>();
 
   if (desktopSignin) {
@@ -403,7 +412,14 @@ export function initNav(config: NavConfig): void {
   syncMobileSigninVisibility();
   syncAuthMenuVisibility();
 
-  void initAuthUi().then(() => {
+  void initAuthUi({
+    onSession(session) {
+      if (!session && statusBadge) {
+        statusBadge.textContent = "";
+        statusBadge.classList.remove("visible");
+      }
+    },
+  }).then(() => {
     syncMobileSigninVisibility();
     syncAuthMenuVisibility();
 

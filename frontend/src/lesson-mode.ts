@@ -1,5 +1,5 @@
 import type { UserSession } from "./auth";
-import { getBestSubmission, getChallengesForLesson, loadChallengeSubmissions } from "./challenges";
+import { loadChallengeSubmissions } from "./challenges";
 import { escapeHtml, hex32 } from "./format";
 import {
   checkGoals,
@@ -17,7 +17,9 @@ import {
   type UserProgress,
 } from "./lessons";
 import { showNotification } from "./notifications";
-import { addPoints, checkAndAwardBadges, loadScore, syncScoreToApi } from "./scoring";
+import { buildReferralLink } from "./referrals";
+import { addPoints, checkAndAwardBadges, loadScore, recordRecentActivity, syncScoreToApi } from "./scoring";
+import { createShareSection } from "./share-card-ui";
 import type { WasmStateDelta } from "./types";
 import { activateWatchMode, deactivateWatchMode, generateNarration, isWatchModeActive } from "./watch-mode";
 
@@ -58,6 +60,11 @@ type GoalEvaluation = {
 
 type StepPhase = "reading" | "watching" | "trying";
 
+export const LESSON_READING_CURRENT_DOT_WIDTH = 20;
+export const LESSON_READING_DEFAULT_DOT_WIDTH = 7;
+export const LESSON_READING_CHECKPOINT_DOT_RADIUS = 2;
+export const LESSON_COMPLETION_XP = 50;
+
 const REGISTER_ABI_NAMES = [
   "zero",
   "ra",
@@ -95,6 +102,79 @@ const REGISTER_ABI_NAMES = [
 
 const LESSON_INSTRUCTION_PATTERN =
   /^(?<mnemonic>[a-z.][a-z0-9.]*)\s+(?<operands>.+)$/i;
+const REGISTER_TOKEN_PATTERN =
+  /\b(?:x(?:[0-9]|[12][0-9]|3[01])|zero|ra|sp|gp|tp|a[0-7]|s(?:0(?:\/fp)?|1[0-1]?|[2-9]|fp)|t[0-6])\b/gi;
+const REGISTER_TOKEN_EXACT_PATTERN =
+  /^(?:x(?:[0-9]|[12][0-9]|3[01])|zero|ra|sp|gp|tp|a[0-7]|s(?:0(?:\/fp)?|1[0-1]?|[2-9]|fp)|t[0-6])$/i;
+const ADDRESS_TOKEN_PATTERN = /\b0x[0-9a-fA-F]+\b/g;
+const STRONG_PATTERN = /\*\*([^*]+)\*\*/g;
+const INLINE_CODE_PATTERN = /`([^`]+)`/g;
+const PROTECTED_TOKEN_PREFIX = "__LRO_TOKEN__";
+
+const KNOWN_MNEMONICS = new Set([
+  "add",
+  "addi",
+  "sub",
+  "mul",
+  "div",
+  "rem",
+  "lw",
+  "lh",
+  "lb",
+  "lbu",
+  "lhu",
+  "sw",
+  "sh",
+  "sb",
+  "beq",
+  "bne",
+  "blt",
+  "bge",
+  "bltu",
+  "bgeu",
+  "jal",
+  "jalr",
+  "li",
+  "mv",
+  "la",
+  "nop",
+  "j",
+  "ret",
+  "call",
+  "ecall",
+  "ebreak",
+]);
+
+const REGISTER_DESCRIPTIONS: Record<string, string> = {
+  zero: "constant zero",
+  ra: "return address",
+  sp: "stack pointer",
+  gp: "global pointer",
+  tp: "thread pointer",
+  a0: "arg / return value",
+  a1: "arg",
+  a2: "arg",
+  a3: "arg",
+  a4: "arg",
+  a5: "arg",
+  a6: "arg",
+  a7: "arg / syscall",
+  s0: "saved / frame pointer",
+  fp: "frame pointer",
+  s1: "saved register",
+  t0: "temporary",
+  t1: "temporary",
+  t2: "temporary",
+  t3: "temporary",
+  t4: "temporary",
+  t5: "temporary",
+  t6: "temporary",
+};
+
+type ProtectedChunkStore = {
+  chunks: Map<string, string>;
+  nextId: number;
+};
 
 function getRegisterAbiName(index: number): string {
   return REGISTER_ABI_NAMES[index] ?? `x${index}`;
@@ -129,10 +209,94 @@ function uniqueStepIds(stepIds: string[]): string[] {
   return Array.from(new Set(stepIds));
 }
 
-function renderInline(text: string): string {
-  return escapeHtml(text)
-    .replace(/`([^`]+)`/g, '<code class="lesson-rich-code">$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+function createProtectedStore(): ProtectedChunkStore {
+  return {
+    chunks: new Map<string, string>(),
+    nextId: 0,
+  };
+}
+
+function lessonPrefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function stashProtectedHtml(store: ProtectedChunkStore, html: string): string {
+  const token = `${PROTECTED_TOKEN_PREFIX}${store.nextId++}__`;
+  store.chunks.set(token, html);
+  return token;
+}
+
+function restoreProtectedHtml(value: string, store: ProtectedChunkStore): string {
+  let restored = value;
+  for (const [token, html] of store.chunks.entries()) {
+    restored = restored.split(token).join(html);
+  }
+  return restored;
+}
+
+function normalizeRegisterToken(token: string): string {
+  const lower = token.toLowerCase();
+  if (lower === "s0/fp") {
+    return "fp";
+  }
+  return lower;
+}
+
+function renderRegisterReference(token: string): string {
+  const normalized = normalizeRegisterToken(token);
+  const label = normalized.startsWith("x") ? normalized : token;
+  const description = REGISTER_DESCRIPTIONS[normalized];
+  return `<span class="lro-reg-ref">${escapeHtml(label)}${
+    description ? `<span class="lro-reg-ref__meta">${escapeHtml(description)}</span>` : ""
+  }</span>`;
+}
+
+function renderInlineRich(text: string): string {
+  if (!text.trim()) {
+    return "";
+  }
+
+  const inlineStore = createProtectedStore();
+  let processed = text.replace(INLINE_CODE_PATTERN, (_, inner: string) =>
+    stashProtectedHtml(inlineStore, `<code>${escapeHtml(inner)}</code>`)
+  );
+
+  processed = escapeHtml(processed).replace(STRONG_PATTERN, "<strong>$1</strong>");
+  processed = processed.replace(ADDRESS_TOKEN_PATTERN, (match) => `<span class="lro-addr-ref">${match}</span>`);
+  processed = processed.replace(REGISTER_TOKEN_PATTERN, (match) => renderRegisterReference(match));
+
+  return restoreProtectedHtml(processed, inlineStore);
+}
+
+function renderInstructionSyntax(syntax: string, description?: string, label?: string): string {
+  const trimmed = syntax.trim();
+  const [mnemonic = "", ...rawOperands] = trimmed.replace(/,/g, " , ").split(/\s+/).filter(Boolean);
+  const operands = rawOperands.map((part, index) => {
+    if (part === ",") {
+      return ", ";
+    }
+    if (REGISTER_TOKEN_EXACT_PATTERN.test(part)) {
+      const cls = index === 0 ? "lro-instruction-block__rd" : "lro-instruction-block__rs";
+      return `<span class="${cls}">${escapeHtml(part)}</span>`;
+    }
+    if (/^-?(?:0x[0-9a-f]+|\d+)$/i.test(part)) {
+      return `<span class="lro-instruction-block__imm">${escapeHtml(part)}</span>`;
+    }
+    return `<span class="lro-instruction-block__label">${escapeHtml(part)}</span>`;
+  });
+
+  return `<div class="lro-instruction-block">
+    <div class="lro-instruction-block__header">${escapeHtml(label ?? "Instruction")}</div>
+    <div class="lro-instruction-block__syntax">
+      <span class="lro-instruction-block__mnemonic">${escapeHtml(mnemonic)}</span>
+      ${operands.join(" ")}
+    </div>
+    ${
+      description
+        ? `<div class="lro-instruction-block__description">${renderInlineRich(description)}</div>`
+        : ""
+    }
+  </div>`;
 }
 
 function renderInstructionLine(line: string): string | null {
@@ -142,57 +306,99 @@ function renderInstructionLine(line: string): string | null {
   }
 
   const { mnemonic, operands } = match.groups;
-  if (!/[,(]|x\d+|\b(?:ra|sp|gp|tp|a[0-7]|s(?:[0-9]|1[01]|0\/fp)|t[0-6])\b/i.test(operands)) {
+  if (!KNOWN_MNEMONICS.has(mnemonic.toLowerCase())) {
     return null;
   }
 
-  const operandHtml = escapeHtml(operands)
-    .replace(/\b(x(?:[12]?\d|3[01])|zero|ra|sp|gp|tp|a[0-7]|s(?:0\/fp|[0-9]|1[01])|t[0-6])\b/g, '<span class="lesson-instruction__rs">$1</span>')
-    .replace(/\b(-?(?:0x[0-9a-f]+|\d+))\b/gi, '<span class="lesson-instruction__imm">$1</span>');
-
-  return `<div class="lesson-instruction"><span class="lesson-instruction__mnemonic">${escapeHtml(
-    mnemonic
-  )}</span><span class="lesson-instruction__rs">${operandHtml}</span></div>`;
+  return renderInstructionSyntax(`${mnemonic} ${operands}`, undefined, `${mnemonic.toUpperCase()} syntax`);
 }
 
-function renderStepContent(content: string): string {
-  const blocks = content
-    .trim()
+export function renderStepContent(content: string): string {
+  const trimmed = content.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const store = createProtectedStore();
+  let safeContent = trimmed;
+
+  safeContent = safeContent.replace(/```([\s\S]*?)```/g, (_, inner: string) =>
+    stashProtectedHtml(
+      store,
+      `<pre><div class="code-header">Assembly</div><code>${escapeHtml(inner.trim())}</code></pre>`
+    )
+  );
+
+  safeContent = safeContent.replace(/\[instruction(?:\s+([^\]]+))?\]([\s\S]*?)\[\/instruction\]/gi, (_, rawName: string | undefined, inner: string) => {
+    const lines = inner
+      .trim()
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const syntax = lines.shift() ?? rawName ?? "";
+    const description = lines.join(" ");
+    const label = rawName ? `${rawName.toUpperCase()} instruction` : "Instruction";
+    return stashProtectedHtml(store, renderInstructionSyntax(syntax, description, label));
+  });
+
+  safeContent = safeContent.replace(/\[tip\]([\s\S]*?)\[\/tip\]/gi, (_, inner: string) =>
+    stashProtectedHtml(
+      store,
+      `<div class="lro-tip">
+        <span class="lro-tip__icon">💡</span>
+        <div class="lro-tip__body">
+          <span class="lro-tip__label">Tip</span>
+          ${renderInlineRich(inner.trim()).replace(/\n/g, "<br />")}
+        </div>
+      </div>`
+    )
+  );
+
+  safeContent = safeContent.replace(/\[warning\]([\s\S]*?)\[\/warning\]/gi, (_, inner: string) =>
+    stashProtectedHtml(
+      store,
+      `<div class="lro-tip lro-warning">
+        <span class="lro-tip__icon">⚠️</span>
+        <div class="lro-tip__body">
+          <span class="lro-tip__label">Warning</span>
+          ${renderInlineRich(inner.trim()).replace(/\n/g, "<br />")}
+        </div>
+      </div>`
+    )
+  );
+
+  safeContent = safeContent.replace(/\[concept\]([\s\S]*?)\[\/concept\]/gi, (_, inner: string) =>
+    stashProtectedHtml(store, `<div class="lro-concept"><div class="lro-concept__body">${renderInlineRich(inner.trim())}</div></div>`)
+  );
+
+  const blocks = safeContent
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter(Boolean);
 
-  return blocks
+  const rendered = blocks
     .map((block) => {
+      if (store.chunks.has(block)) {
+        return block;
+      }
       if (block === "---") {
-        return '<hr class="lesson-divider" />';
-      }
-
-      if (block.startsWith("[tip]") && block.endsWith("[/tip]")) {
-        const inner = block.slice(5, -6).trim();
-        return `<div class="lesson-tip"><span class="lesson-tip__icon">💡</span><div class="lesson-tip__text">${renderInline(inner).replace(
-          /\n/g,
-          "<br />"
-        )}</div></div>`;
-      }
-
-      if (block.startsWith("[warning]") && block.endsWith("[/warning]")) {
-        const inner = block.slice(9, -10).trim();
-        return `<div class="lesson-tip lesson-warning"><span class="lesson-tip__icon">⚠️</span><div class="lesson-tip__text">${renderInline(
-          inner
-        ).replace(/\n/g, "<br />")}</div></div>`;
+        return "<hr />";
       }
 
       const lines = block.split("\n").map((line) => line.trimEnd());
+      if (lines.every((line) => line.startsWith("#"))) {
+        return lines
+          .map((line) => `<div class="lro-section-label">${renderInlineRich(line.replace(/^#+\s*/, ""))}</div>`)
+          .join("");
+      }
+
       if (lines.every((line) => line.startsWith("- "))) {
-        return `<ul class="lesson-list">${lines
-          .map((line) => `<li>${renderInline(line.slice(2))}</li>`)
-          .join("")}</ul>`;
+        return `<ul class="lesson-list">${lines.map((line) => `<li>${renderInlineRich(line.slice(2))}</li>`).join("")}</ul>`;
       }
 
       if (lines.every((line) => /^\d+\.\s/.test(line))) {
         return `<ol class="lesson-list lesson-list--ordered">${lines
-          .map((line) => `<li>${renderInline(line.replace(/^\d+\.\s/, ""))}</li>`)
+          .map((line) => `<li>${renderInlineRich(line.replace(/^\d+\.\s/, ""))}</li>`)
           .join("")}</ol>`;
       }
 
@@ -203,9 +409,11 @@ function renderStepContent(content: string): string {
         return renderedInstructions.join("");
       }
 
-      return `<p>${lines.map((line) => renderInline(line)).join("<br />")}</p>`;
+      return `<p>${lines.map((line) => renderInlineRich(line)).join("<br />")}</p>`;
     })
     .join("");
+
+  return restoreProtectedHtml(rendered, store);
 }
 
 export function createLessonMode(deps: LessonModeDependencies): LessonModeController {
@@ -255,6 +463,9 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   let watchInstructionCount = 0;
   let watchTimer: number | null = null;
   let stepPhase: StepPhase = "reading";
+  let pendingEnterDirection: "left" | "right" | null = null;
+  let shortcutsOpen = false;
+  let compactCollapsed = false;
 
   const simulatorLayout = document.querySelector(".simulator-layout");
   const leftColumn = document.querySelector(".sim-column--left");
@@ -296,34 +507,33 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   const simulatorAppEl = simulatorApp;
   const editorPanelEl = editorPanel;
 
-  const desktopColumn = document.createElement("div");
-  desktopColumn.className = "sim-column sim-column--lesson";
-  desktopColumn.id = "lessonModeDesktopColumn";
+  const panel = document.createElement("div");
+  panel.className = "lro";
+  panel.id = "lesson-reading-overlay";
+  panel.setAttribute("role", "main");
+  panel.setAttribute("aria-label", "Lesson content");
+  panel.hidden = true;
 
-  const panel = document.createElement("section");
-  panel.className = "sim-panel lesson-panel";
-  panel.id = "lessonModePanel";
+  const lessonOverlayRoot =
+    document.getElementById("lesson-reading-overlay-root") ??
+    (() => {
+      const root = document.createElement("div");
+      root.id = "lesson-reading-overlay-root";
+      document.body.appendChild(root);
+      return root;
+    })();
+  lessonOverlayRoot.appendChild(panel);
 
   const compactShell = document.createElement("div");
-  compactShell.className = "lesson-compact-shell";
+  compactShell.className = "lesson-inline-shell";
   compactShell.id = "lessonCompactShell";
   compactShell.hidden = true;
-  compactShell.innerHTML = `
-    <div class="lesson-compact-tabs" role="tablist" aria-label="Lesson and editor">
-      <button class="lesson-compact-tab is-active" type="button" data-lesson-compact-tab="lesson" aria-selected="true">Lesson</button>
-      <button class="lesson-compact-tab" type="button" data-lesson-compact-tab="editor" aria-selected="false">Editor</button>
-    </div>
-    <div class="lesson-compact-host" id="lessonCompactHost"></div>
-  `;
-
-  desktopColumn.appendChild(panel);
-  simulatorLayout.insertBefore(desktopColumn, leftColumn);
-  leftColumn.insertBefore(compactShell, leftColumn.firstChild);
+  simulatorAppEl.insertBefore(compactShell, simulatorLayoutEl);
 
   const navIndicator = document.createElement("a");
   navIndicator.className = "lesson-nav-indicator";
   navIndicator.href = "/learn/";
-  navIndicator.hidden = false;
+  navIndicator.hidden = true;
   brandRow?.appendChild(navIndicator);
 
   function clearWatchTimer(): void {
@@ -375,23 +585,47 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     window.history[method]({}, "", url);
   }
 
+  function isWideLessonSplit(): boolean {
+    return stepPhase !== "reading" && window.innerWidth >= 1200;
+  }
+
+  function isLessonSimulatorMode(): boolean {
+    return stepPhase !== "reading" && !isWideLessonSplit();
+  }
+
   function applyPhaseClasses(): void {
     const wantsRegisters = stepPhase !== "reading" && showFullRegisters(currentStep());
-    document.body.classList.add("lesson-mode");
-    document.body.classList.toggle("lesson-phase-reading", stepPhase === "reading");
+    const reading = stepPhase === "reading";
+    const split = isWideLessonSplit();
+    const simulatorOnly = isLessonSimulatorMode();
+
+    document.body.classList.add("lesson-mode", "lesson-mode-active");
+    document.body.classList.toggle("lesson-reading-active", reading);
+    document.body.classList.toggle("lesson-split-mode", split);
+    document.body.classList.toggle("lesson-simulator-active", simulatorOnly);
+    document.body.classList.toggle("lesson-phase-reading", reading);
     document.body.classList.toggle("lesson-phase-watching", stepPhase === "watching");
     document.body.classList.toggle("lesson-phase-trying", stepPhase === "trying");
     document.body.classList.toggle("lesson-show-registers", wantsRegisters);
+
     simulatorAppEl.classList.add("lesson-mode");
-    simulatorAppEl.classList.toggle("lesson-phase-reading", stepPhase === "reading");
+    simulatorAppEl.classList.toggle("lesson-split-mode", split);
+    simulatorAppEl.classList.toggle("lesson-simulator-active", simulatorOnly);
+    simulatorAppEl.classList.toggle("lesson-phase-reading", reading);
     simulatorAppEl.classList.toggle("lesson-phase-watching", stepPhase === "watching");
     simulatorAppEl.classList.toggle("lesson-phase-trying", stepPhase === "trying");
     simulatorAppEl.classList.toggle("lesson-show-registers", wantsRegisters);
-    simulatorLayoutEl.classList.add("has-lesson-column", "lesson-mode");
-    simulatorLayoutEl.classList.toggle("lesson-phase-reading", stepPhase === "reading");
+
+    simulatorLayoutEl.classList.add("lesson-mode");
+    simulatorLayoutEl.classList.toggle("lesson-split-mode", split);
+    simulatorLayoutEl.classList.toggle("lesson-simulator-active", simulatorOnly);
+    simulatorLayoutEl.classList.toggle("lesson-phase-reading", reading);
     simulatorLayoutEl.classList.toggle("lesson-phase-watching", stepPhase === "watching");
     simulatorLayoutEl.classList.toggle("lesson-phase-trying", stepPhase === "trying");
     simulatorLayoutEl.classList.toggle("lesson-show-registers", wantsRegisters);
+
+    panel.hidden = reading ? false : !split && !completionVisible;
+    compactShell.hidden = !(simulatorOnly && !completionVisible);
   }
 
   function syncPhaseControls(): void {
@@ -401,7 +635,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     assembleButton?.toggleAttribute("disabled", !interactive);
     stepButton?.toggleAttribute("disabled", !interactive && !watching);
     stepBackButton?.toggleAttribute("disabled", !interactive);
-    runButton?.toggleAttribute("disabled", !interactive);
+    runButton?.toggleAttribute("disabled", true);
     resetButton?.toggleAttribute("disabled", !interactive && !watching);
     if (sourceTextarea) {
       sourceTextarea.readOnly = watching || !interactive;
@@ -550,21 +784,6 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     return "Goal not yet met · keep stepping";
   }
 
-  function buildAnnotatedCode(step: LessonStep): string {
-    const lines = (step.code ?? "").split("\n");
-    const annotations = step.annotations ?? [];
-    if (lines.length === 0) {
-      return step.solution ?? step.code ?? "";
-    }
-
-    return lines
-      .map((line, index) => {
-        const note = annotations[index];
-        return note ? `# ${note}\n${line}` : line;
-      })
-      .join("\n");
-  }
-
   function awardLessonStepPoints(step: LessonStep): void {
     const basePoints = step.isCheckpoint ? 15 : 5;
     addPoints(basePoints, `lesson:${lesson.id}:${step.id}`);
@@ -577,10 +796,193 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
 
   function applyCompactLayout(): void {
     simulatorLayoutEl.classList.add("has-lesson-column");
-    compactShell.hidden = true;
-    desktopColumn.hidden = false;
-    desktopColumn.appendChild(panel);
     editorPanelEl.hidden = false;
+    compactShell.hidden = !(isLessonSimulatorMode() && !completionVisible);
+  }
+
+  function extractMentionedRegisters(text: string): string[] {
+    const matches = text.match(REGISTER_TOKEN_PATTERN) ?? [];
+    const seen = new Set<string>();
+    return matches
+      .map((entry) => normalizeRegisterToken(entry))
+      .filter((entry) => {
+        if (seen.has(entry)) {
+          return false;
+        }
+        seen.add(entry);
+        return true;
+      })
+      .slice(0, 8);
+  }
+
+  function extractMentionedInstructions(text: string): string[] {
+    const lower = text.toLowerCase();
+    const hits: string[] = [];
+    for (const mnemonic of KNOWN_MNEMONICS) {
+      if (new RegExp(`\\b${mnemonic}\\b`, "i").test(lower)) {
+        hits.push(mnemonic);
+      }
+    }
+    return hits.slice(0, 4);
+  }
+
+  function registerLabel(token: string): string {
+    if (token.startsWith("x")) {
+      const index = Number(token.slice(1));
+      return `${token} · ${getRegisterAbiName(index)}`;
+    }
+    return token === "fp" ? "s0/fp" : token;
+  }
+
+  function instructionQuickRef(mnemonic: string): { syntax: string; rows: Array<{ label: string; value: string }> } {
+    const refs: Record<string, { syntax: string; rows: Array<{ label: string; value: string }> }> = {
+      addi: {
+        syntax: "addi rd, rs1, imm",
+        rows: [
+          { label: "rd", value: "destination register" },
+          { label: "rs1", value: "source register" },
+          { label: "imm", value: "12-bit signed immediate" },
+        ],
+      },
+      add: {
+        syntax: "add rd, rs1, rs2",
+        rows: [
+          { label: "rd", value: "destination register" },
+          { label: "rs1", value: "left operand" },
+          { label: "rs2", value: "right operand" },
+        ],
+      },
+      lw: {
+        syntax: "lw rd, imm(rs1)",
+        rows: [
+          { label: "rd", value: "loaded word" },
+          { label: "rs1", value: "base address" },
+          { label: "imm", value: "byte offset" },
+        ],
+      },
+      sw: {
+        syntax: "sw rs2, imm(rs1)",
+        rows: [
+          { label: "rs2", value: "value to store" },
+          { label: "rs1", value: "base address" },
+          { label: "imm", value: "byte offset" },
+        ],
+      },
+      beq: {
+        syntax: "beq rs1, rs2, label",
+        rows: [
+          { label: "rs1", value: "left side" },
+          { label: "rs2", value: "right side" },
+          { label: "label", value: "branch target" },
+        ],
+      },
+      jal: {
+        syntax: "jal rd, label",
+        rows: [
+          { label: "rd", value: "return address register" },
+          { label: "label", value: "jump target" },
+        ],
+      },
+    };
+    return refs[mnemonic] ?? {
+      syntax: `${mnemonic} ...`,
+      rows: [{ label: "note", value: "See the disassembly for exact operands" }],
+    };
+  }
+
+  function renderQuickReference(step: LessonStep, lessonNumber: number): string {
+    const stepText = `${step.title}\n${step.content}\n${step.code ?? ""}`;
+    if (isCheckpointStep(step)) {
+      return `
+        <div class="lro__context-inner">
+          <div class="lro__context-section">
+            <div class="lro__context-label">Goal Status</div>
+            ${renderGoalsMarkup(step, lessonNumber, { compact: true, includeActions: false })}
+          </div>
+        </div>
+      `;
+    }
+
+    if (/calling convention|callee saved|caller saved|stack frame|return address/i.test(stepText)) {
+      return `
+        <div class="lro__context-inner">
+          <div class="lro__context-section">
+            <div class="lro__context-label">Calling Convention</div>
+            <div class="lro-quick-ref">
+              <div class="lro-quick-ref__row"><span class="lro-quick-ref__label">ra</span><span class="lro-quick-ref__value">return address</span></div>
+              <div class="lro-quick-ref__row"><span class="lro-quick-ref__label">a0-a7</span><span class="lro-quick-ref__value">arguments / return</span></div>
+              <div class="lro-quick-ref__row"><span class="lro-quick-ref__label">s0-s11</span><span class="lro-quick-ref__value">callee-saved</span></div>
+              <div class="lro-quick-ref__row"><span class="lro-quick-ref__label">t0-t6</span><span class="lro-quick-ref__value">caller-saved temps</span></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    const instructions = extractMentionedInstructions(stepText);
+    if (instructions.length > 0) {
+      return `
+        <div class="lro__context-inner">
+          ${instructions
+            .map((mnemonic) => {
+              const ref = instructionQuickRef(mnemonic);
+              return `<div class="lro__context-section">
+                <div class="lro__context-label">${escapeHtml(mnemonic.toUpperCase())}</div>
+                <div class="lro-quick-ref">
+                  <div class="lro-quick-ref__row"><span class="lro-quick-ref__label">syntax</span><span class="lro-quick-ref__value">${escapeHtml(ref.syntax)}</span></div>
+                  ${ref.rows
+                    .map(
+                      (row) =>
+                        `<div class="lro-quick-ref__row"><span class="lro-quick-ref__label">${escapeHtml(row.label)}</span><span class="lro-quick-ref__value">${escapeHtml(row.value)}</span></div>`
+                    )
+                    .join("")}
+                </div>
+              </div>`;
+            })
+            .join("")}
+        </div>
+      `;
+    }
+
+    const registers = extractMentionedRegisters(stepText);
+    if (registers.length > 0) {
+      return `
+        <div class="lro__context-inner">
+          <div class="lro__context-section">
+            <div class="lro__context-label">Registers Mentioned</div>
+            <div class="lro-quick-ref">
+              ${registers
+                .map((token) => {
+                  const description = REGISTER_DESCRIPTIONS[token] ?? "register";
+                  return `<div class="lro-quick-ref__row"><span class="lro-quick-ref__label">${escapeHtml(
+                    registerLabel(token)
+                  )}</span><span class="lro-quick-ref__value">${escapeHtml(description)}</span></div>`;
+                })
+                .join("")}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="lro__context-inner">
+        <div class="lro__context-section">
+          <div class="lro__context-label">Curriculum Progress</div>
+          <div class="lro-quick-ref">
+            ${allLessons
+              .slice(0, 6)
+              .map(
+                (entry, index) =>
+                  `<div class="lro-quick-ref__row"><span class="lro-quick-ref__label">Lesson ${index + 1}</span><span class="lro-quick-ref__value">${
+                    progress.lessons[entry.id]?.completed ? "complete" : entry.id === lesson.id ? "current" : "locked"
+                  }</span></div>`
+              )
+              .join("")}
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   function loadGoalEvaluation(options: { recordAttempt?: boolean; allowRewards?: boolean } = {}): void {
@@ -659,6 +1061,15 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   async function navigateToStep(nextIndex: number, options: { markCurrentComplete?: boolean } = {}): Promise<void> {
     const clampedIndex = Math.max(0, Math.min(nextIndex, lesson.steps.length - 1));
     const previousStep = currentStep();
+    const movingForward = clampedIndex >= lessonProgress.currentStepIndex;
+
+    if (!lessonPrefersReducedMotion() && !panel.hidden && panel.querySelector(".lro__step-content")) {
+      const content = panel.querySelector<HTMLElement>(".lro__step-content");
+      content?.classList.add(movingForward ? "is-leaving-left" : "is-leaving-right");
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 180);
+      });
+    }
 
     if (options.markCurrentComplete) {
       markStepCompleted(previousStep.id);
@@ -674,6 +1085,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     goalEvaluation = { passed: false, results: {} };
     completionVisible = false;
     stepPhase = resolvePhaseForStep(currentStep(), "reading");
+    pendingEnterDirection = movingForward ? "right" : "left";
     resetWatchState();
     applyCompactLayout();
     updateUrl(true);
@@ -731,7 +1143,12 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     persistProgress();
     completionVisible = true;
     if (!wasCompleted) {
-      addPoints(50, `lesson-complete:${lesson.id}`);
+      addPoints(LESSON_COMPLETION_XP, `lesson-complete:${lesson.id}`);
+      recordRecentActivity({
+        type: "lesson",
+        title: lesson.title,
+        completedAt: lessonProgress.completedAt ?? new Date().toISOString(),
+      });
       checkAndAwardBadges(loadProgress(), loadChallengeSubmissions());
       const session = deps.getCurrentSession();
       if (session?.idToken) {
@@ -743,7 +1160,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
       id: `lesson-${lesson.id}-${lessonProgress.completedAt ?? Date.now()}`,
       type: "lesson",
       title: "Lesson Complete!",
-      message: `${lesson.title} · +50 XP`,
+      message: `${lesson.title} · +${LESSON_COMPLETION_XP} XP`,
       icon: "🎓",
       duration: 4000,
       accentColor: "var(--success)",
@@ -768,7 +1185,11 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     </div>`;
   }
 
-  function renderGoalPanel(step: LessonStep, lessonNumber: number): string {
+  function renderGoalsMarkup(
+    step: LessonStep,
+    lessonNumber: number,
+    options: { compact?: boolean; includeActions?: boolean } = {}
+  ): string {
     if (!step.goals || step.goals.length === 0) {
       return "";
     }
@@ -778,30 +1199,29 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     const showSolution = attempts >= 5;
     const showMiniRegisters = lessonNumber <= 5;
     const primaryHint = step.goals.find((goal) => goal.hint)?.hint;
+    const compact = options.compact === true;
+    const includeActions = options.includeActions !== false;
 
     return `
-      <div class="lesson-goal-panel">
-        <button class="lesson-goal-panel__back" type="button" data-lesson-action="back-to-reading">← Back to explanation</button>
-        <div class="lesson-goal-panel__title">Your goal</div>
-        <div class="lesson-goals-list">
+        <div class="${compact ? "lro__goals-list" : "lesson-goals-list"}">
           ${step.goals
             .map((goal) => {
               const passed = goalEvaluation.results[goal.id] === true;
               const failing = !passed && (stepAttemptCounts.get(step.id) ?? 0) > 0;
               const hintVisible = hintVisibility.has(goal.id);
               return `
-                <div class="lesson-goal-item${passed ? " is-passing" : ""}${failing ? " is-failing" : ""}">
-                  <div class="lesson-goal-item__circle">${passed ? "✓" : ""}</div>
-                  <div class="lesson-goal-item__body">
-                    <div class="lesson-goal-item__desc">${escapeHtml(goal.description)}</div>
+                <div class="${compact ? "lro__goal-item" : "lesson-goal-item"}${passed ? " is-passing" : ""}${failing ? " is-failing" : ""}">
+                  <div class="${compact ? "lro__goal-circle" : "lesson-goal-item__circle"}">${passed ? "✓" : ""}</div>
+                  <div class="${compact ? "lro__goal-body" : "lesson-goal-item__body"}">
+                    <div class="${compact ? "lro__goal-desc" : "lesson-goal-item__desc"}">${escapeHtml(goal.description)}</div>
                     ${showMiniRegisters ? renderMiniRegister(goal) : ""}
                     ${
                       !passed && goalFeedback[goal.id]
-                        ? `<div class="lesson-goal-item__feedback">${escapeHtml(goalFeedback[goal.id])}</div>`
+                        ? `<div class="${compact ? "lro__goal-feedback" : "lesson-goal-item__feedback"}">${escapeHtml(goalFeedback[goal.id])}</div>`
                         : ""
                     }
                     ${
-                      showHints && goal.hint && !hintVisible
+                      includeActions && showHints && goal.hint && !hintVisible
                         ? `<button class="lesson-goal__hint-toggle" type="button" data-lesson-hint="${escapeHtml(goal.id)}">Show hint</button>`
                         : ""
                     }
@@ -813,116 +1233,203 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
             .join("")}
         </div>
         ${
-          showHints && primaryHint
-            ? `<div class="lesson-hint${hintVisibility.size > 0 ? "" : " is-visible"}">
+          includeActions && showHints && primaryHint
+            ? `<div class="lesson-hint">
                 <div class="lesson-hint__label">Hint</div>
                 <div class="lesson-hint__text">${escapeHtml(primaryHint)}</div>
               </div>`
             : ""
         }
-        ${showSolution ? '<button class="lesson-show-solution" type="button" data-lesson-action="show-solution">Show solution</button>' : ""}
+        ${includeActions && showSolution ? '<button class="lesson-show-solution" type="button" data-lesson-action="show-solution">Show solution</button>' : ""}
         ${
           goalEvaluation.passed
-            ? `<div class="lesson-success-banner">
-                <div class="lesson-success-banner__title">All goals complete.</div>
-                <button class="lesson-success-banner__button" type="button" data-lesson-action="continue">Continue →</button>
+            ? `<div class="lro-success-banner">
+                <div class="lro-success-banner__title">All goals passing</div>
+                <div class="lro-success-banner__subtitle">The simulator state matches the goal checklist.</div>
+                ${
+                  includeActions
+                    ? '<button class="lesson-success-banner__button" type="button" data-lesson-action="continue">Continue →</button>'
+                    : ""
+                }
               </div>`
             : ""
         }
-      </div>
     `;
   }
 
-  function renderStepDots(): string {
+  function renderStepList(): string {
     return lesson.steps
       .map((entry, index) => {
         const isCompleted = lessonProgress.stepsCompleted.includes(entry.id);
         const isCurrent = index === lessonProgress.currentStepIndex;
         const isClickable = isCompleted || isCurrent;
         return `<button
-          class="lesson-step-dot${isCompleted ? " is-completed" : ""}${isCurrent ? " is-current" : ""}${
+          class="lro__step-item${isCompleted ? " is-completed" : ""}${isCurrent ? " is-current" : ""}${
             entry.isCheckpoint ? " is-checkpoint" : ""
           }"
           type="button"
-          data-lesson-step-dot="${index}"
+          data-lesson-step-index="${index}"
           ${isClickable ? "" : "disabled"}
           aria-label="Step ${index + 1}: ${escapeHtml(entry.title)}"
+        >
+          <div class="lro__step-item-dot"></div>
+          <div class="lro__step-item-info">
+            <span class="lro__step-item-title">${escapeHtml(entry.title)}</span>
+            <span class="lro__step-item-type">${entry.isCheckpoint ? "Checkpoint" : "Reading"}</span>
+          </div>
+        </button>`;
+      })
+      .join("");
+  }
+
+  function renderFooterDots(): string {
+    return lesson.steps
+      .map((entry, index) => {
+        const isCompleted = lessonProgress.stepsCompleted.includes(entry.id);
+        const isCurrent = index === lessonProgress.currentStepIndex;
+        const isClickable = isCompleted || isCurrent;
+        return `<button
+          class="lro__dot${isCompleted ? " is-completed" : ""}${isCurrent ? " is-current" : ""}${entry.isCheckpoint ? " is-checkpoint" : ""}"
+          type="button"
+          data-lesson-step-dot="${index}"
+          ${isClickable ? "" : "disabled"}
+          aria-label="Jump to step ${index + 1}"
         ></button>`;
       })
       .join("");
   }
 
-  function renderReadingView(step: LessonStep, lessonNumber: number): string {
-    const progressPercent = lesson.steps.length === 0 ? 0 : ((lessonProgress.currentStepIndex + 1) / lesson.steps.length) * 100;
-    const canGoPrevious = lessonProgress.currentStepIndex > 0;
-    const isCheckpoint = isCheckpointStep(step);
-    const hasWatch = canWatch(step);
-    const isLastStep = lessonProgress.currentStepIndex >= lesson.steps.length - 1;
-
+  function renderShortcutsPopover(): string {
     return `
-      <div class="lesson-reading-view">
-        <div class="lesson-breadcrumb">
-          <a href="/learn/" class="lesson-breadcrumb__back">← Curriculum</a>
-          <span class="lesson-breadcrumb__sep">·</span>
-          <span class="lesson-breadcrumb__lesson">Lesson ${lessonNumber} of ${allLessons.length}</span>
-          <span class="lesson-breadcrumb__sep">·</span>
-          <span class="lesson-breadcrumb__step">Step ${lessonProgress.currentStepIndex + 1} of ${lesson.steps.length}</span>
-        </div>
-        <div class="lesson-progress-bar">
-          <div class="lesson-progress-bar__fill" style="width:${progressPercent}%;"></div>
-        </div>
-        <div class="lesson-step-dots">${renderStepDots()}</div>
-        <div class="lesson-content-card">
-          <h2 class="lesson-step-title">${escapeHtml(step.title)}</h2>
-          <div class="lesson-step-body">${renderStepContent(step.content)}</div>
-        </div>
-        <div class="lesson-action-bar">
-          <button class="lesson-btn-prev" type="button" data-lesson-action="prev"${canGoPrevious ? "" : " disabled"}>← Previous</button>
-          <div class="lesson-action-bar__right">
-            ${
-              isCheckpoint && hasWatch
-                ? '<button class="lesson-btn-watch-link" type="button" data-lesson-action="start-watch">Watch solution first</button>'
-                : ""
-            }
-            ${
-              isCheckpoint
-                ? '<button class="lesson-btn-try" type="button" data-lesson-action="start-trying">Try it in the simulator →</button>'
-                : isLastStep
-                  ? '<button class="lesson-btn-continue" type="button" data-lesson-action="finish">Finish lesson →</button>'
-                  : '<button class="lesson-btn-continue" type="button" data-lesson-action="next-reading">Continue →</button>'
-            }
-          </div>
+      <div class="lro-shortcuts${shortcutsOpen ? " is-open" : ""}">
+        <button class="lro-shortcuts__trigger" type="button" data-lesson-action="toggle-shortcuts">?</button>
+        <div class="lro-shortcuts__popover" ${shortcutsOpen ? "" : "hidden"}>
+          <span>→ / Space · next</span>
+          <span>← · previous</span>
+          <span>T · try it</span>
+          <span>B · back to lesson</span>
+          <span>Esc · curriculum</span>
+          <span>1-9 · jump step</span>
         </div>
       </div>
     `;
   }
 
-  function renderWatchingView(lessonNumber: number): string {
+  function renderWatchSummary(): string {
+    if (stepPhase !== "watching") {
+      return "";
+    }
     const progress =
       watchInstructionCount > 0 ? Math.min(100, (currentState.stepCount / watchInstructionCount) * 100) : 0;
     const currentInstruction = escapeHtml(deps.getInstructionText(watchLastState.pc) || "Waiting for the first instruction…");
-
     return `
-      <div class="lesson-goal-panel lesson-watch-panel">
-        <button class="lesson-goal-panel__back" type="button" data-lesson-action="back-to-reading">← Back to explanation</button>
-        <div class="lesson-panel__eyebrow">Lesson ${lessonNumber} · Watch</div>
-        <div class="lesson-goal-panel__title">Watch the solution</div>
-        <div class="lesson-watch">
+      <div class="lro-watch-banner">
+        <div class="lro-watch-banner__header">
+          <span class="lro-watch-banner__label">Watch mode</span>
           <div class="lesson-watch__controls">
             <button class="lesson-watch__button" type="button" data-lesson-action="watch-play" ${watchPlaying || watchCompleted ? "disabled" : ""}>▶ Play</button>
             <button class="lesson-watch__button" type="button" data-lesson-action="watch-pause" ${!watchPlaying ? "disabled" : ""}>⏸ Pause</button>
             <button class="lesson-watch__button" type="button" data-lesson-action="watch-reset">⏮ Reset</button>
             <button class="lesson-watch__button" type="button" data-lesson-action="watch-speed">⏩ ${watchSpeed}x</button>
           </div>
-          <div class="lesson-watch__progress"><span style="width:${progress}%;"></span></div>
-          <div class="lesson-watch__instruction">${currentInstruction}</div>
-          <div class="lesson-watch__narration">${escapeHtml(
-            watchNarration || "Watch the worked solution execute. The editor is locked while this phase is active."
-          )}</div>
         </div>
-        <div class="lesson-action-stack">
-          <button class="lesson-btn-try" type="button" data-lesson-action="watch-try">Now you try →</button>
-          <button class="lesson-btn-watch-link" type="button" data-lesson-action="skip-watch">Skip to try it</button>
+        <div class="lesson-watch__progress"><span style="width:${progress}%;"></span></div>
+        <div class="lesson-watch__instruction">${currentInstruction}</div>
+        <div class="lesson-watch__narration">${escapeHtml(
+          watchNarration || "Watch the worked solution execute, then switch back to the starter."
+        )}</div>
+      </div>
+    `;
+  }
+
+  function renderOverlay(step: LessonStep, lessonNumber: number): string {
+    const progressPercent = lesson.steps.length === 0 ? 0 : (lessonProgress.stepsCompleted.length / lesson.steps.length) * 100;
+    const canGoPrevious = lessonProgress.currentStepIndex > 0;
+    const isCheckpoint = isCheckpointStep(step);
+    const hasWatch = canWatch(step);
+    const isLastStep = lessonProgress.currentStepIndex >= lesson.steps.length - 1;
+    const split = isWideLessonSplit();
+    const primaryAction =
+      stepPhase === "watching"
+        ? `<button class="lro__btn-try" id="lro-btn-try" type="button" data-lesson-action="watch-try">Now you try</button>`
+        : isCheckpoint
+          ? stepPhase === "reading"
+            ? `<button class="lro__btn-try" id="lro-btn-try" type="button" data-lesson-action="start-trying">Try it</button>`
+            : `<button class="lro__btn-continue${goalEvaluation.passed ? "" : " is-disabled"}" id="lro-btn-continue" type="button" data-lesson-action="continue" ${
+                goalEvaluation.passed ? "" : "disabled"
+              }>Continue</button>`
+          : isLastStep
+            ? `<button class="lro__btn-continue" id="lro-btn-continue" type="button" data-lesson-action="finish">Finish</button>`
+            : `<button class="lro__btn-continue" id="lro-btn-continue" type="button" data-lesson-action="next-reading">Continue</button>`;
+
+    return `
+      <aside class="lro__sidebar">
+        <div class="lro__sidebar-inner">
+          <a href="/learn/" class="lro__back">← Curriculum</a>
+          <div class="lro__lesson-meta">
+            <span class="lro__lesson-num">Lesson ${lessonNumber} of ${allLessons.length}</span>
+            <span class="lro__lesson-title-small">${escapeHtml(lesson.title)}</span>
+          </div>
+          <nav class="lro__step-list" aria-label="Lesson steps">${renderStepList()}</nav>
+          <div class="lro__lesson-progress">
+            <div class="lro__lesson-progress-bar"><div class="lro__lesson-progress-fill" style="width:${progressPercent}%;"></div></div>
+            <span class="lro__lesson-progress-label">${lessonProgress.stepsCompleted.length} of ${lesson.steps.length} steps complete</span>
+          </div>
+        </div>
+      </aside>
+      <main class="lro__main">
+        <div class="lro__content-wrapper${split ? " is-split" : ""}">
+          <header class="lro__step-header">
+            <div class="lro__step-indicator">
+              <span class="lro__step-num">Step ${lessonProgress.currentStepIndex + 1}</span>
+              <span class="lro__step-type-badge ${isCheckpoint ? "checkpoint" : "reading"}">${isCheckpoint ? "Checkpoint" : "Reading"}</span>
+            </div>
+            <h1 class="lro__step-title">${escapeHtml(step.title)}</h1>
+          </header>
+          ${renderWatchSummary()}
+          <div class="lro__step-content" id="lro-step-content">${renderStepContent(step.content)}</div>
+          ${
+            isCheckpoint
+              ? `<div class="lro__goals" id="lro-goals">
+                  <div class="lro__goals-header">Checkpoint</div>
+                  ${renderGoalsMarkup(step, lessonNumber, { compact: true, includeActions: true })}
+                </div>`
+              : ""
+          }
+        </div>
+      </main>
+      <aside class="lro__context" id="lro-context">${renderQuickReference(step, lessonNumber)}</aside>
+      <footer class="lro__footer">
+        <div class="lro__footer-inner">
+          <div class="lro__footer-left">
+            <button class="lro__btn-prev" id="lro-btn-prev" type="button" data-lesson-action="prev"${canGoPrevious ? "" : " disabled"}>← Previous</button>
+          </div>
+          <div class="lro__footer-center">
+            <div class="lro__dots" role="tablist">${renderFooterDots()}</div>
+            ${renderShortcutsPopover()}
+          </div>
+          <div class="lro__footer-right">
+            ${isCheckpoint && hasWatch && stepPhase === "reading" ? '<button class="lesson-btn-watch-link" type="button" data-lesson-action="start-watch">Watch solution first</button>' : ""}
+            ${primaryAction}
+          </div>
+        </div>
+      </footer>
+    `;
+  }
+
+  function renderInlineShell(step: LessonStep, lessonNumber: number): string {
+    const totalGoals = step.goals?.length ?? 0;
+    const passingGoals = step.goals?.filter((goal) => goalEvaluation.results[goal.id]).length ?? 0;
+    return `
+      <div class="lesson-inline-shell__card${compactCollapsed ? " is-collapsed" : ""}">
+        <div class="lesson-inline-shell__header">
+          <button class="lesson-inline-shell__back" type="button" data-lesson-action="back-to-reading">← ${escapeHtml(step.title)}</button>
+          <button class="lesson-inline-shell__toggle" type="button" data-lesson-action="toggle-inline">${compactCollapsed ? "▾" : "▴"}</button>
+        </div>
+        <div class="lesson-inline-shell__summary">${passingGoals}/${totalGoals} goals passing · Lesson ${lessonNumber}</div>
+        <div class="lesson-inline-shell__body"${compactCollapsed ? ' hidden' : ""}>
+          ${renderWatchSummary()}
+          ${isCheckpointStep(step) ? renderGoalsMarkup(step, lessonNumber, { compact: true, includeActions: true }) : ""}
         </div>
       </div>
     `;
@@ -931,71 +1438,61 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   function renderCompletion(): string {
     const lessonIndex = allLessons.findIndex((entry) => entry.id === lesson.id);
     const nextLesson = allLessons[lessonIndex + 1];
-    const relatedChallenges = getChallengesForLesson(lesson.id);
-    const confetti = Array.from({ length: 12 }, (_, index) => {
-      const delay = `${(index % 6) * 90}ms`;
-      const left = `${8 + index * 7}%`;
-      return `<span class="lesson-complete__confetti" style="--confetti-delay:${delay}; left:${left};"></span>`;
+    const confetti = Array.from({ length: 16 }, (_, index) => {
+      const delay = `${(index % 8) * 90}ms`;
+      const left = `${10 + ((index * 11) % 80)}%`;
+      const duration = `${1.5 + (index % 4) * 0.25}s`;
+      const variant = ["is-accent", "is-success", "is-warning", "is-violet"][index % 4];
+      return `<span class="lro-confetti-piece ${variant}" style="left:${left}; --delay:${delay}; --duration:${duration};"></span>`;
     }).join("");
 
     return `
-      <div class="lesson-complete">
-        <div class="lesson-complete__confetti-layer" aria-hidden="true">${confetti}</div>
-        <div class="lesson-complete__title">Lesson Complete!</div>
-        ${
-          nextLesson
-            ? `<a class="lesson-complete__next" href="/simulator/?lesson=${encodeURIComponent(nextLesson.id)}">${escapeHtml(
-                nextLesson.title
-              )} unlocked</a>`
-            : '<div class="lesson-complete__next">You finished the full learning path.</div>'
-        }
-        ${
-          relatedChallenges.length > 0
-            ? `<div class="lesson-complete__challenges">
-                <div class="lesson-complete__challenges-title">Practice Challenges</div>
-                ${relatedChallenges
-                  .map((entry) => {
-                    const best = getBestSubmission(entry.id);
-                    return `<div class="lesson-complete__challenge">
-                      <div>
-                        <div class="lesson-complete__challenge-title">${escapeHtml(entry.title)}</div>
-                        <div class="lesson-complete__challenge-meta">${escapeHtml(entry.difficulty)} · ${entry.points} pts · best ${
-                          best ? `${best.score}/${best.maxScore}` : "none"
-                        }</div>
-                      </div>
-                      <a class="lesson-complete__challenge-link" href="/simulator/?challenge=${encodeURIComponent(entry.id)}">Start Challenge →</a>
-                    </div>`;
-                  })
-                  .join("")}
-              </div>`
-            : ""
-        }
-        <a class="lesson-complete__back" href="/learn/">Back to Learn</a>
+      <div class="lro-completion" id="lro-completion">
+        <div class="lro-completion__confetti" aria-hidden="true">${confetti}</div>
+        <div class="lro-completion__card">
+          <div class="lro-completion__icon">🎓</div>
+          <h2 class="lro-completion__title">Lesson ${lessonIndex + 1} Complete</h2>
+          <p class="lro-completion__subtitle">${escapeHtml(lesson.title)}</p>
+          <div class="lro-completion__stats">
+            <div class="lro-completion__stat">
+              <span class="lro-completion__stat-value">${lesson.steps.length}</span>
+              <span class="lro-completion__stat-label">Steps</span>
+            </div>
+            <div class="lro-completion__stat">
+              <span class="lro-completion__stat-value">+${LESSON_COMPLETION_XP}</span>
+              <span class="lro-completion__stat-label">XP earned</span>
+            </div>
+            <div class="lro-completion__stat">
+              <span class="lro-completion__stat-value">${progress.totalCompleted}/20</span>
+              <span class="lro-completion__stat-label">Lessons done</span>
+            </div>
+          </div>
+          ${
+            nextLesson
+              ? `<div class="lro-completion__next" id="lro-completion-next">
+                  <span class="lro-completion__next-label">Up next</span>
+                  <span class="lro-completion__next-title">${escapeHtml(nextLesson.title)}</span>
+                </div>`
+              : ""
+          }
+          <div id="lessonShareMount"></div>
+          <div class="lro-completion__actions">
+            <a href="/learn/" class="lro-completion__btn-secondary">Back to curriculum</a>
+            ${
+              nextLesson
+                ? `<button class="lro-completion__btn-primary" id="lro-btn-next-lesson" type="button" data-lesson-action="next-lesson">Start Lesson ${
+                    lessonIndex + 2
+                  } →</button>`
+                : `<button class="lro-completion__btn-primary" id="lro-btn-next-lesson" type="button" data-lesson-action="back-curriculum">Back to curriculum</button>`
+            }
+          </div>
+        </div>
       </div>
     `;
   }
 
-  function render(): void {
-    updateNavIndicator();
-    applyCompactLayout();
-    applyPhaseClasses();
-    syncEditorReadOnly();
-
-    if (completionVisible) {
-      panel.innerHTML = renderCompletion();
-      return;
-    }
-
-    const step = currentStep();
-    const lessonNumber = allLessons.findIndex((entry) => entry.id === lesson.id) + 1;
-    panel.innerHTML =
-      stepPhase === "reading"
-        ? renderReadingView(step, lessonNumber)
-        : stepPhase === "watching"
-          ? renderWatchingView(lessonNumber)
-          : renderGoalPanel(step, lessonNumber);
-
-    panel.querySelectorAll<HTMLElement>("[data-lesson-hint]").forEach((button) => {
+  function bindLessonActions(container: ParentNode): void {
+    container.querySelectorAll<HTMLElement>("[data-lesson-hint]").forEach((button) => {
       button.addEventListener("click", () => {
         const goalId = button.dataset.lessonHint;
         if (!goalId) {
@@ -1006,14 +1503,11 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
       });
     });
 
-    panel.querySelectorAll<HTMLElement>("[data-lesson-action]").forEach((button) => {
+    container.querySelectorAll<HTMLElement>("[data-lesson-action]").forEach((button) => {
       button.addEventListener("click", () => {
         const action = button.dataset.lessonAction;
         if (action === "prev" && lessonProgress.currentStepIndex > 0) {
           void navigateToStep(lessonProgress.currentStepIndex - 1);
-        }
-        if (action === "next" && !isCheckpointStep(currentStep()) && lessonProgress.currentStepIndex < lesson.steps.length - 1) {
-          void navigateToStep(lessonProgress.currentStepIndex + 1, { markCurrentComplete: true });
         }
         if (action === "next-reading" && lessonProgress.currentStepIndex < lesson.steps.length - 1) {
           void navigateToStep(lessonProgress.currentStepIndex + 1, { markCurrentComplete: true });
@@ -1027,7 +1521,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
         if (action === "back-to-reading") {
           void enterPhase("reading");
         }
-        if (action === "skip-watch") {
+        if (action === "skip-watch" || action === "watch-try") {
           void enterPhase("trying");
         }
         if (action === "continue" && goalEvaluation.passed) {
@@ -1051,24 +1545,6 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
             void deps.assembleSource(false, "Solution assembled.");
           }
         }
-        if (action === "breakdown") {
-          const step = currentStep();
-          const annotated = buildAnnotatedCode(step);
-          if (annotated) {
-            deps.loadSource(annotated, {
-              statusMessage: "Annotated starter code loaded.",
-              focus: false,
-            });
-            void deps.assembleSource(false, "Annotated starter assembled.");
-          }
-        }
-        if (action === "watch-toggle") {
-          if (currentWatchStepActive()) {
-            void exitWatchMode(true);
-          } else {
-            void enterWatchMode();
-          }
-        }
         if (action === "watch-play" && currentWatchStepActive() && !watchCompleted) {
           watchPlaying = true;
           queueWatchStep();
@@ -1089,15 +1565,30 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
           }
           render();
         }
-        if (action === "watch-try" && currentWatchStepActive()) {
-          void enterPhase("trying");
+        if (action === "toggle-shortcuts") {
+          shortcutsOpen = !shortcutsOpen;
+          render();
+        }
+        if (action === "toggle-inline") {
+          compactCollapsed = !compactCollapsed;
+          render();
+        }
+        if (action === "next-lesson") {
+          const lessonIndex = allLessons.findIndex((entry) => entry.id === lesson.id);
+          const nextLesson = allLessons[lessonIndex + 1];
+          if (nextLesson) {
+            window.location.href = `/simulator/?lesson=${encodeURIComponent(nextLesson.id)}`;
+          }
+        }
+        if (action === "back-curriculum") {
+          window.location.href = "/learn/";
         }
       });
     });
 
-    panel.querySelectorAll<HTMLButtonElement>("[data-lesson-step-dot]").forEach((button) => {
+    container.querySelectorAll<HTMLButtonElement>("[data-lesson-step-dot], [data-lesson-step-index]").forEach((button) => {
       button.addEventListener("click", () => {
-        const rawIndex = Number(button.dataset.lessonStepDot);
+        const rawIndex = Number(button.dataset.lessonStepDot ?? button.dataset.lessonStepIndex);
         if (!Number.isInteger(rawIndex)) {
           return;
         }
@@ -1112,6 +1603,80 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
         void navigateToStep(rawIndex);
       });
     });
+  }
+
+  function animateEntryIfNeeded(): void {
+    if (!pendingEnterDirection || lessonPrefersReducedMotion() || panel.hidden) {
+      pendingEnterDirection = null;
+      return;
+    }
+    const content = panel.querySelector<HTMLElement>(".lro__step-content");
+    if (!content) {
+      pendingEnterDirection = null;
+      return;
+    }
+    const className = pendingEnterDirection === "right" ? "is-entering-right" : "is-entering-left";
+    content.classList.add(className);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        content.classList.remove(className);
+        pendingEnterDirection = null;
+      });
+    });
+  }
+
+  function render(): void {
+    updateNavIndicator();
+    applyCompactLayout();
+    applyPhaseClasses();
+    syncEditorReadOnly();
+
+    const step = currentStep();
+    const lessonNumber = allLessons.findIndex((entry) => entry.id === lesson.id) + 1;
+    const showOverlay = completionVisible || stepPhase === "reading" || isWideLessonSplit();
+
+    panel.hidden = !showOverlay;
+    compactShell.hidden = !(isLessonSimulatorMode() && !completionVisible);
+
+    if (showOverlay) {
+      panel.innerHTML = `${renderOverlay(step, lessonNumber)}${completionVisible ? renderCompletion() : ""}`;
+      bindLessonActions(panel);
+      animateEntryIfNeeded();
+    } else {
+      panel.innerHTML = "";
+    }
+
+    if (!compactShell.hidden) {
+      compactShell.innerHTML = renderInlineShell(step, lessonNumber);
+      bindLessonActions(compactShell);
+    } else {
+      compactShell.innerHTML = "";
+    }
+
+    if (completionVisible) {
+      const shareMount = panel.querySelector<HTMLElement>("#lessonShareMount");
+      const session = deps.getCurrentSession();
+      if (shareMount) {
+        shareMount.appendChild(
+          createShareSection({
+            card: {
+              variant: "lesson",
+              title: `Lesson ${allLessons.findIndex((entry) => entry.id === lesson.id) + 1} Complete`,
+              subtitle: lesson.title,
+              stats: [
+                { label: "Steps", value: `${lesson.steps.length}` },
+                { label: "Instructions", value: `${currentState.stepCount}` },
+              ],
+              badge: "🎓",
+              streakDays: loadScore().streak,
+              accentColor: "var(--success)",
+            },
+            filename: `${lesson.id}.png`,
+            link: session ? buildReferralLink(session.userId, "/learn/") : "https://studyriscv.com/learn/",
+          })
+        );
+      }
+    }
   }
 
   lessonProgress = createLessonProgress(lesson, progress.lessons[lesson.id]);
@@ -1137,6 +1702,93 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
   applyPhaseClasses();
   updateUrl(false);
   render();
+
+  const handleResize = (): void => {
+    applyPhaseClasses();
+    render();
+  };
+  window.addEventListener("resize", handleResize);
+
+  const handleReadingKeydown = (event: KeyboardEvent): void => {
+    const active = document.activeElement;
+    const isTyping =
+      active instanceof HTMLInputElement ||
+      active instanceof HTMLTextAreaElement ||
+      (active instanceof HTMLElement && active.isContentEditable);
+    const modalOpen =
+      !panel.hidden && panel.querySelector(".lro-completion") !== null;
+
+    if (isTyping || modalOpen) {
+      return;
+    }
+
+    if (event.key === "Escape") {
+      window.location.href = "/learn/";
+      return;
+    }
+
+    if (event.key === "?") {
+      event.preventDefault();
+      shortcutsOpen = !shortcutsOpen;
+      render();
+      return;
+    }
+
+    if (event.key.toLowerCase() === "b" && stepPhase !== "reading") {
+      event.preventDefault();
+      void enterPhase("reading");
+      return;
+    }
+
+    if (event.key.toLowerCase() === "t" && isCheckpointStep(currentStep()) && stepPhase === "reading") {
+      event.preventDefault();
+      void enterPhase("trying");
+      return;
+    }
+
+    if (/^[1-9]$/.test(event.key)) {
+      const targetIndex = Number(event.key) - 1;
+      const target = lesson.steps[targetIndex];
+      if (target) {
+        const isCompleted = lessonProgress.stepsCompleted.includes(target.id);
+        if (isCompleted || targetIndex === lessonProgress.currentStepIndex) {
+          event.preventDefault();
+          void navigateToStep(targetIndex);
+        }
+      }
+      return;
+    }
+
+    if (event.key === "ArrowLeft" && lessonProgress.currentStepIndex > 0) {
+      event.preventDefault();
+      void navigateToStep(lessonProgress.currentStepIndex - 1);
+      return;
+    }
+
+    if ((event.key === "ArrowRight" || event.key === " ") && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      event.preventDefault();
+      const step = currentStep();
+      if (stepPhase === "reading") {
+        if (isCheckpointStep(step)) {
+          void enterPhase("trying");
+        } else if (lessonProgress.currentStepIndex >= lesson.steps.length - 1) {
+          void finishLesson();
+        } else {
+          void navigateToStep(lessonProgress.currentStepIndex + 1, { markCurrentComplete: true });
+        }
+        return;
+      }
+
+      if (goalEvaluation.passed) {
+        if (lessonProgress.currentStepIndex >= lesson.steps.length - 1) {
+          void finishLesson();
+        } else {
+          void navigateToStep(lessonProgress.currentStepIndex + 1, { markCurrentComplete: true });
+        }
+      }
+    }
+  };
+  window.addEventListener("keydown", handleReadingKeydown);
 
   window.addEventListener("popstate", () => {
     const params = new URLSearchParams(window.location.search);

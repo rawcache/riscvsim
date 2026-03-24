@@ -63,7 +63,10 @@ function challengeSolvedText(): string {
   return `${challengesPassed()}/${getChallenges().length}`;
 }
 
-function resumeMarkup(progress: UserProgress): string {
+function resumeMarkup(progress: UserProgress, loggedIn: boolean): string {
+  if (!loggedIn) {
+    return "";
+  }
   const lessons = getLessons();
   const activeId = progress.lastActiveLesson ?? lessons.find((lesson) => progress.lessons[lesson.id] && !progress.lessons[lesson.id]?.completed)?.id;
   if (!activeId) {
@@ -117,7 +120,7 @@ function renderHero(progress: UserProgress, loggedIn: boolean): void {
         <p class="learn-hero__subhead">${totalLessons} lessons · 15 challenges · ECE 2035 aligned</p>
       </div>
       <div class="learn-xp-pill">${formatPoints(score.totalPoints)} XP</div>
-      ${resumeMarkup(progress)}
+      ${resumeMarkup(progress, loggedIn)}
     </div>
     <div class="learn-hero__status">
       ${
@@ -255,6 +258,70 @@ async function fetchLeaderboard(period: "alltime" | "weekly"): Promise<Leaderboa
   }
 }
 
+async function fetchStudyGroups(idToken: string): Promise<Array<{ id: string; name: string; members: Array<{ displayName: string }>; maxMembers: number }>> {
+  try {
+    const response = await fetch(`${API_ENDPOINT}/groups/mine`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    });
+    if (!response.ok) {
+      return [];
+    }
+    const payload = (await response.json()) as unknown;
+    return Array.isArray(payload) ? (payload as Array<{ id: string; name: string; members: Array<{ displayName: string }>; maxMembers: number }>) : [];
+  } catch {
+    return [];
+  }
+}
+
+function renderStudyGroups(session: Awaited<ReturnType<typeof getSession>> | null, groups: Array<{ id: string; name: string; members: Array<{ displayName: string }>; maxMembers: number }>): void {
+  const root = document.getElementById("learnStudyGroups");
+  if (!root) {
+    return;
+  }
+
+  if (!session) {
+    root.innerHTML = `
+      <div class="learn-panel__header-row">
+        <h2 class="learn-panel__title">Study groups</h2>
+        <div class="learn-panel__meta">Sign in required</div>
+      </div>
+      <div class="learn-challenge-summary__empty">Create or join a group to compare progress with classmates.</div>
+      <a class="learn-panel__link" href="/groups/">Open groups →</a>
+    `;
+    return;
+  }
+
+  root.innerHTML = `
+    <div class="learn-panel__header-row">
+      <h2 class="learn-panel__title">Study groups</h2>
+      <a class="learn-panel__link" href="/groups/">Open groups →</a>
+    </div>
+    <div class="learn-panel__meta">${groups.length} group${groups.length === 1 ? "" : "s"} joined</div>
+    ${
+      groups.length
+        ? `
+          <div class="learn-study-groups__list">
+            ${groups
+              .slice(0, 3)
+              .map(
+                (group) => `
+                  <a class="learn-study-groups__item" href="/groups/?code=${encodeURIComponent(group.id)}">
+                    <span class="learn-study-groups__name">${escapeHtml(group.name)}</span>
+                    <span class="learn-study-groups__meta">${group.members.length}/${group.maxMembers} members</span>
+                  </a>
+                `
+              )
+              .join("")}
+          </div>
+        `
+        : '<div class="learn-challenge-summary__empty">No study groups yet. Create one for your section or project team.</div>'
+    }
+  `;
+}
+
 function renderChallengeSnapshot(): void {
   const summary = document.getElementById("learnChallengeSummary");
   if (!summary) {
@@ -326,8 +393,23 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     await renderLeaderboardNow();
+    renderStudyGroups(session, session?.idToken ? await fetchStudyGroups(session.idToken) : []);
     window.setInterval(() => {
       void renderLeaderboardNow();
     }, 60_000);
+
+    window.addEventListener("studyriscv-auth-changed", async (event) => {
+      const nextSession = (event as CustomEvent<Awaited<ReturnType<typeof getSession>> | null>).detail ?? null;
+      let nextProgress = loadProgress();
+      if (nextSession?.idToken) {
+        const apiProgress = await loadProgressFromApi(nextSession.idToken);
+        if (apiProgress) {
+          nextProgress = mergeProgress(nextProgress, apiProgress);
+          saveProgress(nextProgress);
+        }
+      }
+      renderPage(nextProgress, Boolean(nextSession));
+      renderStudyGroups(nextSession, nextSession?.idToken ? await fetchStudyGroups(nextSession.idToken) : []);
+    });
   })();
 });

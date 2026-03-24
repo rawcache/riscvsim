@@ -1,5 +1,6 @@
 import type { ChallengeSubmission } from "./challenges";
 import type { UserProgress } from "./lessons";
+import { getStoredReferral } from "./referrals";
 
 const SCORE_STORAGE_KEY = "studyriscv_score";
 const DEFAULT_API_ENDPOINT = "https://api.studyriscv.com";
@@ -20,6 +21,10 @@ export interface UserScore {
   streakFreezeCount?: number;
   weeklyPoints?: number;
   weeklyStartDate?: string;
+  pinnedBadgeIds?: string[];
+  profileAvatar?: string;
+  profileAvatarType?: "preset" | "upload";
+  recentActivity?: ScoreActivity[];
 }
 
 export interface Badge {
@@ -28,6 +33,13 @@ export interface Badge {
   description: string;
   icon: string;
   earnedAt: string;
+}
+
+export interface ScoreActivity {
+  type: "lesson" | "challenge" | "quiz";
+  title: string;
+  completedAt: string;
+  score?: number;
 }
 
 type BadgeDefinition = {
@@ -274,6 +286,24 @@ function normalizeBadge(input: unknown): Badge | null {
   };
 }
 
+function normalizeActivity(input: unknown): ScoreActivity | null {
+  if (!input || typeof input !== "object") {
+    return null;
+  }
+
+  const activity = input as Partial<ScoreActivity>;
+  if ((activity.type !== "lesson" && activity.type !== "challenge" && activity.type !== "quiz") || typeof activity.title !== "string") {
+    return null;
+  }
+
+  return {
+    type: activity.type,
+    title: activity.title,
+    completedAt: typeof activity.completedAt === "string" && activity.completedAt ? activity.completedAt : new Date().toISOString(),
+    score: Number.isFinite(activity.score) ? Number(activity.score) : undefined,
+  };
+}
+
 function normalizeScore(input: unknown): UserScore {
   if (!input || typeof input !== "object") {
     return attachExtras(baseScore(), emptyExtras());
@@ -291,6 +321,28 @@ function normalizeScore(input: unknown): UserScore {
   score.badges = Array.isArray(raw.badges)
     ? raw.badges.map(normalizeBadge).filter((badge): badge is Badge => Boolean(badge))
     : [];
+  const pinnedBadgeIds = Array.isArray(raw.pinnedBadgeIds)
+    ? raw.pinnedBadgeIds.filter((badgeId): badgeId is string => typeof badgeId === "string").slice(0, 3)
+    : [];
+  if (pinnedBadgeIds.length > 0) {
+    score.pinnedBadgeIds = pinnedBadgeIds;
+  }
+
+  const profileAvatar = typeof raw.profileAvatar === "string" ? raw.profileAvatar.trim() : "";
+  if (profileAvatar) {
+    score.profileAvatar = profileAvatar;
+  }
+
+  if (raw.profileAvatarType === "preset" || raw.profileAvatarType === "upload") {
+    score.profileAvatarType = raw.profileAvatarType;
+  }
+
+  const recentActivity = Array.isArray(raw.recentActivity)
+    ? raw.recentActivity.map(normalizeActivity).filter((activity): activity is ScoreActivity => Boolean(activity)).slice(0, 10)
+    : [];
+  if (recentActivity.length > 0) {
+    score.recentActivity = recentActivity;
+  }
 
   return attachExtras(score, {
     longestStreak: raw.longestStreak,
@@ -303,7 +355,7 @@ function normalizeScore(input: unknown): UserScore {
 
 function serializeScore(score: UserScore): Record<string, unknown> {
   const extras = getExtras(score);
-  return {
+  const serialized: Record<string, unknown> = {
     totalPoints: score.totalPoints,
     lessonPoints: score.lessonPoints,
     challengePoints: score.challengePoints,
@@ -318,6 +370,21 @@ function serializeScore(score: UserScore): Record<string, unknown> {
     weeklyPoints: extras.weeklyPoints,
     weeklyStartDate: extras.weeklyStartDate,
   };
+
+  if (Array.isArray(score.pinnedBadgeIds) && score.pinnedBadgeIds.length > 0) {
+    serialized.pinnedBadgeIds = score.pinnedBadgeIds;
+  }
+  if (typeof score.profileAvatar === "string" && score.profileAvatar.trim()) {
+    serialized.profileAvatar = score.profileAvatar.trim();
+  }
+  if (score.profileAvatarType === "preset" || score.profileAvatarType === "upload") {
+    serialized.profileAvatarType = score.profileAvatarType;
+  }
+  if (Array.isArray(score.recentActivity) && score.recentActivity.length > 0) {
+    serialized.recentActivity = score.recentActivity;
+  }
+
+  return serialized;
 }
 
 function parseDateStamp(stamp: string): number | null {
@@ -401,6 +468,38 @@ export function saveScore(score: UserScore): void {
     return;
   }
   localStorage.setItem(SCORE_STORAGE_KEY, JSON.stringify(serializeScore(normalizeScore(score))));
+}
+
+export function setPinnedBadges(badgeIds: string[]): UserScore {
+  const score = normalizeScore(loadScore());
+  score.pinnedBadgeIds = badgeIds.filter((badgeId) => score.badges.some((badge) => badge.id === badgeId)).slice(0, 3);
+  saveScore(score);
+  return score;
+}
+
+export function setProfileAvatar(type: "preset" | "upload", value: string): UserScore {
+  const score = normalizeScore(loadScore());
+  score.profileAvatarType = type;
+  score.profileAvatar = value.trim();
+  saveScore(score);
+  return score;
+}
+
+export function recordRecentActivity(activity: ScoreActivity): UserScore {
+  const normalized = normalizeActivity(activity);
+  const score = normalizeScore(loadScore());
+  if (!normalized) {
+    return score;
+  }
+
+  score.recentActivity = [
+    normalized,
+    ...(score.recentActivity ?? []).filter(
+      (entry) => !(entry.type === normalized.type && entry.title === normalized.title && entry.completedAt === normalized.completedAt)
+    ),
+  ].slice(0, 10);
+  saveScore(score);
+  return score;
 }
 
 export function getScore(): UserScore {
@@ -561,7 +660,10 @@ export async function syncScoreToApi(score: UserScore, idToken: string): Promise
         "Content-Type": "application/json",
         Authorization: `Bearer ${idToken}`,
       },
-      body: JSON.stringify(serializeScore(normalizeScore(score))),
+      body: JSON.stringify({
+        ...serializeScore(normalizeScore(score)),
+        referredBy: getStoredReferral(),
+      }),
     });
   } catch {
     // Ignore sync failures so the local UX keeps moving.

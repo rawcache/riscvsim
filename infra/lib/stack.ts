@@ -175,6 +175,52 @@ export class StudyRiscvStack extends Stack {
       authorizer: programsAuthorizer,
     });
 
+    httpApi.addRoutes({
+      path: "/leaderboard/weekly-challenge",
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: programsIntegration,
+    });
+
+    httpApi.addRoutes({
+      path: "/leaderboard/announcements",
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: programsIntegration,
+    });
+
+    httpApi.addRoutes({
+      path: "/groups/create",
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: programsIntegration,
+      authorizer: programsAuthorizer,
+    });
+
+    httpApi.addRoutes({
+      path: "/groups/join",
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: programsIntegration,
+      authorizer: programsAuthorizer,
+    });
+
+    httpApi.addRoutes({
+      path: "/groups/mine",
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: programsIntegration,
+      authorizer: programsAuthorizer,
+    });
+
+    httpApi.addRoutes({
+      path: "/groups/leave",
+      methods: [apigatewayv2.HttpMethod.DELETE],
+      integration: programsIntegration,
+      authorizer: programsAuthorizer,
+    });
+
+    httpApi.addRoutes({
+      path: "/profile/{username}",
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: programsIntegration,
+    });
+
     new CfnOutput(this, "UserPoolId", {
       value: userPool.userPoolId,
     });
