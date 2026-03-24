@@ -165,7 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const filtered = applyFilters(challenges, activeDifficulty, lessonFilterEl.value);
     challengesGrid.innerHTML = filtered.map((challenge) => renderChallengeCard(challenge)).join("");
     solvedLabelEl.textContent = `${challenges.filter((challenge) => getChallengeStatus(challenge.id) === "passed").length}/${challenges.length} solved`;
-    xpLabelEl.textContent = `${loadScore().totalPoints.toLocaleString("en-US")} XP`;
+    xpLabelEl.textContent = `${loadScore().totalPoints.toLocaleString("en-US")} chips`;
 
     filterButtons.forEach((button) => {
       const active = button.dataset.challengeDifficulty === activeDifficulty;

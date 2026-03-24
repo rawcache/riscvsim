@@ -108,7 +108,7 @@ function groupCard(group: StudyGroup, active = false): string {
                 <div class="group-member-card__avatar">${escapeHtml(member.displayName.charAt(0).toUpperCase())}</div>
                 <div class="group-member-card__body">
                   <div class="group-member-card__name">${escapeHtml(member.displayName)}</div>
-                  <div class="group-member-card__meta">${member.totalXP.toLocaleString("en-US")} XP · ${member.lessonsCompleted}/20 lessons · 🔥 ${member.streak}</div>
+                  <div class="group-member-card__meta">${member.totalXP.toLocaleString("en-US")} chips · ${member.lessonsCompleted}/20 lessons · 🔥 ${member.streak}</div>
                 </div>
               </div>
             `
@@ -239,7 +239,7 @@ function renderGroups(root: HTMLElement, groups: StudyGroup[], currentUserId: st
                         <span class="leaderboard-page__name">${escapeHtml(member.displayName)}</span>
                         <span class="leaderboard-page__meta">${member.lessonsCompleted}/20 lessons</span>
                         <span class="leaderboard-page__meta">${relativeLastActive(member.lastActive)}</span>
-                        <span class="leaderboard-page__xp">${member.totalXP.toLocaleString("en-US")} XP</span>
+                        <span class="leaderboard-page__xp">${member.totalXP.toLocaleString("en-US")} chips</span>
                       </div>
                     `
                   )

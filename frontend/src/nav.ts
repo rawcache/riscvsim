@@ -36,18 +36,6 @@ function chevronSvg(): string {
   return `<svg class="nav-chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"></path></svg>`;
 }
 
-function iconStep(): string {
-  return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M4 12h11"></path><path d="m11 5 7 7-7 7"></path><path d="M4 5v14"></path></svg>`;
-}
-
-function iconStack(): string {
-  return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="5" y="6" width="14" height="4" rx="1.5"></rect><rect x="5" y="10" width="14" height="4" rx="1.5"></rect><rect x="5" y="14" width="14" height="4" rx="1.5"></rect></svg>`;
-}
-
-function iconCode(): string {
-  return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M8 8 4 12l4 4"></path><path d="m16 8 4 4-4 4"></path><path d="M10 19h4"></path></svg>`;
-}
-
 function iconPerson(): string {
   return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c1.8-3.5 4.2-5 7-5s5.2 1.5 7 5"></path></svg>`;
 }
@@ -87,10 +75,6 @@ function toggleTheme(themeToggles: Array<HTMLButtonElement | null>): void {
   themeToggles.forEach((toggle) => setThemeToggleState(toggle));
 }
 
-function productActive(config: NavConfig["activePage"]): boolean {
-  return config === "simulator";
-}
-
 function resourcesActive(config: NavConfig["activePage"]): boolean {
   return config === "about" || config === "docs";
 }
@@ -101,7 +85,7 @@ function renderNav(config: NavConfig): string {
   const isLabs = config.activePage === "labs";
   const isChallenges = config.activePage === "challenges";
   const isGithub = config.activePage === "github";
-  const isProduct = productActive(config.activePage);
+  const isSimulator = config.activePage === "simulator";
   const isResources = resourcesActive(config.activePage);
   const docsGuideActive = config.activePage === "docs";
 
@@ -111,29 +95,10 @@ function renderNav(config: NavConfig): string {
         <a href="/" class="nav-logo">StudyRISC-V</a>
         <div class="nav-links">
           <a href="/learn/" class="nav-link${isLearn ? " nav-link-active" : ""}">Learn</a>
+          <a href="/simulator/" class="nav-link${isSimulator ? " nav-link-active" : ""}">Simulator</a>
           <a href="/quiz/" class="nav-link${isQuiz ? " nav-link-active" : ""}">Quizzes</a>
           <a href="/labs/" class="nav-link${isLabs ? " nav-link-active" : ""}">Labs</a>
           <a href="/challenges/" class="nav-link${isChallenges ? " nav-link-active" : ""}">Challenges</a>
-          <div class="nav-dropdown-wrapper" data-nav-dropdown="product">
-            <button class="nav-link nav-dropdown-trigger${isProduct ? " nav-link-active" : ""}" type="button" aria-expanded="false" aria-controls="nav-dropdown-product">
-              Product
-              ${chevronSvg()}
-            </button>
-            <div class="nav-dropdown" id="nav-dropdown-product">
-              <a href="/simulator/" class="nav-dropdown-item${isProduct ? " nav-dropdown-item-active" : ""}">
-                <div class="nav-dropdown-icon">${iconStep()}</div>
-                <div><span class="nav-dropdown-title">Simulator</span><span class="nav-dropdown-desc">Step through RISC-V assembly</span></div>
-              </a>
-              <a href="/simulator/" class="nav-dropdown-item${isProduct ? " nav-dropdown-item-active" : ""}">
-                <div class="nav-dropdown-icon">${iconStack()}</div>
-                <div><span class="nav-dropdown-title">Call Stack Visualizer</span><span class="nav-dropdown-desc">Watch stack frames build live</span></div>
-              </a>
-              <a href="/simulator/" class="nav-dropdown-item${isProduct ? " nav-dropdown-item-active" : ""}">
-                <div class="nav-dropdown-icon">${iconCode()}</div>
-                <div><span class="nav-dropdown-title">Pseudo-C Explainer</span><span class="nav-dropdown-desc">Assembly translated to readable C</span></div>
-              </a>
-            </div>
-          </div>
           <div class="nav-dropdown-wrapper" data-nav-dropdown="resources">
             <button class="nav-link nav-dropdown-trigger${isResources ? " nav-link-active" : ""}" type="button" aria-expanded="false" aria-controls="nav-dropdown-resources">
               Resources
@@ -185,7 +150,7 @@ function renderNav(config: NavConfig): string {
       </div>
       <div class="nav-mobile-menu" id="nav-mobile-menu">
         <a href="/learn/" class="nav-mobile-link${isLearn ? " nav-link-active" : ""}">Learn</a>
-        <a href="/simulator/" class="nav-mobile-link${isProduct ? " nav-link-active" : ""}">Simulator</a>
+        <a href="/simulator/" class="nav-mobile-link${isSimulator ? " nav-link-active" : ""}">Simulator</a>
         <a href="/quiz/" class="nav-mobile-link">Quizzes</a>
         <a href="/labs/" class="nav-mobile-link">Labs</a>
         <a href="/challenges/" class="nav-mobile-link">Challenges</a>

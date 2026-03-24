@@ -1160,7 +1160,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
       id: `lesson-${lesson.id}-${lessonProgress.completedAt ?? Date.now()}`,
       type: "lesson",
       title: "Lesson Complete!",
-      message: `${lesson.title} · +${LESSON_COMPLETION_XP} XP`,
+      message: `${lesson.title} · +${LESSON_COMPLETION_XP} chips`,
       icon: "🎓",
       duration: 4000,
       accentColor: "var(--success)",
@@ -1460,7 +1460,7 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
             </div>
             <div class="lro-completion__stat">
               <span class="lro-completion__stat-value">+${LESSON_COMPLETION_XP}</span>
-              <span class="lro-completion__stat-label">XP earned</span>
+              <span class="lro-completion__stat-label">Chips earned</span>
             </div>
             <div class="lro-completion__stat">
               <span class="lro-completion__stat-value">${progress.totalCompleted}/20</span>
@@ -1824,6 +1824,9 @@ export function createLessonMode(deps: LessonModeDependencies): LessonModeContro
     },
     async initialize() {
       runtimeReady = true;
+      if (assembleButton) {
+        assembleButton.textContent = "Assemble and run";
+      }
       syncEditorReadOnly();
       render();
       if (stepPhase === "watching") {

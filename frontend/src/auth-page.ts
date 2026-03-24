@@ -21,6 +21,10 @@ type ModalState = {
   config: AuthConfig;
   avatarType: "" | "preset" | "upload";
   avatarValue: string;
+  turnstileToken: string;
+  turnstileProof: string;
+  humanVerified: boolean;
+  turnstileError: string;
 };
 
 type ShowOptions = {
@@ -41,6 +45,34 @@ type CognitoResponse = {
   __type?: string;
 };
 
+type TurnstileVerificationResponse = {
+  success?: boolean;
+  proof?: string;
+  expiresAt?: number;
+  message?: string;
+};
+
+type TurnstileGlobal = {
+  render: (
+    container: Element | string,
+    options: {
+      sitekey: string;
+      theme?: "light" | "dark" | "auto";
+      callback?: (token: string) => void;
+      "expired-callback"?: () => void;
+      "error-callback"?: () => void;
+    }
+  ) => string;
+  remove?: (widgetId: string) => void;
+  reset?: (widgetId?: string) => void;
+};
+
+declare global {
+  interface Window {
+    turnstile?: TurnstileGlobal;
+  }
+}
+
 const COGNITO_ENDPOINT = "https://cognito-idp.us-east-1.amazonaws.com/";
 const EVENT_NAME = "studyriscv-auth-changed";
 
@@ -60,7 +92,53 @@ let state: ModalState = {
   config: AUTH_CONFIG,
   avatarType: "",
   avatarValue: "",
+  turnstileToken: "",
+  turnstileProof: "",
+  humanVerified: false,
+  turnstileError: "",
 };
+
+let turnstileScriptPromise: Promise<void> | null = null;
+let turnstileWidgetId: string | null = null;
+
+function requiresHumanVerification(mode: Mode): boolean {
+  return mode === "sign-in" || mode === "sign-up" || mode === "confirm-sign-up" || mode === "forgot-password" || mode === "reset-password";
+}
+
+function turnstileContainerMarkup(): string {
+  if (!requiresHumanVerification(state.mode) || !state.config.turnstileSiteKey) {
+    return "";
+  }
+
+  return `
+    <div class="auth-modal__field auth-modal__field--turnstile">
+      <span class="auth-modal__label">Human check</span>
+      <div class="auth-modal__turnstile-shell">
+        <div class="auth-modal__turnstile" id="auth-turnstile"></div>
+      </div>
+      ${
+        state.humanVerified
+          ? '<div class="auth-modal__turnstile-status is-success">Verification complete.</div>'
+          : state.turnstileError
+            ? `<div class="auth-modal__turnstile-status is-error">${escapeHtml(state.turnstileError)}</div>`
+            : '<div class="auth-modal__turnstile-status">Complete the human check once to continue.</div>'
+      }
+    </div>
+  `;
+}
+
+function resetHumanVerification(options: { keepError?: boolean } = {}): void {
+  state = {
+    ...state,
+    turnstileToken: "",
+    turnstileProof: "",
+    humanVerified: false,
+    turnstileError: options.keepError ? state.turnstileError : "",
+  };
+  if (turnstileWidgetId && typeof window !== "undefined" && window.turnstile?.reset) {
+    window.turnstile.reset(turnstileWidgetId);
+  }
+}
 
 function handleDocumentKeydown(event: KeyboardEvent): void {
   if (event.key === "Escape" && overlayEl && state.allowClose) {
@@ -89,6 +167,12 @@ function cleanErrorMessage(message: string): string {
   }
   if (message.includes("NetworkError") || message.includes("Failed to fetch")) {
     return "Couldn't reach Cognito. Check your connection and try again.";
+  }
+  if (message.toLowerCase().includes("human verification")) {
+    return "Human verification failed. Try again.";
+  }
+  if (message.includes("Turnstile")) {
+    return "Human verification is unavailable right now.";
   }
   if (message === "Incorrect username or password.") {
     return message;
@@ -124,9 +208,12 @@ function hasPlaceholderConfig(config: AuthConfig): boolean {
 
 function configErrorMessage(config: AuthConfig): string {
   if (!hasPlaceholderConfig(config)) {
+    if (!config.turnstileSiteKey.trim()) {
+      return "Human verification is not configured for this deployment. Add VITE_TURNSTILE_SITE_KEY and rebuild the frontend.";
+    }
     return "";
   }
-  return "This page was built without Cognito config. If you're on localhost, stop and restart `npm run dev`. If you're on Amplify, set VITE_COGNITO_USER_POOL_ID, VITE_COGNITO_CLIENT_ID, and VITE_COGNITO_DOMAIN, then redeploy.";
+  return "This page was built without Cognito config. If you're on localhost, stop and restart `npm run dev`. If you're on Amplify, set VITE_COGNITO_USER_POOL_ID, VITE_COGNITO_CLIENT_ID, VITE_COGNITO_DOMAIN, and VITE_TURNSTILE_SITE_KEY, then redeploy.";
 }
 
 async function cognitoRequest(target: string, body: Record<string, unknown>): Promise<CognitoResponse> {
@@ -144,6 +231,142 @@ async function cognitoRequest(target: string, body: Record<string, unknown>): Pr
     throw new Error(cleanErrorMessage(payload.message ?? "Something went wrong. Try again."));
   }
   return payload;
+}
+
+function authApiUrl(config: AuthConfig, path: string): string {
+  return `${config.apiEndpoint.replace(/\/+$/g, "")}${path}`;
+}
+
+function hasTurnstileConfig(config: AuthConfig): boolean {
+  return Boolean(config.turnstileSiteKey.trim());
+}
+
+function loadTurnstileScript(): Promise<void> {
+  if (typeof document === "undefined") {
+    return Promise.resolve();
+  }
+  if (window.turnstile) {
+    return Promise.resolve();
+  }
+  if (turnstileScriptPromise) {
+    return turnstileScriptPromise;
+  }
+
+  turnstileScriptPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>('script[data-turnstile-script="true"]');
+    if (existing) {
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error("Unable to load Cloudflare Turnstile.")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.defer = true;
+    script.dataset.turnstileScript = "true";
+    script.addEventListener("load", () => resolve(), { once: true });
+    script.addEventListener("error", () => reject(new Error("Unable to load Cloudflare Turnstile.")), { once: true });
+    document.head.appendChild(script);
+  });
+
+  return turnstileScriptPromise;
+}
+
+async function verifyTurnstileToken(token: string): Promise<void> {
+  const email = state.email.trim().toLowerCase();
+  const response = await fetch(authApiUrl(state.config, "/auth/verify-turnstile"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      token,
+      email,
+      source: "web",
+    }),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as TurnstileVerificationResponse;
+  if (!response.ok || !payload.success || !payload.proof) {
+    throw new Error(payload.message || "Human verification failed. Try again.");
+  }
+
+  state = {
+    ...state,
+    turnstileToken: token,
+    turnstileProof: payload.proof,
+    humanVerified: true,
+    turnstileError: "",
+  };
+}
+
+function mountTurnstileWidget(): void {
+  if (typeof document === "undefined" || !overlayEl || !hasTurnstileConfig(state.config) || !requiresHumanVerification(state.mode)) {
+    return;
+  }
+
+  const container = overlayEl.querySelector<HTMLElement>("#auth-turnstile");
+  if (!container) {
+    return;
+  }
+
+  void loadTurnstileScript()
+    .then(() => {
+      if (!overlayEl || !overlayEl.contains(container) || !window.turnstile) {
+        return;
+      }
+      container.innerHTML = "";
+      turnstileWidgetId = window.turnstile.render(container, {
+        sitekey: state.config.turnstileSiteKey,
+        theme: document.documentElement.dataset.theme === "dark" ? "dark" : "light",
+        callback: (token: string) => {
+          state = {
+            ...state,
+            turnstileError: "",
+            humanVerified: false,
+            turnstileProof: "",
+            turnstileToken: token,
+          };
+          render();
+          void verifyTurnstileToken(token)
+            .then(() => {
+              render();
+            })
+            .catch((error) => {
+              state = {
+                ...state,
+                humanVerified: false,
+                turnstileProof: "",
+                turnstileToken: "",
+                turnstileError: cleanErrorMessage((error as Error).message),
+              };
+              render();
+            });
+        },
+        "expired-callback": () => {
+          resetHumanVerification({ keepError: false });
+          render();
+        },
+        "error-callback": () => {
+          state = {
+            ...state,
+            humanVerified: false,
+            turnstileProof: "",
+            turnstileToken: "",
+            turnstileError: "Human verification failed. Try again.",
+          };
+          render();
+        },
+      });
+    })
+    .catch((error) => {
+      state = {
+        ...state,
+        turnstileError: cleanErrorMessage((error as Error).message),
+      };
+      render();
+    });
 }
 
 function dispatchAuthChange(session: UserSession | null): void {
@@ -228,6 +451,7 @@ function renderFields(): string {
               </div>
               <label class="auth-modal__upload">
                 <span>Or upload a picture</span>
+                <span class="auth-modal__upload-button">${state.avatarType === "upload" && state.avatarValue ? "Choose a different image" : "Choose an image"}</span>
                 <input data-auth-avatar-upload type="file" accept="image/*" />
               </label>
               ${
@@ -352,6 +576,9 @@ function validateState(): string {
       return "Enter a new password.";
     }
   }
+  if (requiresHumanVerification(state.mode) && !state.humanVerified) {
+    return state.turnstileError || "Complete the human check to continue.";
+  }
   return "";
 }
 
@@ -361,7 +588,10 @@ function render(): void {
   }
 
   const configError = configErrorMessage(state.config);
-  const submitDisabled = state.loading || Boolean(configError);
+  const submitDisabled =
+    state.loading ||
+    Boolean(configError) ||
+    (requiresHumanVerification(state.mode) && !state.humanVerified);
 
   overlayEl.innerHTML = `
     <div class="auth-modal__backdrop"></div>
@@ -380,6 +610,7 @@ function render(): void {
       </div>
       <form class="auth-modal__form" data-auth-action="submit">
         ${renderFields()}
+        ${turnstileContainerMarkup()}
         ${infoLine() ? `<div class="auth-modal__info">${infoLine()}</div>` : ""}
         ${configError ? `<div class="auth-modal__error">${escapeHtml(configError)}</div>` : ""}
         ${state.error ? `<div class="auth-modal__error">${escapeHtml(state.error)}</div>` : ""}
@@ -404,11 +635,16 @@ function render(): void {
         | "password"
         | "confirmationCode"
         | "rememberMe";
+      const nextValue = key === "rememberMe" ? target.checked : target.value;
+      const emailChanged = key === "email" && target.value.trim().toLowerCase() !== state.email.trim().toLowerCase();
       state = {
         ...state,
-        [key]: key === "rememberMe" ? target.checked : target.value,
+        [key]: nextValue,
         error: "",
       };
+      if (emailChanged) {
+        resetHumanVerification();
+      }
     });
   });
 
@@ -468,6 +704,8 @@ function render(): void {
       close();
     }
   });
+
+  mountTurnstileWidget();
 }
 
 function ensureOverlay(): HTMLElement {
@@ -480,6 +718,15 @@ function ensureOverlay(): HTMLElement {
   document.body.appendChild(overlayEl);
   document.body.classList.add("auth-modal-open");
   document.addEventListener("keydown", handleDocumentKeydown);
+  if (hasTurnstileConfig(state.config)) {
+    void loadTurnstileScript().catch(() => {
+      state = {
+        ...state,
+        turnstileError: "Human verification is unavailable right now.",
+      };
+      render();
+    });
+  }
   requestAnimationFrame(() => {
     overlayEl?.classList.add("is-visible");
   });
@@ -493,6 +740,7 @@ function close(): void {
 
   overlayEl.remove();
   overlayEl = null;
+  turnstileWidgetId = null;
   document.body.classList.remove("auth-modal-open");
   document.removeEventListener("keydown", handleDocumentKeydown);
 }
@@ -546,6 +794,9 @@ async function signUp(): Promise<void> {
       { Name: "family_name", Value: state.lastName.trim() },
       { Name: "name", Value: `${state.firstName.trim()} ${state.lastName.trim()}`.trim() },
     ],
+    ClientMetadata: {
+      turnstileProof: state.turnstileProof,
+    },
   });
 
   if (payload.UserConfirmed) {
@@ -689,6 +940,7 @@ async function handleAction(action: string): Promise<void> {
       }
       return;
     case "forgot-password":
+      resetHumanVerification();
       state = {
         ...state,
         mode: "forgot-password",
@@ -700,6 +952,7 @@ async function handleAction(action: string): Promise<void> {
       render();
       return;
     case "go-sign-up":
+      resetHumanVerification();
       state = {
         ...state,
         mode: "sign-up",
@@ -711,6 +964,7 @@ async function handleAction(action: string): Promise<void> {
       render();
       return;
     case "go-sign-in":
+      resetHumanVerification();
       state = {
         ...state,
         mode: "sign-in",
@@ -759,6 +1013,10 @@ export function show(options: ShowOptions = {}): void {
     config: options.config ?? AUTH_CONFIG,
     avatarType: state.avatarType,
     avatarValue: state.avatarValue,
+    turnstileToken: "",
+    turnstileProof: "",
+    humanVerified: false,
+    turnstileError: "",
   };
 
   ensureOverlay();

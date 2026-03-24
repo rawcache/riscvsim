@@ -5,6 +5,8 @@ export interface AuthConfig {
   clientId: string;
   hostedUiDomain: string;
   redirectUri: string;
+  apiEndpoint: string;
+  turnstileSiteKey: string;
 }
 
 export interface UserSession {

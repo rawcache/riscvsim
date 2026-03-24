@@ -1,5 +1,5 @@
 // @ts-nocheck
-const { randomUUID, randomInt } = require("node:crypto");
+const { createHmac, timingSafeEqual, randomUUID, randomInt } = require("node:crypto");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const {
   DynamoDBDocumentClient,
@@ -20,6 +20,8 @@ const STUDY_GROUP_MAX_MEMBERS = 10;
 const GROUP_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const PROFILE_AVATAR_MAX_LENGTH = 200_000;
 const ANNOUNCEMENT_TTL_SECONDS = 24 * 60 * 60;
+const TURNSTILE_SECRET = process.env.TURNSTILE_SECRET || "";
+const TURNSTILE_PROOF_TTL_MS = 10 * 60 * 1000;
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Authorization, Content-Type",
@@ -98,6 +100,78 @@ function getPath(event) {
 function getQueryParam(event, key) {
   const value = event.queryStringParameters?.[key];
   return typeof value === "string" ? value : "";
+}
+
+function base64UrlEncode(value) {
+  return Buffer.from(value).toString("base64url");
+}
+
+function base64UrlDecode(value) {
+  return Buffer.from(String(value || ""), "base64url").toString("utf8");
+}
+
+function signTurnstilePayload(encodedPayload) {
+  return createHmac("sha256", TURNSTILE_SECRET).update(encodedPayload).digest("base64url");
+}
+
+function createTurnstileProof(email) {
+  const payload = {
+    email: typeof email === "string" ? email.trim().toLowerCase() : "",
+    exp: Date.now() + TURNSTILE_PROOF_TTL_MS,
+  };
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  return `${encodedPayload}.${signTurnstilePayload(encodedPayload)}`;
+}
+
+async function verifyTurnstileToken(token, remoteIp) {
+  if (!TURNSTILE_SECRET) {
+    throw new Error("TURNSTILE_NOT_CONFIGURED");
+  }
+
+  const params = new URLSearchParams({
+    secret: TURNSTILE_SECRET,
+    response: typeof token === "string" ? token.trim() : "",
+  });
+  if (remoteIp) {
+    params.set("remoteip", remoteIp);
+  }
+
+  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  return Boolean(response.ok && payload && payload.success === true);
+}
+
+async function handleVerifyTurnstile(event) {
+  const body = parseBody(event);
+  const token = typeof body.token === "string" ? body.token.trim() : "";
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  if (!token) {
+    return response(400, {
+      success: false,
+      message: "Human verification failed. Try again.",
+    });
+  }
+
+  const verified = await verifyTurnstileToken(token, event.requestContext?.http?.sourceIp ?? "");
+  if (!verified) {
+    return response(403, {
+      success: false,
+      message: "Human verification failed. Try again.",
+    });
+  }
+
+  return response(200, {
+    success: true,
+    proof: createTurnstileProof(email),
+    expiresAt: Date.now() + TURNSTILE_PROOF_TTL_MS,
+  });
 }
 
 function toProgram(item) {
@@ -1066,6 +1140,12 @@ exports.handler = async (event) => {
     if (path === "/leaderboard/weekly-challenge" || path.endsWith("/leaderboard/weekly-challenge")) {
       if (method === "GET") {
         return await handleGetWeeklyChallenge(event);
+      }
+    }
+
+    if (path === "/auth/verify-turnstile" || path.endsWith("/auth/verify-turnstile")) {
+      if (method === "POST") {
+        return await handleVerifyTurnstile(event);
       }
     }
 

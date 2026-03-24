@@ -46,6 +46,29 @@ function formatPoints(points: number): string {
   return points.toLocaleString("en-US");
 }
 
+function chipLabel(points: number): string {
+  return `${formatPoints(points)} chips`;
+}
+
+function emptyProgress(): UserProgress {
+  return {
+    lessons: {},
+    totalCompleted: 0,
+    lastActiveLesson: undefined,
+  };
+}
+
+function resumeDismissKey(lessonId: string, stepId: string): string {
+  return `studyriscv_resume_dismissed:${lessonId}:${stepId}`;
+}
+
+function isResumeDismissed(lessonId: string, stepId: string): boolean {
+  if (typeof localStorage === "undefined") {
+    return false;
+  }
+  return localStorage.getItem(resumeDismissKey(lessonId, stepId)) === "1";
+}
+
 function progressPercent(progress: UserProgress): number {
   const lessonCount = Math.max(1, getLessons().length);
   return Math.round((Object.values(progress.lessons).filter((lesson) => lesson.completed).length / lessonCount) * 100);
@@ -77,13 +100,21 @@ function resumeMarkup(progress: UserProgress, loggedIn: boolean): string {
   if (!lesson || !lessonProgress || lessonProgress.completed) {
     return "";
   }
-  const stepIndex = Math.min(lessonProgress.currentStepIndex + 1, lesson.steps.length);
+  const safeStepIndex = Math.min(lessonProgress.currentStepIndex, lesson.steps.length - 1);
+  const stepIndex = safeStepIndex + 1;
+  const stepId = lesson.steps[safeStepIndex]?.id ?? "";
+  if (!stepId || isResumeDismissed(lesson.id, stepId)) {
+    return "";
+  }
   return `
-    <a class="learn-resume" href="/simulator/?lesson=${encodeURIComponent(lesson.id)}&step=${encodeURIComponent(lesson.steps[Math.min(lessonProgress.currentStepIndex, lesson.steps.length - 1)].id)}">
-      <span class="learn-resume__label">Continue</span>
-      <span class="learn-resume__text">${escapeHtml(lesson.title)} · Step ${stepIndex} of ${lesson.steps.length}</span>
-      <span class="learn-resume__cta">Resume →</span>
-    </a>
+    <div class="learn-resume" data-resume-lesson-id="${escapeHtml(lesson.id)}" data-resume-step-id="${escapeHtml(stepId)}">
+      <a class="learn-resume__main" href="/simulator/?lesson=${encodeURIComponent(lesson.id)}&step=${encodeURIComponent(stepId)}">
+        <span class="learn-resume__label">Continue</span>
+        <span class="learn-resume__text">${escapeHtml(lesson.title)} · Step ${stepIndex} of ${lesson.steps.length}</span>
+        <span class="learn-resume__cta">Resume →</span>
+      </a>
+      <button class="learn-resume__dismiss" type="button" aria-label="Dismiss continue card">×</button>
+    </div>
   `;
 }
 
@@ -119,7 +150,7 @@ function renderHero(progress: UserProgress, loggedIn: boolean): void {
         <h1 class="learn-hero__title">Learn RISC-V Assembly</h1>
         <p class="learn-hero__subhead">${totalLessons} lessons · 15 challenges · ECE 2035 aligned</p>
       </div>
-      <div class="learn-xp-pill">${formatPoints(score.totalPoints)} XP</div>
+      <div class="learn-xp-pill">${chipLabel(score.totalPoints)}</div>
       ${resumeMarkup(progress, loggedIn)}
     </div>
     <div class="learn-hero__status">
@@ -147,6 +178,18 @@ function renderHero(progress: UserProgress, loggedIn: boolean): void {
   heroShell.querySelector<HTMLButtonElement>("#learnHeroSignin")?.addEventListener("click", () => {
     document.getElementById("auth-signin-btn")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
+
+  heroShell.querySelector<HTMLButtonElement>(".learn-resume__dismiss")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const card = (event.currentTarget as HTMLElement | null)?.closest<HTMLElement>(".learn-resume");
+    const lessonId = card?.dataset.resumeLessonId ?? "";
+    const stepId = card?.dataset.resumeStepId ?? "";
+    if (typeof localStorage !== "undefined" && lessonId && stepId) {
+      localStorage.setItem(resumeDismissKey(lessonId, stepId), "1");
+    }
+    card?.remove();
+  });
 }
 
 function renderStats(progress: UserProgress): void {
@@ -159,7 +202,7 @@ function renderStats(progress: UserProgress): void {
   statsStrip.innerHTML = `
     <div class="stat-card"><span class="stat-card__label">Lessons</span><strong class="stat-card__value">${lessonsCompleted(progress)}/${totalLessons}</strong></div>
     <div class="stat-card"><span class="stat-card__label">Challenges</span><strong class="stat-card__value">${challengeSolvedText()}</strong></div>
-    <div class="stat-card"><span class="stat-card__label">XP</span><strong class="stat-card__value">${formatPoints(score.totalPoints)}</strong></div>
+    <div class="stat-card"><span class="stat-card__label">Chips</span><strong class="stat-card__value">${formatPoints(score.totalPoints)}</strong></div>
     <div class="stat-card"><span class="stat-card__label">Streak</span><strong class="stat-card__value">${score.streak} day${score.streak === 1 ? "" : "s"}</strong></div>
   `;
 }
@@ -214,7 +257,7 @@ function renderLeaderboard(
             <div class="leaderboard-row${currentDisplayName === entry.displayName ? " is-current" : ""}">
               <span class="leaderboard-row__rank${medalClass(entry.rank)}">#${entry.rank}</span>
               <span class="leaderboard-row__name">${escapeHtml(entry.displayName)}</span>
-              <span class="leaderboard-row__xp">${displayPoints(entry)} XP</span>
+              <span class="leaderboard-row__xp">${displayPoints(entry)} chips</span>
             </div>
           `
         )
@@ -225,7 +268,7 @@ function renderLeaderboard(
              <div class="leaderboard-row is-current">
                <span class="leaderboard-row__rank">#${currentUserEntry.rank}</span>
                <span class="leaderboard-row__name">${escapeHtml(currentUserEntry.displayName)}</span>
-               <span class="leaderboard-row__xp">${displayPoints(currentUserEntry)} XP</span>
+               <span class="leaderboard-row__xp">${displayPoints(currentUserEntry)} chips</span>
              </div>`
           : ""
       }
@@ -373,17 +416,16 @@ document.addEventListener("DOMContentLoaded", () => {
   initFooter();
 
   void (async () => {
-    let progress = loadProgress();
     let session = await getSession();
+    let progress = session ? emptyProgress() : loadProgress();
     renderPage(progress, Boolean(session));
 
     if (session) {
+      const localProgress = loadProgress();
       const apiProgress = await loadProgressFromApi(session.idToken);
-      if (apiProgress) {
-        progress = mergeProgress(progress, apiProgress);
-        saveProgress(progress);
-        renderPage(progress, true);
-      }
+      progress = apiProgress ? mergeProgress(localProgress, apiProgress) : localProgress;
+      saveProgress(progress);
+      renderPage(progress, true);
     }
 
     const renderLeaderboardNow = async () => {
@@ -400,13 +442,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.addEventListener("studyriscv-auth-changed", async (event) => {
       const nextSession = (event as CustomEvent<Awaited<ReturnType<typeof getSession>> | null>).detail ?? null;
-      let nextProgress = loadProgress();
+      let nextProgress = nextSession ? emptyProgress() : loadProgress();
       if (nextSession?.idToken) {
+        const localProgress = loadProgress();
         const apiProgress = await loadProgressFromApi(nextSession.idToken);
-        if (apiProgress) {
-          nextProgress = mergeProgress(nextProgress, apiProgress);
-          saveProgress(nextProgress);
-        }
+        nextProgress = apiProgress ? mergeProgress(localProgress, apiProgress) : localProgress;
+        saveProgress(nextProgress);
       }
       renderPage(nextProgress, Boolean(nextSession));
       renderStudyGroups(nextSession, nextSession?.idToken ? await fetchStudyGroups(nextSession.idToken) : []);

@@ -853,22 +853,62 @@
   position: fixed;
   right: 24px;
   bottom: 24px;
-  width: 58px;
-  height: 58px;
-  border-radius: 16px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+  width: 74px;
+  height: 74px;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  --chip-body-top: color-mix(in srgb, var(--bg-elevated) 90%, #fff 10%);
+  --chip-body-bottom: color-mix(in srgb, var(--bg-base) 92%, #000 8%);
+  --chip-stroke: var(--accent);
+  --chip-die-fill: var(--bg-base);
 }
 
-.clip-chip-anchor__image {
-  width: 36px;
-  height: 36px;
-  display: block;
+.clip-chip-anchor #chip-reactor,
+.clip-chip-anchor #chip-stage,
+.clip-chip-anchor .cpu-pet__svg {
+  width: 100%;
+  height: 100%;
+}
+
+.clip-chip-anchor #chip-stage {
+  transform-origin: center;
+  animation: clip-chip-bob 5.5s ease-in-out infinite;
+}
+
+.clip-chip-anchor .cpu-pet__pin-dot {
+  animation: clip-chip-pin-pulse 1.9s ease-in-out infinite;
+  animation-delay: var(--pin-delay, 0ms);
+}
+
+.clip-chip-anchor .cpu-pet__eye {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.clip-chip-anchor--calm .cpu-pet__mouth--happy {
+  opacity: 0;
+}
+
+@keyframes clip-chip-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(1deg);
+  }
+}
+
+@keyframes clip-chip-pin-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
 }
 
 #clip-bubble {

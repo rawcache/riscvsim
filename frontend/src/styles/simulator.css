@@ -1156,6 +1156,14 @@ body.simulator-page {
   gap: 8px;
 }
 
+body.challenge-simulator-active .sim-column--right {
+  min-width: 280px;
+}
+
+body.challenge-simulator-active .register-file-section {
+  min-height: 420px !important;
+}
+
 .challenge-submit-button {
   margin-bottom: 2px;
 }
@@ -3259,6 +3267,10 @@ body.simulator-page {
   .simulator-layout {
     grid-template-columns: 380px 1fr 240px;
   }
+
+  .simulator-layout.has-lesson-column {
+    grid-template-columns: 260px 320px minmax(0, 1fr) 280px;
+  }
 }
 
 @media (min-width: 900px) and (max-width: 1199px) {
@@ -3267,10 +3279,26 @@ body.simulator-page {
     align-items: start;
   }
 
+  .simulator-layout.has-lesson-column {
+    grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+  }
+
   .sim-column--left {
     grid-column: 1;
     grid-row: 1 / span 2;
     max-width: 500px;
+  }
+
+  .simulator-layout.has-lesson-column .sim-column--lesson {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    max-width: 300px;
+  }
+
+  .simulator-layout.has-lesson-column .sim-column--left {
+    grid-column: 2;
+    grid-row: 1;
+    max-width: none;
   }
 
   .sim-column--right {
@@ -3281,6 +3309,16 @@ body.simulator-page {
   .sim-column--center {
     grid-column: 2;
     grid-row: 2;
+  }
+
+  .simulator-layout.has-lesson-column .sim-column--center {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .simulator-layout.has-lesson-column .sim-column--right {
+    grid-column: 2;
+    grid-row: 3;
   }
 
   .lesson-panel {

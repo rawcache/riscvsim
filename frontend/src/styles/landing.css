@@ -18,7 +18,7 @@ body.landing-page {
   z-index: 1;
   width: min(1200px, calc(100% - 2 * var(--space-6)));
   margin: 0 auto;
-  padding: var(--space-16) 0 var(--space-20);
+  padding: var(--space-12) 0 var(--space-16);
 }
 
 
@@ -1382,12 +1382,30 @@ body.loaded .hero__visual {
   border-color: var(--accent-hover);
 }
 
+.landing-resume-bar__dismiss {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color var(--transition), color var(--transition);
+}
+
+.landing-resume-bar__dismiss:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
 .landing-home .landing-section {
-  padding: 96px 0;
+  padding: 72px 0;
 }
 
 .landing-home .landing-section--hero {
-  padding: 32px 0 96px;
+  padding: 24px 0 72px;
 }
 
 .landing-home .hero {
@@ -1773,7 +1791,7 @@ body.loaded .hero__visual {
 }
 
 .landing-home .landing-section--curriculum {
-  padding-top: 64px;
+  padding-top: 48px;
 }
 
 .curriculum-preview-grid {
@@ -1798,7 +1816,7 @@ body.loaded .hero__visual {
   border: 1px solid var(--border);
   background: var(--bg-surface);
   transition: border-color 150ms ease, background 150ms ease;
-  cursor: default;
+  cursor: pointer;
   text-decoration: none;
 }
 

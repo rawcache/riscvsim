@@ -196,6 +196,8 @@ export function createChallengeMode(deps: ChallengeModeDependencies): ChallengeM
   panel.className = "sim-panel lesson-panel challenge-panel";
   panel.id = "challengeModePanel";
   desktopColumn.appendChild(panel);
+  simulatorLayout.classList.add("has-lesson-column");
+  document.body.classList.add("challenge-simulator-active");
   simulatorLayout.insertBefore(desktopColumn, leftColumn);
 
   const navIndicator = document.createElement("a");
@@ -283,7 +285,7 @@ export function createChallengeMode(deps: ChallengeModeDependencies): ChallengeM
       <div class="panel-header lesson-panel__header">
         <div>
           <div class="lesson-panel__eyebrow">Challenge</div>
-          <div class="lesson-panel__title">${escapeHtml(activeChallenge.title)} · ${activeChallenge.points} pts</div>
+          <div class="lesson-panel__title">${escapeHtml(activeChallenge.title)} · ${activeChallenge.points} chips</div>
         </div>
       </div>
       <div class="lesson-panel__body challenge-panel__body">
@@ -416,7 +418,7 @@ export function createChallengeMode(deps: ChallengeModeDependencies): ChallengeM
           id: `challenge-weekly-${activeChallenge.id}-${submission.submittedAt}`,
           type: "xp",
           title: "Weekly challenge complete",
-          message: "+50 XP bonus",
+          message: "+50 chip bonus",
           icon: "🏆",
           duration: 4000,
           accentColor: "var(--accent)",
@@ -446,7 +448,7 @@ export function createChallengeMode(deps: ChallengeModeDependencies): ChallengeM
         id: `challenge-${activeChallenge.id}-${submission.submittedAt}`,
         type: "challenge",
         title: "Challenge Passed!",
-        message: `${activeChallenge.title} · +${bonus} XP`,
+        message: `${activeChallenge.title} · +${bonus} chips`,
         icon: "✅",
         duration: 4000,
         accentColor: "var(--success)",

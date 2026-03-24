@@ -96,7 +96,7 @@ function weeklyDigestMarkup(currentUser: LeaderboardEntry | null, totalUsers: nu
         <div class="learn-panel__meta">Weekly summary</div>
       </div>
       <div class="leaderboard-digest__grid">
-        <div class="leaderboard-digest__metric"><span>XP earned this week</span><strong>${(score.weeklyPoints ?? 0).toLocaleString("en-US")}</strong></div>
+        <div class="leaderboard-digest__metric"><span>Chips earned this week</span><strong>${(score.weeklyPoints ?? 0).toLocaleString("en-US")}</strong></div>
         <div class="leaderboard-digest__metric"><span>Lessons completed</span><strong>${score.lessonsCompleted}</strong></div>
         <div class="leaderboard-digest__metric"><span>Challenges passed</span><strong>${score.challengesPassed}</strong></div>
         <div class="leaderboard-digest__metric"><span>Current rank</span><strong>#${currentUser.rank} of ${totalUsers}</strong></div>
@@ -136,16 +136,16 @@ function render(
       <div class="learn-hero__copy">
         <div>
           <h1 class="learn-hero__title">Leaderboard</h1>
-          <p class="learn-hero__subhead">Track all-time and weekly XP across the StudyRISC-V platform.</p>
+          <p class="learn-hero__subhead">Track all-time and weekly chips across the StudyRISC-V platform.</p>
         </div>
-        <div class="learn-xp-pill">${loadScore().totalPoints.toLocaleString("en-US")} XP</div>
+        <div class="learn-xp-pill">${loadScore().totalPoints.toLocaleString("en-US")} chips</div>
       </div>
       <div class="learn-hero__status">
         ${
           currentUser
             ? `<div class="learn-hero__signin">
                 <div class="learn-hero__signin-copy">Your rank · #${currentUser.rank}</div>
-                <div class="learn-hero__signin-copy">${pointsForPeriod(currentUser, activePeriod).toLocaleString("en-US")} XP in this view</div>
+                <div class="learn-hero__signin-copy">${pointsForPeriod(currentUser, activePeriod).toLocaleString("en-US")} chips in this view</div>
               </div>`
             : `<div class="learn-hero__signin"><div class="learn-hero__signin-copy">Public rankings update every minute.</div></div>`
         }
@@ -173,7 +173,7 @@ function render(
     <section class="learn-panel leaderboard-page__panel">
       <div class="learn-panel__header-row">
         <h2 class="learn-panel__title">${activePeriod === "alltime" ? "Top 100 · All Time" : "Top 100 · This Week"}</h2>
-        <div class="learn-panel__meta">XP, lessons, challenges, badges, and streaks</div>
+        <div class="learn-panel__meta">Chips, lessons, challenges, badges, and streaks</div>
       </div>
       <div class="leaderboard-page__list">
         ${filtered
@@ -187,7 +187,7 @@ function render(
                 <span class="leaderboard-page__meta">${entry.streak && entry.streak >= 3 ? `🔥 ${entry.streak}` : ""}</span>
                 <span class="leaderboard-page__meta">${entry.badges?.length ?? 0} badges</span>
                 <span class="leaderboard-page__meta">${entry.lessonsCompleted} lessons</span>
-                <span class="leaderboard-page__xp">${pointsForPeriod(entry, activePeriod).toLocaleString("en-US")} XP</span>
+                <span class="leaderboard-page__xp">${pointsForPeriod(entry, activePeriod).toLocaleString("en-US")} chips</span>
               </div>
             `;
           })

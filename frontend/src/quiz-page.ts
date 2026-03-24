@@ -86,7 +86,7 @@ function renderQuizList(): void {
           <h1 class="learn-hero__title">Quizzes</h1>
           <p class="learn-hero__subhead">Practice rounds, a midterm simulation, and a final exam covering the full StudyRISC-V curriculum.</p>
         </div>
-        <div class="learn-xp-pill">${loadScore().totalPoints.toLocaleString("en-US")} XP</div>
+        <div class="learn-xp-pill">${loadScore().totalPoints.toLocaleString("en-US")} chips</div>
       </div>
       <div class="learn-hero__status">
         <div class="learn-hero__signin">
@@ -196,7 +196,7 @@ async function completeQuiz(state: QuizRuntimeState): Promise<void> {
       id: `quiz-${state.quiz.id}-${attempt.completedAt}`,
       type: "quiz",
       title: `Quiz Complete · ${percent(attempt.score, attempt.maxScore)}%`,
-      message: `${attempt.passed ? "Passed" : "Review complete"} · +${award} XP`,
+      message: `${attempt.passed ? "Passed" : "Review complete"} · +${award} chips`,
       icon: "📝",
       duration: 5000,
       accentColor: "var(--accent)",
@@ -296,7 +296,7 @@ function renderQuestionBody(state: QuizRuntimeState, question: QuizQuestion): st
   return `
     <textarea id="quizAssemblyInput" class="source-textarea quiz-assembly" spellcheck="false">${escapeHtml(String(draft.answer ?? question.starterCode ?? ""))}</textarea>
     <div class="quiz-input-row quiz-input-row--actions">
-      <button type="button" class="sim-button sim-button--primary" data-quiz-assembly-check>Check Answer</button>
+      <button type="button" class="quiz-action-button quiz-action-button--primary quiz-action-button--check" data-quiz-assembly-check>Check Answer</button>
       <span class="learn-panel__meta" id="quizAssemblyStatus">${
         draft.state && question.check?.(draft.state) ? "Current code passes this question." : "Run your code to validate it."
       }</span>
@@ -368,7 +368,7 @@ function renderQuizRuntime(state: QuizRuntimeState): void {
         <h2 class="quiz-question__prompt">${escapeHtml(question.prompt)}</h2>
         ${renderQuestionBody(state, question)}
         <div class="quiz-question__nav">
-          <button type="button" class="challenge-secondary-button" data-quiz-prev ${state.currentIndex === 0 ? "disabled" : ""}>← Previous</button>
+          <button type="button" class="quiz-action-button quiz-action-button--secondary" data-quiz-prev ${state.currentIndex === 0 ? "disabled" : ""}>← Previous</button>
           <div class="quiz-question__dots">
             ${state.quiz.questions
               .map((item, index) => {
@@ -377,10 +377,10 @@ function renderQuizRuntime(state: QuizRuntimeState): void {
               })
               .join("")}
           </div>
-          <button type="button" class="sim-button sim-button--primary" data-quiz-next>${state.currentIndex === state.quiz.questions.length - 1 ? "Finish →" : "Next →"}</button>
+          <button type="button" class="quiz-action-button quiz-action-button--primary" data-quiz-next>${state.currentIndex === state.quiz.questions.length - 1 ? "Finish →" : "Next →"}</button>
         </div>
         <div class="quiz-submit-row">
-          <button type="button" class="lesson-finish-button" data-quiz-submit ${answeredCount < state.quiz.questions.length ? "disabled" : ""}>Submit Quiz</button>
+          <button type="button" class="quiz-action-button quiz-action-button--primary quiz-action-button--submit" data-quiz-submit ${answeredCount < state.quiz.questions.length ? "disabled" : ""}>Submit Quiz</button>
         </div>
       </article>
     </section>

@@ -1,6 +1,8 @@
 import type { LessonState } from "./lessons";
 
 const QUIZ_ATTEMPTS_STORAGE_KEY = "studyriscv_quiz_attempts";
+const LEGACY_QUIZ_ATTEMPTS_STORAGE_KEY = "studyriscv_quiz_attempts";
+const ID_TOKEN_KEY = "studyriscv_id_token";
 
 export interface QuizQuestion {
   id: string;
@@ -55,6 +57,41 @@ export interface QuizAnswerInput {
   answer?: string | number;
   state?: LessonState;
   timeSpentSeconds: number;
+}
+
+function decodeJwtUserId(token: string): string | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) {
+      return null;
+    }
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+    const maybeBuffer = (globalThis as typeof globalThis & {
+      Buffer?: { from(input: string, encoding: string): { toString(encoding: string): string } };
+    }).Buffer;
+    const json =
+      typeof atob === "function"
+        ? atob(padded)
+        : maybeBuffer?.from(padded, "base64").toString("utf8") ?? "";
+    const payload = JSON.parse(json) as { sub?: unknown };
+    return typeof payload.sub === "string" && payload.sub.trim().length > 0 ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+function currentQuizUserId(): string | null {
+  if (typeof localStorage === "undefined" || typeof sessionStorage === "undefined") {
+    return null;
+  }
+  const token = localStorage.getItem(ID_TOKEN_KEY) ?? sessionStorage.getItem(ID_TOKEN_KEY);
+  return token ? decodeJwtUserId(token) : null;
+}
+
+function getQuizAttemptStorageKey(userId?: string | null): string {
+  const scopedUserId = userId === undefined ? currentQuizUserId() : userId;
+  return scopedUserId ? `${QUIZ_ATTEMPTS_STORAGE_KEY}:${scopedUserId}` : `${QUIZ_ATTEMPTS_STORAGE_KEY}:guest`;
 }
 
 function mcq(
@@ -373,14 +410,26 @@ export function saveQuizAttempt(attempt: QuizAttempt): void {
   if (typeof localStorage === "undefined") {
     return;
   }
-  localStorage.setItem(QUIZ_ATTEMPTS_STORAGE_KEY, JSON.stringify([...loadQuizAttempts(), attempt]));
+  const storageKey = getQuizAttemptStorageKey();
+  localStorage.setItem(storageKey, JSON.stringify([...loadQuizAttempts(), attempt]));
+  if (storageKey !== LEGACY_QUIZ_ATTEMPTS_STORAGE_KEY) {
+    localStorage.removeItem(LEGACY_QUIZ_ATTEMPTS_STORAGE_KEY);
+  }
 }
 
 export function loadQuizAttempts(): QuizAttempt[] {
   if (typeof localStorage === "undefined") {
     return [];
   }
-  const stored = localStorage.getItem(QUIZ_ATTEMPTS_STORAGE_KEY);
+  const storageKey = getQuizAttemptStorageKey();
+  let stored = localStorage.getItem(storageKey);
+  if (!stored && storageKey === `${QUIZ_ATTEMPTS_STORAGE_KEY}:guest`) {
+    stored = localStorage.getItem(LEGACY_QUIZ_ATTEMPTS_STORAGE_KEY);
+    if (stored) {
+      localStorage.setItem(storageKey, stored);
+      localStorage.removeItem(LEGACY_QUIZ_ATTEMPTS_STORAGE_KEY);
+    }
+  }
   if (!stored) {
     return [];
   }

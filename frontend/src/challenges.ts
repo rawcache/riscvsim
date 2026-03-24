@@ -1,6 +1,8 @@
 import { getLesson, getLessonState, isUnlocked, loadProgress, type LessonState } from "./lessons";
 
 const CHALLENGE_SUBMISSIONS_STORAGE_KEY = "studyriscv_challenge_submissions";
+const LEGACY_CHALLENGE_SUBMISSIONS_STORAGE_KEY = "studyriscv_challenge_submissions";
+const ID_TOKEN_KEY = "studyriscv_id_token";
 
 export interface TestCase {
   id: string;
@@ -65,6 +67,41 @@ function regCase(
 
 function emptySubmissions(): ChallengeSubmission[] {
   return [];
+}
+
+function decodeJwtUserId(token: string): string | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) {
+      return null;
+    }
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+    const maybeBuffer = (globalThis as typeof globalThis & {
+      Buffer?: { from(input: string, encoding: string): { toString(encoding: string): string } };
+    }).Buffer;
+    const json =
+      typeof atob === "function"
+        ? atob(padded)
+        : maybeBuffer?.from(padded, "base64").toString("utf8") ?? "";
+    const payload = JSON.parse(json) as { sub?: unknown };
+    return typeof payload.sub === "string" && payload.sub.trim().length > 0 ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+function currentChallengeUserId(): string | null {
+  if (typeof localStorage === "undefined" || typeof sessionStorage === "undefined") {
+    return null;
+  }
+  const token = localStorage.getItem(ID_TOKEN_KEY) ?? sessionStorage.getItem(ID_TOKEN_KEY);
+  return token ? decodeJwtUserId(token) : null;
+}
+
+function getChallengeSubmissionStorageKey(userId?: string | null): string {
+  const scopedUserId = userId === undefined ? currentChallengeUserId() : userId;
+  return scopedUserId ? `${CHALLENGE_SUBMISSIONS_STORAGE_KEY}:${scopedUserId}` : `${CHALLENGE_SUBMISSIONS_STORAGE_KEY}:guest`;
 }
 
 const CHALLENGES: Challenge[] = [
@@ -731,7 +768,11 @@ export function saveChallengeSubmission(submission: ChallengeSubmission): void {
   }
 
   const next = [...loadChallengeSubmissions(), submission];
-  localStorage.setItem(CHALLENGE_SUBMISSIONS_STORAGE_KEY, JSON.stringify(next));
+  const storageKey = getChallengeSubmissionStorageKey();
+  localStorage.setItem(storageKey, JSON.stringify(next));
+  if (storageKey !== LEGACY_CHALLENGE_SUBMISSIONS_STORAGE_KEY) {
+    localStorage.removeItem(LEGACY_CHALLENGE_SUBMISSIONS_STORAGE_KEY);
+  }
 }
 
 export function loadChallengeSubmissions(): ChallengeSubmission[] {
@@ -739,7 +780,15 @@ export function loadChallengeSubmissions(): ChallengeSubmission[] {
     return emptySubmissions();
   }
 
-  const stored = localStorage.getItem(CHALLENGE_SUBMISSIONS_STORAGE_KEY);
+  const storageKey = getChallengeSubmissionStorageKey();
+  let stored = localStorage.getItem(storageKey);
+  if (!stored && storageKey === `${CHALLENGE_SUBMISSIONS_STORAGE_KEY}:guest`) {
+    stored = localStorage.getItem(LEGACY_CHALLENGE_SUBMISSIONS_STORAGE_KEY);
+    if (stored) {
+      localStorage.setItem(storageKey, stored);
+      localStorage.removeItem(LEGACY_CHALLENGE_SUBMISSIONS_STORAGE_KEY);
+    }
+  }
   if (!stored) {
     return emptySubmissions();
   }

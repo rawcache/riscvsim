@@ -161,6 +161,35 @@ body.auth-modal-open {
   text-align: center;
 }
 
+.auth-modal__field--turnstile {
+  gap: 8px;
+}
+
+.auth-modal__turnstile-shell {
+  min-height: 66px;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+.auth-modal__turnstile-status {
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 11px;
+  text-align: center;
+}
+
+.auth-modal__turnstile-status.is-success {
+  color: var(--success);
+}
+
+.auth-modal__turnstile-status.is-error {
+  color: var(--danger);
+}
+
 .auth-modal__primary {
   display: inline-flex;
   align-items: center;
@@ -244,6 +273,7 @@ body.auth-modal-open {
 }
 
 .auth-modal__upload {
+  position: relative;
   display: grid;
   gap: 6px;
   color: var(--text-secondary);
@@ -251,10 +281,33 @@ body.auth-modal-open {
   font-size: 12px;
 }
 
+.auth-modal__upload-button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition), background-color var(--transition), transform var(--transition);
+}
+
+.auth-modal__upload:hover .auth-modal__upload-button {
+  border-color: var(--accent-border);
+  background: var(--accent-subtle);
+  transform: translateY(-1px);
+}
+
 .auth-modal__upload input {
-  color: var(--text-muted);
-  font-family: var(--font-body);
-  font-size: 12px;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .auth-modal__avatar-preview {

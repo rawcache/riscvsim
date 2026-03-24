@@ -37,6 +37,9 @@ export class StudyRiscvStack extends Stack {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: "index.handler",
       code: lambda.Code.fromInline(inlineLambdaSource("pre-signup.ts")),
+      environment: {
+        TURNSTILE_SECRET: process.env.TURNSTILE_SECRET ?? "",
+      },
     });
 
     const userPool = new cognito.UserPool(this, "UserPool", {
@@ -105,6 +108,7 @@ export class StudyRiscvStack extends Stack {
       code: lambda.Code.fromInline(inlineLambdaSource("programs.ts")),
       environment: {
         PROGRAMS_TABLE_NAME: programsTable.tableName,
+        TURNSTILE_SECRET: process.env.TURNSTILE_SECRET ?? "",
       },
     });
 
@@ -184,6 +188,12 @@ export class StudyRiscvStack extends Stack {
     httpApi.addRoutes({
       path: "/leaderboard/announcements",
       methods: [apigatewayv2.HttpMethod.GET],
+      integration: programsIntegration,
+    });
+
+    httpApi.addRoutes({
+      path: "/auth/verify-turnstile",
+      methods: [apigatewayv2.HttpMethod.POST],
       integration: programsIntegration,
     });
 

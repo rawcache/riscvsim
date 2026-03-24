@@ -36,7 +36,7 @@ function renderLabs(): void {
           <h1 class="learn-hero__title">Labs</h1>
           <p class="learn-hero__subhead">Five open-ended ECE 2035-style assignments with visible tests, hidden tests, and graded submissions.</p>
         </div>
-        <div class="learn-xp-pill">${loadScore().totalPoints.toLocaleString("en-US")} XP</div>
+        <div class="learn-xp-pill">${loadScore().totalPoints.toLocaleString("en-US")} chips</div>
       </div>
       <div class="learn-hero__status">
         <div class="learn-hero__signin">

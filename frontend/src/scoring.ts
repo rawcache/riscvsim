@@ -3,6 +3,8 @@ import type { UserProgress } from "./lessons";
 import { getStoredReferral } from "./referrals";
 
 const SCORE_STORAGE_KEY = "studyriscv_score";
+const LEGACY_SCORE_STORAGE_KEY = "studyriscv_score";
+const ID_TOKEN_KEY = "studyriscv_id_token";
 const DEFAULT_API_ENDPOINT = "https://api.studyriscv.com";
 const API_ENDPOINT = (import.meta.env.VITE_API_ENDPOINT as string | undefined)?.trim() || DEFAULT_API_ENDPOINT;
 const MS_PER_DAY = 86_400_000;
@@ -161,6 +163,41 @@ const BADGE_DEFINITIONS: Record<string, BadgeDefinition> = {
     icon: "🏆",
   },
 };
+
+function decodeJwtUserId(token: string): string | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) {
+      return null;
+    }
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+    const maybeBuffer = (globalThis as typeof globalThis & {
+      Buffer?: { from(input: string, encoding: string): { toString(encoding: string): string } };
+    }).Buffer;
+    const json =
+      typeof atob === "function"
+        ? atob(padded)
+        : maybeBuffer?.from(padded, "base64").toString("utf8") ?? "";
+    const payload = JSON.parse(json) as { sub?: unknown };
+    return typeof payload.sub === "string" && payload.sub.trim().length > 0 ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+function currentScoreUserId(): string | null {
+  if (typeof localStorage === "undefined" || typeof sessionStorage === "undefined") {
+    return null;
+  }
+  const token = localStorage.getItem(ID_TOKEN_KEY) ?? sessionStorage.getItem(ID_TOKEN_KEY);
+  return token ? decodeJwtUserId(token) : null;
+}
+
+function getScoreStorageKey(userId?: string | null): string {
+  const scopedUserId = userId === undefined ? currentScoreUserId() : userId;
+  return scopedUserId ? `${SCORE_STORAGE_KEY}:${scopedUserId}` : `${SCORE_STORAGE_KEY}:guest`;
+}
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -451,7 +488,15 @@ export function loadScore(): UserScore {
     return attachExtras(baseScore(), emptyExtras());
   }
 
-  const stored = localStorage.getItem(SCORE_STORAGE_KEY);
+  const storageKey = getScoreStorageKey();
+  let stored = localStorage.getItem(storageKey);
+  if (!stored && storageKey === `${SCORE_STORAGE_KEY}:guest`) {
+    stored = localStorage.getItem(LEGACY_SCORE_STORAGE_KEY);
+    if (stored) {
+      localStorage.setItem(storageKey, stored);
+      localStorage.removeItem(LEGACY_SCORE_STORAGE_KEY);
+    }
+  }
   if (!stored) {
     return attachExtras(baseScore(), emptyExtras());
   }
@@ -467,7 +512,11 @@ export function saveScore(score: UserScore): void {
   if (typeof localStorage === "undefined") {
     return;
   }
-  localStorage.setItem(SCORE_STORAGE_KEY, JSON.stringify(serializeScore(normalizeScore(score))));
+  const storageKey = getScoreStorageKey();
+  localStorage.setItem(storageKey, JSON.stringify(serializeScore(normalizeScore(score))));
+  if (storageKey !== LEGACY_SCORE_STORAGE_KEY) {
+    localStorage.removeItem(LEGACY_SCORE_STORAGE_KEY);
+  }
 }
 
 export function setPinnedBadges(badgeIds: string[]): UserScore {

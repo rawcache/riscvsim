@@ -306,7 +306,7 @@ export function createLabMode(deps: LabModeDependencies): LabModeController {
         id: `lab-${lab.id}-${latestSubmission.submittedAt}`,
         type: "lab",
         title: "Lab Complete!",
-        message: `${lab.title} · +${adjustedScore} XP`,
+        message: `${lab.title} · +${adjustedScore} chips`,
         icon: "🧪",
         duration: 5000,
         accentColor: "var(--success)",

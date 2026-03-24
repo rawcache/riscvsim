@@ -101,13 +101,13 @@ function renderProfile(root: HTMLElement, profile: PublicProfile): void {
       </div>
       <div class="learn-hero__status">
         <div class="learn-hero__signin">
-          <div class="learn-hero__signin-copy">${profile.isTier === "pro" ? "🐝 Pro" : "Free"} · ${profile.totalXP.toLocaleString("en-US")} XP</div>
+          <div class="learn-hero__signin-copy">${profile.isTier === "pro" ? "🐝 Pro" : "Free"} · ${profile.totalXP.toLocaleString("en-US")} chips</div>
           <button id="profileCopyLink" class="learn-hero__signin-button" type="button">Copy profile link</button>
         </div>
       </div>
     </section>
     <section class="stats-strip profile-stats-strip">
-      <div class="stat-card"><span class="stat-card__label">XP</span><strong class="stat-card__value">${profile.totalXP.toLocaleString("en-US")}</strong></div>
+      <div class="stat-card"><span class="stat-card__label">Chips</span><strong class="stat-card__value">${profile.totalXP.toLocaleString("en-US")}</strong></div>
       <div class="stat-card"><span class="stat-card__label">Lessons</span><strong class="stat-card__value">${profile.lessonsCompleted}</strong></div>
       <div class="stat-card"><span class="stat-card__label">Challenges</span><strong class="stat-card__value">${profile.challengesPassed}</strong></div>
       <div class="stat-card"><span class="stat-card__label">Streak</span><strong class="stat-card__value">${profile.currentStreak} 🔥</strong></div>
