@@ -302,7 +302,7 @@ async function verifyTurnstileToken(token: string): Promise<void> {
 }
 
 function mountTurnstileWidget(): void {
-  if (typeof document === "undefined" || !overlayEl || !hasTurnstileConfig(state.config) || !requiresHumanVerification(state.mode)) {
+  if (typeof document === "undefined" || !overlayEl || !hasTurnstileConfig(state.config) || !requiresHumanVerification(state.mode) || state.humanVerified) {
     return;
   }
 
@@ -328,7 +328,6 @@ function mountTurnstileWidget(): void {
             turnstileProof: "",
             turnstileToken: token,
           };
-          render();
           void verifyTurnstileToken(token)
             .then(() => {
               render();
