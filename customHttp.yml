@@ -1,0 +1,17 @@
+customHeaders:
+  - pattern: '**/*'
+    headers:
+      - key: 'Content-Security-Policy'
+        value: >-
+          default-src 'self';
+          script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com;
+          frame-src https://challenges.cloudflare.com;
+          connect-src 'self' https://cognito-idp.us-east-1.amazonaws.com https://hsyyxozom8.execute-api.us-east-1.amazonaws.com https://challenges.cloudflare.com;
+          img-src 'self' data: blob:;
+          style-src 'self' 'unsafe-inline';
+          font-src 'self';
+          object-src 'none'
+      - key: 'X-Content-Type-Options'
+        value: 'nosniff'
+      - key: 'X-Frame-Options'
+        value: 'SAMEORIGIN'

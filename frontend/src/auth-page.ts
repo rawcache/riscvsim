@@ -113,9 +113,7 @@ function turnstileContainerMarkup(): string {
   return `
     <div class="auth-modal__field auth-modal__field--turnstile">
       <span class="auth-modal__label">Human check</span>
-      <div class="auth-modal__turnstile-shell">
-        <div class="auth-modal__turnstile" id="auth-turnstile"></div>
-      </div>
+      ${state.humanVerified ? "" : '<div class="auth-modal__turnstile-shell"><div class="auth-modal__turnstile" id="auth-turnstile"></div></div>'}
       ${
         state.humanVerified
           ? '<div class="auth-modal__turnstile-status is-success">Verification complete.</div>'
