@@ -17,6 +17,7 @@ frontend/.env
 
 # AI agent config (local only)
 AGENTS.md
+CLAUDE.md
 
 # OS
 .DS_Store
