@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Problems - StudyRISC-V</title>
+    <meta
+      name="description"
+      content="Standalone RISC-V assembly problems for StudyRISC-V. Practice in a polished two-panel IDE with visible and hidden test cases."
+    />
+    <meta property="og:title" content="StudyRISC-V Problems" />
+    <meta
+      property="og:description"
+      content="Practice RISC-V assembly in a clean LeetCode-style workspace. Solve problems, run tests, and submit entirely in the browser."
+    />
+    <meta property="og:image" content="https://studyriscv.com/og-image.png" />
+    <meta property="og:url" content="https://studyriscv.com/problems/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://studyriscv.com/problems/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore theme bootstrap failures.
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="../src/styles/global.css" />
+    <link rel="stylesheet" href="../src/styles/nav.css" />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/auth.css" />
+    <link rel="stylesheet" href="../src/styles/landing.css" />
+    <link rel="stylesheet" href="../src/styles/problems.css" />
+    <link rel="icon" type="image/svg+xml" href="../favicon-chip.svg" />
+  </head>
+  <body class="landing-page problems-page">
+    <nav id="site-nav"></nav>
+
+    <main class="problems-shell" id="problems-shell">
+      <section class="problems-list-view" id="problems-list-view">
+        <div class="problems-list-inner">
+          <div class="pl-header">
+            <div class="pl-header__left">
+              <h1 class="pl-header__title">Problems</h1>
+              <p class="pl-header__subtitle">Practice RISC-V assembly. No account required.</p>
+            </div>
+            <div class="pl-header__right">
+              <div class="pl-stats">
+                <div class="pl-stat">
+                  <span class="pl-stat__value" id="pl-stat-solved">0</span>
+                  <span class="pl-stat__label">Solved</span>
+                </div>
+                <div class="pl-stat">
+                  <span class="pl-stat__value" id="pl-stat-attempted">0</span>
+                  <span class="pl-stat__label">Attempted</span>
+                </div>
+                <div class="pl-stat">
+                  <span class="pl-stat__value" id="pl-stat-total">15</span>
+                  <span class="pl-stat__label">Total</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pl-filters" id="pl-filters">
+            <div class="pl-search-wrapper">
+              <svg class="pl-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="m20 20-3.5-3.5"></path>
+              </svg>
+              <input class="pl-search" id="pl-search" type="text" placeholder="Search problems..." autocomplete="off" />
+            </div>
+            <select class="pl-filter-select" id="pl-difficulty" aria-label="Filter by difficulty">
+              <option value="">Difficulty</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+            <select class="pl-filter-select" id="pl-status" aria-label="Filter by status">
+              <option value="">Status</option>
+              <option value="solved">Solved</option>
+              <option value="attempted">Attempted</option>
+              <option value="unsolved">Unsolved</option>
+            </select>
+            <select class="pl-filter-select" id="pl-tag" aria-label="Filter by tag">
+              <option value="">Tags</option>
+              <option value="Arithmetic">Arithmetic</option>
+              <option value="Control Flow">Control Flow</option>
+              <option value="Memory">Memory</option>
+              <option value="Loops">Loops</option>
+              <option value="Functions">Functions</option>
+              <option value="Bit Manipulation">Bit Manipulation</option>
+              <option value="Arrays">Arrays</option>
+              <option value="Strings">Strings</option>
+              <option value="Stack">Stack</option>
+              <option value="Sorting">Sorting</option>
+            </select>
+            <button class="pl-filter-clear" id="pl-clear" type="button" hidden>Clear</button>
+          </div>
+
+          <div class="pl-table-wrapper">
+            <table class="pl-table" id="pl-table">
+              <thead>
+                <tr>
+                  <th class="pl-th pl-th--status"></th>
+                  <th class="pl-th pl-th--num">#</th>
+                  <th class="pl-th pl-th--title">Title</th>
+                  <th class="pl-th pl-th--acceptance">Acceptance</th>
+                  <th class="pl-th pl-th--difficulty">Difficulty</th>
+                </tr>
+              </thead>
+              <tbody id="pl-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="pv-layout" id="pv-layout" hidden>
+        <div class="pv-topbar">
+          <div class="pv-topbar__left">
+            <button class="pv-back-btn" id="pv-back-btn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M15 18 9 12l6-6"></path>
+              </svg>
+              <span>Problem List</span>
+            </button>
+            <div class="pv-nav-arrows">
+              <button class="pv-nav-btn" id="pv-prev-btn" type="button" title="Previous problem" aria-label="Previous problem">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <path d="M15 18 9 12l6-6"></path>
+                </svg>
+              </button>
+              <button class="pv-nav-btn" id="pv-next-btn" type="button" title="Next problem" aria-label="Next problem">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="pv-topbar__center">
+            <span class="pv-topbar__num" id="pv-topbar-num"></span>
+            <span class="pv-topbar__title" id="pv-topbar-title"></span>
+          </div>
+          <div class="pv-topbar__right">
+            <button class="pv-topbar-btn" id="pv-timer-btn" type="button" aria-label="Problem timer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <circle cx="12" cy="12" r="8"></circle>
+                <path d="M12 8v4l3 2"></path>
+              </svg>
+              <span id="pv-timer">00:00</span>
+            </button>
+            <button class="pv-topbar-btn pv-topbar-btn--shortcuts" id="pv-shortcuts-btn" type="button" aria-haspopup="dialog" aria-expanded="false">
+              ?
+            </button>
+            <button class="pv-topbar-btn pv-topbar-btn--premium" id="pv-premium-btn" type="button" hidden>🐝 Pro</button>
+          </div>
+          <div class="pv-shortcuts-popover" id="pv-shortcuts-popover" hidden>
+            <div class="pv-shortcuts-popover__header">Keyboard shortcuts</div>
+            <div class="pv-shortcuts-popover__row"><span>Run</span><kbd id="pv-shortcut-run">⌘↵</kbd></div>
+            <div class="pv-shortcuts-popover__row"><span>Submit</span><kbd id="pv-shortcut-submit">⌘⇧↵</kbd></div>
+            <div class="pv-shortcuts-popover__row"><span>Previous</span><kbd id="pv-shortcut-prev">⌘[</kbd></div>
+            <div class="pv-shortcuts-popover__row"><span>Next</span><kbd id="pv-shortcut-next">⌘]</kbd></div>
+            <div class="pv-shortcuts-popover__row"><span>Toggle console</span><kbd id="pv-shortcut-console">⌘J</kbd></div>
+          </div>
+        </div>
+
+        <div class="pv-panels" id="pv-panels">
+          <div class="pv-left" id="pv-left">
+            <div class="pv-left__tabs">
+              <button class="pv-tab active" data-left-tab="description" type="button">Description</button>
+              <button class="pv-tab" data-left-tab="hints" type="button">
+                Hints
+                <span class="pv-tab-badge" id="pv-hint-count"></span>
+              </button>
+              <button class="pv-tab" data-left-tab="editorial" type="button">Editorial</button>
+              <button class="pv-tab" data-left-tab="submissions" type="button">Submissions</button>
+            </div>
+            <div class="pv-left__content" id="pv-left-content"></div>
+          </div>
+
+          <div class="pv-divider-v" id="pv-divider-v" role="separator" aria-orientation="vertical" aria-label="Resize panels">
+            <div class="pv-divider-v__handle"></div>
+          </div>
+
+          <div class="pv-right" id="pv-right">
+            <div class="pv-verdict-layer" id="pv-verdict-layer"></div>
+
+            <div class="pv-editor-toolbar">
+              <div class="pv-editor-toolbar__left">
+                <div class="pv-lang-pill">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="m8 7-4 5 4 5"></path>
+                    <path d="m16 7 4 5-4 5"></path>
+                  </svg>
+                  <span>RISC-V Assembly</span>
+                </div>
+                <div class="pv-autosave-indicator" id="pv-autosave-indicator" aria-live="polite"></div>
+              </div>
+              <div class="pv-editor-toolbar__right">
+                <button class="pv-toolbar-btn" id="pv-reset-btn" type="button" title="Reset to starter code" aria-label="Reset to starter code">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 3-6.7"></path>
+                    <path d="M3 4v5h5"></path>
+                  </svg>
+                </button>
+                <div class="pv-reset-confirm" id="pv-reset-confirm" hidden>
+                  <span>Restore starter code?</span>
+                  <button class="pv-reset-cancel" id="pv-reset-cancel" type="button">Cancel</button>
+                  <button class="pv-reset-ok" id="pv-reset-ok" type="button">Reset</button>
+                </div>
+                <button class="pv-toolbar-btn" id="pv-fullscreen-btn" type="button" title="Toggle fullscreen" aria-label="Toggle fullscreen">
+                  <svg id="pv-fullscreen-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"></path>
+                  </svg>
+                </button>
+                <button class="pv-toolbar-btn" id="pv-open-sim-btn" type="button" title="Open in simulator" aria-label="Open in simulator">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="M14 5h5v5"></path>
+                    <path d="M10 14 19 5"></path>
+                    <path d="M19 14v5h-5"></path>
+                    <path d="M5 10V5h5"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="pv-load-banner" id="pv-load-banner" hidden></div>
+
+            <div class="pv-editor-stage" id="pv-editor-stage">
+              <div id="pv-editor" class="pv-editor"></div>
+              <div class="pv-editor-loading" id="pv-editor-loading" hidden>Running…</div>
+            </div>
+
+            <div class="pv-divider-h" id="pv-divider-h" role="separator" aria-orientation="horizontal" aria-label="Resize console">
+              <div class="pv-divider-h__handle"></div>
+            </div>
+
+            <div class="pv-console" id="pv-console" hidden>
+              <div class="pv-console__tabs">
+                <button class="pv-tab active" data-console-tab="testcase" type="button">Testcase</button>
+                <button class="pv-tab" data-console-tab="result" type="button">Test Result</button>
+              </div>
+              <div class="pv-console__content" id="pv-console-content"></div>
+            </div>
+
+            <div class="pv-action-bar">
+              <div class="pv-action-bar__left">
+                <button class="pv-console-toggle" id="pv-console-toggle" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="m8 7-4 5 4 5"></path>
+                    <path d="m13 17 7 0"></path>
+                  </svg>
+                  <span>Console</span>
+                </button>
+              </div>
+              <div class="pv-action-bar__right">
+                <button class="pv-btn pv-btn--run" id="pv-run-btn" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="m8 6 10 6-10 6z"></path>
+                  </svg>
+                  <span>Run</span>
+                </button>
+                <button class="pv-btn pv-btn--submit" id="pv-submit-btn" type="button">
+                  <span>Submit</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer id="site-footer"></footer>
+
+    <script type="module" src="../src/problem-list.ts"></script>
+  </body>
+</html>

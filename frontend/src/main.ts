@@ -93,6 +93,23 @@ const FOLLOW_REGISTER_MAP: Record<Exclude<MemoryFollowMode, "none">, number> = {
 const RUN_SPEED_PRESETS: RunSpeedPreset[] = [1, 10, 50, 100, 250, 500, -1];
 const RUN_SPEED_STORAGE_KEY = "studyriscv_run_speed";
 
+function readProblemCodeParam(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const encoded = new URLSearchParams(window.location.search).get("code");
+  if (!encoded) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(atob(encoded));
+  } catch {
+    return null;
+  }
+}
+
 window.addEventListener("DOMContentLoaded", async () => {
   const detectMobile = (): boolean =>
     window.innerWidth < 768 || ("ontouchstart" in window && window.innerWidth < 1024);
@@ -2514,10 +2531,18 @@ window.addEventListener("DOMContentLoaded", async () => {
     await copyTextToClipboard(window.location.href, "Link copied!");
   });
 
-  const sharedProgram = activeLearningMode.isActive() ? null : await readFromUrl();
+  const prefilledProblemCode = activeLearningMode.isActive() ? null : readProblemCodeParam();
+  const sharedProgram = activeLearningMode.isActive() || prefilledProblemCode ? null : await readFromUrl();
   if (activeLearningMode.isActive()) {
     setSharedBannerVisible(false);
     activeLearningMode.prefillSource();
+  } else if (prefilledProblemCode) {
+    setSharedBannerVisible(false);
+    applyEditorSource(prefilledProblemCode, {
+      keepSharedBanner: false,
+      statusMessage: "Problem code loaded.",
+      focus: false,
+    });
   } else if (sharedProgram) {
     setSharedBannerVisible(true);
     applyEditorSource(sharedProgram, {

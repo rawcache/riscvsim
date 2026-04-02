@@ -4,6 +4,7 @@ import { captureReferralParam } from "./referrals";
 
 export interface NavConfig {
   activePage:
+    | "problems"
     | "landing"
     | "learn"
     | "quiz"
@@ -80,6 +81,7 @@ function resourcesActive(config: NavConfig["activePage"]): boolean {
 }
 
 function renderNav(config: NavConfig): string {
+  const isProblems = config.activePage === "problems";
   const isLearn = config.activePage === "learn";
   const isQuiz = config.activePage === "quiz";
   const isLabs = config.activePage === "labs";
@@ -94,6 +96,7 @@ function renderNav(config: NavConfig): string {
       <div class="nav-inner">
         <a href="/" class="nav-logo">StudyRISC-V</a>
         <div class="nav-links">
+          <a href="/problems/" class="nav-link${isProblems ? " nav-link-active" : ""}">Problems</a>
           <a href="/learn/" class="nav-link${isLearn ? " nav-link-active" : ""}">Learn</a>
           <a href="/simulator/" class="nav-link${isSimulator ? " nav-link-active" : ""}">Simulator</a>
           <a href="/quiz/" class="nav-link${isQuiz ? " nav-link-active" : ""}">Quizzes</a>
@@ -149,6 +152,7 @@ function renderNav(config: NavConfig): string {
         </div>
       </div>
       <div class="nav-mobile-menu" id="nav-mobile-menu">
+        <a href="/problems/" class="nav-mobile-link${isProblems ? " nav-link-active" : ""}">Problems</a>
         <a href="/learn/" class="nav-mobile-link${isLearn ? " nav-link-active" : ""}">Learn</a>
         <a href="/simulator/" class="nav-mobile-link${isSimulator ? " nav-link-active" : ""}">Simulator</a>
         <a href="/quiz/" class="nav-mobile-link">Quizzes</a>

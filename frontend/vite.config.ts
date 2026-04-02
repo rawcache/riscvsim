@@ -30,6 +30,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         landing: resolve(__dirname, "landing.html"),
+        problems: resolve(__dirname, "problems/index.html"),
         learn: resolve(__dirname, "learn/index.html"),
         quiz: resolve(__dirname, "quiz/index.html"),
         labs: resolve(__dirname, "labs/index.html"),

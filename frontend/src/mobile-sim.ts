@@ -626,6 +626,19 @@ async function copyText(text: string, successMessage: string): Promise<void> {
 
 function resolveInitialSource(): { source: string; status: string; sampleValue: string } {
   const params = new URLSearchParams(window.location.search);
+  const encodedProblemCode = params.get("code");
+  if (encodedProblemCode) {
+    try {
+      return {
+        source: decodeURIComponent(atob(encodedProblemCode)),
+        status: "Problem code loaded",
+        sampleValue: "",
+      };
+    } catch {
+      // Fall through to the existing source resolution flow.
+    }
+  }
+
   const lessonId = params.get("lesson");
   if (lessonId) {
     const lesson = getLesson(lessonId);

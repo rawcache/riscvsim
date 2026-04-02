@@ -24,6 +24,7 @@ export function initFooter(): void {
         <div>
           <div class="site-footer__heading">Navigate</div>
           <div class="site-footer__links">
+            <a href="/problems/">Problems</a>
             <a href="/learn/">Learn</a>
             <a href="/quiz/">Quizzes</a>
             <a href="/labs/">Labs</a>

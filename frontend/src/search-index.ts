@@ -1,9 +1,11 @@
 import { getChallenges } from "./challenges";
 import { getLabs } from "./labs";
 import { getLessons } from "./lessons";
+import { getProblems } from "./problem-data";
 import { getQuizzes } from "./quiz";
 
 export type SearchCategory =
+  | "problem"
   | "lesson"
   | "challenge"
   | "lab"
@@ -32,6 +34,10 @@ function firstSentence(text: string): string {
   const normalized = text.replace(/\s+/g, " ").trim();
   const match = normalized.match(/^.+?[.!?](?:\s|$)/);
   return match ? match[0].trim() : normalized;
+}
+
+function stripHtml(text: string): string {
+  return text.replace(/<[^>]+>/g, " ");
 }
 
 function splitKeywords(text: string): string[] {
@@ -191,6 +197,7 @@ const CONCEPT_ENTRIES: StaticEntrySeed[] = [
 
 const PAGE_ENTRIES: StaticEntrySeed[] = [
   { id: "page-simulator", title: "Simulator", description: "Run, step, rewind, and inspect RV32IM assembly directly in the browser.", keywords: ["simulator", "step", "run", "registers", "memory"], url: "/simulator/", category: "page", categoryLabel: "Page", icon: "🧭" },
+  { id: "page-problems", title: "Problems", description: "Standalone RISC-V assembly problems with a LeetCode-style two-panel IDE and no account required.", keywords: ["problems", "leetcode", "practice", "assembly"], url: "/problems/", category: "page", categoryLabel: "Page", icon: "🧭" },
   { id: "page-learn", title: "Learn", description: "The guided StudyRISC-V curriculum with lessons, progress tracking, and challenge links.", keywords: ["learn", "lessons", "curriculum", "guided"], url: "/learn/", category: "page", categoryLabel: "Page", icon: "🧭" },
   { id: "page-checkpoints", title: "Checkpoints", description: "LeetCode-style RISC-V programming checkpoints with visible and hidden grader cases.", keywords: ["checkpoints", "challenges", "practice", "graded"], url: "/checkpoints/", category: "page", categoryLabel: "Page", icon: "🧭" },
   { id: "page-labs", title: "Labs", description: "Longer assignment-style exercises modeled after course lab work.", keywords: ["labs", "assignments", "grader"], url: "/labs/", category: "page", categoryLabel: "Page", icon: "🧭" },
@@ -215,6 +222,23 @@ const lessonEntries: SearchEntry[] = getLessons().map((lesson) => ({
   category: "lesson",
   categoryLabel: "Lesson",
   icon: "📖",
+}));
+
+const problemEntries: SearchEntry[] = getProblems().map((problem) => ({
+  id: `problem-${problem.id}`,
+  title: `${problem.number}. ${problem.title}`,
+  description: firstSentence(stripHtml(problem.description)),
+  keywords: uniqueKeywords([
+    problem.title,
+    problem.difficulty,
+    ...problem.tags,
+    ...(problem.companies ?? []),
+    ...(problem.relatedProblems ?? []),
+  ]),
+  url: `/problems/?id=${encodeURIComponent(problem.id)}`,
+  category: "problem",
+  categoryLabel: "Problem",
+  icon: "⚡",
 }));
 
 const challengeEntries: SearchEntry[] = getChallenges().map((challenge) => ({
@@ -302,6 +326,7 @@ const pageEntries: SearchEntry[] = PAGE_ENTRIES.map((entry) => ({
 }));
 
 export const SEARCH_INDEX: SearchEntry[] = [
+  ...problemEntries,
   ...lessonEntries,
   ...challengeEntries,
   ...labEntries,
