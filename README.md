@@ -66,6 +66,10 @@ Each challenge includes:
 
 The `/learn/` page also includes a public leaderboard powered by the backend API.
 
+## Checkpoints
+
+Eight LeetCode-style checkpoints live at `/checkpoints/`, each with a two-panel IDE, visible and hidden register-state tests, and local/account-backed progress.
+
 ## Labs
 
 Five lab-style assignments live at `/labs/`, designed to feel like real ECE 2035 programming labs.
@@ -110,6 +114,8 @@ If you deploy on Amplify or another static host, add rewrites for the multi-page
 | `/quiz` | `/quiz/index.html` | `200` |
 | `/labs/` | `/labs/index.html` | `200` |
 | `/labs` | `/labs/index.html` | `200` |
+| `/checkpoints/` | `/checkpoints/index.html` | `200` |
+| `/checkpoints` | `/checkpoints/index.html` | `200` |
 | `/challenges/` | `/challenges/index.html` | `200` |
 | `/challenges` | `/challenges/index.html` | `200` |
 | `/leaderboard/` | `/leaderboard/index.html` | `200` |
