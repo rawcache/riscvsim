@@ -504,6 +504,8 @@ class ProblemsApp {
   private readonly dividerH = document.getElementById("pv-divider-h") as HTMLElement;
   private readonly topbarNum = document.getElementById("pv-topbar-num") as HTMLElement;
   private readonly topbarTitle = document.getElementById("pv-topbar-title") as HTMLElement;
+  private readonly topbarDifficulty = document.getElementById("pv-topbar-difficulty") as HTMLElement;
+  private readonly topbarTags = document.getElementById("pv-topbar-tags") as HTMLElement;
   private readonly timerValue = document.getElementById("pv-timer") as HTMLElement;
   private readonly backButton = document.getElementById("pv-back-btn") as HTMLButtonElement;
   private readonly prevButton = document.getElementById("pv-prev-btn") as HTMLButtonElement;
@@ -1107,6 +1109,12 @@ class ProblemsApp {
     }
     this.topbarNum.textContent = `${this.currentProblem.number}.`;
     this.topbarTitle.textContent = this.currentProblem.title;
+    this.topbarDifficulty.textContent = this.currentProblem.difficulty;
+    this.topbarDifficulty.className = `pv-topbar__difficulty pv-topbar__difficulty--${difficultyClass(this.currentProblem.difficulty)}`;
+    this.topbarTags.innerHTML = this.currentProblem.tags
+      .slice(0, 3)
+      .map((tag) => `<span class="pv-topbar__tag">${escapeHtml(tag)}</span>`)
+      .join("");
     this.timerValue.textContent = formatTimer(timerElapsedMs(this.timerState));
     this.prevButton.disabled = this.currentProblem.number <= 1;
     this.nextButton.disabled = this.currentProblem.number >= this.problems.length;
