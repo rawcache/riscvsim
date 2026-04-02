@@ -574,12 +574,12 @@ class ProblemsApp {
     initFooter();
     this.totalStat.textContent = String(this.problems.length);
     this.applyFilterControls();
+    this.renderList();
     this.bindEvents();
     this.themeObserver.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["data-theme"],
     });
-    await this.refreshSessionState();
     const initialProblem = problemFromUrl();
     if (initialProblem) {
       await this.openProblem(initialProblem.id, false);
@@ -587,6 +587,7 @@ class ProblemsApp {
       this.showListView(false);
       this.restoreListScroll();
     }
+    void this.refreshSessionState();
     this.startTimerTicker();
   }
 
@@ -891,23 +892,29 @@ class ProblemsApp {
   }
 
   private async refreshSessionState(): Promise<void> {
-    this.session = await getSession();
-    const guestProgress = loadProblemProgressForUser(null);
+    try {
+      this.session = await getSession();
+      const guestProgress = loadProblemProgressForUser(null);
 
-    if (this.session) {
-      const scopedProgress = loadProblemProgressForUser(this.session.userId);
-      const apiProgress = await loadProblemProgressFromApi(this.session.idToken);
-      this.progress = mergeProblemProgress(mergeProblemProgress(guestProgress, scopedProgress), apiProgress ?? {});
-      saveProblemProgressForUser(this.progress, this.session.userId);
-      void syncProblemProgressToApi(this.progress, this.session.idToken);
-    } else {
-      this.progress = guestProgress;
-    }
-
-    this.renderList();
-    if (this.currentProblem) {
-      this.renderLeftContent();
-      this.renderTopbar();
+      if (this.session) {
+        const scopedProgress = loadProblemProgressForUser(this.session.userId);
+        const apiProgress = await loadProblemProgressFromApi(this.session.idToken);
+        this.progress = mergeProblemProgress(mergeProblemProgress(guestProgress, scopedProgress), apiProgress ?? {});
+        saveProblemProgressForUser(this.progress, this.session.userId);
+        void syncProblemProgressToApi(this.progress, this.session.idToken);
+      } else {
+        this.progress = guestProgress;
+      }
+    } catch (error) {
+      console.error("Failed to refresh problem session state.", error);
+      this.session = null;
+      this.progress = loadProblemProgressForUser(null);
+    } finally {
+      this.renderList();
+      if (this.currentProblem) {
+        this.renderLeftContent();
+        this.renderTopbar();
+      }
     }
   }
 
