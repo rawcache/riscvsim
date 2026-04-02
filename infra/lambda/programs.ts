@@ -190,7 +190,13 @@ function sortPrograms(programs) {
 
 function isSavedProgramItem(item) {
   const programId = typeof item?.programId === "string" ? item.programId : "";
-  return programId && programId !== "progress" && programId !== "score" && !programId.startsWith("group#");
+  return (
+    programId &&
+    programId !== "progress" &&
+    programId !== "score" &&
+    !programId.startsWith("group#") &&
+    !programId.startsWith("submission#")
+  );
 }
 
 function validateName(name) {
@@ -454,6 +460,7 @@ async function handleGetProgress(caller) {
     return response(200, {
       lessonProgress: { lessons: {}, totalCompleted: 0 },
       checkpointProgress: {},
+      problemProgress: {},
     });
   }
 
@@ -462,7 +469,7 @@ async function handleGetProgress(caller) {
     if (
       parsed &&
       typeof parsed === "object" &&
-      ("lessonProgress" in parsed || "checkpointProgress" in parsed)
+      ("lessonProgress" in parsed || "checkpointProgress" in parsed || "problemProgress" in parsed)
     ) {
       return response(200, {
         lessonProgress:
@@ -473,16 +480,22 @@ async function handleGetProgress(caller) {
           parsed.checkpointProgress && typeof parsed.checkpointProgress === "object"
             ? parsed.checkpointProgress
             : {},
+        problemProgress:
+          parsed.problemProgress && typeof parsed.problemProgress === "object"
+            ? parsed.problemProgress
+            : {},
       });
     }
     return response(200, {
       lessonProgress: parsed,
       checkpointProgress: {},
+      problemProgress: {},
     });
   } catch {
     return response(200, {
       lessonProgress: { lessons: {}, totalCompleted: 0 },
       checkpointProgress: {},
+      problemProgress: {},
     });
   }
 }
@@ -499,6 +512,7 @@ async function handleSaveProgress(event, caller) {
   let existing = {
     lessonProgress: { lessons: {}, totalCompleted: 0 },
     checkpointProgress: {},
+    problemProgress: {},
   };
   const existingItem = await ddb.send(
     new GetCommand({
@@ -514,7 +528,7 @@ async function handleSaveProgress(event, caller) {
     try {
       const parsed = JSON.parse(existingItem.Item.data);
       existing =
-        parsed && typeof parsed === "object" && ("lessonProgress" in parsed || "checkpointProgress" in parsed)
+        parsed && typeof parsed === "object" && ("lessonProgress" in parsed || "checkpointProgress" in parsed || "problemProgress" in parsed)
           ? {
               lessonProgress:
                 parsed.lessonProgress && typeof parsed.lessonProgress === "object"
@@ -524,15 +538,21 @@ async function handleSaveProgress(event, caller) {
                 parsed.checkpointProgress && typeof parsed.checkpointProgress === "object"
                   ? parsed.checkpointProgress
                   : {},
+              problemProgress:
+                parsed.problemProgress && typeof parsed.problemProgress === "object"
+                  ? parsed.problemProgress
+                  : {},
             }
           : {
               lessonProgress: parsed && typeof parsed === "object" ? parsed : { lessons: {}, totalCompleted: 0 },
               checkpointProgress: {},
+              problemProgress: {},
             };
     } catch {
       existing = {
         lessonProgress: { lessons: {}, totalCompleted: 0 },
         checkpointProgress: {},
+        problemProgress: {},
       };
     }
   }
@@ -541,13 +561,17 @@ async function handleSaveProgress(event, caller) {
     lessonProgress:
       body.lessonProgress && typeof body.lessonProgress === "object"
         ? body.lessonProgress
-        : body.checkpointProgress
+        : body.checkpointProgress || body.problemProgress
           ? existing.lessonProgress
           : body,
     checkpointProgress:
       body.checkpointProgress && typeof body.checkpointProgress === "object"
         ? body.checkpointProgress
         : existing.checkpointProgress,
+    problemProgress:
+      body.problemProgress && typeof body.problemProgress === "object"
+        ? body.problemProgress
+        : existing.problemProgress,
   };
 
   await ddb.send(
@@ -558,6 +582,48 @@ async function handleSaveProgress(event, caller) {
         programId: "progress",
         data: JSON.stringify(merged),
         updatedAt: new Date().toISOString(),
+      },
+    })
+  );
+
+  return response(200, { saved: true });
+}
+
+async function handleSaveSubmission(event, caller) {
+  const body = parseBody(event);
+  const problemId = typeof body?.problemId === "string" ? body.problemId.trim() : "";
+  const verdict = typeof body?.verdict === "string" ? body.verdict.trim() : "";
+  const stepsTaken = Number.isFinite(body?.stepsTaken) ? Math.max(0, Number(body.stepsTaken)) : 0;
+
+  if (!problemId || !verdict) {
+    return response(400, {
+      error: "VALIDATION_ERROR",
+      message: "problemId and verdict are required.",
+    });
+  }
+
+  const submittedAt =
+    typeof body?.submittedAt === "string" && body.submittedAt.trim().length > 0
+      ? body.submittedAt
+      : new Date().toISOString();
+
+  await ddb.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        userId: caller.userId,
+        programId: `submission#${problemId}#${submittedAt}#${randomUUID()}`,
+        type: "problem-submission",
+        problemId,
+        verdict,
+        stepsTaken,
+        passedCases: Number.isFinite(body?.passedCases) ? Math.max(0, Number(body.passedCases)) : 0,
+        totalCases: Number.isFinite(body?.totalCases) ? Math.max(0, Number(body.totalCases)) : 0,
+        failedCaseId: typeof body?.failedCaseId === "string" ? body.failedCaseId : "",
+        errorMessage: typeof body?.errorMessage === "string" ? body.errorMessage : "",
+        elapsedMs: Number.isFinite(body?.elapsedMs) ? Math.max(0, Number(body.elapsedMs)) : 0,
+        submittedAt,
+        updatedAt: submittedAt,
       },
     })
   );
@@ -1248,6 +1314,12 @@ exports.handler = async (event) => {
 
       if (method === "POST") {
         return await handleSaveProgress(event, caller);
+      }
+    }
+
+    if (path === "/submissions" || path.endsWith("/submissions")) {
+      if (method === "POST") {
+        return await handleSaveSubmission(event, caller);
       }
     }
 
