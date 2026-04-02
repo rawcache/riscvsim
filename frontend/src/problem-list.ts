@@ -67,6 +67,13 @@ type TimerState = {
   stopped: boolean;
 };
 
+const DEFAULT_FILTER_STATE: FilterState = {
+  search: "",
+  difficulty: "",
+  status: "",
+  tag: "",
+};
+
 const MONACO_CDN =
   "https://cdnjs.cloudflare.com/ajax/libs/" +
   "monaco-editor/0.44.0/min/vs";
@@ -272,19 +279,22 @@ function stopTimer(problemId: string, timerState: TimerState): void {
 
 function loadFilterState(): FilterState {
   if (typeof sessionStorage === "undefined") {
-    return { search: "", difficulty: "", status: "", tag: "" };
+    return { ...DEFAULT_FILTER_STATE };
   }
 
   const raw = sessionStorage.getItem(FILTER_STORAGE_KEY);
   if (!raw) {
-    return { search: "", difficulty: "", status: "", tag: "" };
+    return { ...DEFAULT_FILTER_STATE };
   }
 
   try {
     const parsed = JSON.parse(raw) as Partial<FilterState>;
     return {
       search: typeof parsed.search === "string" ? parsed.search : "",
-      difficulty: parsed.difficulty === "Easy" || parsed.difficulty === "Medium" || parsed.difficulty === "Hard" ? parsed.difficulty : "",
+      difficulty:
+        parsed.difficulty === "Easy" || parsed.difficulty === "Medium" || parsed.difficulty === "Hard"
+          ? parsed.difficulty
+          : "",
       status:
         parsed.status === "solved" || parsed.status === "attempted" || parsed.status === "unsolved"
           ? parsed.status
@@ -307,7 +317,7 @@ function loadFilterState(): FilterState {
           : "",
     };
   } catch {
-    return { search: "", difficulty: "", status: "", tag: "" };
+    return { ...DEFAULT_FILTER_STATE };
   }
 }
 
@@ -985,7 +995,10 @@ class ProblemsApp {
 
   private applyFilterControls(): void {
     this.searchInput.value = this.filters.search;
-    this.difficultyFilter.value = this.filters.difficulty;
+    this.difficultyFilter.value =
+      this.filters.difficulty === "Easy" || this.filters.difficulty === "Medium" || this.filters.difficulty === "Hard"
+        ? this.filters.difficulty
+        : "";
     this.statusFilter.value = this.filters.status;
     this.tagFilter.value = this.filters.tag;
   }
