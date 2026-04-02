@@ -27,7 +27,7 @@ export function initFooter(): void {
             <a href="/learn/">Learn</a>
             <a href="/quiz/">Quizzes</a>
             <a href="/labs/">Labs</a>
-            <a href="/challenges/">Challenges</a>
+            <a href="/checkpoints/">Checkpoints</a>
             <a href="/simulator/">Simulator</a>
             <a href="/leaderboard/">Leaderboard</a>
             <a href="/about/">About</a>

@@ -98,7 +98,7 @@ function renderNav(config: NavConfig): string {
           <a href="/simulator/" class="nav-link${isSimulator ? " nav-link-active" : ""}">Simulator</a>
           <a href="/quiz/" class="nav-link${isQuiz ? " nav-link-active" : ""}">Quizzes</a>
           <a href="/labs/" class="nav-link${isLabs ? " nav-link-active" : ""}">Labs</a>
-          <a href="/challenges/" class="nav-link${isChallenges ? " nav-link-active" : ""}">Challenges</a>
+          <a href="/checkpoints/" class="nav-link${isChallenges ? " nav-link-active" : ""}">Checkpoints</a>
           <div class="nav-dropdown-wrapper" data-nav-dropdown="resources">
             <button class="nav-link nav-dropdown-trigger${isResources ? " nav-link-active" : ""}" type="button" aria-expanded="false" aria-controls="nav-dropdown-resources">
               Resources
@@ -153,7 +153,7 @@ function renderNav(config: NavConfig): string {
         <a href="/simulator/" class="nav-mobile-link${isSimulator ? " nav-link-active" : ""}">Simulator</a>
         <a href="/quiz/" class="nav-mobile-link">Quizzes</a>
         <a href="/labs/" class="nav-mobile-link">Labs</a>
-        <a href="/challenges/" class="nav-mobile-link">Challenges</a>
+        <a href="/checkpoints/" class="nav-mobile-link">Checkpoints</a>
         <a href="/about/" class="nav-mobile-link${config.activePage === "about" ? " nav-link-active" : ""}">About</a>
         <a href="https://github.com/rawcache/riscvsim" class="nav-mobile-link" target="_blank" rel="noopener">GitHub</a>
         <div class="nav-mobile-actions">

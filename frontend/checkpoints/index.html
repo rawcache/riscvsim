@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Checkpoints - StudyRISC-V</title>
+    <meta
+      name="description"
+      content="LeetCode-style RISC-V checkpoint problems for StudyRISC-V. Write assembly, run register-state tests, and submit for Accepted."
+    />
+    <meta property="og:title" content="StudyRISC-V Checkpoints" />
+    <meta
+      property="og:description"
+      content="A polished checkpoint IDE for RISC-V assembly with problem statements, Monaco editing, and real test-case grading."
+    />
+    <meta property="og:image" content="https://studyriscv.com/og-image.png" />
+    <meta property="og:url" content="https://studyriscv.com/checkpoints/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://studyriscv.com/checkpoints/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore theme bootstrap failures.
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="../src/styles/global.css" />
+    <link rel="stylesheet" href="../src/styles/nav.css" />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/auth.css" />
+    <link rel="stylesheet" href="../src/styles/landing.css" />
+    <link rel="stylesheet" href="../src/styles/checkpoints.css" />
+    <link rel="icon" type="image/svg+xml" href="../favicon-chip.svg" />
+  </head>
+  <body class="landing-page checkpoints-page">
+    <nav id="site-nav"></nav>
+
+    <main class="cp-shell">
+      <div class="cp-layout" id="cp-layout">
+        <div class="cp-topbar">
+          <div class="cp-topbar__left">
+            <a href="/learn/" class="cp-topbar__back" aria-label="Back to learn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M15 18 9 12l6-6"></path>
+              </svg>
+            </a>
+            <div class="cp-problem-selector">
+              <button class="cp-problem-selector__btn" id="cp-problem-btn" type="button" aria-expanded="false" aria-controls="cp-problem-dropdown">
+                <span id="cp-problem-title">Loading checkpoint…</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <path d="m6 9 6 6 6-6"></path>
+                </svg>
+              </button>
+              <div class="cp-problem-dropdown" id="cp-problem-dropdown" hidden></div>
+            </div>
+          </div>
+          <div class="cp-topbar__center">
+            <div class="cp-difficulty-badge" id="cp-difficulty-badge">Easy</div>
+          </div>
+          <div class="cp-topbar__right">
+            <div class="cp-status" id="cp-status">Guest mode · Progress saved locally</div>
+            <button class="cp-topbar__btn" id="cp-timer-btn" type="button">⏱ 00:00</button>
+          </div>
+        </div>
+
+        <div class="cp-panels" id="cp-panels">
+          <div class="cp-left" id="cp-left">
+            <div class="cp-left__tabs">
+              <button class="cp-tab active" data-left-tab="description" type="button">Description</button>
+              <button class="cp-tab" data-left-tab="hints" type="button">Hints</button>
+              <button class="cp-tab" data-left-tab="approach" type="button">Approach</button>
+              <button class="cp-tab" data-left-tab="submissions" type="button">Submissions</button>
+            </div>
+            <div class="cp-left__content" id="cp-left-content"></div>
+          </div>
+
+          <div class="cp-divider-v" id="cp-divider-v" role="separator" aria-orientation="vertical" aria-label="Resize panels"></div>
+
+          <div class="cp-right" id="cp-right">
+            <div class="cp-verdict-layer" id="cp-verdict-layer"></div>
+
+            <div class="cp-editor-toolbar">
+              <div class="cp-editor-toolbar__meta">
+                <div class="cp-lang-badge">RISC-V Assembly</div>
+                <div class="cp-save-indicator" id="cp-save-indicator" aria-live="polite"></div>
+              </div>
+              <div class="cp-editor-toolbar__actions">
+                <button class="cp-editor-btn" id="cp-reset-btn" type="button">Reset</button>
+                <button class="cp-editor-btn" id="cp-fullscreen-btn" type="button" aria-label="Toggle fullscreen">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="cp-editor-stage" id="cp-editor-stage">
+              <div id="cp-editor" class="cp-editor"></div>
+              <div class="cp-editor-loading" id="cp-editor-loading" hidden>Running…</div>
+              <div class="cp-lock-shell" id="cp-lock-shell" hidden></div>
+            </div>
+
+            <div class="cp-divider-h" id="cp-divider-h" role="separator" aria-orientation="horizontal" aria-label="Resize result panel"></div>
+
+            <div class="cp-bottom" id="cp-bottom">
+              <div class="cp-bottom__tabs">
+                <button class="cp-tab active" data-bottom-tab="testcase" type="button">Testcase</button>
+                <button class="cp-tab" data-bottom-tab="result" type="button">Test Result</button>
+              </div>
+
+              <div class="cp-bottom__content" id="cp-bottom-content"></div>
+            </div>
+
+            <div class="cp-action-bar">
+              <div class="cp-action-bar__left">
+                <button class="cp-action-btn cp-action-btn--secondary" id="cp-run-btn" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="m8 6 10 6-10 6z"></path>
+                  </svg>
+                  <span>Run</span>
+                  <span class="cp-shortcut-tip" id="cp-run-shortcut"></span>
+                </button>
+              </div>
+              <div class="cp-action-bar__right">
+                <button class="cp-action-btn cp-action-btn--primary" id="cp-submit-btn" type="button">
+                  <span>Submit</span>
+                  <span class="cp-shortcut-tip" id="cp-submit-shortcut"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script type="module" src="../src/checkpoint.ts"></script>
+  </body>
+</html>

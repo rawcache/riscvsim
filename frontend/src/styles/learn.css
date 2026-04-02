@@ -674,6 +674,163 @@
   transform: translateY(-50%) translateX(0);
 }
 
+.cp-gate-group {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 16px 52px;
+}
+
+.cp-gate-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-base);
+  transition: border-color 200ms ease, background 200ms ease, opacity 200ms ease;
+}
+
+.cp-gate-card[data-state="unlocked"] {
+  border: 1.5px solid var(--accent);
+  background: var(--accent-subtle);
+  animation: cp-gate-pulse 2s ease-in-out infinite;
+}
+
+.cp-gate-card[data-state="completed"] {
+  border: 1.5px solid #22c55e;
+  background: color-mix(in srgb, #22c55e 6%, transparent);
+}
+
+.cp-gate-card[data-state="locked"] {
+  opacity: 0.65;
+}
+
+.cp-gate-card[data-state="locked-tier"] {
+  opacity: 0.8;
+}
+
+@keyframes cp-gate-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+}
+
+.cp-gate-card__left {
+  flex-shrink: 0;
+}
+
+.cp-gate-card__icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.cp-gate-card[data-state="unlocked"] .cp-gate-card__icon-wrap {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.cp-gate-card[data-state="completed"] .cp-gate-card__icon-wrap {
+  border-color: #22c55e;
+  background: #22c55e;
+  color: var(--bg-surface);
+}
+
+.cp-gate-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.cp-gate-card__title {
+  font-family: "Geist", sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cp-gate-card__label {
+  font-family: "Geist Mono", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+
+.cp-gate-card__meta {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-family: "Geist Mono", monospace;
+  font-size: 11px;
+}
+
+.cp-gate-card__desc {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.cp-gate-card__action {
+  flex-shrink: 0;
+}
+
+.cp-gate-card__action-stack {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+
+.cp-gate-card__button,
+.cp-gate-card__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--bg-surface);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cp-gate-card__link {
+  border-color: transparent;
+  background: transparent;
+  color: var(--accent);
+  min-height: auto;
+  padding: 0;
+}
+
+.cp-gate-card__done {
+  color: #22c55e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cp-gate-card__done-date,
+.cp-gate-card__lock-copy {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: right;
+}
+
 .leaderboard-sidebar {
   position: sticky;
   top: 80px;
@@ -1439,6 +1596,27 @@
     max-width: 100%;
     min-height: auto;
     overflow: visible;
+  }
+
+  .cp-gate-group {
+    margin-left: 0;
+  }
+
+  .cp-gate-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cp-gate-card__action,
+  .cp-gate-card__action-stack {
+    width: 100%;
+    justify-items: stretch;
+  }
+
+  .cp-gate-card__button,
+  .cp-gate-card__link {
+    width: 100%;
+    justify-content: center;
   }
 
   .leaderboard-page__controls,

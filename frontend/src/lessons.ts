@@ -3465,7 +3465,9 @@ export async function syncProgressToApi(progress: UserProgress, idToken: string)
         "Content-Type": "application/json",
         Authorization: `Bearer ${idToken}`,
       },
-      body: JSON.stringify(normalizeProgress(progress)),
+      body: JSON.stringify({
+        lessonProgress: normalizeProgress(progress),
+      }),
     });
   } catch {
     // Do not block the UI on sync failures.
@@ -3489,7 +3491,13 @@ export async function loadProgressFromApi(idToken: string): Promise<UserProgress
       return null;
     }
 
-    return normalizeProgress((await response.json()) as unknown);
+    const raw = (await response.json()) as unknown;
+    const payload =
+      raw && typeof raw === "object" && "lessonProgress" in (raw as { lessonProgress?: unknown })
+        ? (raw as { lessonProgress?: unknown }).lessonProgress
+        : raw;
+
+    return normalizeProgress(payload);
   } catch {
     return null;
   }

@@ -1,3 +1,8 @@
+import type { UserSession } from "./auth";
+import { show as showAuthModal } from "./auth-page";
+import { CHECKPOINT_PROBLEMS } from "./checkpoint-data";
+import { checkpointMilestone, formatLessonRange, getCheckpointCardState } from "./checkpoint-logic";
+import type { CheckpointProgress } from "./checkpoint-data";
 import { getChallengesForLesson, getChallengeStatus } from "./challenges";
 import type { Lesson, UserProgress } from "./lessons";
 
@@ -163,6 +168,87 @@ function rowMarkup(
   `;
 }
 
+function checkpointIcon(state: ReturnType<typeof getCheckpointCardState>, requiredTier: string): string {
+  if (state === "completed") {
+    return "✓";
+  }
+  if (state === "unlocked") {
+    return "🏁";
+  }
+  if (state === "locked-tier") {
+    return requiredTier === "Pro" ? "🐝" : "👤";
+  }
+  return "🔒";
+}
+
+function checkpointActionMarkup(
+  state: ReturnType<typeof getCheckpointCardState>,
+  problemId: string,
+  requiredTier: string,
+  completedAt?: string
+): string {
+  if (state === "completed") {
+    return `
+      <div class="cp-gate-card__action-stack">
+        <span class="cp-gate-card__done">Completed ✓</span>
+        ${completedAt ? `<span class="cp-gate-card__done-date">${escapeHtml(new Date(completedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }))}</span>` : ""}
+        <a class="cp-gate-card__link" href="/checkpoints/?id=${encodeURIComponent(problemId)}">View →</a>
+      </div>
+    `;
+  }
+  if (state === "unlocked") {
+    return `<a class="cp-gate-card__button" href="/checkpoints/?id=${encodeURIComponent(problemId)}">Start Checkpoint →</a>`;
+  }
+  if (state === "locked-tier") {
+    return `
+      <div class="cp-gate-card__action-stack">
+        <span class="cp-gate-card__lock-copy">${escapeHtml(requiredTier === "Pro" ? "Georgia Tech Pro required" : "Sign in required")}</span>
+        <button class="cp-gate-card__button" data-cp-auth-action="signin" type="button">${escapeHtml(requiredTier === "Pro" ? "Use GT email →" : "Sign in →")}</button>
+      </div>
+    `;
+  }
+  return `<span class="cp-gate-card__lock-copy">Complete Lessons ${escapeHtml(formatLessonRange(CHECKPOINT_PROBLEMS.find((problem) => problem.id === problemId)!))} first</span>`;
+}
+
+function checkpointCardsMarkup(
+  lessonNumber: number,
+  progress: UserProgress,
+  checkpointProgress: CheckpointProgress,
+  session: UserSession | null
+): string {
+  const cards = CHECKPOINT_PROBLEMS.filter((problem) => checkpointMilestone(problem) === lessonNumber);
+  if (cards.length === 0) {
+    return "";
+  }
+
+  return `
+    <div class="cp-gate-group">
+      ${cards
+        .map((problem) => {
+          const state = getCheckpointCardState(problem, progress, checkpointProgress, session);
+          const entry = checkpointProgress[problem.id];
+          return `
+            <div class="cp-gate-card" data-state="${escapeHtml(state)}" data-cp-id="${escapeHtml(problem.id)}">
+              <div class="cp-gate-card__left">
+                <div class="cp-gate-card__icon-wrap">${escapeHtml(checkpointIcon(state, problem.requiredTier))}</div>
+              </div>
+              <div class="cp-gate-card__body">
+                <div class="cp-gate-card__label">Checkpoint ${problem.id.replace("cp", "")}</div>
+                <div class="cp-gate-card__title">${escapeHtml(problem.title)}</div>
+                <div class="cp-gate-card__meta">${escapeHtml(`${problem.difficulty} · ${problem.estimatedMinutes} min · ${problem.tags[0] ?? "Practice"}`)}</div>
+                ${state === "unlocked" || state === "completed" ? '<div class="cp-gate-card__desc">Complete this checkpoint to continue.</div>' : ""}
+              </div>
+              <div class="cp-gate-card__action">
+                ${checkpointActionMarkup(state, problem.id, problem.requiredTier, entry?.completedAt)}
+              </div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 function removeExistingTooltip(container: HTMLElement): void {
   container.querySelector(".lesson-tree__tooltip")?.remove();
 }
@@ -192,7 +278,13 @@ function showLockedTooltip(row: HTMLElement, message: string): void {
   }, 2000);
 }
 
-export function renderCurriculumTree(container: HTMLElement, lessons: Lesson[], progress: UserProgress): void {
+export function renderCurriculumTree(
+  container: HTMLElement,
+  lessons: Lesson[],
+  progress: UserProgress,
+  checkpointProgress: CheckpointProgress,
+  session: UserSession | null
+): void {
   const lessonsById = new Map(lessons.map((lesson) => [lesson.id, lesson]));
   const completedCount = lessons.filter((lesson) => progress.lessons[lesson.id]?.completed === true).length;
   const totalCount = lessons.length || 1;
@@ -203,7 +295,7 @@ export function renderCurriculumTree(container: HTMLElement, lessons: Lesson[], 
     .map((lesson, index) => {
       const divider = PHASE_LABELS[lesson.id] ? phaseDivider(PHASE_LABELS[lesson.id]) : "";
       const state = lessonState(lesson, progress);
-      return `${divider}${rowMarkup(lesson, index, state, progress, lessonsById, terminalIds.has(lesson.id))}`;
+      return `${divider}${rowMarkup(lesson, index, state, progress, lessonsById, terminalIds.has(lesson.id))}${checkpointCardsMarkup(index + 1, progress, checkpointProgress, session)}`;
     })
     .join("");
 
@@ -218,6 +310,13 @@ export function renderCurriculumTree(container: HTMLElement, lessons: Lesson[], 
     row.addEventListener("click", (event) => {
       event.preventDefault();
       showLockedTooltip(row, row.dataset.lockedMessage ?? "Complete the prerequisite lesson to unlock this lesson.");
+    });
+  });
+
+  container.querySelectorAll<HTMLButtonElement>("[data-cp-auth-action='signin']").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      showAuthModal({ allowClose: true });
     });
   });
 }

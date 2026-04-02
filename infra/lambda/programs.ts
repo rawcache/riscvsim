@@ -451,13 +451,39 @@ async function handleGetProgress(caller) {
   );
 
   if (!result.Item?.data) {
-    return response(200, { lessons: {}, totalCompleted: 0 });
+    return response(200, {
+      lessonProgress: { lessons: {}, totalCompleted: 0 },
+      checkpointProgress: {},
+    });
   }
 
   try {
-    return response(200, JSON.parse(result.Item.data));
+    const parsed = JSON.parse(result.Item.data);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      ("lessonProgress" in parsed || "checkpointProgress" in parsed)
+    ) {
+      return response(200, {
+        lessonProgress:
+          parsed.lessonProgress && typeof parsed.lessonProgress === "object"
+            ? parsed.lessonProgress
+            : { lessons: {}, totalCompleted: 0 },
+        checkpointProgress:
+          parsed.checkpointProgress && typeof parsed.checkpointProgress === "object"
+            ? parsed.checkpointProgress
+            : {},
+      });
+    }
+    return response(200, {
+      lessonProgress: parsed,
+      checkpointProgress: {},
+    });
   } catch {
-    return response(200, { lessons: {}, totalCompleted: 0 });
+    return response(200, {
+      lessonProgress: { lessons: {}, totalCompleted: 0 },
+      checkpointProgress: {},
+    });
   }
 }
 
@@ -470,13 +496,67 @@ async function handleSaveProgress(event, caller) {
     });
   }
 
+  let existing = {
+    lessonProgress: { lessons: {}, totalCompleted: 0 },
+    checkpointProgress: {},
+  };
+  const existingItem = await ddb.send(
+    new GetCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        userId: caller.userId,
+        programId: "progress",
+      },
+    })
+  );
+
+  if (typeof existingItem.Item?.data === "string") {
+    try {
+      const parsed = JSON.parse(existingItem.Item.data);
+      existing =
+        parsed && typeof parsed === "object" && ("lessonProgress" in parsed || "checkpointProgress" in parsed)
+          ? {
+              lessonProgress:
+                parsed.lessonProgress && typeof parsed.lessonProgress === "object"
+                  ? parsed.lessonProgress
+                  : { lessons: {}, totalCompleted: 0 },
+              checkpointProgress:
+                parsed.checkpointProgress && typeof parsed.checkpointProgress === "object"
+                  ? parsed.checkpointProgress
+                  : {},
+            }
+          : {
+              lessonProgress: parsed && typeof parsed === "object" ? parsed : { lessons: {}, totalCompleted: 0 },
+              checkpointProgress: {},
+            };
+    } catch {
+      existing = {
+        lessonProgress: { lessons: {}, totalCompleted: 0 },
+        checkpointProgress: {},
+      };
+    }
+  }
+
+  const merged = {
+    lessonProgress:
+      body.lessonProgress && typeof body.lessonProgress === "object"
+        ? body.lessonProgress
+        : body.checkpointProgress
+          ? existing.lessonProgress
+          : body,
+    checkpointProgress:
+      body.checkpointProgress && typeof body.checkpointProgress === "object"
+        ? body.checkpointProgress
+        : existing.checkpointProgress,
+  };
+
   await ddb.send(
     new PutCommand({
       TableName: TABLE_NAME,
       Item: {
         userId: caller.userId,
         programId: "progress",
-        data: JSON.stringify(body),
+        data: JSON.stringify(merged),
         updatedAt: new Date().toISOString(),
       },
     })

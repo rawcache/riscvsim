@@ -1,4 +1,10 @@
-import { getSession } from "./auth";
+import { getSession, type UserSession } from "./auth";
+import {
+  loadCheckpointProgressForUser,
+  loadCheckpointProgressFromApi,
+  mergeCheckpointProgress,
+  saveCheckpointProgressForUser,
+} from "./checkpoint-progress";
 import { getBestSubmission, getChallengeStatus, getChallenges, loadChallengeSubmissions } from "./challenges";
 import { renderCurriculumTree } from "./curriculum-tree";
 import { initFooter } from "./footer";
@@ -207,12 +213,12 @@ function renderStats(progress: UserProgress): void {
   `;
 }
 
-function renderTree(progress: UserProgress): void {
+function renderTree(progress: UserProgress, checkpointProgress: ReturnType<typeof loadCheckpointProgressForUser>, session: UserSession | null): void {
   const treeRoot = document.getElementById("learnCurriculumTree");
   if (!treeRoot) {
     return;
   }
-  renderCurriculumTree(treeRoot, getLessons(), progress);
+  renderCurriculumTree(treeRoot, getLessons(), progress, checkpointProgress, session);
 }
 
 function renderLeaderboard(
@@ -404,10 +410,15 @@ function renderChallengeSnapshot(): void {
   `;
 }
 
-function renderPage(progress: UserProgress, loggedIn: boolean): void {
+function renderPage(
+  progress: UserProgress,
+  checkpointProgress: ReturnType<typeof loadCheckpointProgressForUser>,
+  session: UserSession | null
+): void {
+  const loggedIn = Boolean(session);
   renderHero(progress, loggedIn);
   renderStats(progress);
-  renderTree(progress);
+  renderTree(progress, checkpointProgress, session);
   renderChallengeSnapshot();
 }
 
@@ -418,14 +429,23 @@ document.addEventListener("DOMContentLoaded", () => {
   void (async () => {
     let session = await getSession();
     let progress = session ? emptyProgress() : loadProgress();
-    renderPage(progress, Boolean(session));
+    let checkpointProgress = session ? loadCheckpointProgressForUser(session.userId) : loadCheckpointProgressForUser(null);
+    renderPage(progress, checkpointProgress, session);
 
     if (session) {
       const localProgress = loadProgress();
       const apiProgress = await loadProgressFromApi(session.idToken);
       progress = apiProgress ? mergeProgress(localProgress, apiProgress) : localProgress;
       saveProgress(progress);
-      renderPage(progress, true);
+      const localCheckpointProgress = loadCheckpointProgressForUser(session.userId);
+      const guestCheckpointProgress = loadCheckpointProgressForUser(null);
+      const apiCheckpointProgress = await loadCheckpointProgressFromApi(session.idToken);
+      checkpointProgress = mergeCheckpointProgress(
+        mergeCheckpointProgress(guestCheckpointProgress, localCheckpointProgress),
+        apiCheckpointProgress ?? {}
+      );
+      saveCheckpointProgressForUser(checkpointProgress, session.userId);
+      renderPage(progress, checkpointProgress, session);
     }
 
     const renderLeaderboardNow = async () => {
@@ -443,13 +463,24 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener("studyriscv-auth-changed", async (event) => {
       const nextSession = (event as CustomEvent<Awaited<ReturnType<typeof getSession>> | null>).detail ?? null;
       let nextProgress = nextSession ? emptyProgress() : loadProgress();
+      let nextCheckpointProgress = nextSession
+        ? loadCheckpointProgressForUser(nextSession.userId)
+        : loadCheckpointProgressForUser(null);
       if (nextSession?.idToken) {
         const localProgress = loadProgress();
         const apiProgress = await loadProgressFromApi(nextSession.idToken);
         nextProgress = apiProgress ? mergeProgress(localProgress, apiProgress) : localProgress;
         saveProgress(nextProgress);
+        const localCheckpointProgress = loadCheckpointProgressForUser(nextSession.userId);
+        const guestCheckpointProgress = loadCheckpointProgressForUser(null);
+        const apiCheckpointProgress = await loadCheckpointProgressFromApi(nextSession.idToken);
+        nextCheckpointProgress = mergeCheckpointProgress(
+          mergeCheckpointProgress(guestCheckpointProgress, localCheckpointProgress),
+          apiCheckpointProgress ?? {}
+        );
+        saveCheckpointProgressForUser(nextCheckpointProgress, nextSession.userId);
       }
-      renderPage(nextProgress, Boolean(nextSession));
+      renderPage(nextProgress, nextCheckpointProgress, nextSession);
       renderStudyGroups(nextSession, nextSession?.idToken ? await fetchStudyGroups(nextSession.idToken) : []);
     });
   })();
