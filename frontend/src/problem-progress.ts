@@ -5,6 +5,32 @@ const ID_TOKEN_KEY = "studyriscv_id_token";
 const DEFAULT_API_ENDPOINT = "https://api.studyriscv.com";
 const API_ENDPOINT = (import.meta.env.VITE_API_ENDPOINT as string | undefined)?.trim() || DEFAULT_API_ENDPOINT;
 
+function safeLocalStorageGet(key: string): string | null {
+  try {
+    return typeof localStorage === "undefined" ? null : localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeLocalStorageSet(key: string, value: string): void {
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(key, value);
+    }
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function safeSessionStorageGet(key: string): string | null {
+  try {
+    return typeof sessionStorage === "undefined" ? null : sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
 type ProgressEnvelope = {
   problemProgress?: unknown;
 };
@@ -41,7 +67,7 @@ function currentProblemUserId(): string | null {
     return null;
   }
 
-  const token = localStorage.getItem(ID_TOKEN_KEY) ?? sessionStorage.getItem(ID_TOKEN_KEY);
+  const token = safeLocalStorageGet(ID_TOKEN_KEY) ?? safeSessionStorageGet(ID_TOKEN_KEY);
   return token ? decodeJwtUserId(token) : null;
 }
 
@@ -204,11 +230,7 @@ export function normalizeProblemProgress(input: unknown): ProblemProgress {
 }
 
 function readStoredProgress(storageKey: string): ProblemProgress {
-  if (typeof localStorage === "undefined") {
-    return emptyProblemProgress();
-  }
-
-  const stored = localStorage.getItem(storageKey);
+  const stored = safeLocalStorageGet(storageKey);
   if (!stored) {
     return emptyProblemProgress();
   }
@@ -234,10 +256,7 @@ export function loadProblemProgress(): ProblemProgress {
 }
 
 export function saveProblemProgressForUser(progress: ProblemProgress, userId?: string | null): void {
-  if (typeof localStorage === "undefined") {
-    return;
-  }
-  localStorage.setItem(getProblemProgressStorageKey(userId), JSON.stringify(normalizeProblemProgress(progress)));
+  safeLocalStorageSet(getProblemProgressStorageKey(userId), JSON.stringify(normalizeProblemProgress(progress)));
 }
 
 export function saveProblemProgress(progress: ProblemProgress): void {
@@ -249,17 +268,11 @@ export function getProblemCodeStorageKey(problemId: string): string {
 }
 
 export function loadProblemCode(problemId: string): string | null {
-  if (typeof localStorage === "undefined") {
-    return null;
-  }
-  return localStorage.getItem(getProblemCodeStorageKey(problemId));
+  return safeLocalStorageGet(getProblemCodeStorageKey(problemId));
 }
 
 export function saveProblemCode(problemId: string, code: string): void {
-  if (typeof localStorage === "undefined") {
-    return;
-  }
-  localStorage.setItem(getProblemCodeStorageKey(problemId), code);
+  safeLocalStorageSet(getProblemCodeStorageKey(problemId), code);
 }
 
 function laterIso(left?: string, right?: string): string | undefined {

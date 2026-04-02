@@ -87,6 +87,42 @@ const SHORTCUTS_SEEN_STORAGE_KEY = "problems_shortcuts_seen";
 const AUTO_SAVE_DELAY_MS = 2000;
 const BANNER_DISMISS_MS = 6000;
 
+function safeLocalStorageGet(key: string): string | null {
+  try {
+    return typeof localStorage === "undefined" ? null : localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeLocalStorageSet(key: string, value: string): void {
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(key, value);
+    }
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function safeSessionStorageGet(key: string): string | null {
+  try {
+    return typeof sessionStorage === "undefined" ? null : sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSessionStorageSet(key: string, value: string): void {
+  try {
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem(key, value);
+    }
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 function isMacPlatform(): boolean {
   return typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
 }
@@ -219,7 +255,7 @@ function loadTimerState(problemId: string): TimerState {
     };
   }
 
-  const raw = sessionStorage.getItem(`problems_timer_${problemId}`);
+  const raw = safeSessionStorageGet(`problems_timer_${problemId}`);
   if (!raw) {
     return {
       elapsedMs: 0,
@@ -246,10 +282,7 @@ function loadTimerState(problemId: string): TimerState {
 }
 
 function saveTimerState(problemId: string, timerState: TimerState): void {
-  if (typeof sessionStorage === "undefined") {
-    return;
-  }
-  sessionStorage.setItem(`problems_timer_${problemId}`, JSON.stringify(timerState));
+  safeSessionStorageSet(`problems_timer_${problemId}`, JSON.stringify(timerState));
 }
 
 function timerElapsedMs(timerState: TimerState): number {
@@ -282,7 +315,7 @@ function loadFilterState(): FilterState {
     return { ...DEFAULT_FILTER_STATE };
   }
 
-  const raw = sessionStorage.getItem(FILTER_STORAGE_KEY);
+  const raw = safeSessionStorageGet(FILTER_STORAGE_KEY);
   if (!raw) {
     return { ...DEFAULT_FILTER_STATE };
   }
@@ -322,10 +355,7 @@ function loadFilterState(): FilterState {
 }
 
 function saveFilterState(filters: FilterState): void {
-  if (typeof sessionStorage === "undefined") {
-    return;
-  }
-  sessionStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(filters));
+  safeSessionStorageSet(FILTER_STORAGE_KEY, JSON.stringify(filters));
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -555,13 +585,13 @@ class ProblemsApp {
   private latestSummary: RunSummary | null = null;
   private expandedResultCaseId: string | null = null;
   private consoleOpen = false;
-  private fullscreen = typeof localStorage !== "undefined" && localStorage.getItem(FULLSCREEN_STORAGE_KEY) === "1";
+  private fullscreen = safeLocalStorageGet(FULLSCREEN_STORAGE_KEY) === "1";
   private verticalSplit = clamp(
-    typeof localStorage !== "undefined" ? Number(localStorage.getItem(PANEL_SPLIT_STORAGE_KEY)) || 42 : 42,
+    Number(safeLocalStorageGet(PANEL_SPLIT_STORAGE_KEY)) || 42,
     28,
     65
   );
-  private consoleHeight = typeof localStorage !== "undefined" ? Number(localStorage.getItem(CONSOLE_HEIGHT_STORAGE_KEY)) || 220 : 220;
+  private consoleHeight = Number(safeLocalStorageGet(CONSOLE_HEIGHT_STORAGE_KEY)) || 220;
   private running = false;
   private monaco: MonacoApi | null = null;
   private editor: MonacoEditorInstance | null = null;
@@ -689,9 +719,7 @@ class ProblemsApp {
 
     this.fullscreenButton.addEventListener("click", () => {
       this.fullscreen = !this.fullscreen;
-      if (typeof localStorage !== "undefined") {
-        localStorage.setItem(FULLSCREEN_STORAGE_KEY, this.fullscreen ? "1" : "0");
-      }
+      safeLocalStorageSet(FULLSCREEN_STORAGE_KEY, this.fullscreen ? "1" : "0");
       this.applyProblemLayout();
     });
 
@@ -1021,17 +1049,11 @@ class ProblemsApp {
   }
 
   private saveListScroll(): void {
-    if (typeof sessionStorage === "undefined") {
-      return;
-    }
-    sessionStorage.setItem(LIST_SCROLL_STORAGE_KEY, String(window.scrollY));
+    safeSessionStorageSet(LIST_SCROLL_STORAGE_KEY, String(window.scrollY));
   }
 
   private restoreListScroll(): void {
-    if (typeof sessionStorage === "undefined") {
-      return;
-    }
-    const raw = Number(sessionStorage.getItem(LIST_SCROLL_STORAGE_KEY));
+    const raw = Number(safeSessionStorageGet(LIST_SCROLL_STORAGE_KEY));
     if (Number.isFinite(raw)) {
       window.requestAnimationFrame(() => {
         window.scrollTo({ top: raw, behavior: "auto" });
@@ -1104,9 +1126,9 @@ class ProblemsApp {
     if (pushHistory) {
       window.history.pushState({ problemId }, "", `/problems/?id=${encodeURIComponent(problem.id)}`);
     }
-    if (typeof localStorage !== "undefined" && !localStorage.getItem(SHORTCUTS_SEEN_STORAGE_KEY)) {
+    if (!safeLocalStorageGet(SHORTCUTS_SEEN_STORAGE_KEY)) {
       this.toggleShortcutsPopover(true);
-      localStorage.setItem(SHORTCUTS_SEEN_STORAGE_KEY, "1");
+      safeLocalStorageSet(SHORTCUTS_SEEN_STORAGE_KEY, "1");
     }
   }
 
@@ -1948,9 +1970,7 @@ class ProblemsApp {
     const onUp = (): void => {
       this.dividerV.classList.remove("is-dragging");
       this.setMonacoPointerEvents(true);
-      if (typeof localStorage !== "undefined") {
-        localStorage.setItem(PANEL_SPLIT_STORAGE_KEY, String(this.verticalSplit));
-      }
+      safeLocalStorageSet(PANEL_SPLIT_STORAGE_KEY, String(this.verticalSplit));
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
@@ -1973,9 +1993,7 @@ class ProblemsApp {
     const onUp = (): void => {
       this.dividerH.classList.remove("is-dragging");
       this.setMonacoPointerEvents(true);
-      if (typeof localStorage !== "undefined") {
-        localStorage.setItem(CONSOLE_HEIGHT_STORAGE_KEY, String(this.consoleHeight));
-      }
+      safeLocalStorageSet(CONSOLE_HEIGHT_STORAGE_KEY, String(this.consoleHeight));
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
