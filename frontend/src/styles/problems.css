@@ -1,9 +1,9 @@
 .problems-page {
   --font-display: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-body: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Geist Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-mono: "JetBrains Mono", "Fira Code", "Geist Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   min-height: 100vh;
-  background: var(--bg-base);
+  background: color-mix(in srgb, var(--bg-base) 94%, var(--bg-surface));
   color: var(--text-primary);
   line-height: 1.6;
 }
@@ -38,7 +38,7 @@
 
 .problems-shell {
   min-height: calc(100vh - 56px);
-  background: var(--bg-base);
+  background: color-mix(in srgb, var(--bg-base) 94%, var(--bg-surface));
 }
 
 .problems-list-inner {
@@ -396,7 +396,7 @@
   flex-direction: column;
   height: calc(100vh - 56px);
   overflow: hidden;
-  background: var(--bg-base);
+  background: color-mix(in srgb, var(--bg-base) 94%, var(--bg-surface));
 }
 
 .problems-view-active .pv-layout {
@@ -413,8 +413,8 @@
   justify-content: space-between;
   height: 52px;
   padding: 0 16px;
-  background: color-mix(in srgb, var(--bg-surface) 88%, var(--bg-base));
-  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-surface) 94%, var(--bg-base));
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
   flex-shrink: 0;
   gap: 14px;
   position: relative;
@@ -499,7 +499,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .pv-topbar__heading,
@@ -567,8 +567,8 @@
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 3px 8px;
-  background: color-mix(in srgb, var(--bg-elevated) 70%, var(--bg-base));
-  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--bg-elevated) 88%, var(--bg-base));
+  color: var(--text-primary);
   font-family: var(--font-mono);
   font-size: 10px;
   white-space: nowrap;
@@ -580,9 +580,9 @@
   gap: 5px;
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--text-secondary);
-  background: color-mix(in srgb, var(--bg-elevated) 72%, var(--bg-base));
-  border: 1px solid transparent;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-elevated) 88%, var(--bg-base));
+  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
   cursor: pointer;
   padding: 7px 10px;
   border-radius: 9px;
@@ -592,8 +592,8 @@
 .pv-topbar-btn:hover,
 .pv-topbar-btn[aria-expanded="true"] {
   color: var(--text-primary);
-  background: var(--bg-elevated);
-  border-color: var(--border);
+  background: color-mix(in srgb, var(--bg-elevated) 94%, var(--bg-base));
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
 }
 
 .pv-topbar-btn--shortcuts {
@@ -606,8 +606,8 @@
   top: calc(100% + 8px);
   right: 16px;
   width: 220px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-surface) 96%, var(--bg-base));
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   border-radius: 10px;
   box-shadow: var(--shadow-lg);
   padding: 12px;
@@ -648,7 +648,7 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  background: var(--bg-base);
+  background: color-mix(in srgb, var(--bg-base) 95%, var(--bg-surface));
   gap: 0;
 }
 
@@ -657,15 +657,15 @@
   flex-direction: column;
   overflow: hidden;
   min-width: 300px;
-  background: color-mix(in srgb, var(--bg-surface) 90%, var(--bg-base));
-  border-right: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--bg-surface) 94%, var(--bg-base));
+  border-right: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
 }
 
 .pv-left__tabs,
 .pv-console__tabs {
   display: flex;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg-elevated) 80%, var(--bg-surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, var(--bg-surface));
   flex-shrink: 0;
   overflow-x: auto;
 }
@@ -676,7 +676,7 @@
   font-family: var(--font-body);
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: color-mix(in srgb, var(--text-secondary) 96%, var(--text-primary));
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
@@ -693,7 +693,7 @@
 .pv-tab.active {
   color: var(--text-primary);
   border-bottom-color: var(--accent);
-  background: color-mix(in srgb, var(--bg-surface) 72%, transparent);
+  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
 }
 
 .pv-tab-badge {
@@ -717,6 +717,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 28px 28px 48px;
+  background: color-mix(in srgb, var(--bg-surface) 92%, var(--bg-base));
 }
 
 .pv-problem-header {
@@ -738,6 +739,7 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  row-gap: 10px;
 }
 
 .pv-badge {
@@ -766,15 +768,15 @@
 .pv-acceptance {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--text-secondary);
+  color: color-mix(in srgb, var(--text-secondary) 94%, var(--text-primary));
 }
 
 .pv-meta-tag {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--text-secondary);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-elevated) 94%, var(--bg-base));
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
   border-radius: 999px;
   padding: 4px 8px;
 }
@@ -783,7 +785,7 @@
   font-family: var(--font-body);
   font-size: 17px;
   line-height: 1.75;
-  color: var(--text-primary);
+  color: color-mix(in srgb, var(--text-primary) 96%, var(--text-secondary));
   margin-bottom: 28px;
   max-width: 44rem;
 }
@@ -800,15 +802,15 @@
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-primary);
-  background: color-mix(in srgb, var(--bg-elevated) 72%, var(--bg-base));
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, var(--bg-base));
+  border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
   border-radius: 8px;
   padding: 2px 7px;
 }
 
 .pv-problem-body pre {
-  background: color-mix(in srgb, var(--bg-elevated) 68%, var(--bg-base));
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, var(--bg-base));
+  border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
   border-radius: 14px;
   padding: 16px 18px;
   overflow-x: auto;
@@ -839,7 +841,7 @@
 }
 
 .pv-problem-body th {
-  background: var(--bg-elevated);
+  background: color-mix(in srgb, var(--bg-elevated) 94%, var(--bg-base));
   color: var(--text-primary);
 }
 
@@ -849,17 +851,19 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   margin: 0 0 16px;
 }
 
 .pv-example {
-  background: color-mix(in srgb, var(--bg-base) 82%, var(--bg-surface));
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 90%, var(--bg-base));
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
   border-radius: 14px;
   padding: 18px 18px 16px;
   margin-bottom: 16px;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--border) 20%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--text-primary) 4%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--bg-base) 18%, transparent);
 }
 
 .pv-example__label {
@@ -886,7 +890,7 @@
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: color-mix(in srgb, var(--text-secondary) 96%, var(--text-primary));
   flex-shrink: 0;
   padding-top: 1px;
   text-transform: uppercase;
@@ -897,8 +901,8 @@
   font-family: var(--font-mono);
   font-size: 14px;
   color: var(--text-primary);
-  background: color-mix(in srgb, var(--bg-surface) 78%, var(--bg-base));
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-base) 82%, var(--bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   border-radius: 8px;
   padding: 8px 10px;
   word-break: break-word;
@@ -907,7 +911,7 @@
 .pv-example__explanation {
   font-family: var(--font-body);
   font-size: 14px;
-  color: var(--text-secondary);
+  color: color-mix(in srgb, var(--text-secondary) 96%, var(--text-primary));
   margin-top: 10px;
   border-top: 1px solid var(--border);
   padding-top: 12px;
@@ -939,8 +943,8 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-muted);
-  background: var(--bg-base);
+  color: color-mix(in srgb, var(--text-muted) 96%, var(--text-primary));
+  background: color-mix(in srgb, var(--bg-base) 82%, var(--bg-elevated));
   text-align: left;
 }
 
@@ -955,6 +959,10 @@
 
 .pv-constraints {
   margin-top: 34px;
+  padding: 18px 20px 20px;
+  border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg-elevated) 86%, var(--bg-base));
 }
 
 .pv-constraints-list {
@@ -989,7 +997,7 @@
 .pv-hints-intro {
   font-family: var(--font-body);
   font-size: 14px;
-  color: var(--text-secondary);
+  color: color-mix(in srgb, var(--text-secondary) 96%, var(--text-primary));
   font-style: italic;
   margin: 0 0 18px;
 }
@@ -1004,8 +1012,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border: 1px solid var(--border);
-  background: var(--bg-base);
+  border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 88%, var(--bg-base));
   color: var(--text-primary);
   border-radius: 12px;
   padding: 14px 16px;
@@ -1035,8 +1043,8 @@
 
 .pv-hint-content {
   margin-top: 8px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elevated) 94%, var(--bg-base));
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   border-radius: 12px;
   padding: 14px 16px;
   color: var(--text-primary);
@@ -1115,7 +1123,7 @@
 
 .pv-divider-v {
   width: 8px;
-  background: color-mix(in srgb, var(--border) 35%, transparent);
+  background: color-mix(in srgb, var(--border) 62%, transparent);
   cursor: col-resize;
   flex-shrink: 0;
   position: relative;
@@ -1153,7 +1161,7 @@
   min-width: 0;
   overflow: hidden;
   position: relative;
-  background: color-mix(in srgb, var(--bg-base) 88%, var(--bg-surface));
+  background: color-mix(in srgb, var(--bg-surface) 86%, var(--bg-base));
 }
 
 .pv-editor-toolbar {
@@ -1162,8 +1170,8 @@
   justify-content: space-between;
   height: 52px;
   padding: 0 16px;
-  background: color-mix(in srgb, var(--bg-elevated) 88%, var(--bg-surface));
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 96%, var(--bg-surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
   flex-shrink: 0;
   gap: 12px;
 }
@@ -1195,8 +1203,8 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
-  background: color-mix(in srgb, var(--bg-base) 45%, var(--bg-elevated));
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--bg-base) 28%, var(--bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
   border-radius: 999px;
   padding: 5px 10px;
 }
@@ -1210,7 +1218,7 @@
   min-height: 16px;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--text-secondary);
+  color: color-mix(in srgb, var(--text-secondary) 96%, var(--text-primary));
   opacity: 0;
   transition: opacity var(--transition);
 }
@@ -1222,10 +1230,10 @@
 .pv-toolbar-btn {
   width: 32px;
   height: 32px;
-  background: color-mix(in srgb, var(--bg-base) 60%, var(--bg-elevated));
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--bg-base) 35%, var(--bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
   border-radius: 8px;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1314,8 +1322,9 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  background: color-mix(in srgb, var(--bg-base) 82%, var(--bg-surface));
-  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--bg-base) 18%, var(--bg-surface));
+  border-top: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--border) 35%, transparent);
 }
 
 .pv-editor {
@@ -1330,7 +1339,7 @@
   box-sizing: border-box;
   border: none;
   outline: none;
-  background: var(--bg-base);
+  background: color-mix(in srgb, var(--bg-base) 22%, var(--bg-surface));
   color: var(--text-primary);
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 15px;
@@ -1348,7 +1357,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--bg-base) 78%, transparent);
+  background: color-mix(in srgb, var(--bg-base) 84%, transparent);
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 600;
@@ -1358,7 +1367,7 @@
 
 .pv-divider-h {
   height: 4px;
-  background: color-mix(in srgb, var(--border) 55%, transparent);
+  background: color-mix(in srgb, var(--border) 72%, transparent);
   cursor: row-resize;
   flex-shrink: 0;
   transition: background var(--transition);
@@ -1386,14 +1395,16 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  background: color-mix(in srgb, var(--bg-surface) 85%, var(--bg-base));
+  border-top: 1px solid color-mix(in srgb, var(--border) 92%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 90%, var(--bg-base));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-primary) 4%, transparent);
 }
 
 .pv-console__content {
   flex: 1;
   overflow-y: auto;
   padding: 14px 16px 18px;
+  background: color-mix(in srgb, var(--bg-base) 34%, var(--bg-elevated));
 }
 
 .pv-action-bar {
@@ -1402,8 +1413,8 @@
   justify-content: space-between;
   height: 44px;
   padding: 0 16px;
-  background: color-mix(in srgb, var(--bg-elevated) 70%, var(--bg-base));
-  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 94%, var(--bg-base));
+  border-top: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   flex-shrink: 0;
 }
 
@@ -1413,7 +1424,7 @@
   gap: 6px;
   font-family: var(--font-body);
   font-size: 13px;
-  color: var(--text-secondary);
+  color: color-mix(in srgb, var(--text-secondary) 96%, var(--text-primary));
   background: none;
   border: none;
   cursor: pointer;
@@ -1443,7 +1454,7 @@
   font-family: var(--font-body);
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-muted);
+  color: color-mix(in srgb, var(--text-secondary) 92%, var(--text-primary));
   letter-spacing: 0.02em;
 }
 
@@ -1475,8 +1486,8 @@
 }
 
 .pv-btn--run {
-  background: color-mix(in srgb, var(--bg-base) 55%, var(--bg-elevated));
-  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  background: color-mix(in srgb, var(--bg-base) 28%, var(--bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   color: var(--text-primary);
 }
 
@@ -1520,8 +1531,8 @@
 }
 
 .pv-case-tab {
-  border: 1px solid transparent;
-  background: color-mix(in srgb, var(--bg-base) 70%, var(--bg-surface));
+  border: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
+  background: color-mix(in srgb, var(--bg-base) 48%, var(--bg-elevated));
   padding: 8px 10px;
   color: var(--text-secondary);
   font-family: var(--font-body);
@@ -1545,7 +1556,7 @@
   font-family: var(--font-body);
   font-size: 12px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: color-mix(in srgb, var(--text-primary) 98%, var(--text-secondary));
   margin-bottom: 8px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1577,9 +1588,9 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   border-radius: 10px;
-  background: var(--bg-base);
+  background: color-mix(in srgb, var(--bg-base) 56%, var(--bg-elevated));
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--text-primary);
@@ -1625,9 +1636,9 @@
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--bg-base) 75%, var(--bg-surface));
+  background: color-mix(in srgb, var(--bg-base) 50%, var(--bg-elevated));
   cursor: pointer;
 }
 
@@ -1657,9 +1668,9 @@
 
 .pv-result-details {
   margin-top: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   border-radius: 12px;
-  background: var(--bg-surface);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, var(--bg-base));
   padding: 14px;
 }
 

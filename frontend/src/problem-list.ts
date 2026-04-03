@@ -248,7 +248,27 @@ function formatElapsedCompact(ms: number): string {
 }
 
 function cssColor(name: string): string {
+  const bodyValue = document.body ? getComputedStyle(document.body).getPropertyValue(name).trim() : "";
+  if (bodyValue) {
+    return bodyValue;
+  }
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function monacoHexVar(name: string): string {
+  const value = cssColor(name);
+  if (value.startsWith("#")) {
+    return value.replace("#", "");
+  }
+
+  const match = value.match(/(\d+)\D+(\d+)\D+(\d+)/u);
+  if (!match) {
+    return "ffffff";
+  }
+
+  return [match[1], match[2], match[3]]
+    .map((component) => Number(component).toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function rgba(color: string, alpha: number): string {
@@ -497,27 +517,39 @@ function applyMonacoTheme(monaco: MonacoApi): void {
     base: "vs-dark",
     inherit: true,
     rules: [
-      { token: "instruction", foreground: "60A5FA", fontStyle: "bold" },
-      { token: "register", foreground: "F59E0B" },
-      { token: "number", foreground: "A78BFA" },
-      { token: "comment", foreground: "71717A", fontStyle: "italic" },
-      { token: "directive", foreground: "34D399" },
-      { token: "label", foreground: "F472B6" },
+      { token: "instruction", foreground: monacoHexVar("--accent-hover"), fontStyle: "bold" },
+      { token: "register", foreground: monacoHexVar("--accent"), fontStyle: "bold" },
+      { token: "number", foreground: monacoHexVar("--warning") },
+      { token: "comment", foreground: monacoHexVar("--success"), fontStyle: "italic" },
+      { token: "directive", foreground: monacoHexVar("--danger") },
+      { token: "label", foreground: monacoHexVar("--accent-hover") },
     ],
     colors: {
-      "editor.background": cssColor("--bg-base"),
+      "editor.background": cssColor("--bg-surface"),
       "editor.foreground": cssColor("--text-primary"),
-      "editor.lineHighlightBackground": cssColor("--bg-surface"),
-      "editorLineNumber.foreground": cssColor("--text-muted"),
-      "editorLineNumber.activeForeground": cssColor("--text-secondary"),
-      "editor.selectionBackground": rgba(cssColor("--accent"), 0.25),
-      "editor.inactiveSelectionBackground": rgba(cssColor("--accent"), 0.14),
+      "editor.lineHighlightBackground": rgba(cssColor("--accent"), 0.14),
+      "editorLineNumber.foreground": rgba(cssColor("--text-secondary"), 0.9),
+      "editorLineNumber.activeForeground": cssColor("--text-primary"),
+      "editor.selectionBackground": rgba(cssColor("--accent"), 0.28),
+      "editor.inactiveSelectionBackground": rgba(cssColor("--accent"), 0.18),
       "editorCursor.foreground": cssColor("--accent"),
-      "editorGutter.background": cssColor("--bg-base"),
-      "editorBracketMatch.background": rgba(cssColor("--accent"), 0.12),
-      "editorBracketMatch.border": rgba(cssColor("--accent"), 0.45),
-      "editorIndentGuide.activeBackground1": rgba(cssColor("--border"), 0.5),
-      "editorIndentGuide.background1": rgba(cssColor("--border"), 0.22),
+      "editorGutter.background": cssColor("--bg-surface"),
+      "editorBracketMatch.background": rgba(cssColor("--accent"), 0.2),
+      "editorBracketMatch.border": rgba(cssColor("--accent-hover"), 0.82),
+      "editorIndentGuide.activeBackground1": rgba(cssColor("--text-secondary"), 0.55),
+      "editorIndentGuide.background1": rgba(cssColor("--border"), 0.45),
+      "editorWhitespace.foreground": rgba(cssColor("--text-muted"), 0.28),
+      "editorWidget.background": cssColor("--bg-elevated"),
+      "editorWidget.border": cssColor("--border"),
+      "editorHoverWidget.background": cssColor("--bg-elevated"),
+      "editorHoverWidget.border": cssColor("--border"),
+      "focusBorder": cssColor("--accent"),
+      "dropdown.background": cssColor("--bg-elevated"),
+      "dropdown.foreground": cssColor("--text-primary"),
+      "dropdown.border": cssColor("--border"),
+      "input.background": cssColor("--bg-base"),
+      "input.foreground": cssColor("--text-primary"),
+      "input.border": cssColor("--border"),
     },
   });
   monaco.editor.setTheme(dark ? "studyriscv-dark" : "vs");
@@ -586,10 +618,13 @@ function initEditor(container: HTMLElement, monaco: MonacoApi, code: string): Mo
     renderLineHighlight: "all",
     renderLineHighlightOnlyWhenFocus: false,
     cursorBlinking: "smooth",
+    cursorWidth: 2,
     smoothScrolling: true,
     automaticLayout: true,
     padding: { top: 18, bottom: 18 },
     lineNumbers: "on",
+    lineNumbersMinChars: 3,
+    lineDecorationsWidth: 12,
     glyphMargin: false,
     folding: false,
     renderWhitespace: "selection",
