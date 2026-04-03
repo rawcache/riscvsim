@@ -39,10 +39,30 @@
     <link rel="icon" type="image/svg+xml" href="../favicon-chip.svg" />
   </head>
   <body class="problems-page">
-    <nav id="site-nav"></nav>
+    <nav id="site-nav" class="site-nav">
+      <div class="nav-mobile-shell">
+        <div class="nav-inner">
+          <a href="/" class="nav-logo">StudyRISC-V</a>
+          <div class="nav-links">
+            <a href="/problems/" class="nav-link nav-link-active">Problems</a>
+            <a href="/learn/" class="nav-link">Learn</a>
+            <a href="/simulator/" class="nav-link">Simulator</a>
+            <a href="/quiz/" class="nav-link">Quizzes</a>
+            <a href="/labs/" class="nav-link">Labs</a>
+            <a href="/checkpoints/" class="nav-link">Checkpoints</a>
+            <a href="/docs/" class="nav-link">Docs</a>
+            <a href="https://github.com/rawcache/riscvsim" class="nav-link" target="_blank" rel="noopener">GitHub</a>
+          </div>
+          <div class="nav-actions">
+            <a href="/profile/" class="nav-signin-btn">Profile</a>
+          </div>
+        </div>
+      </div>
+    </nav>
 
     <main class="problems-shell" id="problems-shell">
       <section class="pl-layout" id="pl-layout">
+        <div id="problems-list-view">
         <div class="problems-list-inner">
           <div class="pl-header">
             <div class="pl-header__left">
@@ -114,13 +134,121 @@
                   <th class="pl-th pl-th--difficulty">Difficulty</th>
                 </tr>
               </thead>
-              <tbody id="pl-tbody"></tbody>
+              <tbody id="pl-tbody">
+                <tr class="pl-row" data-problem-id="p001" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p001'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">1</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p001">Add Two Registers</a><div class="pl-tags"><span class="pl-tag">Arithmetic</span></div></td>
+                  <td class="pl-td pl-td--acceptance">74.2%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--easy">Easy</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p002" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p002'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">2</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p002">Absolute Value</a><div class="pl-tags"><span class="pl-tag">Arithmetic</span><span class="pl-tag">Control Flow</span></div></td>
+                  <td class="pl-td pl-td--acceptance">68.5%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--easy">Easy</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p003" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p003'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">3</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p003">Max of Two</a><div class="pl-tags"><span class="pl-tag">Control Flow</span></div></td>
+                  <td class="pl-td pl-td--acceptance">71.3%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--easy">Easy</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p004" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p004'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">4</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p004">Multiply by Power of Two</a><div class="pl-tags"><span class="pl-tag">Bit Manipulation</span></div></td>
+                  <td class="pl-td pl-td--acceptance">69.1%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--easy">Easy</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p005" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p005'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">5</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p005">Count Down</a><div class="pl-tags"><span class="pl-tag">Loops</span></div></td>
+                  <td class="pl-td pl-td--acceptance">65.8%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--easy">Easy</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p006" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p006'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">6</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p006">Sum Array</a><div class="pl-tags"><span class="pl-tag">Memory</span><span class="pl-tag">Loops</span><span class="pl-tag">Arrays</span></div></td>
+                  <td class="pl-td pl-td--acceptance">52.4%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--medium">Medium</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p007" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p007'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">7</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p007">Fibonacci (Iterative)</a><div class="pl-tags"><span class="pl-tag">Loops</span><span class="pl-tag">Arithmetic</span></div></td>
+                  <td class="pl-td pl-td--acceptance">47.3%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--medium">Medium</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p008" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p008'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">8</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p008">Reverse Bits</a><div class="pl-tags"><span class="pl-tag">Bit Manipulation</span></div></td>
+                  <td class="pl-td pl-td--acceptance">41.7%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--medium">Medium</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p009" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p009'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">9</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p009">Stack Push and Pop</a><div class="pl-tags"><span class="pl-tag">Stack</span><span class="pl-tag">Memory</span><span class="pl-tag">Functions</span></div></td>
+                  <td class="pl-td pl-td--acceptance">44.9%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--medium">Medium</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p010" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p010'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">10</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p010">Count Set Bits</a><div class="pl-tags"><span class="pl-tag">Bit Manipulation</span><span class="pl-tag">Loops</span></div></td>
+                  <td class="pl-td pl-td--acceptance">43.2%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--medium">Medium</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p011" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p011'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">11</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p011">Find Max in Array</a><div class="pl-tags"><span class="pl-tag">Memory</span><span class="pl-tag">Loops</span><span class="pl-tag">Control Flow</span></div></td>
+                  <td class="pl-td pl-td--acceptance">36.8%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--hard">Hard</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p012" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p012'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">12</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p012">String Length</a><div class="pl-tags"><span class="pl-tag">Memory</span><span class="pl-tag">Loops</span><span class="pl-tag">Strings</span></div></td>
+                  <td class="pl-td pl-td--acceptance">33.1%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--hard">Hard</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p013" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p013'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">13</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p013">Bubble Sort</a><div class="pl-tags"><span class="pl-tag">Sorting</span><span class="pl-tag">Memory</span><span class="pl-tag">Loops</span></div></td>
+                  <td class="pl-td pl-td--acceptance">27.4%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--hard">Hard</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p014" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p014'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">14</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p014">GCD (Euclidean)</a><div class="pl-tags"><span class="pl-tag">Arithmetic</span><span class="pl-tag">Loops</span><span class="pl-tag">Functions</span></div></td>
+                  <td class="pl-td pl-td--acceptance">29.6%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--hard">Hard</span></td>
+                </tr>
+                <tr class="pl-row" data-problem-id="p015" tabindex="0" role="link" onclick="window.location.href='/problems/?id=p015'">
+                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
+                  <td class="pl-td pl-td--num">15</td>
+                  <td class="pl-td pl-td--title"><a class="pl-title-link" href="/problems/?id=p015">Matrix Trace</a><div class="pl-tags"><span class="pl-tag">Memory</span><span class="pl-tag">Loops</span><span class="pl-tag">Arrays</span></div></td>
+                  <td class="pl-td pl-td--acceptance">24.3%</td>
+                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--hard">Hard</span></td>
+                </tr>
+              </tbody>
             </table>
           </div>
+        </div>
         </div>
       </section>
 
       <section class="pv-layout" id="pv-layout" hidden>
+        <div id="problem-workspace-view">
         <header class="pv-topbar" id="pv-topbar">
           <div class="pv-topbar__left">
             <a href="/problems/" class="pv-breadcrumb" id="pv-back-link">Problems</a>
@@ -249,6 +377,7 @@
           <span>Reset to starter code?</span>
           <button id="pv-reset-cancel" type="button">Cancel</button>
           <button id="pv-reset-ok" type="button">Reset</button>
+        </div>
         </div>
       </section>
     </main>

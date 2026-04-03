@@ -685,8 +685,20 @@ class ProblemsPageApp {
   private fullscreen = safeLocalStorageGet(FULLSCREEN_STORAGE_KEY) === "1";
 
   async init(): Promise<void> {
-    initNav({ activePage: "problems" });
-    initFooter();
+    console.log("Problems loaded:", this.problems.length);
+
+    try {
+      initNav({ activePage: "problems" });
+    } catch (error) {
+      console.error("Problems nav failed to initialize.", error);
+    }
+
+    try {
+      initFooter();
+    } catch (error) {
+      console.error("Problems footer failed to initialize.", error);
+    }
+
     bindVerdictClose(this.verdictClose, this.verdict);
 
     this.totalStat.textContent = String(this.problems.length);
@@ -694,10 +706,26 @@ class ProblemsPageApp {
     this.bindEvents();
     this.renderList();
 
-    const initialProblemId = getCurrentProblemId();
-    if (initialProblemId) {
-      await this.showProblemView(initialProblemId, false);
-    } else {
+    const id = getCurrentProblemId();
+    const problem = id ? getProblem(id) : null;
+    const mode = problem ? "problem" : "list";
+
+    console.log("MODE:", mode);
+    console.log("Problem ID:", id);
+
+    if (!id || !problem) {
+      this.showListView(false);
+      if (id && !problem) {
+        window.history.replaceState({}, "", "/problems/");
+      }
+      void this.refreshSessionState();
+      return;
+    }
+
+    try {
+      await this.showProblemView(problem.id, false);
+    } catch (error) {
+      console.error("Problem workspace failed to initialize. Falling back to list view.", error);
       this.showListView(false);
     }
 
@@ -756,7 +784,7 @@ class ProblemsPageApp {
         return;
       }
       this.saveListScroll();
-      void this.showProblemView(problemId, true);
+      window.location.href = `/problems/?id=${encodeURIComponent(problemId)}`;
     });
 
     this.tableBody.addEventListener("keydown", (event) => {
@@ -776,7 +804,7 @@ class ProblemsPageApp {
         return;
       }
       this.saveListScroll();
-      void this.showProblemView(problemId, true);
+      window.location.href = `/problems/?id=${encodeURIComponent(problemId)}`;
     });
 
     this.leftPanel.querySelectorAll<HTMLButtonElement>(".pv-tab").forEach((button) => {
@@ -803,7 +831,7 @@ class ProblemsPageApp {
 
     this.backLink.addEventListener("click", (event) => {
       event.preventDefault();
-      this.showListView(true);
+      window.location.href = "/problems/";
     });
 
     this.prevButton.addEventListener("click", () => {
@@ -1115,6 +1143,8 @@ class ProblemsPageApp {
     this.latestSummary = null;
     this.problemLayout.hidden = true;
     this.listLayout.hidden = false;
+    (document.getElementById("problem-workspace-view") as HTMLElement | null)?.setAttribute("hidden", "");
+    (document.getElementById("problems-list-view") as HTMLElement | null)?.removeAttribute("hidden");
     this.nav.hidden = false;
     this.footer.hidden = false;
     this.body.classList.remove("pv-body");
@@ -1155,6 +1185,8 @@ class ProblemsPageApp {
 
     this.listLayout.hidden = true;
     this.problemLayout.hidden = false;
+    (document.getElementById("problems-list-view") as HTMLElement | null)?.setAttribute("hidden", "");
+    (document.getElementById("problem-workspace-view") as HTMLElement | null)?.removeAttribute("hidden");
     this.nav.hidden = true;
     this.footer.hidden = true;
     this.body.classList.add("pv-body");
@@ -2094,8 +2126,28 @@ function bootProblemsPage(): void {
     return;
   }
 
-  const app = new ProblemsPageApp();
-  void app.init();
+  try {
+    const app = new ProblemsPageApp();
+    void app.init().catch((error) => {
+      console.error("Problems page initialization failed.", error);
+      document.body.classList.remove("pv-body");
+      listLayout.hidden = false;
+      problemLayout.hidden = true;
+      const nav = document.getElementById("site-nav");
+      const footer = document.getElementById("site-footer");
+      if (nav) {
+        (nav as HTMLElement).hidden = false;
+      }
+      if (footer) {
+        (footer as HTMLElement).hidden = false;
+      }
+    });
+  } catch (error) {
+    console.error("Problems page boot crashed.", error);
+    document.body.classList.remove("pv-body");
+    listLayout.hidden = false;
+    problemLayout.hidden = true;
+  }
 }
 
 if (typeof document !== "undefined") {
