@@ -1275,6 +1275,25 @@
   height: 100%;
 }
 
+.pv-editor-fallback {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1.7;
+  padding: 20px 22px;
+}
+
+.pv-editor-fallback::selection {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
 .pv-editor-loading {
   position: absolute;
   inset: 0;

@@ -513,6 +513,55 @@ function initEditor(container: HTMLElement, monaco: MonacoApi, code: string): Mo
   });
 }
 
+function initFallbackEditor(container: HTMLElement, code: string): MonacoEditorInstance {
+  container.innerHTML = "";
+  const textarea = document.createElement("textarea");
+  textarea.className = "pv-editor-fallback";
+  textarea.spellcheck = false;
+  textarea.value = code;
+  container.appendChild(textarea);
+
+  const listeners = new Set<() => void>();
+  const notify = (): void => {
+    listeners.forEach((listener) => listener());
+  };
+
+  textarea.addEventListener("input", notify);
+
+  return {
+    getValue(): string {
+      return textarea.value;
+    },
+    setValue(value: string): void {
+      textarea.value = value;
+    },
+    updateOptions(options: Record<string, unknown>): void {
+      if ("readOnly" in options) {
+        textarea.readOnly = options.readOnly === true;
+      }
+    },
+    layout(): void {
+      // Native textarea handles layout through CSS sizing.
+    },
+    focus(): void {
+      textarea.focus();
+    },
+    dispose(): void {
+      textarea.removeEventListener("input", notify);
+      textarea.remove();
+      listeners.clear();
+    },
+    onDidChangeModelContent(listener: () => void): { dispose(): void } {
+      listeners.add(listener);
+      return {
+        dispose(): void {
+          listeners.delete(listener);
+        },
+      };
+    },
+  };
+}
+
 class ProblemsApp {
   private readonly listView = document.getElementById("problems-list-view") as HTMLElement;
   private readonly footer = document.getElementById("site-footer") as HTMLElement;
@@ -595,6 +644,7 @@ class ProblemsApp {
   private running = false;
   private monaco: MonacoApi | null = null;
   private editor: MonacoEditorInstance | null = null;
+  private usingFallbackEditor = false;
   private runtimePromise: Promise<WasmRuntime> | null = null;
   private pendingSubmissionToLoad: ProblemSubmission | null = null;
   private openHints = new Set<number>();
@@ -1148,11 +1198,11 @@ class ProblemsApp {
     this.renderLeftContent();
     this.renderConsoleVisibility();
     this.renderConsoleContent();
-    await this.ensureEditor(problem);
-    this.applyProblemLayout();
     if (pushHistory) {
       window.history.pushState({ problemId }, "", `/problems/?id=${encodeURIComponent(problem.id)}`);
     }
+    await this.ensureEditor(problem);
+    this.applyProblemLayout();
     if (!safeLocalStorageGet(SHORTCUTS_SEEN_STORAGE_KEY)) {
       this.toggleShortcutsPopover(true);
       safeLocalStorageSet(SHORTCUTS_SEEN_STORAGE_KEY, "1");
@@ -1185,27 +1235,51 @@ class ProblemsApp {
   private async ensureEditor(problem: Problem): Promise<void> {
     const code = loadProblemCode(problem.id) ?? ensureProblemEntry(this.progress, problem).lastCode ?? problem.starterCode;
 
-    this.monaco = this.monaco ?? (await loadMonaco());
-    applyMonacoTheme(this.monaco);
+    try {
+      this.monaco = this.monaco ?? (await loadMonaco());
+      applyMonacoTheme(this.monaco);
 
-    if (!this.editor) {
-      this.editor = initEditor(this.editorRoot, this.monaco, code);
-      this.editor.onDidChangeModelContent(() => {
-        if (this.autosaveTimer) {
-          window.clearTimeout(this.autosaveTimer);
-        }
-        this.autosaveTimer = window.setTimeout(() => {
-          this.persistCurrentCode();
-          this.flashAutosaveIndicator("Auto-saved");
-        }, AUTO_SAVE_DELAY_MS);
-      });
-    } else {
-      this.editor.setValue(code);
-      this.editor.updateOptions({ readOnly: false });
+      if (!this.editor || this.usingFallbackEditor) {
+        this.editor?.dispose();
+        this.editorRoot.innerHTML = "";
+        this.editor = initEditor(this.editorRoot, this.monaco, code);
+        this.usingFallbackEditor = false;
+        this.bindEditorAutosave();
+      } else {
+        this.editor.setValue(code);
+        this.editor.updateOptions({ readOnly: false });
+      }
+    } catch (error) {
+      console.error("Failed to initialize Monaco editor. Falling back to textarea editor.", error);
+      if (!this.editor || !this.usingFallbackEditor) {
+        this.editor?.dispose();
+        this.editor = initFallbackEditor(this.editorRoot, code);
+        this.usingFallbackEditor = true;
+        this.bindEditorAutosave();
+      } else {
+        this.editor.setValue(code);
+        this.editor.updateOptions({ readOnly: false });
+      }
+      this.flashAutosaveIndicator("Basic editor loaded");
     }
 
     this.applyProblemLayout();
     this.editor.focus?.();
+  }
+
+  private bindEditorAutosave(): void {
+    if (!this.editor) {
+      return;
+    }
+    this.editor.onDidChangeModelContent(() => {
+      if (this.autosaveTimer) {
+        window.clearTimeout(this.autosaveTimer);
+      }
+      this.autosaveTimer = window.setTimeout(() => {
+        this.persistCurrentCode();
+        this.flashAutosaveIndicator("Auto-saved");
+      }, AUTO_SAVE_DELAY_MS);
+    });
   }
 
   private persistCurrentCode(): void {
