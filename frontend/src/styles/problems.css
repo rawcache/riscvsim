@@ -5,6 +5,16 @@
   line-height: 1.5;
 }
 
+/* Override landing.css ".landing-page main" which sets width/margin/padding
+   on any <main> inside .landing-page — the problems shell must be full-width
+   and flush so both the list view and the full-height problem view work. */
+.problems-page main.problems-shell {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
 .problems-page *::-webkit-scrollbar {
   width: 6px;
   height: 6px;
