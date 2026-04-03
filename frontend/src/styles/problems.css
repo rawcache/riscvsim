@@ -5,6 +5,10 @@
   line-height: 1.5;
 }
 
+.problems-page [hidden] {
+  display: none !important;
+}
+
 /* Override landing.css ".landing-page main" which sets width/margin/padding
    on any <main> inside .landing-page — the problems shell must be full-width
    and flush so both the list view and the full-height problem view work. */
