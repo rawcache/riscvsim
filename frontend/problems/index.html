@@ -37,6 +37,14 @@
     <link rel="stylesheet" href="../src/styles/landing.css" />
     <link rel="stylesheet" href="../src/styles/problems.css" />
     <link rel="icon" type="image/svg+xml" href="../favicon-chip.svg" />
+    <script src="https://unpkg.com/monaco-editor@0.44.0/min/vs/loader.js"></script>
+    <script>
+      if (window.require && typeof window.require.config === "function") {
+        window.require.config({
+          paths: { vs: "https://unpkg.com/monaco-editor@0.44.0/min/vs" },
+        });
+      }
+    </script>
   </head>
   <body class="problems-page">
     <nav id="site-nav" class="site-nav">
@@ -342,6 +350,7 @@
               </div>
 
               <div class="pv-monaco-container" id="pv-monaco">
+                <div class="pv-editor-host" id="pv-editor"></div>
                 <div class="pv-monaco-loading" id="pv-monaco-loading">
                   <div class="pv-monaco-loading__spinner"></div>
                   <span>Loading editor...</span>

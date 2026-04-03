@@ -60,6 +60,14 @@ type MonacoRequire = {
   config(config: { paths: Record<string, string> }): void;
 };
 
+type EditorWindow = Window &
+  typeof globalThis & {
+    monaco?: MonacoApi;
+    require?: MonacoRequire;
+    __editorInstance?: MonacoEditorInstance | null;
+    __editorFallback?: HTMLTextAreaElement | null;
+  };
+
 type FilterState = {
   search: string;
   difficulty: "" | Difficulty;
@@ -69,9 +77,7 @@ type FilterState = {
 
 type SubmissionTone = "accepted" | "wrong" | "error" | "tle";
 
-const MONACO_CDN =
-  "https://cdnjs.cloudflare.com/ajax/libs/" +
-  "monaco-editor/0.44.0/min/vs";
+const MONACO_CDN = "https://unpkg.com/monaco-editor@0.44.0/min/vs";
 
 export const MONACO_THEME_NAME = "riscv-dark";
 export const RISCV_LANGUAGE_ID = "riscv";
@@ -417,8 +423,8 @@ function saveFilters(filters: FilterState): void {
 let monacoPromise: Promise<MonacoApi> | null = null;
 let riscLanguageDefined = false;
 
-function monacoHost(): Window & { monaco?: MonacoApi; require?: MonacoRequire } {
-  return window as Window & { monaco?: MonacoApi; require?: MonacoRequire };
+function monacoHost(): EditorWindow {
+  return window as EditorWindow;
 }
 
 function defineMonacoTheme(monaco: MonacoApi): void {
@@ -503,76 +509,47 @@ function loadMonaco(): Promise<MonacoApi> {
       reject(new Error("Monaco load timeout"));
     }, 15000);
 
-    const onLoad = (): void => {
-      const requireJs = host.require;
-      if (!requireJs) {
-        window.clearTimeout(timeout);
-        reject(new Error("Monaco AMD loader unavailable"));
-        return;
-      }
-
-      requireJs.config({
-        paths: { vs: MONACO_CDN },
-      });
-
-      requireJs(
-        ["vs/editor/editor.main"],
-        () => {
-          window.clearTimeout(timeout);
-          if (!host.monaco) {
-            reject(new Error("Monaco failed to expose the editor API"));
-            return;
-          }
-          defineMonacoTheme(host.monaco);
-          defineRISCVLanguage(host.monaco);
-          resolve(host.monaco);
-        },
-        (error) => {
-          window.clearTimeout(timeout);
-          reject(error instanceof Error ? error : new Error(String(error)));
-        }
-      );
-    };
-
-    const existingLoader = document.querySelector<HTMLScriptElement>("script[data-monaco-loader='1']");
-    if (existingLoader) {
-      if (host.require) {
-        onLoad();
-      } else {
-        existingLoader.addEventListener("load", onLoad, { once: true });
-      }
+    const requireJs = host.require;
+    if (!requireJs) {
+      window.clearTimeout(timeout);
+      reject(new Error("Monaco AMD loader unavailable"));
       return;
     }
 
-    const script = document.createElement("script");
-    script.src = `${MONACO_CDN}/loader.js`;
-    script.async = true;
-    script.dataset.monacoLoader = "1";
-    script.addEventListener("load", onLoad, { once: true });
-    script.addEventListener(
-      "error",
+    requireJs.config({
+      paths: { vs: MONACO_CDN },
+    });
+
+    requireJs(
+      ["vs/editor/editor.main"],
       () => {
         window.clearTimeout(timeout);
-        reject(new Error("Monaco CDN load failed"));
+        if (!host.monaco) {
+          reject(new Error("Monaco failed to expose the editor API"));
+          return;
+        }
+        resolve(host.monaco);
       },
-      { once: true }
+      (error) => {
+        window.clearTimeout(timeout);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
     );
-    document.head.appendChild(script);
   });
 
   return monacoPromise;
 }
 
 function createMonacoEditor(monaco: MonacoApi, container: HTMLElement, code: string): MonacoEditorInstance {
-  monaco.editor.setTheme(MONACO_THEME_NAME);
+  monaco.editor.setTheme("vs-dark");
   return monaco.editor.create(container, {
     value: code,
-    language: RISCV_LANGUAGE_ID,
-    theme: MONACO_THEME_NAME,
-    fontFamily: "'JetBrains Mono', 'Fira Code', 'Geist Mono', 'Cascadia Code', monospace",
-    fontLigatures: true,
-    fontSize: 14,
-    lineHeight: 22,
+    language: "plaintext",
+    theme: "vs-dark",
+    fontFamily: "'Geist Mono', 'Fira Code', monospace",
+    fontLigatures: false,
+    fontSize: 13,
+    lineHeight: 20,
     tabSize: 2,
     insertSpaces: true,
     detectIndentation: false,
@@ -584,7 +561,7 @@ function createMonacoEditor(monaco: MonacoApi, container: HTMLElement, code: str
     cursorWidth: 2,
     smoothScrolling: true,
     automaticLayout: true,
-    padding: { top: 16, bottom: 20 },
+    padding: { top: 12, bottom: 12 },
     lineNumbers: "on",
     lineNumbersMinChars: 3,
     glyphMargin: false,
@@ -646,6 +623,7 @@ class ProblemsPageApp {
   private readonly editorSection = document.getElementById("pv-editor-section") as HTMLElement;
   private readonly editorHeader = document.getElementById("pv-editor-header") as HTMLElement;
   private readonly monacoContainer = document.getElementById("pv-monaco") as HTMLElement;
+  private readonly editorHost = document.getElementById("pv-editor") as HTMLElement;
   private readonly monacoLoading = document.getElementById("pv-monaco-loading") as HTMLElement;
   private readonly resetButton = document.getElementById("pv-reset-btn") as HTMLButtonElement;
   private readonly runButton = document.getElementById("pv-run-btn") as HTMLButtonElement;
@@ -679,6 +657,7 @@ class ProblemsPageApp {
   private timerProblemId: string | null = null;
   private monaco: MonacoApi | null = null;
   private editor: MonacoEditorInstance | null = null;
+  private editorFallback: HTMLTextAreaElement | null = null;
   private editorChangeSubscription: { dispose(): void } | null = null;
   private runtimePromise: Promise<WasmRuntime> | null = null;
   private running = false;
@@ -1227,27 +1206,72 @@ class ProblemsPageApp {
 
   private async ensureEditor(code: string): Promise<void> {
     this.monacoLoading.hidden = false;
+    if (!this.editor) {
+      this.editorHost.innerHTML = "";
+    }
+    delete this.editorHost.dataset.editorFallback;
 
     try {
+      const el = this.editorHost;
       this.monaco ??= await loadMonaco();
       await nextFrame();
       this.ensureEditorContainerHeight();
 
+      if (!el || el.clientWidth === 0 || el.clientHeight === 0) {
+        console.error("Editor container not ready -- aborting Monaco init");
+        this.mountEditorFallback(code);
+        return;
+      }
+
+      console.log("Loading Monaco...");
+
       if (!this.editor) {
-        this.editor = createMonacoEditor(this.monaco, this.monacoContainer, code);
+        console.log("Monaco loaded");
+        this.editor = createMonacoEditor(this.monaco, el, code);
+        monacoHost().__editorInstance = this.editor;
+        monacoHost().__editorFallback = null;
+        this.editorFallback = null;
         this.bindEditorAutosave();
       } else {
         this.editor.setValue(code);
         this.editor.updateOptions({ readOnly: false });
+        monacoHost().__editorInstance = this.editor;
       }
 
-      this.monacoLoading.remove();
+      this.monacoLoading.hidden = true;
       this.editor.layout();
       this.editor.focus();
     } catch (error) {
-      console.error("Failed to initialize Monaco.", error);
-      this.monacoLoading.innerHTML = `<span style="color:var(--pv-danger)">Editor failed to load: ${escapeHtml(error instanceof Error ? error.message : String(error))}</span>`;
+      console.error("Monaco failed:", error);
+      this.mountEditorFallback(code);
     }
+  }
+
+  private mountEditorFallback(code: string): void {
+    this.editor?.dispose();
+    this.editor = null;
+    monacoHost().__editorInstance = null;
+    this.editorHost.innerHTML = "";
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "pv-editor-fallback";
+    textarea.value = code;
+    textarea.spellcheck = false;
+    this.editorHost.dataset.editorFallback = "true";
+    this.editorHost.appendChild(textarea);
+
+    this.editorFallback = textarea;
+    monacoHost().__editorFallback = textarea;
+    this.monacoLoading.hidden = true;
+
+    textarea.addEventListener("input", () => {
+      if (this.autosaveTimer) {
+        window.clearTimeout(this.autosaveTimer);
+      }
+      this.autosaveTimer = window.setTimeout(() => {
+        this.persistCurrentCode();
+      }, AUTO_SAVE_DELAY_MS);
+    });
   }
 
   private bindEditorAutosave(): void {
@@ -1267,11 +1291,11 @@ class ProblemsPageApp {
   }
 
   private persistCurrentCode(): void {
-    if (!this.currentProblem || !this.editor) {
+    if (!this.currentProblem) {
       return;
     }
 
-    const code = this.editor.getValue();
+    const code = this.getEditorCode();
     saveProblemCode(this.currentProblem.id, code);
     const entry = ensureProblemEntry(this.progress, this.currentProblem);
     entry.lastCode = code;
@@ -1722,11 +1746,11 @@ class ProblemsPageApp {
   }
 
   private async executeRun(isSubmit: boolean): Promise<void> {
-    if (!this.currentProblem || !this.editor || this.running) {
+    if (!this.currentProblem || this.running) {
       return;
     }
 
-    const source = this.editor.getValue();
+    const source = this.getEditorCode();
     if (!source.trim()) {
       this.showConsoleError("Editor is empty.");
       return;
@@ -1743,7 +1767,7 @@ class ProblemsPageApp {
     this.running = true;
     this.runButton.classList.add("is-loading");
     this.submitButton.classList.add("is-loading");
-    this.editor.updateOptions({ readOnly: true });
+    this.setEditorReadOnly(true);
     this.resetConfirm.hidden = true;
     this.clearConsole();
     this.showConsoleStatus(isSubmit ? "Running all test cases..." : "Running visible test cases...");
@@ -1772,7 +1796,7 @@ class ProblemsPageApp {
       this.running = false;
       this.runButton.classList.remove("is-loading");
       this.submitButton.classList.remove("is-loading");
-      this.editor.updateOptions({ readOnly: false });
+      this.setEditorReadOnly(false);
     }
   }
 
@@ -1853,7 +1877,7 @@ class ProblemsPageApp {
   }
 
   private loadSubmissionById(submissionId: string): void {
-    if (!this.currentProblem || !this.editor || !submissionId) {
+    if (!this.currentProblem || !submissionId) {
       return;
     }
 
@@ -1868,7 +1892,7 @@ class ProblemsPageApp {
       return;
     }
 
-    this.editor.setValue(submission.code);
+    this.setEditorCode(submission.code);
     this.persistCurrentCode();
   }
 
@@ -1901,11 +1925,11 @@ class ProblemsPageApp {
   }
 
   private restoreStarterCode(): void {
-    if (!this.currentProblem || !this.editor) {
+    if (!this.currentProblem) {
       return;
     }
 
-    this.editor.setValue(this.currentProblem.starterCode);
+    this.setEditorCode(this.currentProblem.starterCode);
     safeLocalStorageSet(`problems_code_${this.currentProblem.id}`, this.currentProblem.starterCode);
     this.persistCurrentCode();
     this.resetConfirm.hidden = true;
@@ -2031,6 +2055,7 @@ class ProblemsPageApp {
     const editorHeaderRect = this.editorHeader.getBoundingClientRect();
     const height = Math.max(MIN_EDITOR_HEIGHT, Math.floor(editorSectionRect.height - editorHeaderRect.height));
     this.monacoContainer.style.height = `${height}px`;
+    this.editorHost.style.height = `${height}px`;
   }
 
   private syncVerdictOffset(): void {
@@ -2115,6 +2140,44 @@ class ProblemsPageApp {
     const monacoIframe = this.monacoContainer.querySelector("iframe") as HTMLElement | null;
     if (monacoIframe) {
       monacoIframe.style.pointerEvents = enabled ? "" : "none";
+    }
+  }
+
+  private getEditorCode(): string {
+    if (this.editor) {
+      return this.editor.getValue();
+    }
+    if (this.editorFallback) {
+      return this.editorFallback.value;
+    }
+    return monacoHost().__editorFallback?.value ?? "";
+  }
+
+  private setEditorCode(code: string): void {
+    if (this.editor) {
+      this.editor.setValue(code);
+      return;
+    }
+    if (this.editorFallback) {
+      this.editorFallback.value = code;
+      return;
+    }
+    const fallback = monacoHost().__editorFallback;
+    if (fallback) {
+      fallback.value = code;
+    }
+  }
+
+  private setEditorReadOnly(readOnly: boolean): void {
+    if (this.editor) {
+      this.editor.updateOptions({ readOnly });
+    }
+    if (this.editorFallback) {
+      this.editorFallback.readOnly = readOnly;
+    }
+    const fallback = monacoHost().__editorFallback;
+    if (fallback) {
+      fallback.readOnly = readOnly;
     }
   }
 }
