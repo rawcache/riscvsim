@@ -457,10 +457,22 @@
       (() => {
         const rows = document.querySelectorAll("#pl-tbody .pl-row[data-problem-id]");
         rows.forEach((row) => {
+          row.setAttribute("tabindex", "0");
+          row.setAttribute("role", "link");
           row.addEventListener("click", (event) => {
             if (event.target instanceof HTMLElement && event.target.closest("a")) {
               return;
             }
+            const problemId = row.getAttribute("data-problem-id");
+            if (problemId) {
+              window.location.href = "/problems/?id=" + encodeURIComponent(problemId);
+            }
+          });
+          row.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") {
+              return;
+            }
+            event.preventDefault();
             const problemId = row.getAttribute("data-problem-id");
             if (problemId) {
               window.location.href = "/problems/?id=" + encodeURIComponent(problemId);

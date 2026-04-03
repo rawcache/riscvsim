@@ -672,6 +672,26 @@ class ProblemsApp {
       void this.openProblem(problemId, true);
     });
 
+    this.tableBody.addEventListener("keydown", (event) => {
+      const target = event.target as HTMLElement | null;
+      const row = target?.closest<HTMLTableRowElement>("[data-problem-id]");
+      if (!row) {
+        return;
+      }
+
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+
+      event.preventDefault();
+      const problemId = row.dataset.problemId;
+      if (!problemId) {
+        return;
+      }
+      this.saveListScroll();
+      void this.openProblem(problemId, true);
+    });
+
     document.querySelectorAll<HTMLButtonElement>("[data-left-tab]").forEach((button) => {
       button.addEventListener("click", () => {
         this.leftTab = button.dataset.leftTab as LeftTab;
@@ -975,7 +995,14 @@ class ProblemsApp {
       .map((problem) => {
         const status = this.problemStatus(problem.id);
         return `
-          <tr class="pl-row" data-problem-id="${escapeHtml(problem.id)}" data-difficulty="${escapeHtml(problem.difficulty)}">
+          <tr
+            class="pl-row"
+            data-problem-id="${escapeHtml(problem.id)}"
+            data-difficulty="${escapeHtml(problem.difficulty)}"
+            tabindex="0"
+            role="link"
+            aria-label="Open problem ${problem.number}: ${escapeHtml(problem.title)}"
+          >
             <td class="pl-td pl-td--status">
               ${status === "solved"
                 ? `<span class="pl-status-icon pl-status-solved" aria-label="Solved">✓</span>`

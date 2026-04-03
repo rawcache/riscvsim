@@ -134,7 +134,7 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text-primary);
   outline: none;
   transition: border-color var(--transition), background var(--transition);
@@ -152,7 +152,7 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-primary);
   cursor: pointer;
   outline: none;
@@ -227,7 +227,7 @@
 
 .pl-row {
   cursor: pointer;
-  transition: background 100ms ease;
+  transition: background 100ms ease, box-shadow var(--transition);
   border-bottom: 1px solid var(--border);
 }
 
@@ -239,11 +239,18 @@
   background: color-mix(in srgb, var(--bg-elevated) 70%, var(--bg-surface));
 }
 
+.pl-row:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: color-mix(in srgb, var(--bg-elevated) 70%, var(--bg-surface));
+}
+
 .pl-td {
   padding: 16px;
   font-family: var(--font-body);
-  font-size: 15px;
-  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-primary);
 }
 
 .pl-td--num {
@@ -266,7 +273,9 @@
   transition: color var(--transition);
 }
 
-.pl-title-link:hover {
+.pl-title-link:hover,
+.pl-row:hover .pl-title-link,
+.pl-row:focus-visible .pl-title-link {
   color: var(--accent);
 }
 
