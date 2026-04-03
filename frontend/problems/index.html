@@ -453,8 +453,538 @@
 
     <footer id="site-footer"></footer>
 
+    <script id="problems-fallback-data" type="application/json">
+      {
+        "p001": {
+          "number": 1,
+          "title": "Add Two Registers",
+          "difficulty": "Easy",
+          "tags": ["Arithmetic"],
+          "description": [
+            "Given two integer values in x10 and x11, compute their sum and store the result in x12.",
+            "This is the most fundamental RISC-V operation. The ADD instruction computes rd = rs1 + rs2."
+          ],
+          "examples": [
+            { "input": "x10 = 3, x11 = 5", "output": "x12 = 8", "explanation": "3 + 5 = 8" }
+          ],
+          "constraints": [
+            "0 ≤ x10, x11 ≤ 2^31 - 1",
+            "Use exactly one instruction",
+            "Do not modify x10 or x11"
+          ],
+          "hints": [
+            "ADD computes rd = rs1 + rs2.",
+            "Syntax: add rd, rs1, rs2",
+            "add x12, x10, x11 stores the sum in x12."
+          ],
+          "starterCode": "# Add Two Registers\n# Input:  x10 = first operand\n#         x11 = second operand\n# Output: x12 = x10 + x11\n"
+        },
+        "p002": {
+          "number": 2,
+          "title": "Absolute Value",
+          "difficulty": "Easy",
+          "tags": ["Arithmetic", "Control Flow"],
+          "description": [
+            "Given a signed 32-bit integer in x10, store its absolute value in x11.",
+            "For positive numbers, the answer is the number itself. For negative numbers, negate it using base instructions only."
+          ],
+          "examples": [
+            { "input": "x10 = -5", "output": "x11 = 5", "explanation": "Negate the negative value." }
+          ],
+          "constraints": [
+            "x10 is any signed 32-bit integer",
+            "Do not use pseudo-instructions",
+            "Special case: abs(-2147483648) may remain negative because of overflow"
+          ],
+          "hints": [
+            "Branch on whether x10 < 0.",
+            "To negate: sub x11, x0, x10",
+            "BLT x10, x0, negative_branch"
+          ],
+          "starterCode": "# Absolute Value\n# Input:  x10 = signed integer\n# Output: x11 = |x10|\n"
+        },
+        "p003": {
+          "number": 3,
+          "title": "Max of Two",
+          "difficulty": "Easy",
+          "tags": ["Control Flow"],
+          "description": [
+            "Given two signed integers in x10 and x11, store the larger value in x12.",
+            "If both values are equal, either path may store the same result."
+          ],
+          "examples": [
+            { "input": "x10 = 7, x11 = 3", "output": "x12 = 7", "explanation": "7 is larger than 3." }
+          ],
+          "constraints": [
+            "x10 and x11 are signed 32-bit integers",
+            "Do not modify x10 or x11",
+            "Use a branch-based comparison"
+          ],
+          "hints": [
+            "Compare the registers and branch to the right assignment.",
+            "Start by assuming one is the max, then overwrite if needed.",
+            "BLT and BGE are enough for this problem."
+          ],
+          "starterCode": "# Max of Two\n# Input:  x10 = first value\n#         x11 = second value\n# Output: x12 = max(x10, x11)\n"
+        },
+        "p004": {
+          "number": 4,
+          "title": "Multiply by Power of Two",
+          "difficulty": "Easy",
+          "tags": ["Bit Manipulation"],
+          "description": [
+            "Given a value in x10 and a shift amount in x11, store x10 × 2^x11 in x12.",
+            "In RISC-V, shifting left by N bits is the same as multiplying by 2^N."
+          ],
+          "examples": [
+            { "input": "x10 = 5, x11 = 2", "output": "x12 = 20", "explanation": "5 << 2 = 20." }
+          ],
+          "constraints": [
+            "0 ≤ x11 ≤ 31",
+            "Use a shift instruction, not MUL",
+            "Overflow is allowed"
+          ],
+          "hints": [
+            "Use SLL or SLLI depending on the shift source.",
+            "The destination is x12.",
+            "Left shift multiplies by powers of two."
+          ],
+          "starterCode": "# Multiply by Power of Two\n# Input:  x10 = value\n#         x11 = shift amount\n# Output: x12 = x10 << x11\n"
+        },
+        "p005": {
+          "number": 5,
+          "title": "Count Down",
+          "difficulty": "Easy",
+          "tags": ["Loops"],
+          "description": [
+            "Starting from the value in x10, count down to zero. Store the number of loop iterations in x11.",
+            "Each iteration decrements a counter by 1 until it reaches zero."
+          ],
+          "examples": [
+            { "input": "x10 = 5", "output": "x11 = 5", "explanation": "The loop runs five times." }
+          ],
+          "constraints": [
+            "x10 ≥ 0",
+            "Use a loop with a branch instruction",
+            "x11 should equal the original value in x10 on completion"
+          ],
+          "hints": [
+            "You need one register for the countdown and one for the iteration count.",
+            "Stop when the countdown register reaches zero.",
+            "Initialize x11 to 0 and increment it every loop."
+          ],
+          "starterCode": "# Count Down\n# Input:  x10 = starting value\n# Output: x11 = number of iterations until zero\n"
+        },
+        "p006": {
+          "number": 6,
+          "title": "Sum Array",
+          "difficulty": "Medium",
+          "tags": ["Memory", "Loops", "Arrays"],
+          "description": [
+            "Given a base address in x10 and element count in x11, sum all 32-bit elements and store the result in x12.",
+            "This is the assembly version of a classic for-loop over an array."
+          ],
+          "examples": [
+            { "input": "x10 = 0x10000000, x11 = 3, arr = [10, 20, 30]", "output": "x12 = 60", "explanation": "10 + 20 + 30 = 60." }
+          ],
+          "constraints": [
+            "Elements are signed 32-bit integers",
+            "If x11 = 0, the result is 0",
+            "Use LW and word-stride addressing"
+          ],
+          "hints": [
+            "Keep a running sum in x12.",
+            "Advance the address by 4 bytes per element.",
+            "Use x11 as the number of remaining elements, but do not modify it permanently."
+          ],
+          "starterCode": "# Sum Array\n# Input:  x10 = base address\n#         x11 = element count\n# Output: x12 = sum of all words\n"
+        },
+        "p007": {
+          "number": 7,
+          "title": "Fibonacci (Iterative)",
+          "difficulty": "Medium",
+          "tags": ["Loops", "Arithmetic"],
+          "description": [
+            "Compute the Nth Fibonacci number where N is in x10. Store the result in x11.",
+            "Use an iterative solution. Recursive approaches are not expected here."
+          ],
+          "examples": [
+            { "input": "x10 = 6", "output": "x11 = 8", "explanation": "F(6) = 8." }
+          ],
+          "constraints": [
+            "0 ≤ N ≤ 20",
+            "Handle N = 0 and N = 1 as base cases",
+            "Use a loop, not recursion"
+          ],
+          "hints": [
+            "Track the previous two Fibonacci values.",
+            "Handle N = 0 and N = 1 before the loop.",
+            "Each iteration computes next = a + b, then shifts the window forward."
+          ],
+          "starterCode": "# Fibonacci (Iterative)\n# Input:  x10 = N\n# Output: x11 = F(N)\n"
+        },
+        "p008": {
+          "number": 8,
+          "title": "Reverse Bits",
+          "difficulty": "Medium",
+          "tags": ["Bit Manipulation"],
+          "description": [
+            "Given a 32-bit value in x10, store its bit-reversed value in x11.",
+            "Bit 31 becomes bit 0, bit 30 becomes bit 1, and so on."
+          ],
+          "examples": [
+            { "input": "0x00000001", "output": "0x80000000", "explanation": "The lowest bit becomes the highest bit." }
+          ],
+          "constraints": [
+            "Treat x10 as an unsigned 32-bit value",
+            "Process all 32 bits",
+            "Use shifts and masking"
+          ],
+          "hints": [
+            "Loop exactly 32 times.",
+            "Extract the lowest bit, shift the result left, then append the extracted bit.",
+            "Shift the input right as the loop progresses."
+          ],
+          "starterCode": "# Reverse Bits\n# Input:  x10 = 32-bit value\n# Output: x11 = bit-reversed value\n"
+        },
+        "p009": {
+          "number": 9,
+          "title": "Stack Push and Pop",
+          "difficulty": "Medium",
+          "tags": ["Stack", "Memory", "Functions"],
+          "description": [
+            "Using x2 as the stack pointer, push x10 and x11, then pop into x12 and x13.",
+            "The result should reflect normal LIFO stack behavior."
+          ],
+          "examples": [
+            { "input": "x10 = 1, x11 = 2, sp = 0x7FFFFFFC", "output": "x12 = 2, x13 = 1", "explanation": "Push 1, push 2, then pop in reverse order." }
+          ],
+          "constraints": [
+            "Use SW to push and LW to pop",
+            "Decrement SP by 4 before each push",
+            "Increment SP by 4 after each pop"
+          ],
+          "hints": [
+            "Remember that the stack grows downward.",
+            "A push is addi sp, sp, -4 followed by sw.",
+            "A pop is lw followed by addi sp, sp, 4."
+          ],
+          "starterCode": "# Stack Push and Pop\n# Inputs: x10, x11, x2 = stack pointer\n# Outputs: x12 = popped x11, x13 = popped x10\n"
+        },
+        "p010": {
+          "number": 10,
+          "title": "Count Set Bits",
+          "difficulty": "Medium",
+          "tags": ["Bit Manipulation", "Loops"],
+          "description": [
+            "Given a 32-bit value in x10, count how many bits are set to 1 and store the result in x11.",
+            "This is the popcount or Hamming weight problem."
+          ],
+          "examples": [
+            { "input": "x10 = 0x0000000B", "output": "x11 = 3", "explanation": "0b1011 has three set bits." }
+          ],
+          "constraints": [
+            "Treat x10 as an unsigned 32-bit value",
+            "0 ≤ result ≤ 32",
+            "Loop through all 32 bits"
+          ],
+          "hints": [
+            "Inspect the least-significant bit each iteration.",
+            "Add that bit to your count register.",
+            "Shift the input right and repeat 32 times."
+          ],
+          "starterCode": "# Count Set Bits\n# Input:  x10 = 32-bit value\n# Output: x11 = number of 1 bits\n"
+        },
+        "p011": {
+          "number": 11,
+          "title": "Find Max in Array",
+          "difficulty": "Hard",
+          "tags": ["Memory", "Loops", "Control Flow"],
+          "description": [
+            "Given a base address in x10 and count in x11, find the maximum signed 32-bit integer in the array and store it in x12.",
+            "Initialize the max with the first element, not zero, because all values may be negative."
+          ],
+          "examples": [
+            { "input": "arr = [3, 1, 4, 1, 5], n = 5", "output": "x12 = 5", "explanation": "Track the current max as you scan the array." }
+          ],
+          "constraints": [
+            "x11 ≥ 1",
+            "Elements are signed 32-bit integers",
+            "Initialize max from the first element"
+          ],
+          "hints": [
+            "Load the first element before entering the main loop.",
+            "Compare each new value against the current max.",
+            "Advance by 4 bytes per array element."
+          ],
+          "starterCode": "# Find Max in Array\n# Input:  x10 = base address\n#         x11 = element count\n# Output: x12 = maximum element\n"
+        },
+        "p012": {
+          "number": 12,
+          "title": "String Length",
+          "difficulty": "Hard",
+          "tags": ["Memory", "Loops", "Strings"],
+          "description": [
+            "Given the address of a null-terminated ASCII string in x10, store the string length in x11.",
+            "Walk memory byte by byte using LBU until you reach a zero byte."
+          ],
+          "examples": [
+            { "input": "\"hello\\0\" at 0x10000000", "output": "x11 = 5", "explanation": "The null terminator is not counted." }
+          ],
+          "constraints": [
+            "Use LBU to read each byte",
+            "The string ends with 0x00",
+            "Maximum length is 100 bytes"
+          ],
+          "hints": [
+            "Keep a pointer register and a length counter.",
+            "Stop when the loaded byte is zero.",
+            "Increment the pointer by 1 each iteration."
+          ],
+          "starterCode": "# String Length\n# Input:  x10 = address of null-terminated string\n# Output: x11 = string length\n"
+        },
+        "p013": {
+          "number": 13,
+          "title": "Bubble Sort",
+          "difficulty": "Hard",
+          "tags": ["Sorting", "Memory", "Loops"],
+          "description": [
+            "Given a base address in x10 and count in x11, sort the array of signed 32-bit integers in ascending order in place.",
+            "Use the classic bubble sort pattern with nested loops and adjacent swaps."
+          ],
+          "examples": [
+            { "input": "[3, 1, 2], n = 3", "output": "[1, 2, 3]", "explanation": "Repeatedly bubble larger values toward the end." }
+          ],
+          "constraints": [
+            "Sort ascending",
+            "Modify memory in place",
+            "Use nested loops"
+          ],
+          "hints": [
+            "The inner loop compares arr[j] and arr[j + 1].",
+            "Swap when the left value is larger than the right value.",
+            "Shrink the inner loop bound each outer iteration."
+          ],
+          "starterCode": "# Bubble Sort\n# Input:  x10 = base address\n#         x11 = element count\n# Output: array sorted in ascending order in memory\n"
+        },
+        "p014": {
+          "number": 14,
+          "title": "GCD (Euclidean)",
+          "difficulty": "Hard",
+          "tags": ["Arithmetic", "Loops", "Functions"],
+          "description": [
+            "Compute the greatest common divisor of x10 and x11 using the Euclidean algorithm. Store the result in x12.",
+            "Use REM to compute remainders while repeatedly swapping a and b."
+          ],
+          "examples": [
+            { "input": "x10 = 48, x11 = 18", "output": "x12 = 6", "explanation": "GCD(48, 18) = 6." }
+          ],
+          "constraints": [
+            "x10 and x11 are positive integers",
+            "Use REM for modulo",
+            "Use an iterative loop"
+          ],
+          "hints": [
+            "While b != 0, compute a % b.",
+            "Move b into a after saving it.",
+            "When b reaches zero, a holds the answer."
+          ],
+          "starterCode": "# GCD (Euclidean)\n# Input:  x10 = a\n#         x11 = b\n# Output: x12 = gcd(a, b)\n"
+        },
+        "p015": {
+          "number": 15,
+          "title": "Matrix Trace",
+          "difficulty": "Hard",
+          "tags": ["Memory", "Loops", "Arrays"],
+          "description": [
+            "Given a base address in x10 and dimension N in x11, compute the trace of an N×N matrix stored in row-major order and store the result in x12.",
+            "The trace is the sum of A[0][0] + A[1][1] + ... + A[N-1][N-1]."
+          ],
+          "examples": [
+            { "input": "N = 2, matrix = [[1, 2], [3, 4]]", "output": "x12 = 5", "explanation": "1 + 4 = 5." }
+          ],
+          "constraints": [
+            "1 ≤ N ≤ 8",
+            "Elements are signed 32-bit integers",
+            "Use row-major indexing"
+          ],
+          "hints": [
+            "The address of A[i][i] is base + (i * N + i) * 4.",
+            "Loop i from 0 to N - 1.",
+            "Accumulate the diagonal values in x12."
+          ],
+          "starterCode": "# Matrix Trace\n# Input:  x10 = base address\n#         x11 = dimension N\n# Output: x12 = trace of the matrix\n"
+        }
+      }
+    </script>
+
     <script>
       (() => {
+        const escapeHtml = (value) =>
+          value
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll("\"", "&quot;")
+            .replaceAll("'", "&#39;");
+
+        const fallbackNode = document.getElementById("problems-fallback-data");
+        const fallbackProblems = fallbackNode ? JSON.parse(fallbackNode.textContent || "{}") : {};
+        const problemIdFromUrl = new URLSearchParams(window.location.search).get("id");
+        const fallbackProblem = problemIdFromUrl ? fallbackProblems[problemIdFromUrl] : null;
+        const listView = document.getElementById("problems-list-view");
+        const problemView = document.getElementById("pv-layout");
+        const footer = document.getElementById("site-footer");
+        const leftContent = document.getElementById("pv-left-content");
+        const editorRoot = document.getElementById("pv-editor");
+        const hintCount = document.getElementById("pv-hint-count");
+        const topbarNum = document.getElementById("pv-topbar-num");
+        const topbarTitle = document.getElementById("pv-topbar-title");
+        const topbarDifficulty = document.getElementById("pv-topbar-difficulty");
+        const topbarTags = document.getElementById("pv-topbar-tags");
+        const tabButtons = document.querySelectorAll("[data-left-tab]");
+
+        const renderDescription = (problem) => {
+          leftContent.innerHTML = `
+            <div class="pv-problem-header">
+              <h2 class="pv-problem-title">${problem.number}. ${escapeHtml(problem.title)}</h2>
+              <div class="pv-problem-meta">
+                <span class="pv-badge pv-badge--${problem.difficulty.toLowerCase()}">${escapeHtml(problem.difficulty)}</span>
+                ${problem.tags.map((tag) => `<span class="pv-meta-tag">${escapeHtml(tag)}</span>`).join("")}
+              </div>
+            </div>
+            <div class="pv-problem-body">
+              ${problem.description.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
+            </div>
+            <div class="pv-examples">
+              <h3 class="pv-section-title">Examples</h3>
+              ${problem.examples
+                .map(
+                  (example, index) => `
+                    <div class="pv-example">
+                      <div class="pv-example__label">Example ${index + 1}:</div>
+                      <div class="pv-example__block">
+                        <div class="pv-example__row">
+                          <span class="pv-example__key">Input:</span>
+                          <code class="pv-example__val">${escapeHtml(example.input)}</code>
+                        </div>
+                        <div class="pv-example__row">
+                          <span class="pv-example__key">Output:</span>
+                          <code class="pv-example__val">${escapeHtml(example.output)}</code>
+                        </div>
+                        ${example.explanation ? `<div class="pv-example__explanation">${escapeHtml(example.explanation)}</div>` : ""}
+                      </div>
+                    </div>
+                  `
+                )
+                .join("")}
+            </div>
+            <div class="pv-constraints">
+              <h3 class="pv-section-title">Constraints</h3>
+              <ul class="pv-constraints-list">
+                ${problem.constraints.map((constraint) => `<li>${escapeHtml(constraint)}</li>`).join("")}
+              </ul>
+            </div>
+          `;
+        };
+
+        const renderHints = (problem) => {
+          leftContent.innerHTML = `
+            <p class="pv-hints-intro">Hints are free — use them without guilt.</p>
+            ${problem.hints
+              .map(
+                (hint, index) => `
+                  <div class="pv-hint-item is-open">
+                    <div class="pv-case-label">Hint ${index + 1} of ${problem.hints.length}</div>
+                    <button class="pv-hint-reveal" type="button">
+                      <span>Hint ${index + 1}</span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path d="m9 6 6 6-6 6"></path>
+                      </svg>
+                    </button>
+                    <div class="pv-hint-content">${escapeHtml(hint)}</div>
+                  </div>
+                `
+              )
+              .join("")}
+          `;
+        };
+
+        const renderEditorial = () => {
+          leftContent.innerHTML = `
+            <div class="pv-editorial-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H19v20H7.5A2.5 2.5 0 0 0 5 24"></path>
+                <path d="M5 4.5v17"></path>
+                <path d="M9 7h7M9 11h7M9 15h5"></path>
+              </svg>
+              <strong>Editorial coming soon.</strong>
+              <p>Try the problem first. The full page app unlocks the richer experience when its script loads.</p>
+            </div>
+          `;
+        };
+
+        const renderSubmissions = () => {
+          leftContent.innerHTML = `
+            <div class="pv-submissions-empty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M4 7h16"></path>
+                <path d="M5 7.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5"></path>
+                <path d="M9 11h6"></path>
+                <path d="M9 15h6"></path>
+              </svg>
+              <p>Submissions appear here after the full app loads.</p>
+            </div>
+          `;
+        };
+
+        const renderTab = (tabName) => {
+          if (!fallbackProblem || !leftContent) {
+            return;
+          }
+          tabButtons.forEach((button) => {
+            button.classList.toggle("active", button.getAttribute("data-left-tab") === tabName);
+          });
+          if (tabName === "hints") {
+            renderHints(fallbackProblem);
+            return;
+          }
+          if (tabName === "editorial") {
+            renderEditorial();
+            return;
+          }
+          if (tabName === "submissions") {
+            renderSubmissions();
+            return;
+          }
+          renderDescription(fallbackProblem);
+        };
+
+        if (fallbackProblem && listView && problemView && leftContent && editorRoot && topbarNum && topbarTitle && topbarDifficulty && topbarTags) {
+          listView.hidden = true;
+          problemView.hidden = false;
+          if (footer) {
+            footer.hidden = true;
+          }
+          document.body.classList.add("problems-view-active");
+          document.title = `${fallbackProblem.title} - StudyRISC-V`;
+          topbarNum.textContent = `${fallbackProblem.number}.`;
+          topbarTitle.textContent = fallbackProblem.title;
+          topbarDifficulty.textContent = fallbackProblem.difficulty;
+          topbarDifficulty.className = `pv-topbar__difficulty pv-topbar__difficulty--${fallbackProblem.difficulty.toLowerCase()}`;
+          topbarTags.innerHTML = fallbackProblem.tags.map((tag) => `<span class="pv-topbar__tag">${escapeHtml(tag)}</span>`).join("");
+          if (hintCount) {
+            hintCount.textContent = String(fallbackProblem.hints.length);
+          }
+          renderTab("description");
+          tabButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+              renderTab(button.getAttribute("data-left-tab") || "description");
+            });
+          });
+          editorRoot.innerHTML = `<textarea class="pv-editor-fallback" spellcheck="false">${escapeHtml(fallbackProblem.starterCode)}</textarea>`;
+        }
+
         const rows = document.querySelectorAll("#pl-tbody .pl-row[data-problem-id]");
         rows.forEach((row) => {
           row.setAttribute("tabindex", "0");
