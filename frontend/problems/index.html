@@ -313,6 +313,7 @@
             </div>
           </div>
           <div class="pv-topbar__center">
+            <div class="pv-topbar__crumbs" id="pv-topbar-crumbs"></div>
             <div class="pv-topbar__heading">
               <span class="pv-topbar__num" id="pv-topbar-num"></span>
               <span class="pv-topbar__title" id="pv-topbar-title"></span>
@@ -846,6 +847,7 @@
         const hintCount = document.getElementById("pv-hint-count");
         const topbarNum = document.getElementById("pv-topbar-num");
         const topbarTitle = document.getElementById("pv-topbar-title");
+        const topbarCrumbs = document.getElementById("pv-topbar-crumbs");
         const topbarDifficulty = document.getElementById("pv-topbar-difficulty");
         const topbarTags = document.getElementById("pv-topbar-tags");
         const tabButtons = document.querySelectorAll("[data-left-tab]");
@@ -974,6 +976,9 @@
           }
           document.body.classList.add("problems-view-active");
           document.title = `${fallbackProblem.title} - StudyRISC-V`;
+          if (topbarCrumbs) {
+            topbarCrumbs.textContent = `Problems / ${fallbackProblem.difficulty}`;
+          }
           topbarNum.textContent = `${fallbackProblem.number}.`;
           topbarTitle.textContent = fallbackProblem.title;
           topbarDifficulty.textContent = fallbackProblem.difficulty;

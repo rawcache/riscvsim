@@ -42,6 +42,11 @@ type MonacoEditorInstance = {
 };
 
 type MonacoApi = {
+  languages: {
+    register(configuration: { id: string }): void;
+    setMonarchTokensProvider(languageId: string, provider: Record<string, unknown>): void;
+    setLanguageConfiguration(languageId: string, configuration: Record<string, unknown>): void;
+  };
   editor: {
     create(container: HTMLElement, options: Record<string, unknown>): MonacoEditorInstance;
     defineTheme(name: string, theme: Record<string, unknown>): void;
@@ -77,6 +82,26 @@ const DEFAULT_FILTER_STATE: FilterState = {
 const MONACO_CDN =
   "https://cdnjs.cloudflare.com/ajax/libs/" +
   "monaco-editor/0.44.0/min/vs";
+
+const MONACO_LANGUAGE_ID = "studyriscv-asm";
+
+const RISCV_INSTRUCTIONS = [
+  "add", "addi", "sub", "mul", "mulh", "mulhsu", "mulhu", "div", "divu", "rem", "remu",
+  "and", "andi", "or", "ori", "xor", "xori", "sll", "slli", "srl", "srli", "sra", "srai",
+  "slt", "slti", "sltu", "sltiu", "lui", "auipc",
+  "lb", "lbu", "lh", "lhu", "lw", "sb", "sh", "sw",
+  "beq", "bne", "blt", "bge", "bltu", "bgeu",
+  "jal", "jalr", "ecall", "ebreak", "fence", "fence.i",
+  "ret", "call", "tail", "nop", "mv", "li", "la", "j", "jr", "ble", "bgt", "bgez", "blez", "bnez", "beqz", "bgtz", "bltz",
+].join("|");
+
+const RISCV_REGISTERS = [
+  ...Array.from({ length: 32 }, (_, index) => `x${index}`),
+  "zero", "ra", "sp", "gp", "tp",
+  "t0", "t1", "t2", "t3", "t4", "t5", "t6",
+  "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "fp",
+  "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
+].join("|");
 
 const FILTER_STORAGE_KEY = "problems_filters";
 const LIST_SCROLL_STORAGE_KEY = "problems_list_scroll";
@@ -471,7 +496,14 @@ function applyMonacoTheme(monaco: MonacoApi): void {
   monaco.editor.defineTheme("studyriscv-dark", {
     base: "vs-dark",
     inherit: true,
-    rules: [],
+    rules: [
+      { token: "instruction", foreground: "60A5FA", fontStyle: "bold" },
+      { token: "register", foreground: "F59E0B" },
+      { token: "number", foreground: "A78BFA" },
+      { token: "comment", foreground: "71717A", fontStyle: "italic" },
+      { token: "directive", foreground: "34D399" },
+      { token: "label", foreground: "F472B6" },
+    ],
     colors: {
       "editor.background": cssColor("--bg-base"),
       "editor.foreground": cssColor("--text-primary"),
@@ -482,34 +514,89 @@ function applyMonacoTheme(monaco: MonacoApi): void {
       "editor.inactiveSelectionBackground": rgba(cssColor("--accent"), 0.14),
       "editorCursor.foreground": cssColor("--accent"),
       "editorGutter.background": cssColor("--bg-base"),
+      "editorBracketMatch.background": rgba(cssColor("--accent"), 0.12),
+      "editorBracketMatch.border": rgba(cssColor("--accent"), 0.45),
+      "editorIndentGuide.activeBackground1": rgba(cssColor("--border"), 0.5),
+      "editorIndentGuide.background1": rgba(cssColor("--border"), 0.22),
     },
   });
   monaco.editor.setTheme(dark ? "studyriscv-dark" : "vs");
 }
 
+let monacoLanguageRegistered = false;
+
+function ensureMonacoLanguage(monaco: MonacoApi): void {
+  if (monacoLanguageRegistered) {
+    return;
+  }
+
+  monaco.languages.register({ id: MONACO_LANGUAGE_ID });
+  monaco.languages.setMonarchTokensProvider(MONACO_LANGUAGE_ID, {
+    ignoreCase: true,
+    tokenizer: {
+      root: [
+        [/^\s*[A-Za-z_.$][\w.$]*:/, "label"],
+        [/#.*$/, "comment"],
+        [/\.[A-Za-z_.]+/, "directive"],
+        [new RegExp(`\\b(?:${RISCV_INSTRUCTIONS})\\b`, "i"), "instruction"],
+        [new RegExp(`\\b(?:${RISCV_REGISTERS})\\b`, "i"), "register"],
+        [/-?0x[0-9a-f]+/, "number"],
+        [/-?0b[01]+/, "number"],
+        [/-?\d+/, "number"],
+        [/[()[\]]/, "@brackets"],
+        [/[,:]/, "delimiter"],
+        [/[A-Za-z_.$][\w.$]*/, "identifier"],
+        [/\s+/, ""],
+      ],
+    },
+  });
+  monaco.languages.setLanguageConfiguration(MONACO_LANGUAGE_ID, {
+    comments: { lineComment: "#" },
+    brackets: [
+      ["(", ")"],
+      ["[", "]"],
+    ],
+    autoClosingPairs: [
+      { open: "(", close: ")" },
+      { open: "[", close: "]" },
+    ],
+    surroundingPairs: [
+      { open: "(", close: ")" },
+      { open: "[", close: "]" },
+    ],
+  });
+
+  monacoLanguageRegistered = true;
+}
+
 function initEditor(container: HTMLElement, monaco: MonacoApi, code: string): MonacoEditorInstance {
+  ensureMonacoLanguage(monaco);
   applyMonacoTheme(monaco);
   return monaco.editor.create(container, {
     value: code,
-    language: "plaintext",
+    language: MONACO_LANGUAGE_ID,
     theme: document.documentElement.dataset.theme === "dark" ? "studyriscv-dark" : "vs",
-    fontFamily: "'Geist Mono', 'Fira Code', monospace",
-    fontSize: 14,
-    lineHeight: 22,
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+    fontSize: 15,
+    lineHeight: 24,
     tabSize: 2,
     insertSpaces: true,
     minimap: { enabled: false },
     scrollBeyondLastLine: false,
     renderLineHighlight: "all",
+    renderLineHighlightOnlyWhenFocus: false,
     cursorBlinking: "smooth",
     smoothScrolling: true,
     automaticLayout: true,
-    padding: { top: 16, bottom: 16 },
+    padding: { top: 18, bottom: 18 },
     lineNumbers: "on",
     glyphMargin: false,
     folding: false,
     renderWhitespace: "selection",
     wordWrap: "off",
+    matchBrackets: "always",
+    guides: { bracketPairs: true, indentation: true, highlightActiveIndentation: true },
+    bracketPairColorization: { enabled: true },
   });
 }
 
@@ -583,6 +670,7 @@ class ProblemsApp {
   private readonly dividerH = document.getElementById("pv-divider-h") as HTMLElement;
   private readonly topbarNum = document.getElementById("pv-topbar-num") as HTMLElement;
   private readonly topbarTitle = document.getElementById("pv-topbar-title") as HTMLElement;
+  private readonly topbarCrumbs = document.getElementById("pv-topbar-crumbs") as HTMLElement;
   private readonly topbarDifficulty = document.getElementById("pv-topbar-difficulty") as HTMLElement;
   private readonly topbarTags = document.getElementById("pv-topbar-tags") as HTMLElement;
   private readonly timerValue = document.getElementById("pv-timer") as HTMLElement;
@@ -640,7 +728,7 @@ class ProblemsApp {
     28,
     65
   );
-  private consoleHeight = Number(safeLocalStorageGet(CONSOLE_HEIGHT_STORAGE_KEY)) || 220;
+  private consoleHeight = Number(safeLocalStorageGet(CONSOLE_HEIGHT_STORAGE_KEY)) || 260;
   private running = false;
   private monaco: MonacoApi | null = null;
   private editor: MonacoEditorInstance | null = null;
@@ -1215,6 +1303,7 @@ class ProblemsApp {
     }
     this.topbarNum.textContent = `${this.currentProblem.number}.`;
     this.topbarTitle.textContent = this.currentProblem.title;
+    this.topbarCrumbs.textContent = `Problems / ${this.currentProblem.difficulty}`;
     this.topbarDifficulty.textContent = this.currentProblem.difficulty;
     this.topbarDifficulty.className = `pv-topbar__difficulty pv-topbar__difficulty--${difficultyClass(this.currentProblem.difficulty)}`;
     this.topbarTags.innerHTML = this.currentProblem.tags
