@@ -10,7 +10,6 @@ import type {
   ProblemProgress,
   ProblemSubmission,
   ProblemTag,
-  ProblemTestCase,
   ProblemVerdict,
 } from "./problem-data";
 import { getProblem, getProblems } from "./problem-data";
@@ -28,6 +27,8 @@ import {
 import { formatProblemDiffValue, runAll, runVisible, type RunResult, type RunSummary } from "./problem-runner";
 import { WasmRuntime } from "./wasm-runtime";
 
+export { escapeHtml };
+
 type LeftTab = "description" | "hints" | "editorial" | "submissions";
 type ConsoleTab = "testcase" | "result";
 
@@ -36,7 +37,7 @@ type MonacoEditorInstance = {
   setValue(value: string): void;
   updateOptions(options: Record<string, unknown>): void;
   layout(): void;
-  focus?(): void;
+  focus(): void;
   dispose(): void;
   onDidChangeModelContent(listener: () => void): { dispose(): void };
 };
@@ -66,51 +67,220 @@ type FilterState = {
   tag: "" | ProblemTag;
 };
 
-type TimerState = {
-  elapsedMs: number;
-  runningSince: number | null;
-  stopped: boolean;
-};
+type SubmissionTone = "accepted" | "wrong" | "error" | "tle";
 
-const DEFAULT_FILTER_STATE: FilterState = {
+const MONACO_CDN =
+  "https://cdnjs.cloudflare.com/ajax/libs/" +
+  "monaco-editor/0.44.0/min/vs";
+
+export const MONACO_THEME_NAME = "riscv-dark";
+export const RISCV_LANGUAGE_ID = "riscv";
+
+export const RISCV_KEYWORDS = [
+  "add", "addi", "sub", "lui", "auipc",
+  "and", "andi", "or", "ori", "xor", "xori",
+  "sll", "slli", "srl", "srli", "sra", "srai",
+  "slt", "slti", "sltu", "sltiu",
+  "lw", "lh", "lb", "lhu", "lbu",
+  "sw", "sh", "sb",
+  "beq", "bne", "blt", "bge", "bltu", "bgeu",
+  "jal", "jalr",
+  "mul", "mulh", "mulhu", "mulhsu",
+  "div", "divu", "rem", "remu",
+  "ecall", "ebreak",
+  "li", "mv", "la", "nop", "j", "ret", "call",
+  "neg", "not", "seqz", "snez", "sltz", "sgtz",
+];
+
+export const RISCV_REGISTERS = [
+  "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7",
+  "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15",
+  "x16", "x17", "x18", "x19", "x20", "x21", "x22", "x23",
+  "x24", "x25", "x26", "x27", "x28", "x29", "x30", "x31",
+  "zero", "ra", "sp", "gp", "tp",
+  "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
+  "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11",
+  "t0", "t1", "t2", "t3", "t4", "t5", "t6",
+  "fp",
+];
+
+const RISCV_DIRECTIVES = [
+  ".text", ".data", ".word", ".byte", ".half",
+  ".ascii", ".asciz", ".space", ".align", ".globl",
+  ".section", ".string",
+];
+
+const DEFAULT_FILTERS: FilterState = {
   search: "",
   difficulty: "",
   status: "",
   tag: "",
 };
 
-const MONACO_CDN =
-  "https://cdnjs.cloudflare.com/ajax/libs/" +
-  "monaco-editor/0.44.0/min/vs";
-
-const MONACO_LANGUAGE_ID = "studyriscv-asm";
-
-const RISCV_INSTRUCTIONS = [
-  "add", "addi", "sub", "mul", "mulh", "mulhsu", "mulhu", "div", "divu", "rem", "remu",
-  "and", "andi", "or", "ori", "xor", "xori", "sll", "slli", "srl", "srli", "sra", "srai",
-  "slt", "slti", "sltu", "sltiu", "lui", "auipc",
-  "lb", "lbu", "lh", "lhu", "lw", "sb", "sh", "sw",
-  "beq", "bne", "blt", "bge", "bltu", "bgeu",
-  "jal", "jalr", "ecall", "ebreak", "fence", "fence.i",
-  "ret", "call", "tail", "nop", "mv", "li", "la", "j", "jr", "ble", "bgt", "bgez", "blez", "bnez", "beqz", "bgtz", "bltz",
-].join("|");
-
-const RISCV_REGISTERS = [
-  ...Array.from({ length: 32 }, (_, index) => `x${index}`),
-  "zero", "ra", "sp", "gp", "tp",
-  "t0", "t1", "t2", "t3", "t4", "t5", "t6",
-  "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "fp",
-  "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
-].join("|");
-
 const FILTER_STORAGE_KEY = "problems_filters";
 const LIST_SCROLL_STORAGE_KEY = "problems_list_scroll";
 const PANEL_SPLIT_STORAGE_KEY = "problems_panel_split";
 const CONSOLE_HEIGHT_STORAGE_KEY = "problems_console_height";
 const FULLSCREEN_STORAGE_KEY = "problems_fullscreen";
-const SHORTCUTS_SEEN_STORAGE_KEY = "problems_shortcuts_seen";
-const AUTO_SAVE_DELAY_MS = 2000;
-const BANNER_DISMISS_MS = 6000;
+const AUTO_SAVE_DELAY_MS = 1500;
+const VERDICT_DISMISS_MS = 8000;
+const DEFAULT_LEFT_RATIO = 0.4;
+const DEFAULT_CONSOLE_HEIGHT = 200;
+const MIN_LEFT_WIDTH = 280;
+const MAX_LEFT_RATIO = 0.65;
+const MIN_EDITOR_HEIGHT = 120;
+const MIN_CONSOLE_HEIGHT = 80;
+
+export function buildRiscvLanguageDefinition(): Record<string, unknown> {
+  return {
+    defaultToken: "",
+    keywords: RISCV_KEYWORDS,
+    registers: RISCV_REGISTERS,
+    directives: RISCV_DIRECTIVES,
+    tokenizer: {
+      root: [
+        [/#.*$/, "comment"],
+        [/^[A-Za-z_][A-Za-z0-9_.]*(?=\s*:)/, "type"],
+        [/[A-Za-z_][A-Za-z0-9_.]*(?=\s*:)/, "type"],
+        [
+          /\.[a-z]+/,
+          {
+            cases: {
+              "@directives": "string",
+              "@default": "string",
+            },
+          },
+        ],
+        [
+          /[A-Za-z_][A-Za-z0-9_.]*/,
+          {
+            cases: {
+              "@keywords": "keyword",
+              "@registers": "variable",
+              "@default": "identifier",
+            },
+          },
+        ],
+        [/0x[0-9a-fA-F]+/, "number"],
+        [/-?[0-9]+/, "number"],
+        [/[,:()[\]]/, "operator"],
+        [/\s+/, ""],
+      ],
+    },
+  };
+}
+
+export function formatHex(value: number): string {
+  return `0x${(value >>> 0).toString(16).padStart(8, "0")}`;
+}
+
+export function formatTimerValue(totalSeconds: number): string {
+  if (totalSeconds >= 3600) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+export function getCurrentProblemId(search = typeof window !== "undefined" ? window.location.search : ""): string | null {
+  return new URLSearchParams(search).get("id");
+}
+
+export function getCurrentProblem(search = typeof window !== "undefined" ? window.location.search : ""): Problem | null {
+  return getProblem(getCurrentProblemId(search)) ?? null;
+}
+
+export function clampPanelSplit(requestedWidth: number, totalWidth: number): number {
+  return Math.max(MIN_LEFT_WIDTH, Math.min(totalWidth * MAX_LEFT_RATIO, requestedWidth));
+}
+
+function clampEditorHeight(requestedHeight: number, rightHeight: number): number {
+  const dividerHeight = 5;
+  const maxEditorHeight = rightHeight - MIN_CONSOLE_HEIGHT - dividerHeight;
+  return Math.max(MIN_EDITOR_HEIGHT, Math.min(maxEditorHeight, requestedHeight));
+}
+
+export function spawnConfetti(parent: ParentNode = document.body): HTMLElement {
+  const container = document.createElement("div");
+  container.className = "pv-confetti";
+
+  const colors = ["#2D6BE4", "#22c55e", "#f59e0b", "#a855f7", "#ef4444", "#06b6d4"];
+  for (let index = 0; index < 24; index += 1) {
+    const piece = document.createElement("div");
+    piece.className = "pv-confetti-piece";
+    piece.style.left = `${Math.random() * 100}%`;
+    piece.style.top = `${Math.random() * 30}%`;
+    piece.style.background = colors[index % colors.length] ?? colors[0];
+    piece.style.setProperty("--d", `${1 + Math.random() * 1.2}s`);
+    piece.style.setProperty("--delay", `${Math.random() * 600}ms`);
+    container.appendChild(piece);
+  }
+
+  parent.appendChild(container);
+  window.setTimeout(() => container.remove(), 2500);
+  return container;
+}
+
+export function renderVerdictBanner(
+  banner: HTMLElement,
+  content: HTMLElement,
+  summary: RunSummary
+): void {
+  banner.className = "pv-verdict";
+
+  if (summary.verdict === "Accepted") {
+    banner.classList.add("pv-verdict--accepted");
+    content.innerHTML = `
+      <div class="pv-verdict__title">✓ Accepted</div>
+      <div class="pv-verdict__sub">Passed ${summary.passedCount}/${summary.totalCount} test cases</div>
+      <div class="pv-verdict__detail">${summary.totalSteps} total steps · ${Math.round(summary.totalTimeMs)}ms</div>
+    `;
+    if (typeof document !== "undefined" && document.body) {
+      spawnConfetti(document.body);
+    }
+  } else if (summary.verdict === "Wrong Answer") {
+    banner.classList.add("pv-verdict--wrong");
+    const diff = summary.firstFailedResult?.diff[0];
+    content.innerHTML = `
+      <div class="pv-verdict__title">✗ Wrong Answer</div>
+      <div class="pv-verdict__sub">Failed on ${escapeHtml(summary.firstFailedResult?.label ?? "a test case")} · ${summary.passedCount}/${summary.totalCount} passed</div>
+      ${diff
+        ? `<div class="pv-verdict__detail">Expected ${escapeHtml(diff.key)} = ${formatProblemDiffValue(diff.expected)} · Got ${formatProblemDiffValue(diff.actual)}</div>`
+        : ""}
+    `;
+  } else if (summary.verdict === "Assembly Error") {
+    banner.classList.add("pv-verdict--error");
+    content.innerHTML = `
+      <div class="pv-verdict__title">✗ Assembly Error</div>
+      <div class="pv-verdict__sub">${escapeHtml(summary.firstFailedResult?.errorMessage ?? "The assembler rejected the source.")}</div>
+    `;
+  } else if (summary.verdict === "Time Limit Exceeded") {
+    banner.classList.add("pv-verdict--tle");
+    content.innerHTML = `
+      <div class="pv-verdict__title">⏱ Time Limit Exceeded</div>
+      <div class="pv-verdict__sub">Exceeded the step limit · Try a more efficient approach.</div>
+    `;
+  } else {
+    banner.classList.add("pv-verdict--error");
+    content.innerHTML = `
+      <div class="pv-verdict__title">⚠ Runtime Error</div>
+      <div class="pv-verdict__sub">${escapeHtml(summary.firstFailedResult?.errorMessage ?? "Execution failed.")}</div>
+    `;
+  }
+
+  banner.hidden = false;
+}
+
+export function bindVerdictClose(closeButton: HTMLButtonElement, banner: HTMLElement): void {
+  closeButton.addEventListener("click", () => {
+    banner.hidden = true;
+  });
+}
 
 function safeLocalStorageGet(key: string): string | null {
   try {
@@ -148,47 +318,12 @@ function safeSessionStorageSet(key: string, value: string): void {
   }
 }
 
-function isMacPlatform(): boolean {
-  return typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
-}
-
-function runShortcutLabel(): string {
-  return isMacPlatform() ? "⌘↵" : "Ctrl+↵";
-}
-
-function submitShortcutLabel(): string {
-  return isMacPlatform() ? "⌘⇧↵" : "Ctrl+Shift+↵";
-}
-
-function prevShortcutLabel(): string {
-  return isMacPlatform() ? "⌘[" : "Ctrl+[";
-}
-
-function nextShortcutLabel(): string {
-  return isMacPlatform() ? "⌘]" : "Ctrl+]";
-}
-
-function consoleShortcutLabel(): string {
-  return isMacPlatform() ? "⌘J" : "Ctrl+J";
-}
-
-function monacoWindow(): Window & { monaco?: MonacoApi; require?: MonacoRequire } {
-  return window as Window & { monaco?: MonacoApi; require?: MonacoRequire };
-}
-
-function toUint32(value: number): number {
-  return value >>> 0;
-}
-
-function signed32(value: number): number {
-  return value >> 0;
-}
-
-function formatValue(value: number, size: "byte" | "half" | "word" = "word"): string {
-  const normalized = toUint32(value);
-  const masked = size === "byte" ? normalized & 0xff : size === "half" ? normalized & 0xffff : normalized;
-  const width = size === "byte" ? 2 : size === "half" ? 4 : 8;
-  return `0x${masked.toString(16).padStart(width, "0")} (${signed32(masked)})`;
+function readStoredNumber(raw: string | null, fallback: number): number {
+  if (!raw) {
+    return fallback;
+  }
+  const value = Number.parseFloat(raw);
+  return Number.isFinite(value) ? value : fallback;
 }
 
 function formatRelativeDate(iso: string): string {
@@ -222,147 +357,23 @@ function formatRelativeDate(iso: string): string {
   });
 }
 
-function formatTimer(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  if (hours > 0) {
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  }
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+function formatSignedValue(value: number, size: "byte" | "half" | "word" = "word"): string {
+  const normalized = value >>> 0;
+  const masked = size === "byte" ? normalized & 0xff : size === "half" ? normalized & 0xffff : normalized;
+  const width = size === "byte" ? 2 : size === "half" ? 4 : 8;
+  return `0x${masked.toString(16).padStart(width, "0")} (${masked >> 0})`;
 }
 
-function formatElapsedCompact(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${seconds}s`;
-  }
-  if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
-  }
-  return `${seconds}s`;
+function nextFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
 }
 
-function cssColor(name: string): string {
-  const bodyValue = document.body ? getComputedStyle(document.body).getPropertyValue(name).trim() : "";
-  if (bodyValue) {
-    return bodyValue;
-  }
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
-function monacoHexVar(name: string): string {
-  const value = cssColor(name);
-  if (value.startsWith("#")) {
-    return value.replace("#", "");
-  }
-
-  const match = value.match(/(\d+)\D+(\d+)\D+(\d+)/u);
-  if (!match) {
-    return "ffffff";
-  }
-
-  return [match[1], match[2], match[3]]
-    .map((component) => Number(component).toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function rgba(color: string, alpha: number): string {
-  if (color.startsWith("#")) {
-    const normalized =
-      color.length === 4
-        ? `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`
-        : color;
-    const red = Number.parseInt(normalized.slice(1, 3), 16);
-    const green = Number.parseInt(normalized.slice(3, 5), 16);
-    const blue = Number.parseInt(normalized.slice(5, 7), 16);
-    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
-  }
-
-  const match = color.match(/(\d+)\D+(\d+)\D+(\d+)/u);
-  if (match) {
-    return `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${alpha})`;
-  }
-
-  return color;
-}
-
-function loadTimerState(problemId: string): TimerState {
-  if (typeof sessionStorage === "undefined") {
-    return {
-      elapsedMs: 0,
-      runningSince: Date.now(),
-      stopped: false,
-    };
-  }
-
-  const raw = safeSessionStorageGet(`problems_timer_${problemId}`);
-  if (!raw) {
-    return {
-      elapsedMs: 0,
-      runningSince: document.visibilityState === "hidden" ? null : Date.now(),
-      stopped: false,
-    };
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as Partial<TimerState>;
-    return {
-      elapsedMs: typeof parsed.elapsedMs === "number" && Number.isFinite(parsed.elapsedMs) ? Math.max(0, parsed.elapsedMs) : 0,
-      runningSince:
-        typeof parsed.runningSince === "number" && Number.isFinite(parsed.runningSince) ? parsed.runningSince : document.visibilityState === "hidden" ? null : Date.now(),
-      stopped: parsed.stopped === true,
-    };
-  } catch {
-    return {
-      elapsedMs: 0,
-      runningSince: document.visibilityState === "hidden" ? null : Date.now(),
-      stopped: false,
-    };
-  }
-}
-
-function saveTimerState(problemId: string, timerState: TimerState): void {
-  safeSessionStorageSet(`problems_timer_${problemId}`, JSON.stringify(timerState));
-}
-
-function timerElapsedMs(timerState: TimerState): number {
-  return timerState.elapsedMs + (timerState.runningSince ? Date.now() - timerState.runningSince : 0);
-}
-
-function pauseTimer(problemId: string, timerState: TimerState): void {
-  if (timerState.runningSince) {
-    timerState.elapsedMs += Date.now() - timerState.runningSince;
-    timerState.runningSince = null;
-    saveTimerState(problemId, timerState);
-  }
-}
-
-function resumeTimer(problemId: string, timerState: TimerState): void {
-  if (!timerState.runningSince && !timerState.stopped) {
-    timerState.runningSince = Date.now();
-    saveTimerState(problemId, timerState);
-  }
-}
-
-function stopTimer(problemId: string, timerState: TimerState): void {
-  pauseTimer(problemId, timerState);
-  timerState.stopped = true;
-  saveTimerState(problemId, timerState);
-}
-
-function loadFilterState(): FilterState {
-  if (typeof sessionStorage === "undefined") {
-    return { ...DEFAULT_FILTER_STATE };
-  }
-
+function loadFilters(): FilterState {
   const raw = safeSessionStorageGet(FILTER_STORAGE_KEY);
   if (!raw) {
-    return { ...DEFAULT_FILTER_STATE };
+    return { ...DEFAULT_FILTERS };
   }
 
   try {
@@ -395,195 +406,68 @@ function loadFilterState(): FilterState {
           : "",
     };
   } catch {
-    return { ...DEFAULT_FILTER_STATE };
+    return { ...DEFAULT_FILTERS };
   }
 }
 
-function saveFilterState(filters: FilterState): void {
+function saveFilters(filters: FilterState): void {
   safeSessionStorageSet(FILTER_STORAGE_KEY, JSON.stringify(filters));
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
-function problemFromUrl(): Problem | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  return getProblem(new URL(window.location.href).searchParams.get("id")) ?? null;
-}
-
-function activeVisibleCases(problem: Problem): ProblemTestCase[] {
-  return problem.testCases.filter((testCase) => testCase.visible);
-}
-
-function difficultyClass(difficulty: Difficulty): string {
-  return difficulty.toLowerCase();
-}
-
-function verdictText(verdict: ProblemVerdict): string {
-  switch (verdict) {
-    case "Accepted":
-      return "✓ Accepted";
-    case "Wrong Answer":
-      return "✗ Wrong Answer";
-    case "Runtime Error":
-      return "⚠ Runtime Error";
-    case "Time Limit Exceeded":
-      return "⏱ Time Limit";
-    case "Assembly Error":
-      return "✗ Assembly Error";
-  }
-}
-
 let monacoPromise: Promise<MonacoApi> | null = null;
+let riscLanguageDefined = false;
 
-function loadMonaco(): Promise<MonacoApi> {
-  const monacoHost = monacoWindow();
-
-  if (monacoHost.monaco) {
-    return Promise.resolve(monacoHost.monaco);
-  }
-  if (monacoPromise) {
-    return monacoPromise;
-  }
-
-  monacoPromise = new Promise<MonacoApi>((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
-      reject(new Error("Monaco failed to load within 10 seconds."));
-    }, 10000);
-
-    const onReady = (): void => {
-      window.clearTimeout(timeout);
-      if (!monacoHost.monaco) {
-        reject(new Error("Monaco loaded without exposing the editor API."));
-        return;
-      }
-      resolve(monacoHost.monaco);
-    };
-
-    const bootstrap = (): void => {
-      const requireJs = monacoHost.require;
-      if (!requireJs) {
-        reject(new Error("Monaco AMD loader was not available."));
-        return;
-      }
-      requireJs.config({
-        paths: { vs: MONACO_CDN },
-      });
-      requireJs(
-        ["vs/editor/editor.main"],
-        () => onReady(),
-        (error) => {
-          window.clearTimeout(timeout);
-          reject(error instanceof Error ? error : new Error(String(error)));
-        }
-      );
-    };
-
-    const existingLoader = document.querySelector<HTMLScriptElement>("script[data-monaco-loader='1']");
-    if (existingLoader) {
-      if (monacoHost.require) {
-        bootstrap();
-      } else {
-        existingLoader.addEventListener("load", () => bootstrap(), { once: true });
-      }
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = `${MONACO_CDN}/loader.min.js`;
-    script.async = true;
-    script.dataset.monacoLoader = "1";
-    script.addEventListener("load", () => bootstrap(), { once: true });
-    script.addEventListener(
-      "error",
-      () => {
-        window.clearTimeout(timeout);
-        reject(new Error("Failed to load Monaco AMD loader."));
-      },
-      { once: true }
-    );
-    document.head.appendChild(script);
-  });
-
-  return monacoPromise;
+function monacoHost(): Window & { monaco?: MonacoApi; require?: MonacoRequire } {
+  return window as Window & { monaco?: MonacoApi; require?: MonacoRequire };
 }
 
-function applyMonacoTheme(monaco: MonacoApi): void {
-  const dark = document.documentElement.dataset.theme === "dark";
-  monaco.editor.defineTheme("studyriscv-dark", {
+function defineMonacoTheme(monaco: MonacoApi): void {
+  monaco.editor.defineTheme(MONACO_THEME_NAME, {
     base: "vs-dark",
     inherit: true,
     rules: [
-      { token: "instruction", foreground: monacoHexVar("--accent-hover"), fontStyle: "bold" },
-      { token: "register", foreground: monacoHexVar("--accent"), fontStyle: "bold" },
-      { token: "number", foreground: monacoHexVar("--warning") },
-      { token: "comment", foreground: monacoHexVar("--success"), fontStyle: "italic" },
-      { token: "directive", foreground: monacoHexVar("--danger") },
-      { token: "label", foreground: monacoHexVar("--accent-hover") },
+      { token: "comment", foreground: "6a9955", fontStyle: "italic" },
+      { token: "keyword", foreground: "569cd6", fontStyle: "bold" },
+      { token: "variable", foreground: "9cdcfe" },
+      { token: "number", foreground: "b5cea8" },
+      { token: "type", foreground: "4ec9b0" },
+      { token: "string", foreground: "ce9178" },
+      { token: "operator", foreground: "d4d4d4" },
     ],
     colors: {
-      "editor.background": cssColor("--bg-surface"),
-      "editor.foreground": cssColor("--text-primary"),
-      "editor.lineHighlightBackground": rgba(cssColor("--accent"), 0.14),
-      "editorLineNumber.foreground": rgba(cssColor("--text-secondary"), 0.9),
-      "editorLineNumber.activeForeground": cssColor("--text-primary"),
-      "editor.selectionBackground": rgba(cssColor("--accent"), 0.28),
-      "editor.inactiveSelectionBackground": rgba(cssColor("--accent"), 0.18),
-      "editorCursor.foreground": cssColor("--accent"),
-      "editorGutter.background": cssColor("--bg-surface"),
-      "editorBracketMatch.background": rgba(cssColor("--accent"), 0.2),
-      "editorBracketMatch.border": rgba(cssColor("--accent-hover"), 0.82),
-      "editorIndentGuide.activeBackground1": rgba(cssColor("--text-secondary"), 0.55),
-      "editorIndentGuide.background1": rgba(cssColor("--border"), 0.45),
-      "editorWhitespace.foreground": rgba(cssColor("--text-muted"), 0.28),
-      "editorWidget.background": cssColor("--bg-elevated"),
-      "editorWidget.border": cssColor("--border"),
-      "editorHoverWidget.background": cssColor("--bg-elevated"),
-      "editorHoverWidget.border": cssColor("--border"),
-      "focusBorder": cssColor("--accent"),
-      "dropdown.background": cssColor("--bg-elevated"),
-      "dropdown.foreground": cssColor("--text-primary"),
-      "dropdown.border": cssColor("--border"),
-      "input.background": cssColor("--bg-base"),
-      "input.foreground": cssColor("--text-primary"),
-      "input.border": cssColor("--border"),
+      "editor.background": "#1e1e1e",
+      "editor.foreground": "#d4d4d4",
+      "editor.lineHighlightBackground": "#2a2d2e",
+      "editor.lineHighlightBorder": "#282828",
+      "editorLineNumber.foreground": "#858585",
+      "editorLineNumber.activeForeground": "#c6c6c6",
+      "editor.selectionBackground": "#264f78",
+      "editor.inactiveSelectionBackground": "#3a3d41",
+      "editorCursor.foreground": "#aeafad",
+      "editorCursor.background": "#000000",
+      "editor.findMatchBackground": "#515c6a",
+      "editorBracketMatch.background": "#0064001a",
+      "editorBracketMatch.border": "#888888",
+      "editorGutter.background": "#1e1e1e",
+      "scrollbar.shadow": "#000000",
+      "scrollbarSlider.background": "#79797966",
+      "scrollbarSlider.hoverBackground": "#646464b3",
+      "scrollbarSlider.activeBackground": "#bfbfbf66",
     },
   });
-  monaco.editor.setTheme(dark ? "studyriscv-dark" : "vs");
 }
 
-let monacoLanguageRegistered = false;
-
-function ensureMonacoLanguage(monaco: MonacoApi): void {
-  if (monacoLanguageRegistered) {
+function defineRISCVLanguage(monaco: MonacoApi): void {
+  if (riscLanguageDefined) {
     return;
   }
 
-  monaco.languages.register({ id: MONACO_LANGUAGE_ID });
-  monaco.languages.setMonarchTokensProvider(MONACO_LANGUAGE_ID, {
-    ignoreCase: true,
-    tokenizer: {
-      root: [
-        [/^\s*[A-Za-z_.$][\w.$]*:/, "label"],
-        [/#.*$/, "comment"],
-        [/\.[A-Za-z_.]+/, "directive"],
-        [new RegExp(`\\b(?:${RISCV_INSTRUCTIONS})\\b`, "i"), "instruction"],
-        [new RegExp(`\\b(?:${RISCV_REGISTERS})\\b`, "i"), "register"],
-        [/-?0x[0-9a-f]+/, "number"],
-        [/-?0b[01]+/, "number"],
-        [/-?\d+/, "number"],
-        [/[()[\]]/, "@brackets"],
-        [/[,:]/, "delimiter"],
-        [/[A-Za-z_.$][\w.$]*/, "identifier"],
-        [/\s+/, ""],
-      ],
+  monaco.languages.register({ id: RISCV_LANGUAGE_ID });
+  monaco.languages.setMonarchTokensProvider(RISCV_LANGUAGE_ID, buildRiscvLanguageDefinition());
+  monaco.languages.setLanguageConfiguration(RISCV_LANGUAGE_ID, {
+    comments: {
+      lineComment: "#",
     },
-  });
-  monaco.languages.setLanguageConfiguration(MONACO_LANGUAGE_ID, {
-    comments: { lineComment: "#" },
     brackets: [
       ["(", ")"],
       ["[", "]"],
@@ -598,200 +482,226 @@ function ensureMonacoLanguage(monaco: MonacoApi): void {
     ],
   });
 
-  monacoLanguageRegistered = true;
+  riscLanguageDefined = true;
 }
 
-function initEditor(container: HTMLElement, monaco: MonacoApi, code: string): MonacoEditorInstance {
-  ensureMonacoLanguage(monaco);
-  applyMonacoTheme(monaco);
+function loadMonaco(): Promise<MonacoApi> {
+  const host = monacoHost();
+
+  if (host.monaco) {
+    defineMonacoTheme(host.monaco);
+    defineRISCVLanguage(host.monaco);
+    return Promise.resolve(host.monaco);
+  }
+
+  if (monacoPromise) {
+    return monacoPromise;
+  }
+
+  monacoPromise = new Promise<MonacoApi>((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      reject(new Error("Monaco load timeout"));
+    }, 15000);
+
+    const onLoad = (): void => {
+      const requireJs = host.require;
+      if (!requireJs) {
+        window.clearTimeout(timeout);
+        reject(new Error("Monaco AMD loader unavailable"));
+        return;
+      }
+
+      requireJs.config({
+        paths: { vs: MONACO_CDN },
+      });
+
+      requireJs(
+        ["vs/editor/editor.main"],
+        () => {
+          window.clearTimeout(timeout);
+          if (!host.monaco) {
+            reject(new Error("Monaco failed to expose the editor API"));
+            return;
+          }
+          defineMonacoTheme(host.monaco);
+          defineRISCVLanguage(host.monaco);
+          resolve(host.monaco);
+        },
+        (error) => {
+          window.clearTimeout(timeout);
+          reject(error instanceof Error ? error : new Error(String(error)));
+        }
+      );
+    };
+
+    const existingLoader = document.querySelector<HTMLScriptElement>("script[data-monaco-loader='1']");
+    if (existingLoader) {
+      if (host.require) {
+        onLoad();
+      } else {
+        existingLoader.addEventListener("load", onLoad, { once: true });
+      }
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = `${MONACO_CDN}/loader.js`;
+    script.async = true;
+    script.dataset.monacoLoader = "1";
+    script.addEventListener("load", onLoad, { once: true });
+    script.addEventListener(
+      "error",
+      () => {
+        window.clearTimeout(timeout);
+        reject(new Error("Monaco CDN load failed"));
+      },
+      { once: true }
+    );
+    document.head.appendChild(script);
+  });
+
+  return monacoPromise;
+}
+
+function createMonacoEditor(monaco: MonacoApi, container: HTMLElement, code: string): MonacoEditorInstance {
+  monaco.editor.setTheme(MONACO_THEME_NAME);
   return monaco.editor.create(container, {
     value: code,
-    language: MONACO_LANGUAGE_ID,
-    theme: document.documentElement.dataset.theme === "dark" ? "studyriscv-dark" : "vs",
-    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-    fontSize: 15,
-    lineHeight: 24,
+    language: RISCV_LANGUAGE_ID,
+    theme: MONACO_THEME_NAME,
+    fontFamily: "'JetBrains Mono', 'Fira Code', 'Geist Mono', 'Cascadia Code', monospace",
+    fontLigatures: true,
+    fontSize: 14,
+    lineHeight: 22,
     tabSize: 2,
     insertSpaces: true,
+    detectIndentation: false,
     minimap: { enabled: false },
     scrollBeyondLastLine: false,
     renderLineHighlight: "all",
-    renderLineHighlightOnlyWhenFocus: false,
-    cursorBlinking: "smooth",
+    cursorBlinking: "blink",
+    cursorStyle: "line",
     cursorWidth: 2,
     smoothScrolling: true,
     automaticLayout: true,
-    padding: { top: 18, bottom: 18 },
+    padding: { top: 16, bottom: 20 },
     lineNumbers: "on",
     lineNumbersMinChars: 3,
-    lineDecorationsWidth: 12,
     glyphMargin: false,
     folding: false,
-    renderWhitespace: "selection",
+    renderWhitespace: "none",
     wordWrap: "off",
+    scrollbar: {
+      vertical: "auto",
+      horizontal: "auto",
+      verticalScrollbarSize: 6,
+      horizontalScrollbarSize: 6,
+    },
+    overviewRulerBorder: false,
+    hideCursorInOverviewRuler: true,
     matchBrackets: "always",
-    guides: { bracketPairs: true, indentation: true, highlightActiveIndentation: true },
-    bracketPairColorization: { enabled: true },
+    bracketPairColorization: { enabled: false },
+    contextmenu: true,
+    quickSuggestions: false,
+    parameterHints: { enabled: false },
+    suggestOnTriggerCharacters: false,
+    acceptSuggestionOnEnter: "off",
+    tabCompletion: "off",
+    wordBasedSuggestions: "off",
   });
 }
 
-function initFallbackEditor(container: HTMLElement, code: string): MonacoEditorInstance {
-  container.innerHTML = "";
-  const textarea = document.createElement("textarea");
-  textarea.className = "pv-editor-fallback";
-  textarea.spellcheck = false;
-  textarea.value = code;
-  container.appendChild(textarea);
-
-  const listeners = new Set<() => void>();
-  const notify = (): void => {
-    listeners.forEach((listener) => listener());
-  };
-
-  textarea.addEventListener("input", notify);
-
-  return {
-    getValue(): string {
-      return textarea.value;
-    },
-    setValue(value: string): void {
-      textarea.value = value;
-    },
-    updateOptions(options: Record<string, unknown>): void {
-      if ("readOnly" in options) {
-        textarea.readOnly = options.readOnly === true;
-      }
-    },
-    layout(): void {
-      // Native textarea handles layout through CSS sizing.
-    },
-    focus(): void {
-      textarea.focus();
-    },
-    dispose(): void {
-      textarea.removeEventListener("input", notify);
-      textarea.remove();
-      listeners.clear();
-    },
-    onDidChangeModelContent(listener: () => void): { dispose(): void } {
-      listeners.add(listener);
-      return {
-        dispose(): void {
-          listeners.delete(listener);
-        },
-      };
-    },
-  };
-}
-
-class ProblemsApp {
-  private readonly listView = document.getElementById("problems-list-view") as HTMLElement;
+class ProblemsPageApp {
+  private readonly problems = getProblems();
+  private readonly body = document.body;
+  private readonly nav = document.getElementById("site-nav") as HTMLElement;
   private readonly footer = document.getElementById("site-footer") as HTMLElement;
-  private readonly solvedStat = document.getElementById("pl-stat-solved") as HTMLElement;
-  private readonly attemptedStat = document.getElementById("pl-stat-attempted") as HTMLElement;
-  private readonly totalStat = document.getElementById("pl-stat-total") as HTMLElement;
+  private readonly listLayout = document.getElementById("pl-layout") as HTMLElement;
   private readonly searchInput = document.getElementById("pl-search") as HTMLInputElement;
   private readonly difficultyFilter = document.getElementById("pl-difficulty") as HTMLSelectElement;
   private readonly statusFilter = document.getElementById("pl-status") as HTMLSelectElement;
   private readonly tagFilter = document.getElementById("pl-tag") as HTMLSelectElement;
   private readonly clearFiltersButton = document.getElementById("pl-clear") as HTMLButtonElement;
   private readonly tableBody = document.getElementById("pl-tbody") as HTMLElement;
+  private readonly solvedStat = document.getElementById("pl-stat-solved") as HTMLElement;
+  private readonly attemptedStat = document.getElementById("pl-stat-attempted") as HTMLElement;
+  private readonly totalStat = document.getElementById("pl-stat-total") as HTMLElement;
 
-  private readonly problemView = document.getElementById("pv-layout") as HTMLElement;
-  private readonly panels = document.getElementById("pv-panels") as HTMLElement;
+  private readonly problemLayout = document.getElementById("pv-layout") as HTMLElement;
+  private readonly backLink = document.getElementById("pv-back-link") as HTMLAnchorElement;
+  private readonly crumbDifficulty = document.getElementById("pv-crumb-difficulty") as HTMLElement;
+  private readonly crumbTitle = document.getElementById("pv-crumb-title") as HTMLElement;
+  private readonly prevButton = document.getElementById("pv-prev") as HTMLButtonElement;
+  private readonly nextButton = document.getElementById("pv-next") as HTMLButtonElement;
+  private readonly timer = document.getElementById("pv-timer") as HTMLElement;
+  private readonly fullscreenButton = document.getElementById("pv-fullscreen-btn") as HTMLButtonElement;
+
+  private readonly main = document.getElementById("pv-main") as HTMLElement;
   private readonly leftPanel = document.getElementById("pv-left") as HTMLElement;
+  private readonly leftBody = document.getElementById("pv-left-body") as HTMLElement;
+  private readonly hintsBadge = document.getElementById("pv-hints-badge") as HTMLElement;
+  private readonly verticalDivider = document.getElementById("pv-divider-v") as HTMLElement;
+
   private readonly rightPanel = document.getElementById("pv-right") as HTMLElement;
-  private readonly dividerV = document.getElementById("pv-divider-v") as HTMLElement;
-  private readonly dividerH = document.getElementById("pv-divider-h") as HTMLElement;
-  private readonly topbarNum = document.getElementById("pv-topbar-num") as HTMLElement;
-  private readonly topbarTitle = document.getElementById("pv-topbar-title") as HTMLElement;
-  private readonly topbarCrumbs = document.getElementById("pv-topbar-crumbs") as HTMLElement;
-  private readonly topbarDifficulty = document.getElementById("pv-topbar-difficulty") as HTMLElement;
-  private readonly topbarTags = document.getElementById("pv-topbar-tags") as HTMLElement;
-  private readonly timerValue = document.getElementById("pv-timer") as HTMLElement;
-  private readonly backButton = document.getElementById("pv-back-btn") as HTMLButtonElement;
-  private readonly prevButton = document.getElementById("pv-prev-btn") as HTMLButtonElement;
-  private readonly nextButton = document.getElementById("pv-next-btn") as HTMLButtonElement;
-  private readonly shortcutsButton = document.getElementById("pv-shortcuts-btn") as HTMLButtonElement;
-  private readonly shortcutsPopover = document.getElementById("pv-shortcuts-popover") as HTMLElement;
-  private readonly leftContent = document.getElementById("pv-left-content") as HTMLElement;
-  private readonly hintCount = document.getElementById("pv-hint-count") as HTMLElement;
-  private readonly editorRoot = document.getElementById("pv-editor") as HTMLElement;
-  private readonly editorStage = document.getElementById("pv-editor-stage") as HTMLElement;
-  private readonly editorLoading = document.getElementById("pv-editor-loading") as HTMLElement;
-  private readonly autosaveIndicator = document.getElementById("pv-autosave-indicator") as HTMLElement;
+  private readonly editorSection = document.getElementById("pv-editor-section") as HTMLElement;
+  private readonly editorHeader = document.getElementById("pv-editor-header") as HTMLElement;
+  private readonly monacoContainer = document.getElementById("pv-monaco") as HTMLElement;
+  private readonly monacoLoading = document.getElementById("pv-monaco-loading") as HTMLElement;
   private readonly resetButton = document.getElementById("pv-reset-btn") as HTMLButtonElement;
+  private readonly runButton = document.getElementById("pv-run-btn") as HTMLButtonElement;
+  private readonly submitButton = document.getElementById("pv-submit-btn") as HTMLButtonElement;
+  private readonly horizontalDivider = document.getElementById("pv-divider-h") as HTMLElement;
+  private readonly consoleTabs = document.getElementById("pv-console-tabs") as HTMLElement;
+  private readonly consoleBody = document.getElementById("pv-console-body") as HTMLElement;
+  private readonly consoleClearButton = document.getElementById("pv-console-clear") as HTMLButtonElement;
+  private readonly verdict = document.getElementById("pv-verdict") as HTMLElement;
+  private readonly verdictContent = document.getElementById("pv-verdict-content") as HTMLElement;
+  private readonly verdictClose = document.getElementById("pv-verdict-close") as HTMLButtonElement;
   private readonly resetConfirm = document.getElementById("pv-reset-confirm") as HTMLElement;
   private readonly resetCancelButton = document.getElementById("pv-reset-cancel") as HTMLButtonElement;
   private readonly resetOkButton = document.getElementById("pv-reset-ok") as HTMLButtonElement;
-  private readonly fullscreenButton = document.getElementById("pv-fullscreen-btn") as HTMLButtonElement;
-  private readonly fullscreenIcon = document.querySelector("#pv-fullscreen-icon") as SVGSVGElement;
-  private readonly openSimulatorButton = document.getElementById("pv-open-sim-btn") as HTMLButtonElement;
-  private readonly loadBanner = document.getElementById("pv-load-banner") as HTMLElement;
-  private readonly consoleElement = document.getElementById("pv-console") as HTMLElement;
-  private readonly consoleContent = document.getElementById("pv-console-content") as HTMLElement;
-  private readonly consoleToggle = document.getElementById("pv-console-toggle") as HTMLButtonElement;
-  private readonly runButton = document.getElementById("pv-run-btn") as HTMLButtonElement;
-  private readonly submitButton = document.getElementById("pv-submit-btn") as HTMLButtonElement;
-  private readonly verdictLayer = document.getElementById("pv-verdict-layer") as HTMLElement;
 
-  private readonly problems = getProblems();
-  private readonly themeObserver = new MutationObserver(() => {
-    if (this.monaco) {
-      applyMonacoTheme(this.monaco);
-    }
-  });
-
+  private filters: FilterState = loadFilters();
   private session: UserSession | null = null;
   private progress: ProblemProgress = loadProblemProgressForUser(null);
-  private filters: FilterState = loadFilterState();
-  private searchTimer: number | null = null;
-  private autosaveTimer: number | null = null;
-  private autosaveIndicatorTimer: number | null = null;
-  private verdictDismissTimer: number | null = null;
   private currentProblem: Problem | null = null;
-  private timerState: TimerState | null = null;
   private leftTab: LeftTab = "description";
   private consoleTab: ConsoleTab = "testcase";
   private activeVisibleCaseIndex = 0;
   private latestSummary: RunSummary | null = null;
   private expandedResultCaseId: string | null = null;
-  private consoleOpen = false;
-  private fullscreen = safeLocalStorageGet(FULLSCREEN_STORAGE_KEY) === "1";
-  private verticalSplit = clamp(
-    Number(safeLocalStorageGet(PANEL_SPLIT_STORAGE_KEY)) || 42,
-    28,
-    65
-  );
-  private consoleHeight = Number(safeLocalStorageGet(CONSOLE_HEIGHT_STORAGE_KEY)) || 260;
-  private running = false;
+  private openHintIndices = new Set<number>();
+  private searchTimer: number | null = null;
+  private autosaveTimer: number | null = null;
+  private verdictTimer: number | null = null;
+  private timerInterval: number | null = null;
+  private timerSeconds = 0;
+  private timerProblemId: string | null = null;
   private monaco: MonacoApi | null = null;
   private editor: MonacoEditorInstance | null = null;
-  private usingFallbackEditor = false;
+  private editorChangeSubscription: { dispose(): void } | null = null;
   private runtimePromise: Promise<WasmRuntime> | null = null;
-  private pendingSubmissionToLoad: ProblemSubmission | null = null;
-  private openHints = new Set<number>();
+  private running = false;
+  private fullscreen = safeLocalStorageGet(FULLSCREEN_STORAGE_KEY) === "1";
 
   async init(): Promise<void> {
     initNav({ activePage: "problems" });
     initFooter();
+    bindVerdictClose(this.verdictClose, this.verdict);
+
     this.totalStat.textContent = String(this.problems.length);
     this.applyFilterControls();
-    this.renderList();
     this.bindEvents();
-    this.themeObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
-    const initialProblem = problemFromUrl();
-    if (initialProblem) {
-      await this.openProblem(initialProblem.id, false);
+    this.renderList();
+
+    const initialProblemId = getCurrentProblemId();
+    if (initialProblemId) {
+      await this.showProblemView(initialProblemId, false);
     } else {
       this.showListView(false);
-      this.restoreListScroll();
     }
+
     void this.refreshSessionState();
-    this.startTimerTicker();
   }
 
   private bindEvents(): void {
@@ -809,16 +719,19 @@ class ProblemsApp {
       this.filters.difficulty = this.difficultyFilter.value as FilterState["difficulty"];
       this.handleFiltersChanged();
     });
+
     this.statusFilter.addEventListener("change", () => {
       this.filters.status = this.statusFilter.value as FilterState["status"];
       this.handleFiltersChanged();
     });
+
     this.tagFilter.addEventListener("change", () => {
       this.filters.tag = this.tagFilter.value as FilterState["tag"];
       this.handleFiltersChanged();
     });
+
     this.clearFiltersButton.addEventListener("click", () => {
-      this.filters = { search: "", difficulty: "", status: "", tag: "" };
+      this.filters = { ...DEFAULT_FILTERS };
       this.applyFilterControls();
       this.handleFiltersChanged();
     });
@@ -836,13 +749,14 @@ class ProblemsApp {
       if (!row) {
         return;
       }
+
       event.preventDefault();
       const problemId = row.dataset.problemId;
       if (!problemId) {
         return;
       }
       this.saveListScroll();
-      void this.openProblem(problemId, true);
+      void this.showProblemView(problemId, true);
     });
 
     this.tableBody.addEventListener("keydown", (event) => {
@@ -862,29 +776,34 @@ class ProblemsApp {
         return;
       }
       this.saveListScroll();
-      void this.openProblem(problemId, true);
+      void this.showProblemView(problemId, true);
     });
 
-    document.querySelectorAll<HTMLButtonElement>("[data-left-tab]").forEach((button) => {
+    this.leftPanel.querySelectorAll<HTMLButtonElement>(".pv-tab").forEach((button) => {
       button.addEventListener("click", () => {
-        this.leftTab = button.dataset.leftTab as LeftTab;
-        this.renderLeftContent();
+        const tab = button.dataset.tab as LeftTab | undefined;
+        if (!tab || !this.currentProblem) {
+          return;
+        }
+        this.leftTab = tab;
+        this.renderLeftBody();
       });
     });
 
-    document.querySelectorAll<HTMLButtonElement>("[data-console-tab]").forEach((button) => {
+    this.consoleTabs.querySelectorAll<HTMLButtonElement>(".pv-console-tab").forEach((button) => {
       button.addEventListener("click", () => {
-        this.consoleTab = button.dataset.consoleTab as ConsoleTab;
-        this.renderConsoleContent();
+        const tab = button.dataset.ctab as ConsoleTab | undefined;
+        if (!tab || !this.currentProblem) {
+          return;
+        }
+        this.consoleTab = tab;
+        this.renderConsoleBody();
       });
     });
 
-    this.backButton.addEventListener("click", () => {
-      if (window.history.state && typeof window.history.state === "object" && "problemId" in window.history.state) {
-        window.history.back();
-      } else {
-        this.showListView(true);
-      }
+    this.backLink.addEventListener("click", (event) => {
+      event.preventDefault();
+      this.showListView(true);
     });
 
     this.prevButton.addEventListener("click", () => {
@@ -894,150 +813,99 @@ class ProblemsApp {
       this.navigateRelative(1);
     });
 
-    this.shortcutsButton.addEventListener("click", (event) => {
-      event.stopPropagation();
-      this.toggleShortcutsPopover();
+    this.fullscreenButton.addEventListener("click", () => {
+      this.fullscreen = !this.fullscreen;
+      safeLocalStorageSet(FULLSCREEN_STORAGE_KEY, this.fullscreen ? "1" : "0");
+      this.applyWorkspaceLayout();
     });
 
     this.resetButton.addEventListener("click", () => {
-      this.resetConfirm.hidden = !this.resetConfirm.hidden;
+      this.resetConfirm.hidden = false;
     });
     this.resetCancelButton.addEventListener("click", () => {
       this.resetConfirm.hidden = true;
     });
     this.resetOkButton.addEventListener("click", () => {
       this.restoreStarterCode();
-      this.resetConfirm.hidden = true;
-    });
-
-    this.fullscreenButton.addEventListener("click", () => {
-      this.fullscreen = !this.fullscreen;
-      safeLocalStorageSet(FULLSCREEN_STORAGE_KEY, this.fullscreen ? "1" : "0");
-      this.applyProblemLayout();
-    });
-
-    this.openSimulatorButton.addEventListener("click", () => {
-      if (!this.editor) {
-        return;
-      }
-      const encoded = encodeURIComponent(btoa(encodeURIComponent(this.editor.getValue())));
-      window.open(`/simulator/?code=${encoded}`, "_blank", "noopener");
-    });
-
-    this.consoleToggle.addEventListener("click", () => {
-      this.consoleOpen = !this.consoleOpen;
-      this.renderConsoleVisibility();
-      this.applyProblemLayout();
     });
 
     this.runButton.addEventListener("click", () => {
-      void this.execute("run");
+      void this.executeRun(false);
     });
     this.submitButton.addEventListener("click", () => {
-      void this.execute("submit");
+      void this.executeRun(true);
     });
 
-    this.leftContent.addEventListener("click", (event) => {
+    this.consoleClearButton.addEventListener("click", () => {
+      this.latestSummary = null;
+      this.expandedResultCaseId = null;
+      this.consoleTab = "result";
+      this.renderConsoleBody();
+    });
+
+    this.leftBody.addEventListener("click", (event) => {
       const target = event.target as HTMLElement | null;
       const hintButton = target?.closest<HTMLButtonElement>("[data-hint-index]");
       if (hintButton && this.currentProblem) {
-        const hintIndex = Number(hintButton.dataset.hintIndex ?? "-1");
-        if (Number.isFinite(hintIndex) && hintIndex >= 0) {
+        const hintIndex = Number.parseInt(hintButton.dataset.hintIndex ?? "-1", 10);
+        if (hintIndex >= 0) {
           void this.toggleHint(hintIndex);
         }
         return;
       }
 
-      const signinButton = target?.closest<HTMLButtonElement>("#pv-signin-prompt");
-      if (signinButton) {
+      const signInButton = target?.closest<HTMLButtonElement>("[data-action='signin']");
+      if (signInButton) {
         showAuthModal({ allowClose: true });
         return;
       }
 
-      const submissionRow = target?.closest<HTMLElement>("[data-load-submission-id]");
-      if (submissionRow && this.currentProblem) {
-        const submissionId = submissionRow.dataset.loadSubmissionId;
-        if (!submissionId) {
-          return;
-        }
-        const entry = this.progress[this.currentProblem.id];
-        const submission = entry?.submissions.find((candidate) => candidate.id === submissionId);
-        if (submission) {
-          this.pendingSubmissionToLoad = submission;
-          this.renderLoadBanner();
-        }
+      const submissionRow = target?.closest<HTMLTableRowElement>("[data-submission-id]");
+      if (submissionRow) {
+        const submissionId = submissionRow.dataset.submissionId;
+        this.loadSubmissionById(submissionId ?? "");
       }
     });
 
-    this.loadBanner.addEventListener("click", (event) => {
+    this.consoleBody.addEventListener("click", (event) => {
       const target = event.target as HTMLElement | null;
-      if (target?.closest(".pv-load-banner__cancel")) {
-        this.pendingSubmissionToLoad = null;
-        this.renderLoadBanner();
-        return;
-      }
-      if (target?.closest(".pv-load-banner__ok")) {
-        this.applyPendingSubmissionLoad();
-      }
-    });
-
-    this.consoleContent.addEventListener("click", (event) => {
-      const target = event.target as HTMLElement | null;
-      const caseButton = target?.closest<HTMLButtonElement>("[data-visible-case-index]");
-      if (caseButton) {
-        this.activeVisibleCaseIndex = Number(caseButton.dataset.visibleCaseIndex ?? "0");
-        this.renderConsoleContent();
+      const caseTab = target?.closest<HTMLButtonElement>(".pv-case-tab");
+      if (caseTab && this.currentProblem && this.consoleTab === "testcase") {
+        const caseIndex = Number.parseInt(caseTab.dataset.ci ?? "0", 10);
+        this.activeVisibleCaseIndex = Number.isFinite(caseIndex) ? caseIndex : 0;
+        this.renderConsoleBody();
         return;
       }
 
-      const resultRow = target?.closest<HTMLElement>("[data-result-case-id]");
-      if (resultRow) {
-        const caseId = resultRow.dataset.resultCaseId ?? null;
+      const resultItem = target?.closest<HTMLElement>("[data-case-id]");
+      if (resultItem && this.consoleTab === "result") {
+        const caseId = resultItem.dataset.caseId ?? null;
         this.expandedResultCaseId = this.expandedResultCaseId === caseId ? null : caseId;
-        this.renderConsoleContent();
-      }
-    });
-
-    this.verdictLayer.addEventListener("click", (event) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest(".pv-verdict__close")) {
-        this.hideVerdict();
-      }
-    });
-
-    document.addEventListener("click", (event) => {
-      const target = event.target as Node | null;
-      if (
-        target &&
-        !this.shortcutsPopover.hidden &&
-        !this.shortcutsPopover.contains(target) &&
-        !this.shortcutsButton.contains(target)
-      ) {
-        this.toggleShortcutsPopover(false);
+        this.renderConsoleBody();
       }
     });
 
     window.addEventListener("popstate", () => {
-      const problem = problemFromUrl();
-      if (problem) {
-        void this.openProblem(problem.id, false);
+      const problemId = getCurrentProblemId();
+      if (problemId) {
+        void this.showProblemView(problemId, false);
       } else {
         this.showListView(false);
       }
     });
 
     window.addEventListener("resize", () => {
-      this.applyProblemLayout();
+      if (this.currentProblem) {
+        this.applyWorkspaceLayout();
+      }
     });
 
     document.addEventListener("visibilitychange", () => {
-      if (!this.currentProblem || !this.timerState) {
+      if (!this.currentProblem || this.timerProblemId !== this.currentProblem.id) {
         return;
       }
-      if (document.visibilityState === "hidden") {
-        pauseTimer(this.currentProblem.id, this.timerState);
-      } else {
-        resumeTimer(this.currentProblem.id, this.timerState);
+      if (document.hidden) {
+        this.saveTimer();
       }
     });
 
@@ -1046,69 +914,47 @@ class ProblemsApp {
     });
 
     document.addEventListener("keydown", (event) => {
-      if (!this.problemView.hidden) {
-        const meta = event.metaKey || event.ctrlKey;
-        if (meta && event.key === "Enter" && !event.shiftKey) {
-          event.preventDefault();
-          void this.execute("run");
-          return;
-        }
-        if (meta && event.key === "Enter" && event.shiftKey) {
-          event.preventDefault();
-          void this.execute("submit");
-          return;
-        }
-        if (meta && event.key === "[") {
-          event.preventDefault();
-          this.navigateRelative(-1);
-          return;
-        }
-        if (meta && event.key === "]") {
-          event.preventDefault();
-          this.navigateRelative(1);
-          return;
-        }
-        if (meta && (event.key === "j" || event.key === "J")) {
-          event.preventDefault();
-          this.consoleToggle.click();
-          return;
-        }
-        if (event.key === "?") {
-          event.preventDefault();
-          this.toggleShortcutsPopover();
-          return;
-        }
-        if (event.key === "Escape") {
-          if (!this.shortcutsPopover.hidden) {
-            this.toggleShortcutsPopover(false);
-            return;
-          }
-          if (this.verdictLayer.childElementCount > 0) {
-            this.hideVerdict();
-            return;
-          }
-          if (this.leftTab === "hints" && this.openHints.size > 0) {
-            this.openHints.clear();
-            this.renderLeftContent();
-          }
-        }
+      if (this.problemLayout.hidden) {
+        return;
+      }
+
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      const modifier = event.metaKey || event.ctrlKey;
+      if (modifier && event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        this.runButton.click();
+        return;
+      }
+
+      if (modifier && event.shiftKey && event.key === "Enter") {
+        event.preventDefault();
+        this.submitButton.click();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        this.verdict.hidden = true;
+        this.resetConfirm.hidden = true;
       }
     });
 
-    this.dividerV.addEventListener("mousedown", (event) => {
-      if (this.fullscreen || window.innerWidth < 768) {
+    this.verticalDivider.addEventListener("mousedown", (event) => {
+      if (this.fullscreen || window.innerWidth < 768 || !this.currentProblem) {
         return;
       }
       event.preventDefault();
-      this.startVerticalDrag(event.clientX);
+      this.startVerticalDrag();
     });
 
-    this.dividerH.addEventListener("mousedown", (event) => {
-      if (!this.consoleOpen || window.innerWidth < 768) {
+    this.horizontalDivider.addEventListener("mousedown", (event) => {
+      if (window.innerWidth < 768 || !this.currentProblem) {
         return;
       }
       event.preventDefault();
-      this.startHorizontalDrag(event.clientY);
+      this.startHorizontalDrag();
     });
   }
 
@@ -1118,23 +964,22 @@ class ProblemsApp {
       const guestProgress = loadProblemProgressForUser(null);
 
       if (this.session) {
-        const scopedProgress = loadProblemProgressForUser(this.session.userId);
-        const apiProgress = await loadProblemProgressFromApi(this.session.idToken);
-        this.progress = mergeProblemProgress(mergeProblemProgress(guestProgress, scopedProgress), apiProgress ?? {});
+        const scoped = loadProblemProgressForUser(this.session.userId);
+        const remote = await loadProblemProgressFromApi(this.session.idToken);
+        this.progress = mergeProblemProgress(mergeProblemProgress(guestProgress, scoped), remote ?? {});
         saveProblemProgressForUser(this.progress, this.session.userId);
         void syncProblemProgressToApi(this.progress, this.session.idToken);
       } else {
         this.progress = guestProgress;
       }
     } catch (error) {
-      console.error("Failed to refresh problem session state.", error);
+      console.error("Failed to refresh problem progress.", error);
       this.session = null;
       this.progress = loadProblemProgressForUser(null);
     } finally {
       this.renderList();
       if (this.currentProblem) {
-        this.renderLeftContent();
-        this.renderTopbar();
+        this.renderLeftBody();
       }
     }
   }
@@ -1143,6 +988,7 @@ class ProblemsApp {
     const filteredProblems = this.problems.filter((problem) => this.matchesFilters(problem));
     this.solvedStat.textContent = String(this.problems.filter((problem) => this.problemStatus(problem.id) === "solved").length);
     this.attemptedStat.textContent = String(this.problems.filter((problem) => this.problemStatus(problem.id) === "attempted").length);
+    this.totalStat.textContent = String(this.problems.length);
     this.updateFilterUi();
 
     if (filteredProblems.length === 0) {
@@ -1171,7 +1017,6 @@ class ProblemsApp {
           <tr
             class="pl-row"
             data-problem-id="${escapeHtml(problem.id)}"
-            data-difficulty="${escapeHtml(problem.difficulty)}"
             tabindex="0"
             role="link"
             aria-label="Open problem ${problem.number}: ${escapeHtml(problem.title)}"
@@ -1192,7 +1037,7 @@ class ProblemsApp {
             </td>
             <td class="pl-td pl-td--acceptance">${problem.acceptanceRate.toFixed(1)}%</td>
             <td class="pl-td pl-td--difficulty">
-              <span class="pl-difficulty pl-difficulty--${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span>
+              <span class="pl-difficulty pl-difficulty--${problem.difficulty.toLowerCase()}">${escapeHtml(problem.difficulty)}</span>
             </td>
           </tr>
         `;
@@ -1201,22 +1046,26 @@ class ProblemsApp {
   }
 
   private matchesFilters(problem: Problem): boolean {
-    const search = this.filters.search.trim().toLowerCase();
+    const search = this.filters.search.toLowerCase();
     if (search) {
       const haystack = [problem.title, ...problem.tags].join(" ").toLowerCase();
       if (!haystack.includes(search)) {
         return false;
       }
     }
+
     if (this.filters.difficulty && problem.difficulty !== this.filters.difficulty) {
       return false;
     }
+
     if (this.filters.status && this.problemStatus(problem.id) !== this.filters.status) {
       return false;
     }
+
     if (this.filters.tag && !problem.tags.includes(this.filters.tag)) {
       return false;
     }
+
     return true;
   }
 
@@ -1225,26 +1074,23 @@ class ProblemsApp {
   }
 
   private handleFiltersChanged(): void {
-    saveFilterState(this.filters);
+    saveFilters(this.filters);
     this.applyFilterControls();
     this.renderList();
   }
 
   private applyFilterControls(): void {
     this.searchInput.value = this.filters.search;
-    this.difficultyFilter.value =
-      this.filters.difficulty === "Easy" || this.filters.difficulty === "Medium" || this.filters.difficulty === "Hard"
-        ? this.filters.difficulty
-        : "";
+    this.difficultyFilter.value = this.filters.difficulty;
     this.statusFilter.value = this.filters.status;
     this.tagFilter.value = this.filters.tag;
   }
 
   private updateFilterUi(): void {
-    const hasActiveFilters = Boolean(this.filters.search || this.filters.difficulty || this.filters.status || this.filters.tag);
-    this.clearFiltersButton.hidden = !hasActiveFilters;
-    [this.difficultyFilter, this.statusFilter, this.tagFilter].forEach((element) => {
-      element.classList.toggle("is-active", Boolean(element.value));
+    const hasFilters = Boolean(this.filters.search || this.filters.difficulty || this.filters.status || this.filters.tag);
+    this.clearFiltersButton.hidden = !hasFilters;
+    [this.difficultyFilter, this.statusFilter, this.tagFilter].forEach((select) => {
+      select.classList.toggle("is-active", Boolean(select.value));
     });
   }
 
@@ -1253,32 +1099,37 @@ class ProblemsApp {
   }
 
   private restoreListScroll(): void {
-    const raw = Number(safeSessionStorageGet(LIST_SCROLL_STORAGE_KEY));
-    if (Number.isFinite(raw)) {
-      window.requestAnimationFrame(() => {
-        window.scrollTo({ top: raw, behavior: "auto" });
-      });
-    }
+    const value = readStoredNumber(safeSessionStorageGet(LIST_SCROLL_STORAGE_KEY), 0);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: value, behavior: "auto" });
+    });
   }
 
   private showListView(pushHistory: boolean): void {
-    this.problemView.hidden = true;
-    this.listView.hidden = false;
-    this.footer.hidden = false;
-    document.body.classList.remove("problems-view-active");
-    document.title = "Problems - StudyRISC-V";
+    if (this.currentProblem && this.editor) {
+      this.persistCurrentCode();
+    }
+
+    this.stopTimer();
     this.currentProblem = null;
     this.latestSummary = null;
-    this.pendingSubmissionToLoad = null;
-    this.hideVerdict();
-    this.renderLoadBanner();
+    this.problemLayout.hidden = true;
+    this.listLayout.hidden = false;
+    this.nav.hidden = false;
+    this.footer.hidden = false;
+    this.body.classList.remove("pv-body");
+    this.verdict.hidden = true;
+    this.resetConfirm.hidden = true;
+    document.title = "Problems - StudyRISC-V";
+
     if (pushHistory) {
       window.history.pushState({}, "", "/problems/");
     }
+
     this.restoreListScroll();
   }
 
-  private async openProblem(problemId: string, pushHistory: boolean): Promise<void> {
+  private async showProblemView(problemId: string, pushHistory: boolean): Promise<void> {
     const problem = getProblem(problemId);
     if (!problem) {
       this.showListView(pushHistory);
@@ -1290,118 +1141,95 @@ class ProblemsApp {
     }
 
     this.currentProblem = problem;
-    this.timerState = loadTimerState(problem.id);
-    if (!this.timerState.stopped && document.visibilityState !== "hidden") {
-      resumeTimer(problem.id, this.timerState);
-    }
-    saveTimerState(problem.id, this.timerState);
-
     this.leftTab = "description";
     this.consoleTab = "testcase";
     this.activeVisibleCaseIndex = 0;
     this.latestSummary = null;
     this.expandedResultCaseId = null;
-    this.pendingSubmissionToLoad = null;
-    this.consoleOpen = true;
-    this.openHints = new Set<number>();
+    this.openHintIndices.clear();
 
     const entry = ensureProblemEntry(this.progress, problem);
     for (let index = 0; index < (entry.hintsRevealed ?? 0); index += 1) {
-      this.openHints.add(index);
+      this.openHintIndices.add(index);
     }
 
-    this.listView.hidden = true;
-    this.problemView.hidden = false;
+    this.listLayout.hidden = true;
+    this.problemLayout.hidden = false;
+    this.nav.hidden = true;
     this.footer.hidden = true;
-    document.body.classList.add("problems-view-active");
-    document.title = `${problem.title} - StudyRISC-V`;
-    this.hideVerdict();
-    this.renderLoadBanner();
-    this.renderTopbar();
-    this.renderLeftContent();
-    this.renderConsoleVisibility();
-    this.renderConsoleContent();
+    this.body.classList.add("pv-body");
+    this.verdict.hidden = true;
+    this.resetConfirm.hidden = true;
+
+    this.crumbDifficulty.textContent = problem.difficulty;
+    this.crumbDifficulty.dataset.val = problem.difficulty;
+    this.crumbTitle.textContent = problem.title;
+    this.hintsBadge.textContent = String(problem.hints.length);
+    this.prevButton.disabled = problem.number <= 1;
+    this.nextButton.disabled = problem.number >= this.problems.length;
+    document.title = `${problem.number}. ${problem.title} - StudyRISC-V`;
+
+    this.renderLeftBody();
+    this.renderConsoleBody();
+
     if (pushHistory) {
-      window.history.pushState({ problemId }, "", `/problems/?id=${encodeURIComponent(problem.id)}`);
+      window.history.pushState({ id: problem.id }, "", `/problems/?id=${encodeURIComponent(problem.id)}`);
     }
-    await this.ensureEditor(problem);
-    this.applyProblemLayout();
-    if (!safeLocalStorageGet(SHORTCUTS_SEEN_STORAGE_KEY)) {
-      this.toggleShortcutsPopover(true);
-      safeLocalStorageSet(SHORTCUTS_SEEN_STORAGE_KEY, "1");
-    }
+
+    await nextFrame();
+    this.restoreVerticalSplit();
+    await nextFrame();
+    this.restoreHorizontalSplit();
+    this.applyWorkspaceLayout();
+    this.startTimer(problem.id);
+
+    const code = loadProblemCode(problem.id) ?? entry.lastCode ?? problem.starterCode;
+    void this.ensureRuntime();
+    await this.ensureEditor(code);
   }
 
-  private renderTopbar(): void {
-    if (!this.currentProblem || !this.timerState) {
-      return;
-    }
-    this.topbarNum.textContent = `${this.currentProblem.number}.`;
-    this.topbarTitle.textContent = this.currentProblem.title;
-    this.topbarCrumbs.textContent = `Problems / ${this.currentProblem.difficulty}`;
-    this.topbarDifficulty.textContent = this.currentProblem.difficulty;
-    this.topbarDifficulty.className = `pv-topbar__difficulty pv-topbar__difficulty--${difficultyClass(this.currentProblem.difficulty)}`;
-    this.topbarTags.innerHTML = this.currentProblem.tags
-      .slice(0, 3)
-      .map((tag) => `<span class="pv-topbar__tag">${escapeHtml(tag)}</span>`)
-      .join("");
-    this.timerValue.textContent = formatTimer(timerElapsedMs(this.timerState));
-    this.prevButton.disabled = this.currentProblem.number <= 1;
-    this.nextButton.disabled = this.currentProblem.number >= this.problems.length;
-    this.hintCount.textContent = String(this.currentProblem.hints.length);
-    (document.getElementById("pv-shortcut-run") as HTMLElement).textContent = runShortcutLabel();
-    (document.getElementById("pv-shortcut-submit") as HTMLElement).textContent = submitShortcutLabel();
-    (document.getElementById("pv-shortcut-prev") as HTMLElement).textContent = prevShortcutLabel();
-    (document.getElementById("pv-shortcut-next") as HTMLElement).textContent = nextShortcutLabel();
-    (document.getElementById("pv-shortcut-console") as HTMLElement).textContent = consoleShortcutLabel();
+  private async ensureRuntime(): Promise<WasmRuntime> {
+    this.runtimePromise ??= WasmRuntime.create();
+    return this.runtimePromise;
   }
 
-  private async ensureEditor(problem: Problem): Promise<void> {
-    const code = loadProblemCode(problem.id) ?? ensureProblemEntry(this.progress, problem).lastCode ?? problem.starterCode;
+  private async ensureEditor(code: string): Promise<void> {
+    this.monacoLoading.hidden = false;
 
     try {
-      this.monaco = this.monaco ?? (await loadMonaco());
-      applyMonacoTheme(this.monaco);
+      this.monaco ??= await loadMonaco();
+      await nextFrame();
+      this.ensureEditorContainerHeight();
 
-      if (!this.editor || this.usingFallbackEditor) {
-        this.editor?.dispose();
-        this.editorRoot.innerHTML = "";
-        this.editor = initEditor(this.editorRoot, this.monaco, code);
-        this.usingFallbackEditor = false;
+      if (!this.editor) {
+        this.editor = createMonacoEditor(this.monaco, this.monacoContainer, code);
         this.bindEditorAutosave();
       } else {
         this.editor.setValue(code);
         this.editor.updateOptions({ readOnly: false });
       }
+
+      this.monacoLoading.remove();
+      this.editor.layout();
+      this.editor.focus();
     } catch (error) {
-      console.error("Failed to initialize Monaco editor. Falling back to textarea editor.", error);
-      if (!this.editor || !this.usingFallbackEditor) {
-        this.editor?.dispose();
-        this.editor = initFallbackEditor(this.editorRoot, code);
-        this.usingFallbackEditor = true;
-        this.bindEditorAutosave();
-      } else {
-        this.editor.setValue(code);
-        this.editor.updateOptions({ readOnly: false });
-      }
-      this.flashAutosaveIndicator("Basic editor loaded");
+      console.error("Failed to initialize Monaco.", error);
+      this.monacoLoading.innerHTML = `<span style="color:var(--pv-danger)">Editor failed to load: ${escapeHtml(error instanceof Error ? error.message : String(error))}</span>`;
     }
-
-    this.applyProblemLayout();
-    this.editor.focus?.();
   }
 
   private bindEditorAutosave(): void {
-    if (!this.editor) {
+    if (!this.editor || !this.currentProblem) {
       return;
     }
-    this.editor.onDidChangeModelContent(() => {
+
+    this.editorChangeSubscription?.dispose();
+    this.editorChangeSubscription = this.editor.onDidChangeModelContent(() => {
       if (this.autosaveTimer) {
         window.clearTimeout(this.autosaveTimer);
       }
       this.autosaveTimer = window.setTimeout(() => {
         this.persistCurrentCode();
-        this.flashAutosaveIndicator("Auto-saved");
       }, AUTO_SAVE_DELAY_MS);
     });
   }
@@ -1410,6 +1238,7 @@ class ProblemsApp {
     if (!this.currentProblem || !this.editor) {
       return;
     }
+
     const code = this.editor.getValue();
     saveProblemCode(this.currentProblem.id, code);
     const entry = ensureProblemEntry(this.progress, this.currentProblem);
@@ -1421,146 +1250,148 @@ class ProblemsApp {
     }
   }
 
-  private flashAutosaveIndicator(message: string): void {
-    this.autosaveIndicator.textContent = message;
-    this.autosaveIndicator.classList.add("is-visible");
-    if (this.autosaveIndicatorTimer) {
-      window.clearTimeout(this.autosaveIndicatorTimer);
-    }
-    this.autosaveIndicatorTimer = window.setTimeout(() => {
-      this.autosaveIndicator.classList.remove("is-visible");
-    }, 1000);
-  }
-
-  private renderLeftContent(): void {
+  private renderLeftBody(): void {
     if (!this.currentProblem) {
       return;
     }
 
-    document.querySelectorAll<HTMLButtonElement>("[data-left-tab]").forEach((button) => {
-      button.classList.toggle("active", button.dataset.leftTab === this.leftTab);
+    this.leftPanel.querySelectorAll<HTMLButtonElement>(".pv-tab").forEach((button) => {
+      const active = button.dataset.tab === this.leftTab;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
     });
 
     if (this.leftTab === "description") {
-      this.leftContent.innerHTML = this.renderDescriptionTab(this.currentProblem);
+      this.leftBody.innerHTML = this.renderDescription(this.currentProblem);
       return;
     }
 
     if (this.leftTab === "hints") {
-      this.leftContent.innerHTML = this.renderHintsTab(this.currentProblem);
+      this.leftBody.innerHTML = this.renderHints(this.currentProblem);
       return;
     }
 
     if (this.leftTab === "editorial") {
-      this.leftContent.innerHTML = this.renderEditorialTab(this.currentProblem);
+      this.leftBody.innerHTML = this.renderEditorial(this.currentProblem);
       return;
     }
 
-    this.leftContent.innerHTML = this.renderSubmissionsTab(this.currentProblem);
+    this.leftBody.innerHTML = this.renderSubmissions(this.currentProblem);
   }
 
-  private renderDescriptionTab(problem: Problem): string {
-    const tagMarkup = problem.tags.map((tag) => `<span class="pv-meta-tag">${escapeHtml(tag)}</span>`).join("");
-    const companiesMarkup =
-      problem.companies && problem.companies.length > 0
-        ? `
-            <div class="pv-constraints">
-              <h3 class="pv-section-title">Used In</h3>
-              <div class="pv-problem-meta">
-                ${problem.companies.map((company) => `<span class="pv-meta-tag">${escapeHtml(company)}</span>`).join("")}
-              </div>
-            </div>
-          `
-        : "";
-
+  private renderDescription(problem: Problem): string {
     return `
-      <div class="pv-problem-header">
-        <h2 class="pv-problem-title">${problem.number}. ${escapeHtml(problem.title)}</h2>
-        <div class="pv-problem-meta">
-          <span class="pv-badge pv-badge--${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span>
-          ${tagMarkup}
-          <span class="pv-acceptance">${problem.acceptanceRate.toFixed(1)}% acceptance</span>
-        </div>
+      <div class="pv-problem-num">${problem.number}.</div>
+      <h2 class="pv-problem-title">${escapeHtml(problem.title)}</h2>
+
+      <div class="pv-problem-meta">
+        <span class="pv-difficulty-badge pv-difficulty-badge--${problem.difficulty.toLowerCase()}">${escapeHtml(problem.difficulty)}</span>
+        ${problem.tags.map((tag) => `<span class="pv-tag">${escapeHtml(tag)}</span>`).join("")}
+        <span class="pv-meta-acceptance">${problem.acceptanceRate.toFixed(1)}% acceptance</span>
       </div>
 
-      <div class="pv-problem-body">${problem.description}</div>
+      <div class="pv-prose">${problem.description}</div>
 
-      <div class="pv-examples">
-        <h3 class="pv-section-title">Examples</h3>
+      <section class="pv-examples">
+        <div class="pv-section-head">Examples</div>
         ${problem.examples
           .map(
             (example, index) => `
-              <div class="pv-example">
-                <div class="pv-example__label">Example ${index + 1}:</div>
-                <div class="pv-example__block">
+              <article class="pv-example">
+                <div class="pv-example__head">Example ${index + 1}</div>
+                <div class="pv-example__body">
                   <div class="pv-example__row">
-                    <span class="pv-example__key">Input:</span>
-                    <code class="pv-example__val">${escapeHtml(example.input)}</code>
+                    <span class="pv-example__key">Input</span>
+                    <span class="pv-example__val">${escapeHtml(example.input)}</span>
                   </div>
                   <div class="pv-example__row">
-                    <span class="pv-example__key">Output:</span>
-                    <code class="pv-example__val">${escapeHtml(example.output)}</code>
+                    <span class="pv-example__key">Output</span>
+                    <span class="pv-example__val">${escapeHtml(example.output)}</span>
                   </div>
                   ${example.explanation ? `<div class="pv-example__explanation">${escapeHtml(example.explanation)}</div>` : ""}
+                  ${example.registerTable && example.registerTable.length > 0
+                    ? `
+                        <table class="pv-register-table">
+                          <thead>
+                            <tr>
+                              <th>Register</th>
+                              <th>Before</th>
+                              <th>After</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            ${example.registerTable
+                              .map(
+                                (row) => `
+                                  <tr>
+                                    <td class="pv-reg-name">${escapeHtml(row.name)}</td>
+                                    <td class="pv-reg-val">${escapeHtml(row.before)}</td>
+                                    <td class="pv-reg-val">${escapeHtml(row.after)}</td>
+                                  </tr>
+                                `
+                              )
+                              .join("")}
+                          </tbody>
+                        </table>
+                      `
+                    : ""}
                 </div>
-                ${example.registerTable && example.registerTable.length > 0
-                  ? `
-                      <table class="pv-reg-table">
-                        <thead>
-                          <tr><th>Register</th><th>Before</th><th>After</th></tr>
-                        </thead>
-                        <tbody>
-                          ${example.registerTable
-                            .map(
-                              (row) => `
-                                <tr>
-                                  <td>${escapeHtml(row.name)}</td>
-                                  <td>${escapeHtml(row.before)}</td>
-                                  <td>${escapeHtml(row.after)}</td>
-                                </tr>
-                              `
-                            )
-                            .join("")}
-                        </tbody>
-                      </table>
-                    `
-                  : ""}
-              </div>
+              </article>
             `
           )
           .join("")}
-      </div>
+      </section>
 
-      <div class="pv-constraints">
-        <h3 class="pv-section-title">Constraints</h3>
-        <ul class="pv-constraints-list">
+      <section class="pv-constraints">
+        <div class="pv-section-head">Constraints</div>
+        <ul class="pv-constraint-list">
           ${problem.constraints.map((constraint) => `<li>${escapeHtml(constraint)}</li>`).join("")}
         </ul>
-      </div>
+      </section>
 
-      ${companiesMarkup}
+      ${problem.companies?.length
+        ? `
+            <section class="pv-related">
+              <div class="pv-section-head">Related To</div>
+              <div class="pv-problem-meta">
+                ${problem.companies.map((company) => `<span class="pv-tag">${escapeHtml(company)}</span>`).join("")}
+              </div>
+            </section>
+          `
+        : ""}
     `;
   }
 
-  private renderHintsTab(problem: Problem): string {
+  private renderHints(problem: Problem): string {
     const entry = ensureProblemEntry(this.progress, problem);
+    const revealed = entry.hintsRevealed ?? 0;
+
     return `
-      <p class="pv-hints-intro">Hints are free — use them without guilt.</p>
+      <div class="pv-hints-intro">Hints are optional. Use them when you need to unblock yourself, not before.</div>
       ${problem.hints
         .map((hint, index) => {
-          const unlocked = index < (entry.hintsRevealed ?? 0);
-          const availableToReveal = index === (entry.hintsRevealed ?? 0);
-          const open = this.openHints.has(index);
+          const unlocked = index < revealed;
+          const canReveal = index === revealed;
+          const open = this.openHintIndices.has(index);
+
+          if (!unlocked && !canReveal) {
+            return `
+              <div class="pv-hint-locked">
+                <span>🔒</span>
+                <span>Reveal Hint ${index + 1} after opening the previous hint.</span>
+              </div>
+            `;
+          }
+
           return `
-            <div class="pv-hint-item ${open ? "is-open" : ""}" data-index="${index}">
-              <div class="pv-case-label">Hint ${index + 1} of ${problem.hints.length}</div>
-              <button class="pv-hint-reveal" data-hint-index="${index}" type="button" ${!unlocked && !availableToReveal ? "disabled" : ""}>
-                <span>${unlocked ? `Hint ${index + 1}` : `Show Hint ${index + 1}`}</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                  <path d="m9 6 6 6-6 6"></path>
-                </svg>
+            <div class="pv-hint-item ${open ? "is-open" : ""}">
+              <button class="pv-hint-toggle" data-hint-index="${index}" type="button">
+                <span class="pv-hint-toggle__label">${unlocked ? `Hint ${index + 1}` : `Show Hint ${index + 1}`}</span>
+                <span class="pv-hint-toggle__chevron">›</span>
               </button>
-              ${open ? `<div class="pv-hint-content">${escapeHtml(hint)}</div>` : ""}
+              <div class="pv-hint-body">
+                <div class="pv-hint-text">${escapeHtml(hint)}</div>
+              </div>
             </div>
           `;
         })
@@ -1568,68 +1399,45 @@ class ProblemsApp {
     `;
   }
 
-  private renderEditorialTab(problem: Problem): string {
+  private renderEditorial(problem: Problem): string {
     if (!problem.editorial) {
       return `
-        <div class="pv-editorial-placeholder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H19v20H7.5A2.5 2.5 0 0 0 5 24"></path>
-            <path d="M5 4.5v17"></path>
-            <path d="M9 7h7M9 11h7M9 15h5"></path>
-          </svg>
-          <strong>Editorial coming soon.</strong>
-          <p>Check back after you've tried the problem.</p>
+        <div class="pv-submissions-empty">
+          <p>Editorial coming soon.</p>
+          <p>Try the problem first. This space will hold the walkthrough later.</p>
         </div>
       `;
     }
 
     if (this.problemStatus(problem.id) !== "solved") {
       return `
-        <div class="pv-editorial-placeholder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <rect x="5" y="11" width="14" height="10" rx="2"></rect>
-            <path d="M8 11V8a4 4 0 1 1 8 0v3"></path>
-          </svg>
-          <strong>Solve to unlock.</strong>
-          <p>Try the problem first. The editorial appears after an accepted submission.</p>
+        <div class="pv-submissions-empty">
+          <p>Solve the problem to unlock the editorial.</p>
         </div>
       `;
     }
 
-    return `<div class="pv-problem-body">${problem.editorial}</div>`;
+    return `<div class="pv-prose">${problem.editorial}</div>`;
   }
 
-  private renderSubmissionsTab(problem: Problem): string {
-    const entry = this.progress[problem.id];
+  private renderSubmissions(problem: Problem): string {
     if (!this.session) {
       return `
         <div class="pv-submissions-empty">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9.5" cy="7" r="3.5"></circle>
-            <path d="m17 8 4 4"></path>
-            <path d="m21 8-4 4"></path>
-          </svg>
           <p>Sign in to save your submissions.</p>
-          <button class="pv-signin-inline" id="pv-signin-prompt" type="button">Sign in</button>
-          <p class="pv-submissions-note">You can still run and submit — results just won't be synced across devices.</p>
+          <button class="pv-submissions-action" type="button" data-action="signin">Sign in</button>
+          <p>You can still run and submit locally.</p>
         </div>
       `;
     }
 
+    const entry = this.progress[problem.id];
     const submissions = [...(entry?.submissions ?? [])].sort((left, right) => Date.parse(right.submittedAt) - Date.parse(left.submittedAt));
     if (submissions.length === 0) {
       return `
         <div class="pv-submissions-empty">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path d="M4 7h16"></path>
-            <path d="M5 7.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5"></path>
-            <path d="M9 11h6"></path>
-            <path d="M9 15h6"></path>
-            <path d="M9 3h6v4H9z"></path>
-          </svg>
           <p>No submissions yet.</p>
-          <p>Write your solution and click Submit.</p>
+          <p>Run and submit to start building a history.</p>
         </div>
       `;
     }
@@ -1647,8 +1455,8 @@ class ProblemsApp {
           ${submissions
             .map(
               (submission) => `
-                <tr class="pv-submission-row" data-load-submission-id="${escapeHtml(submission.id)}">
-                  <td><span class="pv-submission-status pv-submission-status--${this.submissionTone(submission.verdict)}">${escapeHtml(verdictText(submission.verdict))}</span></td>
+                <tr data-submission-id="${escapeHtml(submission.id)}">
+                  <td><span class="pv-submission-verdict pv-submission-verdict--${this.submissionTone(submission.verdict)}">${escapeHtml(this.submissionLabel(submission.verdict))}</span></td>
                   <td>${escapeHtml(`${submission.stepsTaken} steps`)}</td>
                   <td>${escapeHtml(formatRelativeDate(submission.submittedAt))}</td>
                 </tr>
@@ -1660,49 +1468,34 @@ class ProblemsApp {
     `;
   }
 
-  private submissionTone(verdict: ProblemVerdict): string {
-    switch (verdict) {
-      case "Accepted":
-        return "accepted";
-      case "Wrong Answer":
-        return "wrong";
-      case "Assembly Error":
-        return "assembly";
-      case "Runtime Error":
-        return "runtime";
-      case "Time Limit Exceeded":
-        return "tle";
-    }
-  }
-
-  private renderConsoleVisibility(): void {
-    this.consoleElement.hidden = !this.consoleOpen;
-    this.dividerH.hidden = !this.consoleOpen;
-    this.consoleToggle.classList.toggle("is-active", this.consoleOpen);
-  }
-
-  private renderConsoleContent(): void {
+  private renderConsoleBody(): void {
     if (!this.currentProblem) {
+      this.consoleBody.innerHTML = "";
       return;
     }
 
-    document.querySelectorAll<HTMLButtonElement>("[data-console-tab]").forEach((button) => {
-      button.classList.toggle("active", button.dataset.consoleTab === this.consoleTab);
+    this.consoleTabs.querySelectorAll<HTMLButtonElement>(".pv-console-tab").forEach((button) => {
+      button.classList.toggle("active", button.dataset.ctab === this.consoleTab);
     });
 
     if (this.consoleTab === "testcase") {
-      this.consoleContent.innerHTML = this.renderTestcaseTab(this.currentProblem);
+      this.consoleBody.innerHTML = this.renderTestcaseConsole(this.currentProblem);
       return;
     }
 
-    this.consoleContent.innerHTML = this.renderResultTab();
+    if (!this.latestSummary) {
+      this.consoleBody.innerHTML = `<div class="pv-console-empty">Run your code to see output.</div>`;
+      return;
+    }
+
+    this.consoleBody.innerHTML = this.renderResultsConsole(this.latestSummary);
   }
 
-  private renderTestcaseTab(problem: Problem): string {
-    const visibleCases = activeVisibleCases(problem);
+  private renderTestcaseConsole(problem: Problem): string {
+    const visibleCases = problem.testCases.filter((testCase) => testCase.visible);
     const activeCase = visibleCases[this.activeVisibleCaseIndex] ?? visibleCases[0];
     if (!activeCase) {
-      return "<div class='pv-submissions-empty'><p>No visible test cases.</p></div>";
+      return `<div class="pv-console-empty">No visible test cases.</div>`;
     }
 
     const showExpected = Boolean(this.latestSummary);
@@ -1711,313 +1504,247 @@ class ProblemsApp {
         ${visibleCases
           .map(
             (testCase, index) => `
-              <button class="pv-case-tab ${index === this.activeVisibleCaseIndex ? "is-active" : ""}" data-visible-case-index="${index}" type="button">
+              <button class="pv-case-tab ${index === this.activeVisibleCaseIndex ? "active" : ""}" data-ci="${index}" type="button">
                 ${escapeHtml(testCase.label)}
               </button>
             `
           )
           .join("")}
       </div>
-      <div class="pv-case-section">
-        <div class="pv-case-label">Initial State</div>
-        ${this.renderCaseRegisterTable(activeCase.initialRegisters)}
-      </div>
-      ${activeCase.initialMemory && activeCase.initialMemory.length > 0
-        ? `
-            <div class="pv-case-section pv-case-memory">
-              <div class="pv-case-label">Memory</div>
-              ${activeCase.initialMemory
-                .map(
-                  (entry) => `
-                    <div class="pv-case-memory-row">
-                      <span class="pv-case-memory-label">${escapeHtml(entry.label ?? formatValue(entry.address))}</span>
-                      <span>${escapeHtml(formatValue(entry.value, entry.size ?? "word"))}</span>
-                    </div>
-                  `
-                )
-                .join("")}
-            </div>
-          `
-        : ""}
-      ${showExpected
-        ? `
-            <div class="pv-case-section pv-case-expected">
-              <div class="pv-case-label">Expected Output</div>
-              ${this.renderCaseRegisterTable(activeCase.expectedRegisters)}
-              ${activeCase.expectedMemory && activeCase.expectedMemory.length > 0
-                ? activeCase.expectedMemory
+      ${visibleCases
+        .map(
+          (testCase, index) => `
+            <div class="pv-case-content ${index === this.activeVisibleCaseIndex ? "active" : ""}" data-ci="${index}">
+              <table class="pv-register-table">
+                <thead>
+                  <tr>
+                    <th>Register</th>
+                    <th>Initial Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${Object.entries(testCase.initialRegisters)
                     .map(
-                      (entry) => `
-                        <div class="pv-case-memory-row">
-                          <span class="pv-case-memory-label">${escapeHtml(formatValue(entry.address))}</span>
-                          <span>${escapeHtml(formatValue(entry.value, entry.size ?? "word"))}</span>
-                        </div>
+                      ([registerName, value]) => `
+                        <tr>
+                          <td class="pv-reg-name">${escapeHtml(registerName)}</td>
+                          <td class="pv-reg-val">${formatHex(value ?? 0)}<span class="pv-reg-dec">(${(value ?? 0) >> 0})</span></td>
+                        </tr>
                       `
                     )
-                    .join("")
+                    .join("")}
+                  ${(testCase.initialMemory ?? [])
+                    .map(
+                      (entry) => `
+                        <tr>
+                          <td class="pv-reg-name">mem[${formatHex(entry.address)}]</td>
+                          <td class="pv-reg-val">${formatSignedValue(entry.value, entry.size ?? "word")}</td>
+                        </tr>
+                      `
+                    )
+                    .join("")}
+                </tbody>
+              </table>
+              ${showExpected
+                ? `
+                    <div class="pv-section-head">Expected Output</div>
+                    <table class="pv-register-table">
+                      <thead>
+                        <tr>
+                          <th>Register</th>
+                          <th>Expected Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${Object.entries(testCase.expectedRegisters)
+                          .map(
+                            ([registerName, value]) => `
+                              <tr>
+                                <td class="pv-reg-name">${escapeHtml(registerName)}</td>
+                                <td class="pv-reg-val">${formatHex(value ?? 0)}<span class="pv-reg-dec">(${(value ?? 0) >> 0})</span></td>
+                              </tr>
+                            `
+                          )
+                          .join("")}
+                        ${(testCase.expectedMemory ?? [])
+                          .map(
+                            (entry) => `
+                              <tr>
+                                <td class="pv-reg-name">mem[${formatHex(entry.address)}]</td>
+                                <td class="pv-reg-val">${formatSignedValue(entry.value, entry.size ?? "word")}</td>
+                              </tr>
+                            `
+                          )
+                          .join("")}
+                      </tbody>
+                    </table>
+                  `
                 : ""}
             </div>
           `
-        : ""}
-    `;
-  }
-
-  private renderCaseRegisterTable(registers: Partial<Record<string, number>>): string {
-    const entries = Object.entries(registers);
-    if (entries.length === 0) {
-      return `<div class="pv-case-memory-row"><span class="pv-case-memory-label">No register assertions</span><span>—</span></div>`;
-    }
-
-    return `
-      <table class="pv-case-table">
-        <tbody>
-          ${entries
-            .map(
-              ([registerName, value]) => `
-                <tr>
-                  <td class="pv-case-reg">${escapeHtml(registerName)}</td>
-                  <td class="pv-case-val">${escapeHtml(formatValue(value ?? 0))}</td>
-                </tr>
-              `
-            )
-            .join("")}
-        </tbody>
-      </table>
-    `;
-  }
-
-  private renderResultTab(): string {
-    if (!this.latestSummary) {
-      return `
-        <div class="pv-submissions-empty">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <rect x="3" y="4" width="18" height="14" rx="2"></rect>
-            <path d="M7 20h10"></path>
-            <path d="m8 9 2 2 4-4"></path>
-          </svg>
-          <p>Run your code to see testcase results.</p>
-        </div>
-      `;
-    }
-
-    const passed = this.latestSummary.verdict === "Accepted";
-    return `
-      <div class="pv-result-summary pv-result-summary--${passed ? "passed" : "failed"}">
-        ${escapeHtml(`${this.latestSummary.passedCount}/${this.latestSummary.totalCount} test cases passed${passed ? "" : ` · ${this.latestSummary.verdict}`}`)}
-      </div>
-      ${this.latestSummary.results
-        .map((result) => {
-          const expanded = this.expandedResultCaseId === result.caseId;
-          return `
-            <div class="pv-result-item ${expanded ? "is-expanded" : ""}">
-              <div class="pv-result-row pv-result-row--${result.passed ? "pass" : "fail"}" data-result-case-id="${escapeHtml(result.caseId)}">
-                <div class="pv-result-row__icon">${result.passed ? "✓" : "✗"}</div>
-                <div class="pv-result-row__label">${escapeHtml(result.label)}</div>
-                <div class="pv-result-row__expand">▾</div>
-              </div>
-              ${expanded ? this.renderResultDetails(result) : ""}
-            </div>
-          `;
-        })
+        )
         .join("")}
     `;
   }
 
-  private renderResultDetails(result: RunResult): string {
-    if (result.verdict === "Assembly Error" || result.verdict === "Runtime Error" || result.verdict === "Time Limit Exceeded") {
+  private renderResultsConsole(summary: RunSummary): string {
+    const caseMap = new Map(this.currentProblem?.testCases.map((testCase) => [testCase.id, testCase]) ?? []);
+
+    return `
+      ${summary.verdict === "Accepted"
+        ? `<div class="pv-all-pass-banner">✓ Passed ${summary.passedCount}/${summary.totalCount} test cases</div>`
+        : ""}
+      <div class="pv-result-list">
+        ${summary.results
+          .map((result) => {
+            const visible = caseMap.get(result.caseId)?.visible ?? true;
+            const expanded = this.expandedResultCaseId === result.caseId;
+            const diffMarkup = this.renderResultDiff(result, visible, expanded);
+            return `
+              <div class="pv-result-item ${result.passed ? "pass" : "fail"}" data-case-id="${escapeHtml(result.caseId)}">
+                <span class="pv-result-icon ${result.passed ? "pass" : "fail"}">${result.passed ? "✓" : "✗"}</span>
+                <span class="pv-result-label">${escapeHtml(result.label)}</span>
+                <span class="pv-result-steps">${escapeHtml(`${result.stepsTaken} steps`)}</span>
+              </div>
+              ${diffMarkup}
+            `;
+          })
+          .join("")}
+      </div>
+    `;
+  }
+
+  private renderResultDiff(result: RunResult, visible: boolean, expanded: boolean): string {
+    const classes = `pv-result-diff${expanded ? " is-open" : ""}`;
+    if (result.passed) {
+      return `<div class="${classes}"></div>`;
+    }
+
+    if (!visible) {
       return `
-        <div class="pv-result-details">
-          <div class="pv-result-error">
-            <div class="pv-result-error__label">Error</div>
-            <pre class="pv-result-error__msg">${escapeHtml(result.errorMessage ?? result.verdict)}</pre>
+        <div class="${classes}">
+          <div class="pv-error-block">
+            Hidden test case feedback is withheld on submit. Use the visible cases to debug, then try again.
           </div>
         </div>
       `;
     }
 
-    const diffEntries =
-      result.diff.length > 0
-        ? result.diff
-        : [
-            ...Object.entries(result.expectedRegisters).map(([registerName, expected]) => ({
-              key: registerName,
-              expected: expected ?? 0,
-              actual: result.actualRegisters[registerName] ?? 0,
-            })),
-            ...result.expectedMemory.map((entry) => ({
-              key: `mem[0x${entry.address.toString(16).padStart(8, "0")}]`,
-              expected: entry.value,
-              actual: result.actualMemory.find((candidate) => candidate.address === entry.address)?.value ?? 0,
-            })),
-          ];
+    if (result.errorMessage) {
+      const label = result.timedOut ? "Time Limit" : result.verdict === "Assembly Error" ? "Assembly Error" : "Runtime Error";
+      return `
+        <div class="${classes}">
+          <div class="pv-asm-error">
+            <div class="pv-asm-error__line">${escapeHtml(label)}</div>
+            <div class="pv-asm-error__msg">${escapeHtml(result.errorMessage)}</div>
+          </div>
+        </div>
+      `;
+    }
 
     return `
-      <div class="pv-result-details">
-        <table class="pv-diff-table">
-          <thead>
-            <tr>
-              <th>Register</th>
-              <th>Expected</th>
-              <th>Actual</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${diffEntries
-              .map(
-                (entry) => `
-                  <tr class="${entry.expected === entry.actual ? "match" : "mismatch"}">
-                    <td>${escapeHtml(entry.key)}</td>
-                    <td>${escapeHtml(formatProblemDiffValue(entry.expected))}</td>
-                    <td class="${entry.expected === entry.actual ? "correct" : "wrong"}">${escapeHtml(formatProblemDiffValue(entry.actual))}</td>
-                  </tr>
-                `
-              )
-              .join("")}
-          </tbody>
-        </table>
+      <div class="${classes}">
+        <div class="pv-diff-row">
+          <span class="pv-diff-label"></span>
+          <span class="pv-text-caption">Expected</span>
+          <span class="pv-text-caption">Actual</span>
+        </div>
+        ${result.diff
+          .map(
+            (diff) => `
+              <div class="pv-diff-row">
+                <span class="pv-diff-label">${escapeHtml(diff.key)}</span>
+                <span class="pv-diff-expected">${escapeHtml(formatProblemDiffValue(diff.expected))}</span>
+                <span class="pv-diff-actual">${escapeHtml(formatProblemDiffValue(diff.actual))}</span>
+              </div>
+            `
+          )
+          .join("")}
       </div>
     `;
   }
 
-  private renderLoadBanner(): void {
-    if (!this.pendingSubmissionToLoad) {
-      this.loadBanner.hidden = true;
-      this.loadBanner.innerHTML = "";
-      return;
-    }
+  private clearConsole(): void {
+    this.consoleBody.innerHTML = "";
+  }
 
-    const codeAvailable = this.pendingSubmissionToLoad.code.trim().length > 0;
-    this.loadBanner.hidden = false;
-    this.loadBanner.innerHTML = `
-      <div class="pv-load-banner__text">
-        ${escapeHtml(codeAvailable ? "Load this submission? Your current code will be replaced." : "This submission was synced without source code and can't be loaded on this device.")}
-      </div>
-      <div class="pv-load-banner__actions">
-        <button class="pv-load-banner__cancel" type="button">Cancel</button>
-        ${codeAvailable ? `<button class="pv-load-banner__ok" type="button">Load</button>` : ""}
+  private showConsoleStatus(message: string): void {
+    this.consoleTab = "result";
+    this.consoleBody.innerHTML = `<div class="pv-console-empty" style="text-align:left">${escapeHtml(message)}</div>`;
+    this.consoleTabs.querySelectorAll<HTMLButtonElement>(".pv-console-tab").forEach((button) => {
+      button.classList.toggle("active", button.dataset.ctab === "result");
+    });
+  }
+
+  private showConsoleError(message: string): void {
+    this.consoleTab = "result";
+    this.consoleTabs.querySelectorAll<HTMLButtonElement>(".pv-console-tab").forEach((button) => {
+      button.classList.toggle("active", button.dataset.ctab === "result");
+    });
+    this.consoleBody.innerHTML = `
+      <div class="pv-asm-error">
+        <div class="pv-asm-error__line">Error</div>
+        <div class="pv-asm-error__msg">${escapeHtml(message)}</div>
       </div>
     `;
   }
 
-  private applyPendingSubmissionLoad(): void {
-    if (!this.pendingSubmissionToLoad || !this.editor || !this.currentProblem) {
-      return;
-    }
-    this.editor.setValue(this.pendingSubmissionToLoad.code);
-    this.persistCurrentCode();
-    this.pendingSubmissionToLoad = null;
-    this.renderLoadBanner();
-    this.flashAutosaveIndicator("Submission loaded");
-  }
-
-  private async toggleHint(hintIndex: number): Promise<void> {
-    if (!this.currentProblem) {
-      return;
-    }
-
-    const entry = ensureProblemEntry(this.progress, this.currentProblem);
-    const revealed = entry.hintsRevealed ?? 0;
-    if (hintIndex > revealed) {
-      return;
-    }
-
-    if (hintIndex === revealed) {
-      entry.hintsRevealed = revealed + 1;
-      saveProblemProgressForUser(this.progress, this.session?.userId ?? null);
-      if (this.session) {
-        void syncProblemProgressToApi(this.progress, this.session.idToken);
-      }
-      this.openHints.add(hintIndex);
-    } else if (this.openHints.has(hintIndex)) {
-      this.openHints.delete(hintIndex);
-    } else {
-      this.openHints.add(hintIndex);
-    }
-
-    this.renderLeftContent();
-  }
-
-  private restoreStarterCode(): void {
-    if (!this.currentProblem || !this.editor) {
-      return;
-    }
-    this.editor.setValue(this.currentProblem.starterCode);
-    this.persistCurrentCode();
-    this.flashAutosaveIndicator("Starter restored");
-  }
-
-  private toggleShortcutsPopover(force?: boolean): void {
-    const open = force ?? this.shortcutsPopover.hidden;
-    this.shortcutsPopover.hidden = !open;
-    this.shortcutsButton.setAttribute("aria-expanded", String(open));
-  }
-
-  private async execute(mode: "run" | "submit"): Promise<void> {
+  private async executeRun(isSubmit: boolean): Promise<void> {
     if (!this.currentProblem || !this.editor || this.running) {
       return;
     }
 
-    this.running = true;
-    this.runButton.classList.toggle("is-loading", mode === "run");
-    this.submitButton.classList.toggle("is-loading", mode === "submit");
-    this.editor.updateOptions({ readOnly: true });
-    this.editorLoading.hidden = false;
-    this.resetConfirm.hidden = true;
-
-    const runtime = (this.runtimePromise ??= WasmRuntime.create());
     const source = this.editor.getValue();
-
-    if (mode === "submit") {
-      this.persistCurrentCode();
+    if (!source.trim()) {
+      this.showConsoleError("Editor is empty.");
+      return;
     }
 
+    let runtime: WasmRuntime;
     try {
-      const summary = mode === "submit"
-        ? await runAll(source, this.currentProblem, await runtime)
-        : await runVisible(source, this.currentProblem, await runtime);
+      runtime = await this.ensureRuntime();
+    } catch (error) {
+      this.showConsoleError(error instanceof Error ? error.message : "Runtime not ready. Please wait.");
+      return;
+    }
+
+    this.running = true;
+    this.runButton.classList.add("is-loading");
+    this.submitButton.classList.add("is-loading");
+    this.editor.updateOptions({ readOnly: true });
+    this.resetConfirm.hidden = true;
+    this.clearConsole();
+    this.showConsoleStatus(isSubmit ? "Running all test cases..." : "Running visible test cases...");
+
+    try {
+      const summary = isSubmit
+        ? await runAll(source, this.currentProblem, runtime)
+        : await runVisible(source, this.currentProblem, runtime);
 
       this.latestSummary = summary;
-      this.consoleOpen = true;
+      this.expandedResultCaseId = summary.firstFailedResult?.caseId ?? null;
       this.consoleTab = "result";
-      this.expandedResultCaseId = summary.firstFailedResult?.caseId ?? summary.results[0]?.caseId ?? null;
-      this.renderConsoleVisibility();
-      this.renderConsoleContent();
+      this.renderConsoleBody();
 
-      const elapsedMs = this.timerState ? timerElapsedMs(this.timerState) : 0;
-      if (mode === "submit") {
-        this.recordSubmission(summary, source, elapsedMs);
+      if (isSubmit) {
+        this.persistCurrentCode();
+        this.saveSubmission(summary, source);
+        this.showVerdict(summary);
+        if (summary.verdict === "Accepted") {
+          this.stopTimer();
+        }
       }
-
-      if (summary.verdict === "Accepted" && this.currentProblem && this.timerState) {
-        stopTimer(this.currentProblem.id, this.timerState);
-      }
-
-      this.showVerdict(summary, elapsedMs);
     } catch (error) {
-      this.showVerdict(
-        {
-          verdict: "Runtime Error",
-          passedCount: 0,
-          totalCount: 0,
-          results: [],
-          totalSteps: 0,
-          totalTimeMs: 0,
-          firstFailedResult: undefined,
-        },
-        this.timerState ? timerElapsedMs(this.timerState) : 0,
-        error instanceof Error ? error.message : String(error)
-      );
+      this.showConsoleError(error instanceof Error ? error.message : "Execution failed.");
     } finally {
       this.running = false;
       this.runButton.classList.remove("is-loading");
       this.submitButton.classList.remove("is-loading");
       this.editor.updateOptions({ readOnly: false });
-      this.editorLoading.hidden = true;
-      this.applyProblemLayout();
     }
   }
 
-  private recordSubmission(summary: RunSummary, source: string, elapsedMs: number): void {
+  private saveSubmission(summary: RunSummary, source: string): void {
     if (!this.currentProblem) {
       return;
     }
@@ -2034,14 +1761,13 @@ class ProblemsApp {
       submittedAt: new Date().toISOString(),
       failedCaseId: summary.firstFailedResult?.caseId,
       errorMessage: summary.firstFailedResult?.errorMessage,
-      elapsedMs,
+      elapsedMs: this.timerSeconds * 1000,
     };
 
     entry.status = summary.verdict === "Accepted" ? "solved" : "attempted";
     entry.submissions = [submission, ...entry.submissions];
     entry.lastCode = source;
     entry.lastSavedAt = submission.submittedAt;
-
     saveProblemCode(this.currentProblem.id, source);
     saveProblemProgressForUser(this.progress, this.session?.userId ?? null);
 
@@ -2051,230 +1777,331 @@ class ProblemsApp {
     }
 
     if (this.leftTab === "submissions") {
-      this.renderLeftContent();
+      this.renderLeftBody();
     }
     this.renderList();
   }
 
-  private showVerdict(summary: RunSummary, elapsedMs: number, fallbackError?: string): void {
-    const firstFailed = summary.firstFailedResult;
-    const firstDiff = firstFailed?.diff[0];
-    const confettiColors = ["var(--accent)", "#22c55e", "var(--warning)", "var(--danger)", "var(--text-secondary)"];
-
-    let toneClass = "pv-verdict--accepted";
-    let icon = "✓";
-    let title = "Accepted";
-    let sub = `Passed ${summary.passedCount}/${summary.totalCount} test cases · ${summary.totalSteps} steps · Time: ${formatElapsedCompact(elapsedMs)}`;
-    let diff = "";
-    let mono = "";
-    let confetti = Array.from({ length: 20 }, (_, index) => ({
-      left: `${Math.random() * 100}%`,
-      delay: `${Math.floor(Math.random() * 600)}ms`,
-      duration: `${1000 + Math.floor(Math.random() * 800)}ms`,
-      color: confettiColors[index % confettiColors.length]!,
-    }));
-
-    if (summary.verdict === "Wrong Answer") {
-      toneClass = "pv-verdict--wrong";
-      icon = "✗";
-      title = "Wrong Answer";
-      sub = `Failed on ${firstFailed?.label ?? "a testcase"}`;
-      diff = firstDiff
-        ? `Expected ${firstDiff.key} = ${formatProblemDiffValue(firstDiff.expected)} · Got ${formatProblemDiffValue(firstDiff.actual)}`
-        : "";
-      confetti = [];
-    } else if (summary.verdict === "Runtime Error") {
-      toneClass = "pv-verdict--error";
-      icon = "⚠";
-      title = "Runtime Error";
-      sub = firstFailed?.label ?? "Execution stopped";
-      mono = firstFailed?.errorMessage ?? fallbackError ?? "Execution failed.";
-      confetti = [];
-    } else if (summary.verdict === "Time Limit Exceeded") {
-      toneClass = "pv-verdict--tle";
-      icon = "⏱";
-      title = "Time Limit Exceeded";
-      sub = firstFailed?.errorMessage ?? "Exceeded the step limit. Try a more efficient approach.";
-      confetti = [];
-    } else if (summary.verdict === "Assembly Error") {
-      toneClass = "pv-verdict--assembly";
-      icon = "✗";
-      title = "Assembly Error";
-      sub = "Fix the assembly error and try again.";
-      mono = firstFailed?.errorMessage ?? fallbackError ?? "Assembly failed.";
-      confetti = [];
+  private showVerdict(summary: RunSummary): void {
+    renderVerdictBanner(this.verdict, this.verdictContent, summary);
+    this.syncVerdictOffset();
+    if (this.verdictTimer) {
+      window.clearTimeout(this.verdictTimer);
     }
-
-    if (this.verdictDismissTimer) {
-      window.clearTimeout(this.verdictDismissTimer);
-    }
-
-    this.verdictLayer.innerHTML = `
-      <div class="pv-verdict ${toneClass}">
-        ${confetti
-          .map(
-            (piece) => `
-              <span
-                class="pv-confetti-piece"
-                style="left:${piece.left}; --delay:${piece.delay}; --duration:${piece.duration}; --piece-color:${piece.color};"
-                aria-hidden="true"
-              ></span>
-            `
-          )
-          .join("")}
-        <div class="pv-verdict__left">
-          <span class="pv-verdict__icon">${icon}</span>
-          <div>
-            <div class="pv-verdict__title">${escapeHtml(title)}</div>
-            <div class="pv-verdict__sub">${escapeHtml(sub)}</div>
-            ${diff ? `<div class="pv-verdict__diff">${escapeHtml(diff)}</div>` : ""}
-            ${mono ? `<div class="pv-verdict__diff">${escapeHtml(mono)}</div>` : ""}
-          </div>
-        </div>
-        <button class="pv-verdict__close" type="button" aria-label="Close banner">×</button>
-      </div>
-    `;
-
-    const banner = this.verdictLayer.querySelector<HTMLElement>(".pv-verdict");
-    if (banner) {
-      window.requestAnimationFrame(() => {
-        banner.classList.add("is-visible");
-      });
-    }
-
-    this.verdictDismissTimer = window.setTimeout(() => {
-      this.hideVerdict();
-    }, BANNER_DISMISS_MS);
+    this.verdictTimer = window.setTimeout(() => {
+      this.verdict.hidden = true;
+    }, VERDICT_DISMISS_MS);
   }
 
-  private hideVerdict(): void {
-    if (this.verdictDismissTimer) {
-      window.clearTimeout(this.verdictDismissTimer);
-      this.verdictDismissTimer = null;
-    }
-    this.verdictLayer.innerHTML = "";
-  }
-
-  private navigateRelative(direction: -1 | 1): void {
+  private async toggleHint(index: number): Promise<void> {
     if (!this.currentProblem) {
       return;
     }
-    const nextIndex = this.currentProblem.number - 1 + direction;
+
+    const entry = ensureProblemEntry(this.progress, this.currentProblem);
+    const revealed = entry.hintsRevealed ?? 0;
+    if (index > revealed) {
+      return;
+    }
+
+    if (index === revealed) {
+      entry.hintsRevealed = revealed + 1;
+      saveProblemProgressForUser(this.progress, this.session?.userId ?? null);
+      if (this.session) {
+        void syncProblemProgressToApi(this.progress, this.session.idToken);
+      }
+      this.openHintIndices.add(index);
+    } else if (this.openHintIndices.has(index)) {
+      this.openHintIndices.delete(index);
+    } else {
+      this.openHintIndices.add(index);
+    }
+
+    this.renderLeftBody();
+  }
+
+  private loadSubmissionById(submissionId: string): void {
+    if (!this.currentProblem || !this.editor || !submissionId) {
+      return;
+    }
+
+    const entry = this.progress[this.currentProblem.id];
+    const submission = entry?.submissions.find((candidate) => candidate.id === submissionId);
+    if (!submission || !submission.code.trim()) {
+      return;
+    }
+
+    const confirmed = window.confirm("Load this submission? Your current code will be replaced.");
+    if (!confirmed) {
+      return;
+    }
+
+    this.editor.setValue(submission.code);
+    this.persistCurrentCode();
+  }
+
+  private submissionTone(verdict: ProblemVerdict): SubmissionTone {
+    switch (verdict) {
+      case "Accepted":
+        return "accepted";
+      case "Wrong Answer":
+        return "wrong";
+      case "Time Limit Exceeded":
+        return "tle";
+      default:
+        return "error";
+    }
+  }
+
+  private submissionLabel(verdict: ProblemVerdict): string {
+    switch (verdict) {
+      case "Accepted":
+        return "Accepted";
+      case "Wrong Answer":
+        return "Wrong Answer";
+      case "Runtime Error":
+        return "Runtime Error";
+      case "Time Limit Exceeded":
+        return "Time Limit";
+      case "Assembly Error":
+        return "Assembly Error";
+    }
+  }
+
+  private restoreStarterCode(): void {
+    if (!this.currentProblem || !this.editor) {
+      return;
+    }
+
+    this.editor.setValue(this.currentProblem.starterCode);
+    safeLocalStorageSet(`problems_code_${this.currentProblem.id}`, this.currentProblem.starterCode);
+    this.persistCurrentCode();
+    this.resetConfirm.hidden = true;
+  }
+
+  private navigateRelative(offset: number): void {
+    if (!this.currentProblem) {
+      return;
+    }
+
+    const nextIndex = this.currentProblem.number - 1 + offset;
     if (nextIndex < 0 || nextIndex >= this.problems.length) {
       return;
     }
-    const nextProblem = this.problems[nextIndex];
-    if (nextProblem) {
-      void this.openProblem(nextProblem.id, true);
-    }
-  }
 
-  private renderTick(): void {
-    if (!this.currentProblem || !this.timerState) {
+    const target = this.problems[nextIndex];
+    if (!target) {
       return;
     }
-    this.timerValue.textContent = formatTimer(timerElapsedMs(this.timerState));
-    saveTimerState(this.currentProblem.id, this.timerState);
+    void this.showProblemView(target.id, true);
   }
 
-  private startTimerTicker(): void {
-    window.setInterval(() => this.renderTick(), 1000);
+  private startTimer(problemId: string): void {
+    this.stopTimer();
+    this.timerProblemId = problemId;
+    this.timerSeconds = Math.max(0, Number.parseInt(safeSessionStorageGet(`problems_timer_${problemId}`) ?? "0", 10) || 0);
+    this.updateTimerDisplay();
+
+    this.timerInterval = window.setInterval(() => {
+      if (document.hidden) {
+        return;
+      }
+      this.timerSeconds += 1;
+      this.saveTimer();
+      this.updateTimerDisplay();
+    }, 1000);
   }
 
-  private startVerticalDrag(startX: number): void {
-    const bounds = this.panels.getBoundingClientRect();
-    const onMove = (event: MouseEvent): void => {
-      const ratio = ((event.clientX - bounds.left) / bounds.width) * 100;
-      const minPercent = (300 / bounds.width) * 100;
-      this.verticalSplit = clamp(ratio, Math.max(28, minPercent), 65);
-      this.dividerV.classList.add("is-dragging");
-      this.setMonacoPointerEvents(false);
-      this.applyProblemLayout();
-    };
-
-    const onUp = (): void => {
-      this.dividerV.classList.remove("is-dragging");
-      this.setMonacoPointerEvents(true);
-      safeLocalStorageSet(PANEL_SPLIT_STORAGE_KEY, String(this.verticalSplit));
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-
-    onMove(new MouseEvent("mousemove", { clientX: startX }));
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp, { once: true });
+  private stopTimer(): void {
+    if (this.timerInterval) {
+      window.clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+    this.saveTimer();
+    this.timerProblemId = this.currentProblem?.id ?? null;
   }
 
-  private startHorizontalDrag(startY: number): void {
-    const bounds = this.rightPanel.getBoundingClientRect();
-    const onMove = (event: MouseEvent): void => {
-      const rawHeight = bounds.bottom - event.clientY - 48;
-      this.consoleHeight = clamp(rawHeight, 120, bounds.height * 0.5);
-      this.dividerH.classList.add("is-dragging");
-      this.setMonacoPointerEvents(false);
-      this.applyProblemLayout();
-    };
-
-    const onUp = (): void => {
-      this.dividerH.classList.remove("is-dragging");
-      this.setMonacoPointerEvents(true);
-      safeLocalStorageSet(CONSOLE_HEIGHT_STORAGE_KEY, String(this.consoleHeight));
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-
-    onMove(new MouseEvent("mousemove", { clientY: startY }));
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp, { once: true });
+  private saveTimer(): void {
+    if (!this.timerProblemId) {
+      return;
+    }
+    safeSessionStorageSet(`problems_timer_${this.timerProblemId}`, String(this.timerSeconds));
   }
 
-  private setMonacoPointerEvents(enabled: boolean): void {
-    this.editorStage.querySelectorAll("iframe").forEach((frame) => {
-      (frame as HTMLElement).style.pointerEvents = enabled ? "" : "none";
-    });
+  private updateTimerDisplay(): void {
+    this.timer.textContent = formatTimerValue(this.timerSeconds);
   }
 
-  private applyProblemLayout(): void {
-    if (this.problemView.hidden) {
+  private restoreVerticalSplit(): void {
+    if (window.innerWidth < 768 || this.fullscreen) {
+      this.leftPanel.style.width = "";
+      this.leftPanel.style.flex = "";
+      return;
+    }
+
+    const mainWidth = this.main.getBoundingClientRect().width;
+    const saved = readStoredNumber(safeLocalStorageGet(PANEL_SPLIT_STORAGE_KEY), DEFAULT_LEFT_RATIO);
+    const width = clampPanelSplit(saved * mainWidth, mainWidth);
+    this.leftPanel.style.width = `${width}px`;
+    this.leftPanel.style.flex = "none";
+  }
+
+  private restoreHorizontalSplit(): void {
+    if (window.innerWidth < 768) {
+      this.editorSection.style.height = "";
+      this.editorSection.style.flex = "";
+      return;
+    }
+
+    const rightHeight = this.rightPanel.getBoundingClientRect().height;
+    if (rightHeight === 0) {
+      return;
+    }
+
+    const savedConsoleHeight = readStoredNumber(safeLocalStorageGet(CONSOLE_HEIGHT_STORAGE_KEY), DEFAULT_CONSOLE_HEIGHT);
+    const editorHeight = clampEditorHeight(rightHeight - savedConsoleHeight - this.horizontalDivider.offsetHeight, rightHeight);
+    this.editorSection.style.height = `${editorHeight}px`;
+    this.editorSection.style.flex = "none";
+  }
+
+  private applyWorkspaceLayout(): void {
+    if (!this.currentProblem) {
       return;
     }
 
     if (this.fullscreen) {
-      this.leftPanel.hidden = true;
-      this.dividerV.hidden = true;
+      this.leftPanel.style.display = "none";
+      this.verticalDivider.style.display = "none";
+    } else {
+      this.leftPanel.style.display = "";
+      this.verticalDivider.style.display = "";
+      if (window.innerWidth >= 768) {
+        this.restoreVerticalSplit();
+      }
+    }
+
+    if (window.innerWidth < 768) {
       this.leftPanel.style.width = "";
-      this.fullscreenIcon.innerHTML = `<path d="M9 3H4v5M20 9V4h-5M15 20h5v-5M4 15v5h5"></path>`;
+      this.leftPanel.style.flex = "";
+      this.editorSection.style.height = "";
+      this.editorSection.style.flex = "";
     } else {
-      this.leftPanel.hidden = false;
-      this.dividerV.hidden = false;
-      this.leftPanel.style.width = `${this.verticalSplit}%`;
-      this.fullscreenIcon.innerHTML = `<path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"></path>`;
+      this.restoreHorizontalSplit();
     }
 
-    const rightHeight = this.rightPanel.clientHeight;
-    const toolbarHeight = this.rightPanel.querySelector<HTMLElement>(".pv-editor-toolbar")?.offsetHeight ?? 40;
-    const loadBannerHeight = this.loadBanner.hidden ? 0 : this.loadBanner.offsetHeight + 10;
-    const actionBarHeight = this.rightPanel.querySelector<HTMLElement>(".pv-action-bar")?.offsetHeight ?? 48;
-    const dividerHeight = this.consoleOpen ? (this.dividerH.offsetHeight || 4) : 0;
-    const maxConsoleHeight = this.rightPanel.clientHeight * 0.5;
-
-    if (this.consoleOpen) {
-      this.consoleHeight = clamp(this.consoleHeight, 120, maxConsoleHeight);
-      this.consoleElement.style.height = `${this.consoleHeight}px`;
-      this.consoleElement.hidden = false;
-    } else {
-      this.consoleElement.style.height = "0px";
-      this.consoleElement.hidden = true;
-    }
-
-    const editorHeight = Math.max(
-      220,
-      rightHeight - toolbarHeight - loadBannerHeight - actionBarHeight - (this.consoleOpen ? this.consoleHeight + dividerHeight : 0)
-    );
-    this.editorRoot.style.height = `${editorHeight}px`;
+    this.ensureEditorContainerHeight();
+    this.syncVerdictOffset();
     this.editor?.layout();
+  }
+
+  private ensureEditorContainerHeight(): void {
+    const editorSectionRect = this.editorSection.getBoundingClientRect();
+    const editorHeaderRect = this.editorHeader.getBoundingClientRect();
+    const height = Math.max(MIN_EDITOR_HEIGHT, Math.floor(editorSectionRect.height - editorHeaderRect.height));
+    this.monacoContainer.style.height = `${height}px`;
+  }
+
+  private syncVerdictOffset(): void {
+    if (this.problemLayout.hidden) {
+      return;
+    }
+
+    if (window.innerWidth < 768 || this.fullscreen || this.leftPanel.style.display === "none") {
+      this.verdict.style.left = "0px";
+      return;
+    }
+
+    const offset = this.leftPanel.offsetWidth + this.verticalDivider.offsetWidth;
+    this.verdict.style.left = `${offset}px`;
+  }
+
+  private startVerticalDrag(): void {
+    this.verticalDivider.classList.add("dragging");
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+    this.setMonacoPointerEvents(false);
+
+    const onMove = (event: MouseEvent): void => {
+      const mainRect = this.main.getBoundingClientRect();
+      const requestedWidth = event.clientX - mainRect.left;
+      const width = clampPanelSplit(requestedWidth, mainRect.width);
+      this.leftPanel.style.width = `${width}px`;
+      this.leftPanel.style.flex = "none";
+      safeLocalStorageSet(PANEL_SPLIT_STORAGE_KEY, String(width / mainRect.width));
+      this.ensureEditorContainerHeight();
+      this.syncVerdictOffset();
+      this.editor?.layout();
+    };
+
+    const onUp = (): void => {
+      this.verticalDivider.classList.remove("dragging");
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      this.setMonacoPointerEvents(true);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      this.editor?.layout();
+    };
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }
+
+  private startHorizontalDrag(): void {
+    this.horizontalDivider.classList.add("dragging");
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "row-resize";
+    this.setMonacoPointerEvents(false);
+
+    const onMove = (event: MouseEvent): void => {
+      const rightRect = this.rightPanel.getBoundingClientRect();
+      const requestedHeight = event.clientY - rightRect.top;
+      const editorHeight = clampEditorHeight(requestedHeight, rightRect.height);
+      this.editorSection.style.height = `${editorHeight}px`;
+      this.editorSection.style.flex = "none";
+      const consoleHeight = Math.max(MIN_CONSOLE_HEIGHT, Math.floor(rightRect.height - editorHeight - this.horizontalDivider.offsetHeight));
+      safeLocalStorageSet(CONSOLE_HEIGHT_STORAGE_KEY, String(consoleHeight));
+      this.ensureEditorContainerHeight();
+      this.editor?.layout();
+    };
+
+    const onUp = (): void => {
+      this.horizontalDivider.classList.remove("dragging");
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      this.setMonacoPointerEvents(true);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      this.editor?.layout();
+    };
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }
+
+  private setMonacoPointerEvents(enabled: boolean): void {
+    const monacoIframe = this.monacoContainer.querySelector("iframe") as HTMLElement | null;
+    if (monacoIframe) {
+      monacoIframe.style.pointerEvents = enabled ? "" : "none";
+    }
   }
 }
 
-const app = new ProblemsApp();
-void app.init();
+function bootProblemsPage(): void {
+  const listLayout = document.getElementById("pl-layout");
+  const problemLayout = document.getElementById("pv-layout");
+  if (!listLayout || !problemLayout) {
+    return;
+  }
+
+  const app = new ProblemsPageApp();
+  void app.init();
+}
+
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootProblemsPage, { once: true });
+  } else {
+    bootProblemsPage();
+  }
+}

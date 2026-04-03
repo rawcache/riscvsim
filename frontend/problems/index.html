@@ -6,12 +6,12 @@
     <title>Problems - StudyRISC-V</title>
     <meta
       name="description"
-      content="Standalone RISC-V assembly problems for StudyRISC-V. Practice in a polished two-panel IDE with visible and hidden test cases."
+      content="Standalone RISC-V assembly problems for StudyRISC-V. Practice in a focused coding workspace with a real editor, testcase console, and submit flow."
     />
     <meta property="og:title" content="StudyRISC-V Problems" />
     <meta
       property="og:description"
-      content="Practice RISC-V assembly in a clean LeetCode-style workspace. Solve problems, run tests, and submit entirely in the browser."
+      content="Practice RISC-V assembly in a dedicated coding workspace. Read the prompt, write code, run tests, and submit in the browser."
     />
     <meta property="og:image" content="https://studyriscv.com/og-image.png" />
     <meta property="og:url" content="https://studyriscv.com/problems/" />
@@ -38,30 +38,11 @@
     <link rel="stylesheet" href="../src/styles/problems.css" />
     <link rel="icon" type="image/svg+xml" href="../favicon-chip.svg" />
   </head>
-  <body class="landing-page problems-page">
-    <nav id="site-nav" class="site-nav">
-      <div class="nav-mobile-shell">
-        <div class="nav-inner">
-          <a href="/" class="nav-logo">StudyRISC-V</a>
-          <div class="nav-links">
-            <a href="/problems/" class="nav-link nav-link-active">Problems</a>
-            <a href="/learn/" class="nav-link">Learn</a>
-            <a href="/simulator/" class="nav-link">Simulator</a>
-            <a href="/quiz/" class="nav-link">Quizzes</a>
-            <a href="/labs/" class="nav-link">Labs</a>
-            <a href="/checkpoints/" class="nav-link">Checkpoints</a>
-            <a href="/docs/" class="nav-link">Docs</a>
-            <a href="https://github.com/rawcache/riscvsim" class="nav-link" target="_blank" rel="noopener">GitHub</a>
-          </div>
-          <div class="nav-actions">
-            <button class="nav-signin-btn" type="button">Sign in</button>
-          </div>
-        </div>
-      </div>
-    </nav>
+  <body class="problems-page">
+    <nav id="site-nav"></nav>
 
     <main class="problems-shell" id="problems-shell">
-      <section class="problems-list-view" id="problems-list-view">
+      <section class="pl-layout" id="pl-layout">
         <div class="problems-list-inner">
           <div class="pl-header">
             <div class="pl-header__left">
@@ -95,7 +76,7 @@
               <input class="pl-search" id="pl-search" type="text" placeholder="Search problems..." autocomplete="off" />
             </div>
             <select class="pl-filter-select" id="pl-difficulty" aria-label="Filter by difficulty">
-              <option value="" selected>Difficulty</option>
+              <option value="">Difficulty</option>
               <option value="Easy">Easy</option>
               <option value="Medium">Medium</option>
               <option value="Hard">Hard</option>
@@ -133,895 +114,146 @@
                   <th class="pl-th pl-th--difficulty">Difficulty</th>
                 </tr>
               </thead>
-              <tbody id="pl-tbody">
-                <tr class="pl-row" data-problem-id="p001" data-difficulty="Easy">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">1</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p001">Add Two Registers</a>
-                    <div class="pl-tags"><span class="pl-tag">Arithmetic</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">74.2%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--easy">Easy</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p002" data-difficulty="Easy">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">2</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p002">Absolute Value</a>
-                    <div class="pl-tags"><span class="pl-tag">Arithmetic</span><span class="pl-tag">Control Flow</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">68.5%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--easy">Easy</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p003" data-difficulty="Easy">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">3</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p003">Max of Two</a>
-                    <div class="pl-tags"><span class="pl-tag">Control Flow</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">71.3%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--easy">Easy</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p004" data-difficulty="Easy">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">4</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p004">Multiply by Power of Two</a>
-                    <div class="pl-tags"><span class="pl-tag">Bit Manipulation</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">69.1%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--easy">Easy</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p005" data-difficulty="Easy">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">5</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p005">Count Down</a>
-                    <div class="pl-tags"><span class="pl-tag">Loops</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">65.8%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--easy">Easy</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p006" data-difficulty="Medium">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">6</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p006">Sum Array</a>
-                    <div class="pl-tags"><span class="pl-tag">Memory</span><span class="pl-tag">Loops</span><span class="pl-tag">Arrays</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">52.4%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--medium">Medium</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p007" data-difficulty="Medium">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">7</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p007">Fibonacci (Iterative)</a>
-                    <div class="pl-tags"><span class="pl-tag">Loops</span><span class="pl-tag">Arithmetic</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">47.3%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--medium">Medium</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p008" data-difficulty="Medium">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">8</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p008">Reverse Bits</a>
-                    <div class="pl-tags"><span class="pl-tag">Bit Manipulation</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">41.7%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--medium">Medium</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p009" data-difficulty="Medium">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">9</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p009">Stack Push and Pop</a>
-                    <div class="pl-tags"><span class="pl-tag">Stack</span><span class="pl-tag">Memory</span><span class="pl-tag">Functions</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">44.9%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--medium">Medium</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p010" data-difficulty="Medium">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">10</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p010">Count Set Bits</a>
-                    <div class="pl-tags"><span class="pl-tag">Bit Manipulation</span><span class="pl-tag">Loops</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">43.2%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--medium">Medium</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p011" data-difficulty="Hard">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">11</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p011">Find Max in Array</a>
-                    <div class="pl-tags"><span class="pl-tag">Memory</span><span class="pl-tag">Loops</span><span class="pl-tag">Control Flow</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">36.8%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--hard">Hard</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p012" data-difficulty="Hard">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">12</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p012">String Length</a>
-                    <div class="pl-tags"><span class="pl-tag">Memory</span><span class="pl-tag">Loops</span><span class="pl-tag">Strings</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">33.1%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--hard">Hard</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p013" data-difficulty="Hard">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">13</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p013">Bubble Sort</a>
-                    <div class="pl-tags"><span class="pl-tag">Sorting</span><span class="pl-tag">Memory</span><span class="pl-tag">Loops</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">27.4%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--hard">Hard</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p014" data-difficulty="Hard">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">14</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p014">GCD (Euclidean)</a>
-                    <div class="pl-tags"><span class="pl-tag">Arithmetic</span><span class="pl-tag">Loops</span><span class="pl-tag">Functions</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">29.6%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--hard">Hard</span></td>
-                </tr>
-                <tr class="pl-row" data-problem-id="p015" data-difficulty="Hard">
-                  <td class="pl-td pl-td--status"><span class="pl-status-icon" aria-hidden="true"></span></td>
-                  <td class="pl-td pl-td--num">15</td>
-                  <td class="pl-td pl-td--title">
-                    <a class="pl-title-link" href="/problems/?id=p015">Matrix Trace</a>
-                    <div class="pl-tags"><span class="pl-tag">Memory</span><span class="pl-tag">Loops</span><span class="pl-tag">Arrays</span></div>
-                  </td>
-                  <td class="pl-td pl-td--acceptance">24.3%</td>
-                  <td class="pl-td pl-td--difficulty"><span class="pl-difficulty pl-difficulty--hard">Hard</span></td>
-                </tr>
-              </tbody>
+              <tbody id="pl-tbody"></tbody>
             </table>
           </div>
         </div>
       </section>
 
       <section class="pv-layout" id="pv-layout" hidden>
-        <div class="pv-topbar">
+        <header class="pv-topbar" id="pv-topbar">
           <div class="pv-topbar__left">
-            <button class="pv-back-btn" id="pv-back-btn" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <path d="M15 18 9 12l6-6"></path>
-              </svg>
-              <span>Problem List</span>
-            </button>
-            <div class="pv-nav-arrows">
-              <button class="pv-nav-btn" id="pv-prev-btn" type="button" title="Previous problem" aria-label="Previous problem">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                  <path d="M15 18 9 12l6-6"></path>
-                </svg>
-              </button>
-              <button class="pv-nav-btn" id="pv-next-btn" type="button" title="Next problem" aria-label="Next problem">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                  <path d="m9 18 6-6-6-6"></path>
-                </svg>
-              </button>
-            </div>
+            <a href="/problems/" class="pv-breadcrumb" id="pv-back-link">Problems</a>
+            <span class="pv-breadcrumb__sep">/</span>
+            <span class="pv-breadcrumb__difficulty" id="pv-crumb-difficulty">Easy</span>
+            <span class="pv-breadcrumb__sep">/</span>
+            <span class="pv-breadcrumb__title" id="pv-crumb-title">Add Two Registers</span>
           </div>
+
           <div class="pv-topbar__center">
-            <div class="pv-topbar__crumbs" id="pv-topbar-crumbs"></div>
-            <div class="pv-topbar__heading">
-              <span class="pv-topbar__num" id="pv-topbar-num"></span>
-              <span class="pv-topbar__title" id="pv-topbar-title"></span>
-            </div>
-            <div class="pv-topbar__meta">
-              <span class="pv-topbar__difficulty" id="pv-topbar-difficulty"></span>
-              <div class="pv-topbar__tags" id="pv-topbar-tags"></div>
-            </div>
-          </div>
-          <div class="pv-topbar__right">
-            <button class="pv-topbar-btn" id="pv-timer-btn" type="button" aria-label="Problem timer">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <circle cx="12" cy="12" r="8"></circle>
-                <path d="M12 8v4l3 2"></path>
+            <button class="pv-nav-btn" id="pv-prev" title="Previous problem" type="button" aria-label="Previous problem">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M10 12 6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
               </svg>
-              <span id="pv-timer">00:00</span>
             </button>
-            <button class="pv-topbar-btn pv-topbar-btn--shortcuts" id="pv-shortcuts-btn" type="button" aria-haspopup="dialog" aria-expanded="false">
-              ?
+            <button class="pv-nav-btn" id="pv-next" title="Next problem" type="button" aria-label="Next problem">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="m6 4 4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              </svg>
             </button>
-            <button class="pv-topbar-btn pv-topbar-btn--premium" id="pv-premium-btn" type="button" hidden>🐝 Pro</button>
           </div>
-          <div class="pv-shortcuts-popover" id="pv-shortcuts-popover" hidden>
-            <div class="pv-shortcuts-popover__header">Keyboard shortcuts</div>
-            <div class="pv-shortcuts-popover__row"><span>Run</span><kbd id="pv-shortcut-run">⌘↵</kbd></div>
-            <div class="pv-shortcuts-popover__row"><span>Submit</span><kbd id="pv-shortcut-submit">⌘⇧↵</kbd></div>
-            <div class="pv-shortcuts-popover__row"><span>Previous</span><kbd id="pv-shortcut-prev">⌘[</kbd></div>
-            <div class="pv-shortcuts-popover__row"><span>Next</span><kbd id="pv-shortcut-next">⌘]</kbd></div>
-            <div class="pv-shortcuts-popover__row"><span>Toggle console</span><kbd id="pv-shortcut-console">⌘J</kbd></div>
-          </div>
-        </div>
 
-        <div class="pv-panels" id="pv-panels">
+          <div class="pv-topbar__right">
+            <span class="pv-timer" id="pv-timer">00:00</span>
+            <button class="pv-topbar-icon-btn" id="pv-fullscreen-btn" title="Fullscreen" type="button" aria-label="Toggle fullscreen">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="pv-main" id="pv-main">
           <div class="pv-left" id="pv-left">
-            <div class="pv-left__tabs">
-              <button class="pv-tab active" data-left-tab="description" type="button">Description</button>
-              <button class="pv-tab" data-left-tab="hints" type="button">
-                Hints
-                <span class="pv-tab-badge" id="pv-hint-count"></span>
+            <nav class="pv-tabs" role="tablist" aria-label="Problem workspace tabs">
+              <button class="pv-tab active" role="tab" data-tab="description" aria-selected="true" type="button">
+                Description
               </button>
-              <button class="pv-tab" data-left-tab="editorial" type="button">Editorial</button>
-              <button class="pv-tab" data-left-tab="submissions" type="button">Submissions</button>
-            </div>
-            <div class="pv-left__content" id="pv-left-content"></div>
+              <button class="pv-tab" role="tab" data-tab="hints" aria-selected="false" type="button">
+                Hints
+                <span class="pv-tab__badge" id="pv-hints-badge"></span>
+              </button>
+              <button class="pv-tab" role="tab" data-tab="editorial" aria-selected="false" type="button">
+                Editorial
+              </button>
+              <button class="pv-tab" role="tab" data-tab="submissions" aria-selected="false" type="button">
+                Submissions
+              </button>
+            </nav>
+
+            <div class="pv-left__body" id="pv-left-body" role="tabpanel"></div>
           </div>
 
-          <div class="pv-divider-v" id="pv-divider-v" role="separator" aria-orientation="vertical" aria-label="Resize panels">
-            <div class="pv-divider-v__handle"></div>
+          <div class="pv-divider-v" id="pv-divider-v" role="separator" aria-orientation="vertical">
+            <div class="pv-divider-v__line"></div>
           </div>
 
           <div class="pv-right" id="pv-right">
-            <div class="pv-verdict-layer" id="pv-verdict-layer"></div>
-
-            <div class="pv-editor-toolbar">
-              <div class="pv-editor-toolbar__left">
-                <div class="pv-editor-title">Code</div>
-                <div class="pv-lang-pill">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <path d="m8 7-4 5 4 5"></path>
-                    <path d="m16 7 4 5-4 5"></path>
-                  </svg>
-                  <span>RISC-V Assembly</span>
-                </div>
-                <div class="pv-autosave-indicator" id="pv-autosave-indicator" aria-live="polite"></div>
-              </div>
-              <div class="pv-editor-toolbar__right">
-                <button class="pv-toolbar-btn" id="pv-reset-btn" type="button" title="Reset to starter code" aria-label="Reset to starter code">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <path d="M3 12a9 9 0 1 0 3-6.7"></path>
-                    <path d="M3 4v5h5"></path>
-                  </svg>
-                </button>
-                <div class="pv-reset-confirm" id="pv-reset-confirm" hidden>
-                  <span>Restore starter code?</span>
-                  <button class="pv-reset-cancel" id="pv-reset-cancel" type="button">Cancel</button>
-                  <button class="pv-reset-ok" id="pv-reset-ok" type="button">Reset</button>
-                </div>
-                <button class="pv-toolbar-btn" id="pv-fullscreen-btn" type="button" title="Toggle fullscreen" aria-label="Toggle fullscreen">
-                  <svg id="pv-fullscreen-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"></path>
-                  </svg>
-                </button>
-                <button class="pv-toolbar-btn" id="pv-open-sim-btn" type="button" title="Open in simulator" aria-label="Open in simulator">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <path d="M14 5h5v5"></path>
-                    <path d="M10 14 19 5"></path>
-                    <path d="M19 14v5h-5"></path>
-                    <path d="M5 10V5h5"></path>
-                  </svg>
-                </button>
-                <div class="pv-editor-primary">
-                  <button class="pv-btn pv-btn--run" id="pv-run-btn" type="button">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                      <path d="m8 6 10 6-10 6z"></path>
+            <div class="pv-editor-section" id="pv-editor-section">
+              <div class="pv-editor-header" id="pv-editor-header">
+                <div class="pv-editor-header__left">
+                  <span class="pv-editor-label">Code</span>
+                  <div class="pv-lang-select" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="m4 5 3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                     </svg>
-                    <span>Run</span>
+                    RISC-V Assembly
+                  </div>
+                </div>
+                <div class="pv-editor-header__right">
+                  <button class="pv-editor-btn pv-editor-btn--reset" id="pv-reset-btn" type="button" title="Reset to starter code">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                      <path
+                        d="M2 7a5 5 0 1 0 1-3M2 2v3h3"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    Reset
                   </button>
-                  <button class="pv-btn pv-btn--submit" id="pv-submit-btn" type="button">
-                    <span>Submit</span>
+                  <button class="pv-editor-btn pv-editor-btn--run" id="pv-run-btn" type="button">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                      <path d="M3 2 12 7 3 12V2Z" fill="currentColor" />
+                    </svg>
+                    Run
                   </button>
+                  <button class="pv-editor-btn pv-editor-btn--submit" id="pv-submit-btn" type="button">Submit</button>
+                </div>
+              </div>
+
+              <div class="pv-monaco-container" id="pv-monaco">
+                <div class="pv-monaco-loading" id="pv-monaco-loading">
+                  <div class="pv-monaco-loading__spinner"></div>
+                  <span>Loading editor...</span>
                 </div>
               </div>
             </div>
 
-            <div class="pv-load-banner" id="pv-load-banner" hidden></div>
-
-            <div class="pv-editor-stage" id="pv-editor-stage">
-              <div id="pv-editor" class="pv-editor"></div>
-              <div class="pv-editor-loading" id="pv-editor-loading" hidden>Running…</div>
+            <div class="pv-divider-h" id="pv-divider-h" role="separator" aria-orientation="horizontal">
+              <div class="pv-divider-h__line"></div>
             </div>
 
-            <div class="pv-divider-h" id="pv-divider-h" role="separator" aria-orientation="horizontal" aria-label="Resize console">
-              <div class="pv-divider-h__handle"></div>
-            </div>
-
-            <div class="pv-console" id="pv-console" hidden>
-              <div class="pv-console__tabs">
-                <button class="pv-tab active" data-console-tab="testcase" type="button">Testcase</button>
-                <button class="pv-tab" data-console-tab="result" type="button">Test Result</button>
-              </div>
-              <div class="pv-console__content" id="pv-console-content"></div>
-            </div>
-
-            <div class="pv-action-bar">
-              <div class="pv-action-bar__left">
-                <button class="pv-console-toggle" id="pv-console-toggle" type="button">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <path d="m8 7-4 5 4 5"></path>
-                    <path d="m13 17 7 0"></path>
-                  </svg>
-                  <span>Console</span>
-                </button>
-              </div>
-              <div class="pv-action-bar__right">
-                <div class="pv-action-hint">
-                  Read, code, test, submit.
+            <div class="pv-console-section" id="pv-console-section">
+              <div class="pv-console-header">
+                <span class="pv-console-label">Console</span>
+                <div class="pv-console-tabs" id="pv-console-tabs">
+                  <button class="pv-console-tab active" data-ctab="testcase" type="button">Testcase</button>
+                  <button class="pv-console-tab" data-ctab="result" type="button">Test Result</button>
                 </div>
+                <button class="pv-console-clear" id="pv-console-clear" title="Clear console" type="button">Clear</button>
               </div>
+
+              <div class="pv-console-body" id="pv-console-body"></div>
             </div>
           </div>
+        </div>
+
+        <div class="pv-verdict" id="pv-verdict" hidden>
+          <div class="pv-verdict__content" id="pv-verdict-content"></div>
+          <button class="pv-verdict__close" id="pv-verdict-close" type="button" aria-label="Close verdict banner">×</button>
+        </div>
+
+        <div class="pv-reset-confirm" id="pv-reset-confirm" hidden>
+          <span>Reset to starter code?</span>
+          <button id="pv-reset-cancel" type="button">Cancel</button>
+          <button id="pv-reset-ok" type="button">Reset</button>
         </div>
       </section>
     </main>
 
     <footer id="site-footer"></footer>
-
-    <script id="problems-fallback-data" type="application/json">
-      {
-        "p001": {
-          "number": 1,
-          "title": "Add Two Registers",
-          "difficulty": "Easy",
-          "tags": ["Arithmetic"],
-          "description": [
-            "Given two integer values in x10 and x11, compute their sum and store the result in x12.",
-            "This is the most fundamental RISC-V operation. The ADD instruction computes rd = rs1 + rs2."
-          ],
-          "examples": [
-            { "input": "x10 = 3, x11 = 5", "output": "x12 = 8", "explanation": "3 + 5 = 8" }
-          ],
-          "constraints": [
-            "0 ≤ x10, x11 ≤ 2^31 - 1",
-            "Use exactly one instruction",
-            "Do not modify x10 or x11"
-          ],
-          "hints": [
-            "ADD computes rd = rs1 + rs2.",
-            "Syntax: add rd, rs1, rs2",
-            "add x12, x10, x11 stores the sum in x12."
-          ],
-          "starterCode": "# Add Two Registers\n# Input:  x10 = first operand\n#         x11 = second operand\n# Output: x12 = x10 + x11\n"
-        },
-        "p002": {
-          "number": 2,
-          "title": "Absolute Value",
-          "difficulty": "Easy",
-          "tags": ["Arithmetic", "Control Flow"],
-          "description": [
-            "Given a signed 32-bit integer in x10, store its absolute value in x11.",
-            "For positive numbers, the answer is the number itself. For negative numbers, negate it using base instructions only."
-          ],
-          "examples": [
-            { "input": "x10 = -5", "output": "x11 = 5", "explanation": "Negate the negative value." }
-          ],
-          "constraints": [
-            "x10 is any signed 32-bit integer",
-            "Do not use pseudo-instructions",
-            "Special case: abs(-2147483648) may remain negative because of overflow"
-          ],
-          "hints": [
-            "Branch on whether x10 < 0.",
-            "To negate: sub x11, x0, x10",
-            "BLT x10, x0, negative_branch"
-          ],
-          "starterCode": "# Absolute Value\n# Input:  x10 = signed integer\n# Output: x11 = |x10|\n"
-        },
-        "p003": {
-          "number": 3,
-          "title": "Max of Two",
-          "difficulty": "Easy",
-          "tags": ["Control Flow"],
-          "description": [
-            "Given two signed integers in x10 and x11, store the larger value in x12.",
-            "If both values are equal, either path may store the same result."
-          ],
-          "examples": [
-            { "input": "x10 = 7, x11 = 3", "output": "x12 = 7", "explanation": "7 is larger than 3." }
-          ],
-          "constraints": [
-            "x10 and x11 are signed 32-bit integers",
-            "Do not modify x10 or x11",
-            "Use a branch-based comparison"
-          ],
-          "hints": [
-            "Compare the registers and branch to the right assignment.",
-            "Start by assuming one is the max, then overwrite if needed.",
-            "BLT and BGE are enough for this problem."
-          ],
-          "starterCode": "# Max of Two\n# Input:  x10 = first value\n#         x11 = second value\n# Output: x12 = max(x10, x11)\n"
-        },
-        "p004": {
-          "number": 4,
-          "title": "Multiply by Power of Two",
-          "difficulty": "Easy",
-          "tags": ["Bit Manipulation"],
-          "description": [
-            "Given a value in x10 and a shift amount in x11, store x10 × 2^x11 in x12.",
-            "In RISC-V, shifting left by N bits is the same as multiplying by 2^N."
-          ],
-          "examples": [
-            { "input": "x10 = 5, x11 = 2", "output": "x12 = 20", "explanation": "5 << 2 = 20." }
-          ],
-          "constraints": [
-            "0 ≤ x11 ≤ 31",
-            "Use a shift instruction, not MUL",
-            "Overflow is allowed"
-          ],
-          "hints": [
-            "Use SLL or SLLI depending on the shift source.",
-            "The destination is x12.",
-            "Left shift multiplies by powers of two."
-          ],
-          "starterCode": "# Multiply by Power of Two\n# Input:  x10 = value\n#         x11 = shift amount\n# Output: x12 = x10 << x11\n"
-        },
-        "p005": {
-          "number": 5,
-          "title": "Count Down",
-          "difficulty": "Easy",
-          "tags": ["Loops"],
-          "description": [
-            "Starting from the value in x10, count down to zero. Store the number of loop iterations in x11.",
-            "Each iteration decrements a counter by 1 until it reaches zero."
-          ],
-          "examples": [
-            { "input": "x10 = 5", "output": "x11 = 5", "explanation": "The loop runs five times." }
-          ],
-          "constraints": [
-            "x10 ≥ 0",
-            "Use a loop with a branch instruction",
-            "x11 should equal the original value in x10 on completion"
-          ],
-          "hints": [
-            "You need one register for the countdown and one for the iteration count.",
-            "Stop when the countdown register reaches zero.",
-            "Initialize x11 to 0 and increment it every loop."
-          ],
-          "starterCode": "# Count Down\n# Input:  x10 = starting value\n# Output: x11 = number of iterations until zero\n"
-        },
-        "p006": {
-          "number": 6,
-          "title": "Sum Array",
-          "difficulty": "Medium",
-          "tags": ["Memory", "Loops", "Arrays"],
-          "description": [
-            "Given a base address in x10 and element count in x11, sum all 32-bit elements and store the result in x12.",
-            "This is the assembly version of a classic for-loop over an array."
-          ],
-          "examples": [
-            { "input": "x10 = 0x10000000, x11 = 3, arr = [10, 20, 30]", "output": "x12 = 60", "explanation": "10 + 20 + 30 = 60." }
-          ],
-          "constraints": [
-            "Elements are signed 32-bit integers",
-            "If x11 = 0, the result is 0",
-            "Use LW and word-stride addressing"
-          ],
-          "hints": [
-            "Keep a running sum in x12.",
-            "Advance the address by 4 bytes per element.",
-            "Use x11 as the number of remaining elements, but do not modify it permanently."
-          ],
-          "starterCode": "# Sum Array\n# Input:  x10 = base address\n#         x11 = element count\n# Output: x12 = sum of all words\n"
-        },
-        "p007": {
-          "number": 7,
-          "title": "Fibonacci (Iterative)",
-          "difficulty": "Medium",
-          "tags": ["Loops", "Arithmetic"],
-          "description": [
-            "Compute the Nth Fibonacci number where N is in x10. Store the result in x11.",
-            "Use an iterative solution. Recursive approaches are not expected here."
-          ],
-          "examples": [
-            { "input": "x10 = 6", "output": "x11 = 8", "explanation": "F(6) = 8." }
-          ],
-          "constraints": [
-            "0 ≤ N ≤ 20",
-            "Handle N = 0 and N = 1 as base cases",
-            "Use a loop, not recursion"
-          ],
-          "hints": [
-            "Track the previous two Fibonacci values.",
-            "Handle N = 0 and N = 1 before the loop.",
-            "Each iteration computes next = a + b, then shifts the window forward."
-          ],
-          "starterCode": "# Fibonacci (Iterative)\n# Input:  x10 = N\n# Output: x11 = F(N)\n"
-        },
-        "p008": {
-          "number": 8,
-          "title": "Reverse Bits",
-          "difficulty": "Medium",
-          "tags": ["Bit Manipulation"],
-          "description": [
-            "Given a 32-bit value in x10, store its bit-reversed value in x11.",
-            "Bit 31 becomes bit 0, bit 30 becomes bit 1, and so on."
-          ],
-          "examples": [
-            { "input": "0x00000001", "output": "0x80000000", "explanation": "The lowest bit becomes the highest bit." }
-          ],
-          "constraints": [
-            "Treat x10 as an unsigned 32-bit value",
-            "Process all 32 bits",
-            "Use shifts and masking"
-          ],
-          "hints": [
-            "Loop exactly 32 times.",
-            "Extract the lowest bit, shift the result left, then append the extracted bit.",
-            "Shift the input right as the loop progresses."
-          ],
-          "starterCode": "# Reverse Bits\n# Input:  x10 = 32-bit value\n# Output: x11 = bit-reversed value\n"
-        },
-        "p009": {
-          "number": 9,
-          "title": "Stack Push and Pop",
-          "difficulty": "Medium",
-          "tags": ["Stack", "Memory", "Functions"],
-          "description": [
-            "Using x2 as the stack pointer, push x10 and x11, then pop into x12 and x13.",
-            "The result should reflect normal LIFO stack behavior."
-          ],
-          "examples": [
-            { "input": "x10 = 1, x11 = 2, sp = 0x7FFFFFFC", "output": "x12 = 2, x13 = 1", "explanation": "Push 1, push 2, then pop in reverse order." }
-          ],
-          "constraints": [
-            "Use SW to push and LW to pop",
-            "Decrement SP by 4 before each push",
-            "Increment SP by 4 after each pop"
-          ],
-          "hints": [
-            "Remember that the stack grows downward.",
-            "A push is addi sp, sp, -4 followed by sw.",
-            "A pop is lw followed by addi sp, sp, 4."
-          ],
-          "starterCode": "# Stack Push and Pop\n# Inputs: x10, x11, x2 = stack pointer\n# Outputs: x12 = popped x11, x13 = popped x10\n"
-        },
-        "p010": {
-          "number": 10,
-          "title": "Count Set Bits",
-          "difficulty": "Medium",
-          "tags": ["Bit Manipulation", "Loops"],
-          "description": [
-            "Given a 32-bit value in x10, count how many bits are set to 1 and store the result in x11.",
-            "This is the popcount or Hamming weight problem."
-          ],
-          "examples": [
-            { "input": "x10 = 0x0000000B", "output": "x11 = 3", "explanation": "0b1011 has three set bits." }
-          ],
-          "constraints": [
-            "Treat x10 as an unsigned 32-bit value",
-            "0 ≤ result ≤ 32",
-            "Loop through all 32 bits"
-          ],
-          "hints": [
-            "Inspect the least-significant bit each iteration.",
-            "Add that bit to your count register.",
-            "Shift the input right and repeat 32 times."
-          ],
-          "starterCode": "# Count Set Bits\n# Input:  x10 = 32-bit value\n# Output: x11 = number of 1 bits\n"
-        },
-        "p011": {
-          "number": 11,
-          "title": "Find Max in Array",
-          "difficulty": "Hard",
-          "tags": ["Memory", "Loops", "Control Flow"],
-          "description": [
-            "Given a base address in x10 and count in x11, find the maximum signed 32-bit integer in the array and store it in x12.",
-            "Initialize the max with the first element, not zero, because all values may be negative."
-          ],
-          "examples": [
-            { "input": "arr = [3, 1, 4, 1, 5], n = 5", "output": "x12 = 5", "explanation": "Track the current max as you scan the array." }
-          ],
-          "constraints": [
-            "x11 ≥ 1",
-            "Elements are signed 32-bit integers",
-            "Initialize max from the first element"
-          ],
-          "hints": [
-            "Load the first element before entering the main loop.",
-            "Compare each new value against the current max.",
-            "Advance by 4 bytes per array element."
-          ],
-          "starterCode": "# Find Max in Array\n# Input:  x10 = base address\n#         x11 = element count\n# Output: x12 = maximum element\n"
-        },
-        "p012": {
-          "number": 12,
-          "title": "String Length",
-          "difficulty": "Hard",
-          "tags": ["Memory", "Loops", "Strings"],
-          "description": [
-            "Given the address of a null-terminated ASCII string in x10, store the string length in x11.",
-            "Walk memory byte by byte using LBU until you reach a zero byte."
-          ],
-          "examples": [
-            { "input": "\"hello\\0\" at 0x10000000", "output": "x11 = 5", "explanation": "The null terminator is not counted." }
-          ],
-          "constraints": [
-            "Use LBU to read each byte",
-            "The string ends with 0x00",
-            "Maximum length is 100 bytes"
-          ],
-          "hints": [
-            "Keep a pointer register and a length counter.",
-            "Stop when the loaded byte is zero.",
-            "Increment the pointer by 1 each iteration."
-          ],
-          "starterCode": "# String Length\n# Input:  x10 = address of null-terminated string\n# Output: x11 = string length\n"
-        },
-        "p013": {
-          "number": 13,
-          "title": "Bubble Sort",
-          "difficulty": "Hard",
-          "tags": ["Sorting", "Memory", "Loops"],
-          "description": [
-            "Given a base address in x10 and count in x11, sort the array of signed 32-bit integers in ascending order in place.",
-            "Use the classic bubble sort pattern with nested loops and adjacent swaps."
-          ],
-          "examples": [
-            { "input": "[3, 1, 2], n = 3", "output": "[1, 2, 3]", "explanation": "Repeatedly bubble larger values toward the end." }
-          ],
-          "constraints": [
-            "Sort ascending",
-            "Modify memory in place",
-            "Use nested loops"
-          ],
-          "hints": [
-            "The inner loop compares arr[j] and arr[j + 1].",
-            "Swap when the left value is larger than the right value.",
-            "Shrink the inner loop bound each outer iteration."
-          ],
-          "starterCode": "# Bubble Sort\n# Input:  x10 = base address\n#         x11 = element count\n# Output: array sorted in ascending order in memory\n"
-        },
-        "p014": {
-          "number": 14,
-          "title": "GCD (Euclidean)",
-          "difficulty": "Hard",
-          "tags": ["Arithmetic", "Loops", "Functions"],
-          "description": [
-            "Compute the greatest common divisor of x10 and x11 using the Euclidean algorithm. Store the result in x12.",
-            "Use REM to compute remainders while repeatedly swapping a and b."
-          ],
-          "examples": [
-            { "input": "x10 = 48, x11 = 18", "output": "x12 = 6", "explanation": "GCD(48, 18) = 6." }
-          ],
-          "constraints": [
-            "x10 and x11 are positive integers",
-            "Use REM for modulo",
-            "Use an iterative loop"
-          ],
-          "hints": [
-            "While b != 0, compute a % b.",
-            "Move b into a after saving it.",
-            "When b reaches zero, a holds the answer."
-          ],
-          "starterCode": "# GCD (Euclidean)\n# Input:  x10 = a\n#         x11 = b\n# Output: x12 = gcd(a, b)\n"
-        },
-        "p015": {
-          "number": 15,
-          "title": "Matrix Trace",
-          "difficulty": "Hard",
-          "tags": ["Memory", "Loops", "Arrays"],
-          "description": [
-            "Given a base address in x10 and dimension N in x11, compute the trace of an N×N matrix stored in row-major order and store the result in x12.",
-            "The trace is the sum of A[0][0] + A[1][1] + ... + A[N-1][N-1]."
-          ],
-          "examples": [
-            { "input": "N = 2, matrix = [[1, 2], [3, 4]]", "output": "x12 = 5", "explanation": "1 + 4 = 5." }
-          ],
-          "constraints": [
-            "1 ≤ N ≤ 8",
-            "Elements are signed 32-bit integers",
-            "Use row-major indexing"
-          ],
-          "hints": [
-            "The address of A[i][i] is base + (i * N + i) * 4.",
-            "Loop i from 0 to N - 1.",
-            "Accumulate the diagonal values in x12."
-          ],
-          "starterCode": "# Matrix Trace\n# Input:  x10 = base address\n#         x11 = dimension N\n# Output: x12 = trace of the matrix\n"
-        }
-      }
-    </script>
-
-    <script>
-      (() => {
-        const escapeHtml = (value) =>
-          value
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll("\"", "&quot;")
-            .replaceAll("'", "&#39;");
-
-        const fallbackNode = document.getElementById("problems-fallback-data");
-        const fallbackProblems = fallbackNode ? JSON.parse(fallbackNode.textContent || "{}") : {};
-        const problemIdFromUrl = new URLSearchParams(window.location.search).get("id");
-        const fallbackProblem = problemIdFromUrl ? fallbackProblems[problemIdFromUrl] : null;
-        const listView = document.getElementById("problems-list-view");
-        const problemView = document.getElementById("pv-layout");
-        const footer = document.getElementById("site-footer");
-        const leftContent = document.getElementById("pv-left-content");
-        const editorRoot = document.getElementById("pv-editor");
-        const hintCount = document.getElementById("pv-hint-count");
-        const topbarNum = document.getElementById("pv-topbar-num");
-        const topbarTitle = document.getElementById("pv-topbar-title");
-        const topbarCrumbs = document.getElementById("pv-topbar-crumbs");
-        const topbarDifficulty = document.getElementById("pv-topbar-difficulty");
-        const topbarTags = document.getElementById("pv-topbar-tags");
-        const tabButtons = document.querySelectorAll("[data-left-tab]");
-
-        const renderDescription = (problem) => {
-          leftContent.innerHTML = `
-            <div class="pv-problem-header">
-              <h2 class="pv-problem-title">${problem.number}. ${escapeHtml(problem.title)}</h2>
-              <div class="pv-problem-meta">
-                <span class="pv-badge pv-badge--${problem.difficulty.toLowerCase()}">${escapeHtml(problem.difficulty)}</span>
-                ${problem.tags.map((tag) => `<span class="pv-meta-tag">${escapeHtml(tag)}</span>`).join("")}
-              </div>
-            </div>
-            <div class="pv-problem-body">
-              ${problem.description.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
-            </div>
-            <div class="pv-examples">
-              <h3 class="pv-section-title">Examples</h3>
-              ${problem.examples
-                .map(
-                  (example, index) => `
-                    <div class="pv-example">
-                      <div class="pv-example__label">Example ${index + 1}:</div>
-                      <div class="pv-example__block">
-                        <div class="pv-example__row">
-                          <span class="pv-example__key">Input:</span>
-                          <code class="pv-example__val">${escapeHtml(example.input)}</code>
-                        </div>
-                        <div class="pv-example__row">
-                          <span class="pv-example__key">Output:</span>
-                          <code class="pv-example__val">${escapeHtml(example.output)}</code>
-                        </div>
-                        ${example.explanation ? `<div class="pv-example__explanation">${escapeHtml(example.explanation)}</div>` : ""}
-                      </div>
-                    </div>
-                  `
-                )
-                .join("")}
-            </div>
-            <div class="pv-constraints">
-              <h3 class="pv-section-title">Constraints</h3>
-              <ul class="pv-constraints-list">
-                ${problem.constraints.map((constraint) => `<li>${escapeHtml(constraint)}</li>`).join("")}
-              </ul>
-            </div>
-          `;
-        };
-
-        const renderHints = (problem) => {
-          leftContent.innerHTML = `
-            <p class="pv-hints-intro">Hints are free — use them without guilt.</p>
-            ${problem.hints
-              .map(
-                (hint, index) => `
-                  <div class="pv-hint-item is-open">
-                    <div class="pv-case-label">Hint ${index + 1} of ${problem.hints.length}</div>
-                    <button class="pv-hint-reveal" type="button">
-                      <span>Hint ${index + 1}</span>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                        <path d="m9 6 6 6-6 6"></path>
-                      </svg>
-                    </button>
-                    <div class="pv-hint-content">${escapeHtml(hint)}</div>
-                  </div>
-                `
-              )
-              .join("")}
-          `;
-        };
-
-        const renderEditorial = () => {
-          leftContent.innerHTML = `
-            <div class="pv-editorial-placeholder">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H19v20H7.5A2.5 2.5 0 0 0 5 24"></path>
-                <path d="M5 4.5v17"></path>
-                <path d="M9 7h7M9 11h7M9 15h5"></path>
-              </svg>
-              <strong>Editorial coming soon.</strong>
-              <p>Try the problem first. The full page app unlocks the richer experience when its script loads.</p>
-            </div>
-          `;
-        };
-
-        const renderSubmissions = () => {
-          leftContent.innerHTML = `
-            <div class="pv-submissions-empty">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <path d="M4 7h16"></path>
-                <path d="M5 7.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5"></path>
-                <path d="M9 11h6"></path>
-                <path d="M9 15h6"></path>
-              </svg>
-              <p>Submissions appear here after the full app loads.</p>
-            </div>
-          `;
-        };
-
-        const renderTab = (tabName) => {
-          if (!fallbackProblem || !leftContent) {
-            return;
-          }
-          tabButtons.forEach((button) => {
-            button.classList.toggle("active", button.getAttribute("data-left-tab") === tabName);
-          });
-          if (tabName === "hints") {
-            renderHints(fallbackProblem);
-            return;
-          }
-          if (tabName === "editorial") {
-            renderEditorial();
-            return;
-          }
-          if (tabName === "submissions") {
-            renderSubmissions();
-            return;
-          }
-          renderDescription(fallbackProblem);
-        };
-
-        if (fallbackProblem && listView && problemView && leftContent && editorRoot && topbarNum && topbarTitle && topbarDifficulty && topbarTags) {
-          listView.hidden = true;
-          problemView.hidden = false;
-          if (footer) {
-            footer.hidden = true;
-          }
-          document.body.classList.add("problems-view-active");
-          document.title = `${fallbackProblem.title} - StudyRISC-V`;
-          if (topbarCrumbs) {
-            topbarCrumbs.textContent = `Problems / ${fallbackProblem.difficulty}`;
-          }
-          topbarNum.textContent = `${fallbackProblem.number}.`;
-          topbarTitle.textContent = fallbackProblem.title;
-          topbarDifficulty.textContent = fallbackProblem.difficulty;
-          topbarDifficulty.className = `pv-topbar__difficulty pv-topbar__difficulty--${fallbackProblem.difficulty.toLowerCase()}`;
-          topbarTags.innerHTML = fallbackProblem.tags.map((tag) => `<span class="pv-topbar__tag">${escapeHtml(tag)}</span>`).join("");
-          if (hintCount) {
-            hintCount.textContent = String(fallbackProblem.hints.length);
-          }
-          renderTab("description");
-          tabButtons.forEach((button) => {
-            button.addEventListener("click", () => {
-              renderTab(button.getAttribute("data-left-tab") || "description");
-            });
-          });
-          editorRoot.innerHTML = `<textarea class="pv-editor-fallback" spellcheck="false">${escapeHtml(fallbackProblem.starterCode)}</textarea>`;
-        }
-
-        const rows = document.querySelectorAll("#pl-tbody .pl-row[data-problem-id]");
-        rows.forEach((row) => {
-          row.setAttribute("tabindex", "0");
-          row.setAttribute("role", "link");
-          row.addEventListener("click", (event) => {
-            if (event.target instanceof HTMLElement && event.target.closest("a")) {
-              return;
-            }
-            const problemId = row.getAttribute("data-problem-id");
-            if (problemId) {
-              window.location.href = "/problems/?id=" + encodeURIComponent(problemId);
-            }
-          });
-          row.addEventListener("keydown", (event) => {
-            if (event.key !== "Enter" && event.key !== " ") {
-              return;
-            }
-            event.preventDefault();
-            const problemId = row.getAttribute("data-problem-id");
-            if (problemId) {
-              window.location.href = "/problems/?id=" + encodeURIComponent(problemId);
-            }
-          });
-        });
-      })();
-    </script>
 
     <script type="module" src="../src/problem-list.ts"></script>
   </body>
