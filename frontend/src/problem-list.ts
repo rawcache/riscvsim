@@ -1179,7 +1179,7 @@ class ProblemsApp {
     this.latestSummary = null;
     this.expandedResultCaseId = null;
     this.pendingSubmissionToLoad = null;
-    this.consoleOpen = false;
+    this.consoleOpen = true;
     this.openHints = new Set<number>();
 
     const entry = ensureProblemEntry(this.progress, problem);

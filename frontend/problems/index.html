@@ -368,6 +368,7 @@
 
             <div class="pv-editor-toolbar">
               <div class="pv-editor-toolbar__left">
+                <div class="pv-editor-title">Code</div>
                 <div class="pv-lang-pill">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                     <path d="m8 7-4 5 4 5"></path>
@@ -402,6 +403,17 @@
                     <path d="M5 10V5h5"></path>
                   </svg>
                 </button>
+                <div class="pv-editor-primary">
+                  <button class="pv-btn pv-btn--run" id="pv-run-btn" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                      <path d="m8 6 10 6-10 6z"></path>
+                    </svg>
+                    <span>Run</span>
+                  </button>
+                  <button class="pv-btn pv-btn--submit" id="pv-submit-btn" type="button">
+                    <span>Submit</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -435,15 +447,9 @@
                 </button>
               </div>
               <div class="pv-action-bar__right">
-                <button class="pv-btn pv-btn--run" id="pv-run-btn" type="button">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <path d="m8 6 10 6-10 6z"></path>
-                  </svg>
-                  <span>Run</span>
-                </button>
-                <button class="pv-btn pv-btn--submit" id="pv-submit-btn" type="button">
-                  <span>Submit</span>
-                </button>
+                <div class="pv-action-hint">
+                  Read, code, test, submit.
+                </div>
               </div>
             </div>
           </div>
