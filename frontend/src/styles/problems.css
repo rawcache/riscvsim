@@ -1235,18 +1235,42 @@
   letter-spacing: 0.1em;
 }
 
-.pv-lang-select {
+.pv-lang-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
+  padding: 4px 12px;
   border: 1px solid var(--pv-border);
   border-radius: 6px;
   background: var(--pv-bg-surface);
   color: var(--pv-text-secondary);
   font-family: "Geist Mono", "JetBrains Mono", monospace;
   font-size: 12px;
+  font-weight: 600;
+  cursor: default;
   user-select: none;
+}
+
+.pv-lang-pill--active::before,
+.pv-lang-pill--error::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pv-lang-pill--active::before {
+  background: var(--success);
+}
+
+.pv-lang-pill--error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.pv-lang-pill--error::before {
+  background: var(--danger);
 }
 
 .pv-editor-btn {

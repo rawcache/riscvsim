@@ -176,22 +176,28 @@ type CustomCaseParseResult = {
 const MONACO_CDN = "https://unpkg.com/monaco-editor@0.44.0/min/vs";
 
 export const MONACO_THEME_NAME = "riscv-dark";
+export const MONACO_LIGHT_THEME_NAME = "studyriscv-light";
 export const RISCV_LANGUAGE_ID = "riscv";
 
+const ACTIVE_DARK_THEME_NAME = "studyriscv-dark";
+
 export const RISCV_KEYWORDS = [
-  "add", "addi", "sub", "lui", "auipc",
-  "and", "andi", "or", "ori", "xor", "xori",
-  "sll", "slli", "srl", "srli", "sra", "srai",
-  "slt", "slti", "sltu", "sltiu",
-  "lw", "lh", "lb", "lhu", "lbu",
-  "sw", "sh", "sb",
+  "add", "sub", "sll", "slt", "sltu", "xor", "srl", "sra",
+  "or", "and",
+  "mul", "mulh", "mulhsu", "mulhu", "div", "divu",
+  "rem", "remu",
+  "addi", "slti", "sltiu", "xori", "ori", "andi",
+  "slli", "srli", "srai",
+  "lb", "lh", "lw", "lbu", "lhu",
+  "sb", "sh", "sw",
   "beq", "bne", "blt", "bge", "bltu", "bgeu",
-  "jal", "jalr",
-  "mul", "mulh", "mulhu", "mulhsu",
-  "div", "divu", "rem", "remu",
-  "ecall", "ebreak",
-  "li", "mv", "la", "nop", "j", "ret", "call",
-  "neg", "not", "seqz", "snez", "sltz", "sgtz",
+  "jalr", "jal",
+  "lui", "auipc",
+  "ecall", "ebreak", "fence",
+  "li", "la", "mv", "nop", "ret", "call", "tail",
+  "j", "jr", "not", "neg", "seqz", "snez", "sltz", "sgtz",
+  "beqz", "bnez", "blez", "bgez", "bltz", "bgtz",
+  "bgt", "ble", "bgtu", "bleu",
 ];
 
 export const RISCV_REGISTERS = [
@@ -201,9 +207,9 @@ export const RISCV_REGISTERS = [
   "x24", "x25", "x26", "x27", "x28", "x29", "x30", "x31",
   "zero", "ra", "sp", "gp", "tp",
   "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
-  "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11",
   "t0", "t1", "t2", "t3", "t4", "t5", "t6",
-  "fp",
+  "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11",
+  "fp", "pc",
 ];
 
 const RISCV_DIRECTIVES = [
@@ -241,37 +247,30 @@ const SUBMISSION_DETAILS_PREFIX = "problems_submission_details_";
 export function buildRiscvLanguageDefinition(): Record<string, unknown> {
   return {
     defaultToken: "",
+    tokenPostfix: ".riscv",
     keywords: RISCV_KEYWORDS,
     registers: RISCV_REGISTERS,
     directives: RISCV_DIRECTIVES,
     tokenizer: {
       root: [
         [/#.*$/, "comment"],
-        [/^[A-Za-z_][A-Za-z0-9_.]*(?=\s*:)/, "type"],
-        [/[A-Za-z_][A-Za-z0-9_.]*(?=\s*:)/, "type"],
+        [/[a-zA-Z_][a-zA-Z0-9_]*(?=\s*:)/, "type.identifier"],
+        [/\.[a-zA-Z][a-zA-Z0-9_]*/, "keyword.directive"],
+        [/0[xX][0-9a-fA-F]+/, "number.hex"],
+        [/-?[0-9]+/, "number"],
+        [/"([^"\\]|\\.)*"/, "string"],
+        [/[ \t\r\n]+/, "white"],
         [
-          /\.[a-z]+/,
+          /[a-zA-Z_][a-zA-Z0-9_]*/,
           {
             cases: {
-              "@directives": "string",
-              "@default": "string",
-            },
-          },
-        ],
-        [
-          /[A-Za-z_][A-Za-z0-9_.]*/,
-          {
-            cases: {
+              "@registers": "variable.register",
               "@keywords": "keyword",
-              "@registers": "variable",
               "@default": "identifier",
             },
           },
         ],
-        [/0x[0-9a-fA-F]+/, "number"],
-        [/-?[0-9]+/, "number"],
-        [/[,:()[\]]/, "operator"],
-        [/\s+/, ""],
+        [/[(),:]/, "delimiter"],
       ],
     },
   };
@@ -1056,33 +1055,69 @@ function monacoHost(): EditorWindow {
   return window as EditorWindow;
 }
 
-function defineMonacoTheme(monaco: MonacoApi): void {
-  monaco.editor.defineTheme(MONACO_THEME_NAME, {
+function currentMonacoThemeName(): string {
+  return document.documentElement.getAttribute("data-theme") === "light"
+    ? MONACO_LIGHT_THEME_NAME
+    : ACTIVE_DARK_THEME_NAME;
+}
+
+function defineMonacoThemes(monaco: MonacoApi): void {
+  const darkTheme = {
     base: "vs-dark",
     inherit: true,
     rules: [
-      { token: "comment", foreground: "6A9955", fontStyle: "italic" },
-      { token: "keyword", foreground: "569CD6", fontStyle: "bold" },
-      { token: "variable", foreground: "4FC1FF" },
-      { token: "number", foreground: "B5CEA8" },
-      { token: "type", foreground: "4EC9B0" },
-      { token: "string", foreground: "CE9178" },
-      { token: "operator", foreground: "D4D4D4" },
+      { token: "comment", foreground: "5A6A5A", fontStyle: "italic" },
+      { token: "keyword", foreground: "4D87F5", fontStyle: "bold" },
+      { token: "keyword.directive", foreground: "A78BFA" },
+      { token: "variable.register", foreground: "22C55E" },
+      { token: "type.identifier", foreground: "F59E0B" },
+      { token: "number", foreground: "F87171" },
+      { token: "number.hex", foreground: "FB923C" },
+      { token: "string", foreground: "FDE68A" },
+      { token: "delimiter", foreground: "555555" },
     ],
     colors: {
       "editor.background": "#0a0a0a",
-      "editor.foreground": "#e6edf3",
-      "editor.lineHighlightBackground": "#171717",
-      "editor.lineHighlightBorder": "#202020",
-      "editorLineNumber.foreground": "#6e7681",
-      "editorLineNumber.activeForeground": "#e6edf3",
-      "editor.selectionBackground": "#264f78",
-      "editor.inactiveSelectionBackground": "#2f2f2f",
-      "editorCursor.foreground": "#ffffff",
-      "editorCursor.background": "#0a0a0a",
-      "editorBracketMatch.background": "#1b4332",
-      "editorBracketMatch.border": "#22c55e",
+      "editor.foreground": "#e4e4e7",
+      "editor.lineHighlightBackground": "#111111",
+      "editor.lineHighlightBorder": "#00000000",
+      "editorLineNumber.foreground": "#3A3A3A",
+      "editorLineNumber.activeForeground": "#888888",
+      "editor.selectionBackground": "#2D6BE440",
+      "editor.inactiveSelectionBackground": "#2D6BE420",
+      "editorCursor.foreground": "#4D87F5",
       "editorGutter.background": "#0a0a0a",
+      "editorIndentGuide.background1": "#1A1A1A",
+      "editorBracketMatch.background": "#2D6BE430",
+      "editorBracketMatch.border": "#2D6BE480",
+    },
+  } as const;
+
+  monaco.editor.defineTheme(MONACO_THEME_NAME, darkTheme);
+  monaco.editor.defineTheme(ACTIVE_DARK_THEME_NAME, darkTheme);
+
+  monaco.editor.defineTheme(MONACO_LIGHT_THEME_NAME, {
+    base: "vs",
+    inherit: true,
+    rules: [
+      { token: "comment", foreground: "6B7280", fontStyle: "italic" },
+      { token: "keyword", foreground: "2563EB", fontStyle: "bold" },
+      { token: "keyword.directive", foreground: "7C3AED" },
+      { token: "variable.register", foreground: "16A34A" },
+      { token: "type.identifier", foreground: "D97706" },
+      { token: "number", foreground: "DC2626" },
+      { token: "number.hex", foreground: "EA580C" },
+      { token: "string", foreground: "B45309" },
+      { token: "delimiter", foreground: "9CA3AF" },
+    ],
+    colors: {
+      "editor.background": "#fafafa",
+      "editor.foreground": "#111111",
+      "editor.lineHighlightBackground": "#f3f4f6",
+      "editorLineNumber.foreground": "#9ca3af",
+      "editorLineNumber.activeForeground": "#374151",
+      "editor.selectionBackground": "#2D6BE430",
+      "editorCursor.foreground": "#2D6BE4",
     },
   });
 }
@@ -1116,7 +1151,7 @@ function loadMonaco(): Promise<MonacoApi> {
   const host = monacoHost();
 
   if (host.monaco) {
-    defineMonacoTheme(host.monaco);
+    defineMonacoThemes(host.monaco);
     defineRISCVLanguage(host.monaco);
     return Promise.resolve(host.monaco);
   }
@@ -1149,7 +1184,7 @@ function loadMonaco(): Promise<MonacoApi> {
           reject(new Error("Monaco failed to expose the editor API"));
           return;
         }
-        defineMonacoTheme(host.monaco);
+        defineMonacoThemes(host.monaco);
         defineRISCVLanguage(host.monaco);
         resolve(host.monaco);
       },
@@ -1164,14 +1199,15 @@ function loadMonaco(): Promise<MonacoApi> {
 }
 
 function createMonacoEditor(monaco: MonacoApi, container: HTMLElement, code: string): MonacoEditorInstance {
-  monaco.editor.setTheme(MONACO_THEME_NAME);
+  const themeName = currentMonacoThemeName();
+  monaco.editor.setTheme(themeName);
   return monaco.editor.create(container, {
     value: code,
     language: RISCV_LANGUAGE_ID,
-    theme: MONACO_THEME_NAME,
+    theme: themeName,
     fontFamily: "'JetBrains Mono', 'Fira Code', 'Geist Mono', 'Cascadia Code', monospace",
     fontLigatures: true,
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 22,
     tabSize: 2,
     insertSpaces: true,
@@ -1179,17 +1215,17 @@ function createMonacoEditor(monaco: MonacoApi, container: HTMLElement, code: str
     minimap: { enabled: false },
     scrollBeyondLastLine: false,
     renderLineHighlight: "all",
-    cursorBlinking: "blink",
+    cursorBlinking: "smooth",
     cursorStyle: "line",
     cursorWidth: 2,
     smoothScrolling: true,
     automaticLayout: true,
-    padding: { top: 16, bottom: 20 },
+    padding: { top: 16, bottom: 16 },
     lineNumbers: "on",
     lineNumbersMinChars: 3,
     glyphMargin: false,
     folding: false,
-    renderWhitespace: "none",
+    renderWhitespace: "selection",
     wordWrap: "off",
     scrollbar: {
       vertical: "auto",
@@ -1201,6 +1237,7 @@ function createMonacoEditor(monaco: MonacoApi, container: HTMLElement, code: str
     hideCursorInOverviewRuler: true,
     matchBrackets: "always",
     bracketPairColorization: { enabled: false },
+    overviewRulerLanes: 0,
     contextmenu: true,
     quickSuggestions: false,
     parameterHints: { enabled: false },
@@ -1257,6 +1294,7 @@ class ProblemsPageApp {
   private readonly monacoContainer = document.getElementById("pv-monaco") as HTMLElement;
   private readonly editorHost = document.getElementById("pv-editor") as HTMLElement;
   private readonly monacoLoading = document.getElementById("pv-monaco-loading") as HTMLElement;
+  private readonly langPill = document.getElementById("pv-lang-pill") as HTMLElement | null;
   private readonly resetButton = document.getElementById("pv-reset-btn") as HTMLButtonElement;
   private readonly runButton = document.getElementById("pv-run-btn") as HTMLButtonElement;
   private readonly submitButton = document.getElementById("pv-submit-btn") as HTMLButtonElement;
@@ -1285,6 +1323,7 @@ class ProblemsPageApp {
   private editor: MonacoEditorInstance | null = null;
   private editorFallback: HTMLTextAreaElement | null = null;
   private editorChangeSubscription: { dispose(): void } | null = null;
+  private editorThemeObserver: MutationObserver | null = null;
   private runtimePromise: Promise<WasmRuntime> | null = null;
   private running = false;
   private fullscreen = safeLocalStorageGet(FULLSCREEN_STORAGE_KEY) === "1";
@@ -1645,6 +1684,10 @@ class ProblemsPageApp {
       void this.refreshSessionState();
     });
 
+    window.addEventListener("beforeunload", () => {
+      this.stopEditorThemeSync();
+    });
+
     document.addEventListener("keydown", (event) => {
       if (this.problemLayout.hidden) {
         return;
@@ -1913,6 +1956,8 @@ class ProblemsPageApp {
     this.body.classList.remove("pv-body");
     this.verdict.hidden = true;
     this.resetConfirm.hidden = true;
+    this.stopEditorThemeSync();
+    this.updateLanguagePill("idle");
     document.title = "Problems - StudyRISC-V";
 
     if (pushHistory) {
@@ -1975,6 +2020,7 @@ class ProblemsPageApp {
     this.crumbDifficulty.textContent = problem.difficulty;
     this.crumbDifficulty.dataset.val = problem.difficulty;
     this.crumbTitle.textContent = problem.title;
+    this.updateLanguagePill("idle");
     this.hintsBadge.textContent = String(problem.hints.length);
     this.prevButton.disabled = problem.number <= 1;
     this.nextButton.disabled = problem.number >= this.problems.length;
@@ -2604,6 +2650,43 @@ class ProblemsPageApp {
     `;
   }
 
+  private updateLanguagePill(state: "idle" | "active" | "error", label = "RISC-V Assembly"): void {
+    if (!this.langPill) {
+      return;
+    }
+    this.langPill.textContent = label;
+    this.langPill.classList.remove("pv-lang-pill--active", "pv-lang-pill--error");
+    if (state === "active") {
+      this.langPill.classList.add("pv-lang-pill--active");
+    } else if (state === "error") {
+      this.langPill.classList.add("pv-lang-pill--error");
+    }
+  }
+
+  private syncEditorTheme(): void {
+    if (!this.monaco) {
+      return;
+    }
+    this.monaco.editor.setTheme(currentMonacoThemeName());
+  }
+
+  private startEditorThemeSync(): void {
+    this.stopEditorThemeSync();
+    this.syncEditorTheme();
+    this.editorThemeObserver = new MutationObserver(() => {
+      this.syncEditorTheme();
+    });
+    this.editorThemeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme", "class"],
+    });
+  }
+
+  private stopEditorThemeSync(): void {
+    this.editorThemeObserver?.disconnect();
+    this.editorThemeObserver = null;
+  }
+
   private async ensureRuntime(): Promise<WasmRuntime> {
     this.runtimePromise ??= WasmRuntime.create();
     return this.runtimePromise;
@@ -2615,6 +2698,7 @@ class ProblemsPageApp {
       this.editorHost.innerHTML = "";
     }
     delete this.editorHost.dataset.editorFallback;
+    this.updateLanguagePill("idle");
 
     try {
       const el = this.editorHost;
@@ -2632,6 +2716,7 @@ class ProblemsPageApp {
       if (!this.editor) {
         console.log("Monaco loaded");
         this.editor = createMonacoEditor(this.monaco, el, code);
+        this.startEditorThemeSync();
         monacoHost().__editorInstance = this.editor;
         monacoHost().__editorFallback = null;
         this.editorFallback = null;
@@ -2640,8 +2725,10 @@ class ProblemsPageApp {
         this.editor.setValue(code);
         this.editor.updateOptions({ readOnly: false });
         monacoHost().__editorInstance = this.editor;
+        this.startEditorThemeSync();
       }
 
+      this.updateLanguagePill("active", "RISC-V Assembly");
       this.monacoLoading.hidden = true;
       this.editor.layout();
       this.editor.focus();
@@ -2654,6 +2741,7 @@ class ProblemsPageApp {
   private mountEditorFallback(code: string): void {
     this.editor?.dispose();
     this.editor = null;
+    this.stopEditorThemeSync();
     monacoHost().__editorInstance = null;
     this.editorHost.innerHTML = "";
 
@@ -2667,6 +2755,7 @@ class ProblemsPageApp {
     this.editorFallback = textarea;
     monacoHost().__editorFallback = textarea;
     this.monacoLoading.hidden = true;
+    this.updateLanguagePill("error", "Editor failed");
 
     textarea.addEventListener("input", () => {
       if (this.state) {
