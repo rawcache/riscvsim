@@ -302,6 +302,28 @@ export function getCurrentProblem(search = typeof window !== "undefined" ? windo
   return getProblem(getCurrentProblemId(search)) ?? null;
 }
 
+function getCurrentTagFilter(search = typeof window !== "undefined" ? window.location.search : ""): ProblemTag | "" {
+  const tag = new URLSearchParams(search).get("tag");
+  if (
+    tag &&
+    [
+      "Arithmetic",
+      "Control Flow",
+      "Memory",
+      "Loops",
+      "Functions",
+      "Bit Manipulation",
+      "Arrays",
+      "Strings",
+      "Stack",
+      "Sorting",
+    ].includes(tag)
+  ) {
+    return tag as ProblemTag;
+  }
+  return "";
+}
+
 export function clampPanelSplit(requestedWidth: number, totalWidth: number): number {
   return Math.max(MIN_LEFT_WIDTH, Math.min(totalWidth * MAX_LEFT_RATIO, requestedWidth));
 }
@@ -1201,9 +1223,17 @@ class ProblemsPageApp {
   private readonly tagFilter = document.getElementById("pl-tag") as HTMLSelectElement;
   private readonly clearFiltersButton = document.getElementById("pl-clear") as HTMLButtonElement;
   private readonly tableBody = document.getElementById("pl-tbody") as HTMLElement;
-  private readonly solvedStat = document.getElementById("pl-stat-solved") as HTMLElement;
-  private readonly attemptedStat = document.getElementById("pl-stat-attempted") as HTMLElement;
-  private readonly totalStat = document.getElementById("pl-stat-total") as HTMLElement;
+  private readonly solvedCount = document.getElementById("pl-solved-count") as HTMLElement;
+  private readonly resultCount = document.getElementById("pl-result-count") as HTMLElement;
+  private readonly tagStrip = document.getElementById("pl-tagstrip") as HTMLElement | null;
+  private readonly sidebarProgress = document.getElementById("pl-sidebar-progress") as HTMLElement | null;
+  private readonly progressRingArc = document.getElementById("pl-ring-arc") as SVGCircleElement | null;
+  private readonly progressRingSolved = document.getElementById("pl-ring-solved") as HTMLElement | null;
+  private readonly easySolvedCount = document.getElementById("pl-easy-solved") as HTMLElement | null;
+  private readonly mediumSolvedCount = document.getElementById("pl-medium-solved") as HTMLElement | null;
+  private readonly hardSolvedCount = document.getElementById("pl-hard-solved") as HTMLElement | null;
+  private readonly pickRandomButton = document.getElementById("pl-pick-random") as HTMLButtonElement | null;
+  private readonly pickEasyButton = document.getElementById("pl-pick-easy") as HTMLButtonElement | null;
 
   private readonly problemLayout = document.getElementById("pv-layout") as HTMLElement;
   private readonly backLink = document.getElementById("pv-back-link") as HTMLAnchorElement;
@@ -1276,7 +1306,10 @@ class ProblemsPageApp {
 
     bindVerdictClose(this.verdictClose, this.verdict);
 
-    this.totalStat.textContent = String(this.problems.length);
+    const urlTag = getCurrentTagFilter();
+    if (urlTag) {
+      this.filters.tag = urlTag;
+    }
     this.applyFilterControls();
     this.bindEvents();
     this.renderList();
@@ -1340,6 +1373,35 @@ class ProblemsPageApp {
       this.filters = { ...DEFAULT_FILTERS };
       this.applyFilterControls();
       this.handleFiltersChanged();
+    });
+
+    this.tagStrip?.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement | null;
+      const button = target?.closest<HTMLButtonElement>("[data-tag]");
+      if (!button) {
+        return;
+      }
+      event.preventDefault();
+      const nextTag = (button.dataset.tag ?? "") as FilterState["tag"];
+      this.filters.tag = this.filters.tag === nextTag ? "" : nextTag;
+      this.handleFiltersChanged();
+    });
+
+    this.listLayout.querySelectorAll<HTMLAnchorElement>(".pl-sidebar-link[data-tag]").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        const nextTag = (link.dataset.tag ?? "") as FilterState["tag"];
+        this.filters.tag = nextTag;
+        this.handleFiltersChanged();
+      });
+    });
+
+    this.pickRandomButton?.addEventListener("click", () => {
+      this.openRandomProblem();
+    });
+
+    this.pickEasyButton?.addEventListener("click", () => {
+      this.openRandomProblem("Easy");
     });
 
     this.tableBody.addEventListener("click", (event) => {
@@ -1557,6 +1619,9 @@ class ProblemsPageApp {
       if (problemId && getProblem(problemId)) {
         void this.showProblemView(problemId, false);
       } else {
+        this.filters.tag = getCurrentTagFilter();
+        this.applyFilterControls();
+        this.renderList();
         this.showListView(false);
       }
     });
@@ -1647,17 +1712,39 @@ class ProblemsPageApp {
     }
   }
 
+  private getFilteredProblems(): Problem[] {
+    return this.problems.filter((problem) => this.matchesFilters(problem));
+  }
+
   private renderList(): void {
-    const filteredProblems = this.problems.filter((problem) => this.matchesFilters(problem));
-    this.solvedStat.textContent = String(this.problems.filter((problem) => this.problemStatus(problem.id) === "solved").length);
-    this.attemptedStat.textContent = String(this.problems.filter((problem) => this.problemStatus(problem.id) === "attempted").length);
-    this.totalStat.textContent = String(this.problems.length);
+    const filteredProblems = this.getFilteredProblems();
+    const solvedProblems = this.problems.filter((problem) => this.problemStatus(problem.id) === "solved");
+    const easySolved = solvedProblems.filter((problem) => problem.difficulty === "Easy").length;
+    const mediumSolved = solvedProblems.filter((problem) => problem.difficulty === "Medium").length;
+    const hardSolved = solvedProblems.filter((problem) => problem.difficulty === "Hard").length;
+    const solvedCount = solvedProblems.length;
+    const circumference = 163;
+    const pct = this.problems.length > 0 ? solvedCount / this.problems.length : 0;
+
+    this.solvedCount.textContent = String(solvedCount);
+    this.resultCount.textContent = `${filteredProblems.length} problem${filteredProblems.length === 1 ? "" : "s"}`;
+    if (this.sidebarProgress) {
+      this.sidebarProgress.hidden = !this.session;
+    }
+    this.progressRingSolved?.replaceChildren(document.createTextNode(String(solvedCount)));
+    this.easySolvedCount?.replaceChildren(document.createTextNode(String(easySolved)));
+    this.mediumSolvedCount?.replaceChildren(document.createTextNode(String(mediumSolved)));
+    this.hardSolvedCount?.replaceChildren(document.createTextNode(String(hardSolved)));
+    if (this.progressRingArc) {
+      this.progressRingArc.style.strokeDasharray = String(circumference);
+      this.progressRingArc.style.strokeDashoffset = String(circumference * (1 - pct));
+    }
     this.updateFilterUi();
 
     if (filteredProblems.length === 0) {
       this.tableBody.innerHTML = `
         <tr class="pl-empty-row">
-          <td colspan="5">
+          <td colspan="6">
             <div class="pl-empty">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                 <circle cx="11" cy="11" r="7"></circle>
@@ -1667,8 +1754,8 @@ class ProblemsPageApp {
               <p>No problems match your filters.</p>
               <button class="pl-empty-clear" type="button">Clear filters</button>
             </div>
-          </td>
-        </tr>
+            </td>
+          </tr>
       `;
       return;
     }
@@ -1702,6 +1789,7 @@ class ProblemsPageApp {
             <td class="pl-td pl-td--difficulty">
               <span class="pl-difficulty pl-difficulty--${problem.difficulty.toLowerCase()}">${escapeHtml(problem.difficulty)}</span>
             </td>
+            <td class="pl-td pl-td--freq">—</td>
           </tr>
         `;
       })
@@ -1739,6 +1827,7 @@ class ProblemsPageApp {
   private handleFiltersChanged(): void {
     saveFilters(this.filters);
     this.applyFilterControls();
+    this.syncListUrl();
     this.renderList();
   }
 
@@ -1755,6 +1844,45 @@ class ProblemsPageApp {
     [this.difficultyFilter, this.statusFilter, this.tagFilter].forEach((select) => {
       select.classList.toggle("is-active", Boolean(select.value));
     });
+    this.tagStrip?.querySelectorAll<HTMLElement>("[data-tag]").forEach((element) => {
+      const elementTag = element.dataset.tag ?? "";
+      const active = this.filters.tag ? elementTag === this.filters.tag : elementTag === "";
+      element.classList.toggle("pl-tagchip--active", element.classList.contains("pl-tagchip") && active);
+    });
+    this.listLayout.querySelectorAll<HTMLElement>(".pl-sidebar-link[data-tag]").forEach((element) => {
+      const elementTag = element.dataset.tag ?? "";
+      const active = this.filters.tag ? elementTag === this.filters.tag : elementTag === "";
+      element.classList.toggle("pl-sidebar-link--active", active);
+    });
+  }
+
+  private syncListUrl(): void {
+    if (!this.problemLayout.hidden) {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    if (this.filters.tag) {
+      url.searchParams.set("tag", this.filters.tag);
+    } else {
+      url.searchParams.delete("tag");
+    }
+    url.searchParams.delete("id");
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState({}, "", nextUrl || "/problems/");
+  }
+
+  private openRandomProblem(difficulty?: Difficulty): void {
+    const candidates = this.getFilteredProblems().filter((problem) => !difficulty || problem.difficulty === difficulty);
+    if (candidates.length === 0) {
+      return;
+    }
+    const target = candidates[Math.floor(Math.random() * candidates.length)];
+    if (!target) {
+      return;
+    }
+    this.saveListScroll();
+    window.location.href = `/problems/?id=${encodeURIComponent(target.id)}`;
   }
 
   private saveListScroll(): void {

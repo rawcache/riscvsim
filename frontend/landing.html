@@ -59,428 +59,217 @@
 
     <main class="landing-main">
       <section id="landingResumeBar" class="landing-resume-bar" hidden></section>
+      <section class="hero">
+        <div class="hero__left">
+          <div class="hero__eyebrow">
+            <span class="hero__pill">● Free for GT students</span>
+          </div>
 
-      <section class="landing-section landing-section--hero">
-        <div class="landing-shell hero">
-          <div class="hero__copy">
-            <div class="hero__eyebrow">
-              <span class="hero__eyebrow-dot" aria-hidden="true"></span>
-              <span>Free for GT students</span>
+          <h1 class="hero__headline">
+            Learn RISC-V.<br />
+            See the machine<br />
+            think.
+          </h1>
+
+          <p class="hero__sub">
+            The first RISC-V simulator built for understanding, not just execution. Step through
+            assembly, watch the stack build, and finally see what the CPU is actually doing.
+          </p>
+
+          <div class="hero__cta-row">
+            <a class="hero__cta-primary" id="hero-cta-primary" href="/simulator/">Open Simulator →</a>
+            <a class="hero__cta-secondary" href="/problems/">Practice Problems</a>
+          </div>
+
+          <div class="hero__trust">
+            <div class="hero__trust-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m5 13 4 4L19 7"></path></svg>
+              No install required
             </div>
-            <h1 class="hero__title">
-              <span class="hero__title-line hero__title-line--primary">
-                <span class="hero-word" style="--word-delay: 0ms">Learn</span>
-                <span class="hero-word" style="--word-delay: 80ms">RISC-V.</span>
-              </span>
-              <span class="hero__title-line hero__title-line--accent">
-                <span class="hero-word" style="--word-delay: 200ms">See</span>
-                <span class="hero-word" style="--word-delay: 260ms">the</span>
-                <span class="hero-word" style="--word-delay: 320ms">machine</span>
-                <span class="hero-word" style="--word-delay: 380ms">think.</span>
-              </span>
-            </h1>
-            <p class="hero__subhead">
-              The first RISC-V simulator built for understanding, not just execution. Step through
-              assembly, watch the stack build, and finally see what the CPU is actually doing.
-            </p>
-            <div class="hero__actions">
-              <a id="hero-cta-primary" class="cta cta--primary" href="/simulator/">Open Simulator →</a>
-              <a class="cta cta--secondary" href="https://github.com/rawcache/riscvsim" target="_blank" rel="noreferrer">
-                View on GitHub
-              </a>
+            <div class="hero__trust-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m5 13 4 4L19 7"></path></svg>
+              Free for GT students
             </div>
-            <div class="hero__trust" aria-label="Product trust signals">
-              <span>No install required</span>
-              <span>Free for GT students</span>
-              <span>Step-by-step execution</span>
+            <div class="hero__trust-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m5 13 4 4L19 7"></path></svg>
+              Step-by-step execution
             </div>
           </div>
 
-          <div class="hero__visual">
-            <div class="hero__visual-stack">
-              <div id="heroCodeWindow" class="hero-code">
-                <div class="hero-code__bar">
-                  <div class="hero-code__dots">
-                    <button class="hero-code__window-btn hero-code__window-btn--close" id="heroCodeClose" aria-label="Close"></button>
-                    <button class="hero-code__window-btn hero-code__window-btn--minimize" aria-label="Minimize"></button>
-                    <button class="hero-code__window-btn hero-code__window-btn--maximize" id="heroCodeNext" aria-label="Next program"></button>
-                  </div>
-                  <span class="hero-code__label" id="heroCodeLabel">sum_loop.s</span>
-                  <div class="hero-code__bar-spacer"></div>
-                </div>
-                <div class="hero-code__body">
-                  <div id="heroCode" class="hero-code__content" aria-live="polite" aria-label="Animated assembly code"></div>
-                </div>
+          <div class="hero__stats">
+            <div class="hero__stat">
+              <span class="hero__stat-num">157+</span>
+              <span class="hero__stat-label">Regression Tests</span>
+            </div>
+            <div class="hero__stat-sep"></div>
+            <div class="hero__stat">
+              <span class="hero__stat-num">20</span>
+              <span class="hero__stat-label">Lessons</span>
+            </div>
+            <div class="hero__stat-sep"></div>
+            <div class="hero__stat">
+              <span class="hero__stat-num">15</span>
+              <span class="hero__stat-label">Problems</span>
+            </div>
+            <div class="hero__stat-sep"></div>
+            <div class="hero__stat">
+              <span class="hero__stat-num">RV32IM</span>
+              <span class="hero__stat-label">Full ISA</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero__right">
+          <div id="heroCodeWindow" class="hero__code-window hero-code">
+            <div class="hero__code-titlebar hero-code__bar">
+              <div class="hero-code__dots">
+                <button class="hero-code__window-btn hero-code__window-btn--close" id="heroCodeClose" aria-label="Close"></button>
+                <button class="hero-code__window-btn hero-code__window-btn--minimize" aria-label="Minimize"></button>
+                <button class="hero-code__window-btn hero-code__window-btn--maximize" id="heroCodeNext" aria-label="Next program"></button>
               </div>
+              <span class="hero__code-filename hero-code__label" id="heroCodeLabel">factorial.s</span>
+              <div class="hero-code__bar-spacer"></div>
+            </div>
+            <div class="hero__code-body hero-code__body">
+              <div id="heroCode" class="hero-code__content" aria-live="polite" aria-label="Animated assembly code"></div>
+            </div>
+          </div>
+
+          <div class="hero__reg-panel">
+            <div class="hero__reg-title">Register File</div>
+            <div class="hero__reg-row hero__reg-row--highlight">
+              <span class="hero__reg-name">x1</span>
+              <span class="hero__reg-val">0x00000001</span>
+              <span class="hero__reg-dec">(1)</span>
+            </div>
+            <div class="hero__reg-row hero__reg-row--highlight">
+              <span class="hero__reg-name">x2</span>
+              <span class="hero__reg-val">0x00000078</span>
+              <span class="hero__reg-dec">(120)</span>
+            </div>
+            <div class="hero__reg-row">
+              <span class="hero__reg-name">pc</span>
+              <span class="hero__reg-val">0x00000018</span>
+              <span class="hero__reg-dec"></span>
             </div>
           </div>
         </div>
       </section>
 
-      <section class="landing-section landing-section--features">
-        <div class="landing-shell">
-          <div class="section-intro section-intro--center">
-            <h2 class="section-intro__title">Everything you need to actually understand RISC-V.</h2>
-            <p class="section-intro__body">Not just execute it.</p>
-          </div>
-
-          <div class="feature-grid">
-            <article class="feature-card js-reveal">
-              <div class="feature-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9">
-                  <path d="M4 12h11"></path>
-                  <path d="m11 5 7 7-7 7"></path>
-                  <path d="M4 5v14"></path>
-                </svg>
-              </div>
-              <h3 class="feature-card__title">Step. Inspect. Understand.</h3>
-              <p class="feature-card__body">
-                Execute one instruction at a time. Watch every register change, every memory write,
-                every PC jump. Step back if you missed something.
-              </p>
-            </article>
-
-            <article class="feature-card js-reveal">
-              <div class="feature-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9">
-                  <path d="M8 8 4 12l4 4"></path>
-                  <path d="m16 8 4 4-4 4"></path>
-                  <path d="M10 19h4"></path>
-                </svg>
-              </div>
-              <h3 class="feature-card__title">Assembly in plain English.</h3>
-              <p class="feature-card__body">
-                Every instruction translates to a C-like expression in real time. addi x1, x2, 10
-                becomes x1 = x2 + 10. The gap between syntax and meaning, closed.
-              </p>
-            </article>
-
-            <article class="feature-card js-reveal">
-              <div class="feature-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9">
-                  <rect x="5" y="6" width="14" height="4" rx="1.5"></rect>
-                  <rect x="5" y="10" width="14" height="4" rx="1.5"></rect>
-                  <rect x="5" y="14" width="14" height="4" rx="1.5"></rect>
-                </svg>
-              </div>
-              <h3 class="feature-card__title feature-card__title--stack">
-                <span>Watch the stack build live.</span>
-                <span class="feature-card__pill">New</span>
-              </h3>
-              <p class="feature-card__body">
-                The only RISC-V simulator that visualizes your call stack frame by frame. See ra
-                saved, see sp move, see the calling convention made concrete.
-              </p>
-            </article>
-          </div>
+      <section class="coverage-strip">
+        <div class="coverage-strip__label">Full RV32IM instruction set coverage</div>
+        <div class="coverage-strip__chips">
+          <span class="cov-chip">ADD</span>
+          <span class="cov-chip">SUB</span>
+          <span class="cov-chip">MUL</span>
+          <span class="cov-chip">DIV</span>
+          <span class="cov-chip">LW</span>
+          <span class="cov-chip">SW</span>
+          <span class="cov-chip">BEQ</span>
+          <span class="cov-chip">BNE</span>
+          <span class="cov-chip">JAL</span>
+          <span class="cov-chip">JALR</span>
+          <span class="cov-chip">LUI</span>
+          <span class="cov-chip">AUIPC</span>
+          <span class="cov-chip">SLL</span>
+          <span class="cov-chip">SRL</span>
+          <span class="cov-chip">SRA</span>
+          <span class="cov-chip">AND</span>
+          <span class="cov-chip">OR</span>
+          <span class="cov-chip">XOR</span>
+          <span class="cov-chip cov-chip--muted">+40 more</span>
         </div>
       </section>
 
-      <section class="landing-section curriculum-preview-section">
-        <div class="landing-shell">
-          <div class="section-intro section-intro--center">
-            <h2 class="section-intro__title">A complete curriculum.</h2>
-            <p class="section-intro__body">
-              20 lessons from registers to mini kernels.
-            </p>
-          </div>
-
-          <div class="curriculum-preview-grid">
-
-            <div class="curriculum-preview-col">
-              <a class="curriculum-preview-item cp-beginner" href="/simulator/?lesson=lesson-1-registers">
-                <span class="cp-num">1</span>
-                <span class="cp-title">Registers & Arithmetic</span>
-                <span class="cp-meta">15 min · Beginner</span>
-              </a>
-              <a class="curriculum-preview-item cp-beginner" href="/simulator/?lesson=lesson-2-memory">
-                <span class="cp-num">2</span>
-                <span class="cp-title">Memory & Load/Store</span>
-                <span class="cp-meta">20 min · Beginner</span>
-              </a>
-              <a class="curriculum-preview-item cp-beginner" href="/simulator/?lesson=lesson-3-branches">
-                <span class="cp-num">3</span>
-                <span class="cp-title">Branches & Loops</span>
-                <span class="cp-meta">25 min · Beginner</span>
-              </a>
-              <a class="curriculum-preview-item cp-intermediate" href="/simulator/?lesson=lesson-4-functions">
-                <span class="cp-num">4</span>
-                <span class="cp-title">Functions & Calling Convention</span>
-                <span class="cp-meta">30 min · Intermediate</span>
-              </a>
-              <a class="curriculum-preview-item cp-advanced" href="/simulator/?lesson=lesson-5-sorting">
-                <span class="cp-num">5</span>
-                <span class="cp-title">Sorting Algorithms</span>
-                <span class="cp-meta">40 min · Advanced</span>
-              </a>
-              <a class="curriculum-preview-item cp-beginner" href="/simulator/?lesson=lesson-6-bitwise">
-                <span class="cp-num">6</span>
-                <span class="cp-title">Bitwise Operations</span>
-                <span class="cp-meta">20 min · Beginner</span>
-              </a>
-              <a class="curriculum-preview-item cp-beginner" href="/simulator/?lesson=lesson-7-shifts">
-                <span class="cp-num">7</span>
-                <span class="cp-title">Shift Operations</span>
-                <span class="cp-meta">20 min · Beginner</span>
-              </a>
-              <a class="curriculum-preview-item cp-intermediate" href="/simulator/?lesson=lesson-8-comparison">
-                <span class="cp-num">8</span>
-                <span class="cp-title">Comparison Deep Dive</span>
-                <span class="cp-meta">25 min · Intermediate</span>
-              </a>
-              <a class="curriculum-preview-item cp-intermediate" href="/simulator/?lesson=lesson-9-stack">
-                <span class="cp-num">9</span>
-                <span class="cp-title">The Stack in Depth</span>
-                <span class="cp-meta">30 min · Intermediate</span>
-              </a>
-              <a class="curriculum-preview-item cp-intermediate" href="/simulator/?lesson=lesson-10-mext">
-                <span class="cp-num">10</span>
-                <span class="cp-title">M Extension (mul/div)</span>
-                <span class="cp-meta">20 min · Intermediate</span>
-              </a>
-            </div>
-
-            <div class="curriculum-preview-col">
-              <a class="curriculum-preview-item cp-intermediate" href="/simulator/?lesson=lesson-11-strings">
-                <span class="cp-num">11</span>
-                <span class="cp-title">Strings & Byte Arrays</span>
-                <span class="cp-meta">30 min · Intermediate</span>
-              </a>
-              <a class="curriculum-preview-item cp-advanced" href="/simulator/?lesson=lesson-12-linked-lists">
-                <span class="cp-num">12</span>
-                <span class="cp-title">Linked Lists</span>
-                <span class="cp-meta">35 min · Advanced</span>
-              </a>
-              <a class="curriculum-preview-item cp-advanced" href="/simulator/?lesson=lesson-13-recursion">
-                <span class="cp-num">13</span>
-                <span class="cp-title">Recursion Patterns</span>
-                <span class="cp-meta">35 min · Advanced</span>
-              </a>
-              <a class="curriculum-preview-item cp-intermediate" href="/simulator/?lesson=lesson-14-ecall">
-                <span class="cp-num">14</span>
-                <span class="cp-title">System Calls (ecall)</span>
-                <span class="cp-meta">20 min · Intermediate</span>
-              </a>
-              <a class="curriculum-preview-item cp-advanced" href="/simulator/?lesson=lesson-15-capstone">
-                <span class="cp-num">15</span>
-                <span class="cp-title">Capstone Program</span>
-                <span class="cp-meta">45 min · Advanced</span>
-              </a>
-              <a class="curriculum-preview-item cp-advanced" href="/simulator/?lesson=lesson-16-pipeline">
-                <span class="cp-num">16</span>
-                <span class="cp-title">Pipeline Hazards</span>
-                <span class="cp-meta">35 min · Advanced</span>
-              </a>
-              <a class="curriculum-preview-item cp-advanced" href="/simulator/?lesson=lesson-17-cache">
-                <span class="cp-num">17</span>
-                <span class="cp-title">Cache Behavior</span>
-                <span class="cp-meta">40 min · Advanced</span>
-              </a>
-              <a class="curriculum-preview-item cp-advanced" href="/simulator/?lesson=lesson-18-floating-point">
-                <span class="cp-num">18</span>
-                <span class="cp-title">Floating Point</span>
-                <span class="cp-meta">35 min · Advanced</span>
-              </a>
-              <a class="curriculum-preview-item cp-advanced" href="/simulator/?lesson=lesson-19-interrupts">
-                <span class="cp-num">19</span>
-                <span class="cp-title">Interrupt Handling</span>
-                <span class="cp-meta">30 min · Advanced</span>
-              </a>
-              <a class="curriculum-preview-item cp-advanced" href="/simulator/?lesson=lesson-20-minikernel">
-                <span class="cp-num">20</span>
-                <span class="cp-title">Mini OS Kernel</span>
-                <span class="cp-meta">50 min · Advanced</span>
-              </a>
-            </div>
-
-          </div>
-
-          <div class="curriculum-preview-footer">
-            <span>20 lessons · 5 labs · 5 quizzes · 20 challenges</span>
-            <a href="/learn/" class="curriculum-preview-cta">
-              Start learning →
-            </a>
-          </div>
-
+      <section class="features">
+        <div class="features__header">
+          <h2 class="features__title">
+            Everything you need to actually<br />
+            understand RISC-V.
+          </h2>
+          <p class="features__sub">Not just execute it.</p>
         </div>
-      </section>
-
-      <section class="landing-section landing-section--comparison">
-        <div class="landing-shell">
-          <div class="section-intro section-intro--center">
-            <h2 class="section-intro__title section-intro__title--comparison">How we compare.</h2>
-          </div>
-
-          <div class="comparison-card js-reveal">
-            <div class="comparison-card__scroll">
-              <table class="comparison-table">
-                <thead>
-                  <tr>
-                    <th>Feature</th>
-                    <th class="comparison-table__study-heading">
-                      <span class="comparison-table__badge">Best choice</span>
-                      <span class="comparison-table__heading">StudyRISC-V</span>
-                    </th>
-                    <th>Venus</th>
-                    <th>RARS</th>
-                    <th>CPUlator</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Browser-based (no install)</td>
-                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                    <td><span class="compare-yes">✓</span></td>
-                  </tr>
-                  <tr>
-                    <td>Local-first (no server)</td>
-                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                  </tr>
-                  <tr>
-                    <td>Pseudo-C explainer</td>
-                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                  </tr>
-                  <tr>
-                    <td>Call stack visualizer</td>
-                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                  </tr>
-                  <tr>
-                    <td>Syntax highlighting</td>
-                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                    <td><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                  </tr>
-                  <tr>
-                    <td>Step back (undo)</td>
-                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                  </tr>
-                  <tr>
-                    <td>Data directives (.data)</td>
-                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-yes">✓</span></td>
-                  </tr>
-                  <tr>
-                    <td>M extension (mul/div)</td>
-                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-yes">✓</span></td>
-                  </tr>
-                  <tr>
-                    <td>Permalink sharing</td>
-                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                  </tr>
-                  <tr>
-                    <td>Saved programs</td>
-                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                  </tr>
-                  <tr>
-                    <td>Free for GT students</td>
-                    <td class="comparison-table__study"><span class="compare-yes">✓</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                    <td><span class="compare-no">✗</span></td>
-                  </tr>
-                </tbody>
-              </table>
+        <div class="features__grid">
+          <div class="feat-card feat-card--accent">
+            <div class="feat-card__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M4 12h11"></path><path d="m11 5 7 7-7 7"></path><path d="M4 5v14"></path></svg>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="landing-section coverage-section">
-        <div class="landing-shell">
-          <div class="section-intro section-intro--left">
-            <h2 class="section-intro__title section-intro__title--coverage">Everything ECE 2035 covers. And more.</h2>
-            <p class="section-intro__body section-intro__body--muted">
-              The complete RV32IM instruction set with M extension for multiply and divide.
+            <h3 class="feat-card__title">Step. Inspect. Understand.</h3>
+            <p class="feat-card__body">
+              Execute one instruction at a time. Watch every register change, every memory write,
+              every PC jump. Step back if you missed something.
             </p>
           </div>
-          <div class="coverage-pills" aria-label="Supported instruction groups">
-            <span class="coverage-badge js-pill">ALU</span>
-            <span class="coverage-badge js-pill">Shifts</span>
-            <span class="coverage-badge js-pill">Branches</span>
-            <span class="coverage-badge js-pill">Loads</span>
-            <span class="coverage-badge js-pill">Stores</span>
-            <span class="coverage-badge js-pill">JAL/JALR</span>
-            <span class="coverage-badge js-pill">LUI</span>
-            <span class="coverage-badge js-pill">AUIPC</span>
-            <span class="coverage-badge js-pill">M Extension (mul/div/rem)</span>
-            <span class="coverage-badge js-pill">Pseudos</span>
-            <span class="coverage-badge js-pill">Ecall</span>
-            <span class="coverage-badge js-pill">Data Directives</span>
+
+          <div class="feat-card">
+            <div class="feat-card__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M8 8 4 12l4 4"></path><path d="m16 8 4 4-4 4"></path><path d="M10 19h4"></path></svg>
+            </div>
+            <h3 class="feat-card__title">Assembly in plain English.</h3>
+            <p class="feat-card__body">
+              Every instruction translates to a C-like expression in real time. <code>addi x1, x2, 10</code>
+              becomes <code>x1 = x2 + 10</code>. The gap between syntax and meaning, closed.
+            </p>
+          </div>
+
+          <div class="feat-card">
+            <div class="feat-card__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m12 3 8 4-8 4-8-4 8-4Z"></path><path d="m4 11 8 4 8-4"></path><path d="m4 15 8 4 8-4"></path></svg>
+            </div>
+            <h3 class="feat-card__title">
+              Watch the stack build live.
+              <span class="feat-badge">New</span>
+            </h3>
+            <p class="feat-card__body">
+              The only RISC-V simulator that visualizes your call stack frame by frame. See ra saved, see sp move, see the calling convention made concrete.
+            </p>
+          </div>
+
+          <div class="feat-card">
+            <div class="feat-card__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2H20v20H8.5A2.5 2.5 0 0 0 6 22"></path><path d="M6 4.5V22"></path></svg>
+            </div>
+            <h3 class="feat-card__title">20 lessons. Built for learners.</h3>
+            <p class="feat-card__body">
+              From binary arithmetic to function calls, each lesson builds on the last. Checkpoints gate progression so you never skip ahead.
+            </p>
+          </div>
+
+          <div class="feat-card">
+            <div class="feat-card__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-13h-7l0-7Z"></path></svg>
+            </div>
+            <h3 class="feat-card__title">15 coding problems.</h3>
+            <p class="feat-card__body">
+              LeetCode-style problem solving, RISC-V edition. Write real assembly, run it, see pass/fail on each test case. Easy to Hard.
+            </p>
+            <a class="feat-card__link" href="/problems/">Try a problem →</a>
+          </div>
+
+          <div class="feat-card">
+            <div class="feat-card__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M7 18a4.6 4.6 0 0 1 0-9.2A5.5 5.5 0 0 1 17.5 8a4 4 0 1 1 .5 10H7Z"></path></svg>
+            </div>
+            <h3 class="feat-card__title">No install. Ever.</h3>
+            <p class="feat-card__body">
+              Runs entirely in your browser. The simulator core is compiled to WebAssembly for near-native speed. Open a tab and start coding.
+            </p>
           </div>
         </div>
       </section>
 
-      <section class="landing-cta">
-        <div class="landing-shell landing-cta__inner">
-          <h2 class="landing-cta__title">Ready to see the machine think?</h2>
-          <p class="landing-cta__subhead">Join GT students and engineers who finally get it.</p>
-          <a class="cta cta--primary landing-cta__button" href="/simulator/">Open the Simulator →</a>
-          <p class="landing-cta__note">Free · No account required · Runs in your browser</p>
+      <section class="cta-bottom">
+        <div class="cta-bottom__inner">
+          <h2 class="cta-bottom__title">Ready to actually understand RISC-V?</h2>
+          <p class="cta-bottom__sub">
+            No install. No account. Open the simulator and start executing assembly in 10 seconds.
+          </p>
+          <div class="cta-bottom__btns">
+            <a class="hero__cta-primary" href="/simulator/">Open Simulator →</a>
+            <a class="hero__cta-secondary" href="/problems/">Browse Problems</a>
+          </div>
         </div>
       </section>
-
-      <div class="ticker-strip">
-        <div class="ticker-track">
-          <span class="ticker-item"><span>📍</span> Used in ECE 2035 at Georgia Tech</span>
-          <span class="ticker-item"><span>🌐</span> Runs entirely in your browser</span>
-          <span class="ticker-item"><span>⏪</span> Step back through execution</span>
-          <span class="ticker-item"><span>🐝</span> Free for GT students</span>
-          <span class="ticker-item"><span>📚</span> Calling convention visualizer</span>
-          <span class="ticker-item"><span>💡</span> Pseudo-C translation</span>
-          <span class="ticker-item"><span>🔗</span> Permalink sharing</span>
-          <span class="ticker-item"><span>🦀</span> Rust + WebAssembly core</span>
-          <span class="ticker-item"><span>🔒</span> No server processes your code</span>
-          <span class="ticker-item"><span>📊</span> Live leaderboard</span>
-          <span class="ticker-item"><span>🎯</span> 20 guided lessons</span>
-          <span class="ticker-item"><span>⚡</span> 20 coding challenges</span>
-          <span class="ticker-item"><span>🔬</span> 5 ECE 2035 labs</span>
-          <span class="ticker-item"><span>🧠</span> Call stack visualizer</span>
-          <span class="ticker-item"><span>🌙</span> Dark and light mode</span>
-          <span class="ticker-item"><span>📱</span> Works on mobile</span>
-          <span class="ticker-item"><span>📍</span> Used in ECE 2035 at Georgia Tech</span>
-          <span class="ticker-item"><span>🌐</span> Runs entirely in your browser</span>
-          <span class="ticker-item"><span>⏪</span> Step back through execution</span>
-          <span class="ticker-item"><span>🐝</span> Free for GT students</span>
-          <span class="ticker-item"><span>📚</span> Calling convention visualizer</span>
-          <span class="ticker-item"><span>💡</span> Pseudo-C translation</span>
-          <span class="ticker-item"><span>🔗</span> Permalink sharing</span>
-          <span class="ticker-item"><span>🦀</span> Rust + WebAssembly core</span>
-          <span class="ticker-item"><span>🔒</span> No server processes your code</span>
-          <span class="ticker-item"><span>📊</span> Live leaderboard</span>
-          <span class="ticker-item"><span>🎯</span> 20 guided lessons</span>
-          <span class="ticker-item"><span>⚡</span> 20 coding challenges</span>
-          <span class="ticker-item"><span>🔬</span> 5 ECE 2035 labs</span>
-          <span class="ticker-item"><span>🧠</span> Call stack visualizer</span>
-          <span class="ticker-item"><span>🌙</span> Dark and light mode</span>
-          <span class="ticker-item"><span>📱</span> Works on mobile</span>
-        </div>
-      </div>
     </main>
 
     <footer id="site-footer"></footer>

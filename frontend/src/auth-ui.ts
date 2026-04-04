@@ -56,13 +56,6 @@ function deriveDisplayName(session: UserSession): string {
   return truncateLabel(emailName || session.displayName || session.firstName || "User");
 }
 
-function renderTierPill(session: UserSession): string {
-  if (session.isGtStudent) {
-    return '<span class="nav-tier-pill nav-tier-pill--pro">🐝 PRO</span>';
-  }
-  return '<span class="nav-tier-pill nav-tier-pill--free">FREE</span>';
-}
-
 function usernameFromSession(session: UserSession): string {
   return session.email.split("@")[0]?.trim().toLowerCase() || deriveDisplayName(session).toLowerCase();
 }
@@ -262,10 +255,9 @@ export function updateAuthUI(session: UserSession | null): void {
       const displayName = deriveDisplayName(session);
       const avatarChoice = getCurrentAvatarChoice();
       elements.authUserBtn.innerHTML = `
-        <div class="nav-user-avatar">${avatarMarkup(avatarChoice, escapeHtml(displayName.charAt(0).toUpperCase()))}</div>
-        <span class="nav-user-name">${escapeHtml(displayName)}</span>
-        ${renderTierPill(session)}
-        <svg class="nav-user-chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <span class="nav-avatar">${avatarMarkup(avatarChoice, escapeHtml(displayName.charAt(0).toUpperCase()))}</span>
+        <span class="nav-username" id="nav-display-name">${escapeHtml(displayName)}</span>
+        <svg class="nav-chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
           <path d="M2.5 4.5 6 8l3.5-3.5"></path>
         </svg>
       `;

@@ -136,7 +136,7 @@ function renderNav(config: NavConfig): string {
           <div id="nav-status-badge" class="nav-status-badge${config.activePage === "simulator" ? " visible" : ""}"></div>
           <button id="auth-signin-btn" class="nav-signin-btn" type="button">Sign in</button>
           <div class="auth-menu">
-            <button id="auth-user-btn" class="auth-user-btn nav-user-btn" type="button" hidden></button>
+            <button id="auth-user-btn" class="auth-user-btn nav-user-menu" type="button" hidden aria-label="Open account menu"></button>
             <div id="auth-dropdown" class="auth-dropdown" hidden>
               <div id="auth-email" class="auth-dropdown__email"></div>
               <div id="auth-tier" class="auth-dropdown__tier"></div>
