@@ -2241,10 +2241,10 @@ body.loaded .hero__visual {
 .landing-home .hero {
   display: grid;
   grid-template-columns: 52% minmax(0, 1fr);
-  align-items: start;
+  align-items: center;
   min-height: calc(100vh - 56px);
   gap: 48px;
-  padding: 64px 64px 0 80px;
+  padding: 64px 64px 64px 80px;
   background: var(--bg-base);
   box-sizing: border-box;
 }
@@ -2258,8 +2258,6 @@ body.loaded .hero__visual {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding-top: 24px;
-  padding-bottom: 64px;
 }
 
 .landing-home .hero__eyebrow {
@@ -2393,14 +2391,14 @@ body.loaded .hero__visual {
 }
 
 .landing-home .hero__stat-num {
-  color: var(--text-primary);
+  color: #ffffff;
   font-family: "Geist Mono", monospace;
   font-size: 20px;
   font-weight: 700;
 }
 
 .landing-home .hero__stat-label {
-  color: var(--text-muted);
+  color: #71717a;
   font-size: 11px;
   letter-spacing: 0.06em;
   text-align: center;
@@ -2415,9 +2413,7 @@ body.loaded .hero__visual {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding-top: 0;
-  position: sticky;
-  top: 72px;
+  align-self: center;
 }
 
 .landing-home .hero__code-window {
@@ -2521,7 +2517,8 @@ body.loaded .hero__visual {
   padding: 16px 80px;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  background: var(--bg-surface);
+  background: #080808;
+  margin-top: 0;
 }
 
 .landing-home .coverage-strip__label {
@@ -2563,7 +2560,8 @@ body.loaded .hero__visual {
 .landing-home .features {
   padding: 72px 80px 80px;
   border-top: none;
-  background: color-mix(in srgb, var(--bg-base) 92%, transparent);
+  background: #0a0a0a;
+  margin-top: 0;
 }
 
 .landing-home .features__header {
@@ -2738,9 +2736,10 @@ body.loaded .hero__visual {
 @media (max-width: 900px) {
   .landing-home .hero {
     grid-template-columns: 1fr;
-    padding: 48px 24px 0;
+    padding: 48px 24px;
     min-height: auto;
     gap: 32px;
+    align-items: start;
   }
 
   .landing-home .hero__headline {
@@ -2748,7 +2747,6 @@ body.loaded .hero__visual {
   }
 
   .landing-home .hero__right {
-    position: static;
     order: -1;
   }
 
@@ -2763,16 +2761,10 @@ body.loaded .hero__visual {
   .landing-home .hero__stat:nth-child(3) {
     border-top: 1px solid var(--border);
     border-right: 1px solid var(--border);
-    padding-top: 12px;
   }
 
   .landing-home .hero__stat:nth-child(4) {
     border-top: 1px solid var(--border);
-    padding-top: 12px;
-  }
-
-  .landing-home .hero__left {
-    padding-bottom: 48px;
   }
 
   .landing-home .coverage-strip {

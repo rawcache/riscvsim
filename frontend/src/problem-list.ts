@@ -173,7 +173,7 @@ type CustomCaseParseResult = {
   errors: string[];
 };
 
-const MONACO_CDN = "https://unpkg.com/monaco-editor@0.44.0/min/vs";
+const MONACO_CDN = "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs";
 
 export const MONACO_THEME_NAME = "riscv-dark";
 export const MONACO_LIGHT_THEME_NAME = "studyriscv-light";
@@ -2702,19 +2702,24 @@ class ProblemsPageApp {
 
     try {
       const el = this.editorHost;
+      console.log("Monaco: configuring require...");
       this.monaco ??= await loadMonaco();
       await nextFrame();
       this.ensureEditorContainerHeight();
+      await nextFrame();
+      this.ensureEditorContainerHeight();
 
-      if (!el || el.clientWidth === 0 || el.clientHeight === 0) {
-        console.error("Editor container not ready -- aborting Monaco init");
+      if (!el) {
+        console.error("Monaco: container not found:", "pv-editor");
         this.mountEditorFallback(code);
         return;
       }
 
-      console.log("Loading Monaco...");
+      const rect = el.getBoundingClientRect();
+      console.log("Monaco container dimensions:", rect.width, "x", rect.height);
+      console.log("Monaco: loading editor.main...");
       if (!this.editor) {
-        console.log("Monaco loaded");
+        console.log("Monaco: editor.main loaded");
         this.editor = createMonacoEditor(this.monaco, el, code);
         this.startEditorThemeSync();
         monacoHost().__editorInstance = this.editor;
@@ -2730,10 +2735,9 @@ class ProblemsPageApp {
 
       this.updateLanguagePill("active", "RISC-V Assembly");
       this.monacoLoading.hidden = true;
-      this.editor.layout();
       this.editor.focus();
     } catch (error) {
-      console.error("Monaco failed:", error);
+      console.error("Monaco CDN load failed:", error);
       this.mountEditorFallback(code);
     }
   }
@@ -2749,6 +2753,7 @@ class ProblemsPageApp {
     textarea.className = "pv-editor-fallback";
     textarea.value = code;
     textarea.spellcheck = false;
+    textarea.placeholder = "# Write your RISC-V assembly here";
     this.editorHost.dataset.editorFallback = "true";
     this.editorHost.appendChild(textarea);
 
@@ -3236,7 +3241,6 @@ class ProblemsPageApp {
 
     this.ensureEditorContainerHeight();
     this.syncVerdictOffset();
-    this.editor?.layout();
   }
 
   private ensureEditorContainerHeight(): void {
@@ -3274,7 +3278,6 @@ class ProblemsPageApp {
       safeLocalStorageSet(PANEL_SPLIT_STORAGE_KEY, String(width / mainRect.width));
       this.ensureEditorContainerHeight();
       this.syncVerdictOffset();
-      this.editor?.layout();
     };
 
     const onUp = (): void => {
@@ -3284,7 +3287,6 @@ class ProblemsPageApp {
       this.setMonacoPointerEvents(true);
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
-      this.editor?.layout();
     };
 
     document.addEventListener("mousemove", onMove);
@@ -3306,7 +3308,6 @@ class ProblemsPageApp {
       const consoleHeight = Math.max(MIN_CONSOLE_HEIGHT, Math.floor(rightRect.height - editorHeight - this.horizontalDivider.offsetHeight));
       safeLocalStorageSet(CONSOLE_HEIGHT_STORAGE_KEY, String(consoleHeight));
       this.ensureEditorContainerHeight();
-      this.editor?.layout();
     };
 
     const onUp = (): void => {
@@ -3316,7 +3317,6 @@ class ProblemsPageApp {
       this.setMonacoPointerEvents(true);
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
-      this.editor?.layout();
     };
 
     document.addEventListener("mousemove", onMove);
