@@ -10,6 +10,7 @@ import type {
   ProblemProgress,
   ProblemSubmission,
   ProblemTag,
+  ProblemTestCase,
   ProblemVerdict,
 } from "./problem-data";
 import { getProblem, getProblems } from "./problem-data";
@@ -24,13 +25,23 @@ import {
   saveProblemSubmissionToApi,
   syncProblemProgressToApi,
 } from "./problem-progress";
-import { formatProblemDiffValue, runAll, runVisible, type RunResult, type RunSummary } from "./problem-runner";
+import { formatProblemDiffValue, runAll, runTestCase, type RunResult, type RunSummary } from "./problem-runner";
 import { WasmRuntime } from "./wasm-runtime";
 
 export { escapeHtml };
 
-type LeftTab = "description" | "hints" | "editorial" | "submissions";
-type ConsoleTab = "testcase" | "result";
+type LeftTab = "description" | "result" | "hints" | "editorial" | "submissions";
+type BottomTab = "testcase" | "result";
+type SubmissionTone = "accepted" | "wrong" | "error" | "tle";
+type ResultStatus = "accepted" | "wrong_answer" | "assembly_error" | "runtime_error" | "tle";
+type CustomCaseField =
+  | "label"
+  | "description"
+  | "initialRegistersText"
+  | "initialMemoryText"
+  | "expectedRegistersText"
+  | "expectedMemoryText"
+  | "stepLimitText";
 
 type MonacoEditorInstance = {
   getValue(): string;
@@ -75,7 +86,92 @@ type FilterState = {
   tag: "" | ProblemTag;
 };
 
-type SubmissionTone = "accepted" | "wrong" | "error" | "tle";
+type CustomCaseDraft = {
+  id: string;
+  label: string;
+  description: string;
+  initialRegistersText: string;
+  initialMemoryText: string;
+  expectedRegistersText: string;
+  expectedMemoryText: string;
+  stepLimitText: string;
+  createdAt: string;
+};
+
+type WorkspaceCase = {
+  id: string;
+  label: string;
+  description: string;
+  custom: boolean;
+  readonly: boolean;
+  draft?: CustomCaseDraft;
+  testCase?: ProblemTestCase;
+};
+
+type WorkspaceCaseResult = {
+  caseId: string;
+  label: string;
+  custom: boolean;
+  visible: boolean;
+  sourceCase: ProblemTestCase;
+  result: RunResult;
+};
+
+type WorkspaceResultBase = {
+  kind: "run" | "submit";
+  verdict: ProblemVerdict;
+  status: ResultStatus;
+  durationMs: number;
+  passed: number;
+  total: number;
+  totalSteps: number;
+  caseResults: WorkspaceCaseResult[];
+  createdAt: string;
+  logs: string[];
+  codeSnapshot: string;
+  selectedCaseId: string | null;
+  memoryBytes?: number;
+};
+
+type WorkspaceRunResultState = WorkspaceResultBase & {
+  kind: "run";
+};
+
+type WorkspaceSubmitResultState = WorkspaceResultBase & {
+  kind: "submit";
+  id: string;
+};
+
+type ProblemViewState = {
+  currentProblemId: string;
+  currentCode: string;
+  activeLeftTab: LeftTab;
+  activeBottomTab: BottomTab;
+  activeCaseId: string;
+  customCases: CustomCaseDraft[];
+  lastRunResult: WorkspaceRunResultState | null;
+  lastSubmitResult: WorkspaceSubmitResultState | null;
+  latestExecution: "run" | "submit" | null;
+  submissions: WorkspaceSubmitResultState[];
+  selectedSubmissionId: string | null;
+  testcaseError: string | null;
+  resultNotice: string | null;
+};
+
+type ParseRegistersResult = {
+  value: Partial<Record<string, number>>;
+  errors: string[];
+};
+
+type ParseMemoryResult = {
+  value: Array<{ address: number; value: number; size: "byte" | "half" | "word" }>;
+  errors: string[];
+};
+
+type CustomCaseParseResult = {
+  testCase: ProblemTestCase | null;
+  errors: string[];
+};
 
 const MONACO_CDN = "https://unpkg.com/monaco-editor@0.44.0/min/vs";
 
@@ -116,6 +212,10 @@ const RISCV_DIRECTIVES = [
   ".section", ".string",
 ];
 
+const KEYWORD_SET = new Set(RISCV_KEYWORDS);
+const REGISTER_SET = new Set(RISCV_REGISTERS);
+const DIRECTIVE_SET = new Set(RISCV_DIRECTIVES);
+
 const DEFAULT_FILTERS: FilterState = {
   search: "",
   difficulty: "",
@@ -129,13 +229,14 @@ const PANEL_SPLIT_STORAGE_KEY = "problems_panel_split";
 const CONSOLE_HEIGHT_STORAGE_KEY = "problems_console_height";
 const FULLSCREEN_STORAGE_KEY = "problems_fullscreen";
 const AUTO_SAVE_DELAY_MS = 1500;
-const VERDICT_DISMISS_MS = 8000;
 const DEFAULT_LEFT_RATIO = 0.4;
 const DEFAULT_CONSOLE_HEIGHT = 200;
 const MIN_LEFT_WIDTH = 280;
 const MAX_LEFT_RATIO = 0.65;
 const MIN_EDITOR_HEIGHT = 120;
 const MIN_CONSOLE_HEIGHT = 80;
+const CUSTOM_CASES_PREFIX = "problems_custom_cases_";
+const SUBMISSION_DETAILS_PREFIX = "problems_submission_details_";
 
 export function buildRiscvLanguageDefinition(): Record<string, unknown> {
   return {
@@ -215,7 +316,7 @@ export function spawnConfetti(parent: ParentNode = document.body): HTMLElement {
   const container = document.createElement("div");
   container.className = "pv-confetti";
 
-  const colors = ["#2D6BE4", "#22c55e", "#f59e0b", "#a855f7", "#ef4444", "#06b6d4"];
+  const colors = ["#22c55e", "#eab308", "#f97316", "#ef4444", "#10b981", "#ffffff"];
   for (let index = 0; index < 24; index += 1) {
     const piece = document.createElement("div");
     piece.className = "pv-confetti-piece";
@@ -300,6 +401,16 @@ function safeLocalStorageSet(key: string, value: string): void {
   try {
     if (typeof localStorage !== "undefined") {
       localStorage.setItem(key, value);
+    }
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function safeLocalStorageRemove(key: string): void {
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem(key);
     }
   } catch {
     // Ignore storage failures.
@@ -420,6 +531,502 @@ function saveFilters(filters: FilterState): void {
   safeSessionStorageSet(FILTER_STORAGE_KEY, JSON.stringify(filters));
 }
 
+function customCasesStorageKey(problemId: string): string {
+  return `${CUSTOM_CASES_PREFIX}${problemId}`;
+}
+
+function submissionDetailsStorageKey(problemId: string): string {
+  return `${SUBMISSION_DETAILS_PREFIX}${problemId}`;
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function verdictToStatus(verdict: ProblemVerdict): ResultStatus {
+  switch (verdict) {
+    case "Accepted":
+      return "accepted";
+    case "Wrong Answer":
+      return "wrong_answer";
+    case "Assembly Error":
+      return "assembly_error";
+    case "Time Limit Exceeded":
+      return "tle";
+    default:
+      return "runtime_error";
+  }
+}
+
+function resultStatusLabel(status: ResultStatus): string {
+  switch (status) {
+    case "accepted":
+      return "Accepted";
+    case "wrong_answer":
+      return "Wrong Answer";
+    case "assembly_error":
+      return "Compile Error";
+    case "runtime_error":
+      return "Runtime Error";
+    case "tle":
+      return "Time Limit Exceeded";
+  }
+}
+
+function resultToneFromStatus(status: ResultStatus): SubmissionTone {
+  switch (status) {
+    case "accepted":
+      return "accepted";
+    case "wrong_answer":
+      return "wrong";
+    case "tle":
+      return "tle";
+    default:
+      return "error";
+  }
+}
+
+function summarizeResults(results: RunResult[]): RunSummary {
+  const firstFailedResult = results.find((result) => !result.passed);
+  return {
+    verdict: firstFailedResult?.verdict ?? "Accepted",
+    passedCount: results.filter((result) => result.passed).length,
+    totalCount: results.length,
+    results,
+    firstFailedResult,
+    totalSteps: results.reduce((sum, result) => sum + result.stepsTaken, 0),
+    totalTimeMs: results.reduce((sum, result) => sum + result.executionTimeMs, 0),
+  };
+}
+
+function parseNumericLiteral(raw: string): number | null {
+  const value = raw.trim();
+  if (!value) {
+    return null;
+  }
+
+  if (/^-?0x[0-9a-f]+$/iu.test(value)) {
+    const negative = value.startsWith("-");
+    const normalized = value.replace(/^-?0x/iu, "");
+    const parsed = Number.parseInt(normalized, 16);
+    return negative ? -parsed : parsed;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+function parseRegistersText(text: string): ParseRegistersResult {
+  const value: Partial<Record<string, number>> = {};
+  const errors: string[] = [];
+  const lines = text.split(/\r?\n/u);
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    const separator = trimmed.includes("=") ? "=" : trimmed.includes(":") ? ":" : null;
+    if (!separator) {
+      errors.push(`Register line ${index + 1} must use "name = value".`);
+      return;
+    }
+
+    const [rawRegister, rawValue] = trimmed.split(separator, 2);
+    const registerName = rawRegister?.trim() ?? "";
+    const parsedValue = parseNumericLiteral(rawValue ?? "");
+    if (!registerName || !/^[A-Za-z][A-Za-z0-9]*$/u.test(registerName)) {
+      errors.push(`Register line ${index + 1} has an invalid register name.`);
+      return;
+    }
+    if (parsedValue === null) {
+      errors.push(`Register line ${index + 1} has an invalid numeric value.`);
+      return;
+    }
+    value[registerName] = parsedValue;
+  });
+
+  return { value, errors };
+}
+
+function parseMemoryText(text: string): ParseMemoryResult {
+  const value: Array<{ address: number; value: number; size: "byte" | "half" | "word" }> = [];
+  const errors: string[] = [];
+  const lines = text.split(/\r?\n/u);
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    if (!trimmed.includes("=")) {
+      errors.push(`Memory line ${index + 1} must use "address[:size] = value".`);
+      return;
+    }
+
+    const [lhs, rhs] = trimmed.split("=", 2);
+    const [rawAddress, rawSize] = lhs.trim().split(":", 2);
+    const address = parseNumericLiteral(rawAddress ?? "");
+    const parsedValue = parseNumericLiteral(rhs ?? "");
+    const size = rawSize?.trim() ? rawSize.trim().toLowerCase() : "word";
+    if (address === null) {
+      errors.push(`Memory line ${index + 1} has an invalid address.`);
+      return;
+    }
+    if (parsedValue === null) {
+      errors.push(`Memory line ${index + 1} has an invalid value.`);
+      return;
+    }
+    if (size !== "byte" && size !== "half" && size !== "word") {
+      errors.push(`Memory line ${index + 1} must use byte, half, or word.`);
+      return;
+    }
+    value.push({ address, value: parsedValue, size });
+  });
+
+  return { value, errors };
+}
+
+function serializeRegisters(registers: Partial<Record<string, number>>): string {
+  return Object.entries(registers)
+    .map(([registerName, value]) => `${registerName} = ${(value ?? 0) >> 0}`)
+    .join("\n");
+}
+
+function serializeMemory(entries: NonNullable<ProblemTestCase["initialMemory"]> | NonNullable<ProblemTestCase["expectedMemory"]>): string {
+  return entries
+    .map((entry) => `${formatHex(entry.address)}:${entry.size ?? "word"} = ${(entry.value ?? 0) >> 0}`)
+    .join("\n");
+}
+
+function buildCustomCaseDraft(problem: Problem, index: number, seed?: ProblemTestCase | CustomCaseDraft): CustomCaseDraft {
+  if (seed && "initialRegistersText" in seed) {
+    return {
+      ...seed,
+      id: `custom-${problem.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      label: `${seed.label} Copy`,
+      createdAt: nowIso(),
+    };
+  }
+
+  const sourceCase = seed && "initialRegisters" in seed ? seed : problem.testCases.find((candidate) => candidate.visible) ?? problem.testCases[0];
+  return {
+    id: `custom-${problem.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    label: sourceCase ? `Custom ${index + 1}` : `Custom ${index + 1}`,
+    description: sourceCase?.description ?? "Custom testcase",
+    initialRegistersText: sourceCase ? serializeRegisters(sourceCase.initialRegisters) : "",
+    initialMemoryText: sourceCase?.initialMemory?.length ? serializeMemory(sourceCase.initialMemory) : "",
+    expectedRegistersText: sourceCase ? serializeRegisters(sourceCase.expectedRegisters) : "",
+    expectedMemoryText: sourceCase?.expectedMemory?.length ? serializeMemory(sourceCase.expectedMemory) : "",
+    stepLimitText: sourceCase?.stepLimit ? String(sourceCase.stepLimit) : "",
+    createdAt: nowIso(),
+  };
+}
+
+function parseCustomCaseDraft(draft: CustomCaseDraft): CustomCaseParseResult {
+  const registers = parseRegistersText(draft.initialRegistersText);
+  const memory = parseMemoryText(draft.initialMemoryText);
+  const expectedRegisters = parseRegistersText(draft.expectedRegistersText);
+  const expectedMemory = parseMemoryText(draft.expectedMemoryText);
+  const errors = [...registers.errors, ...memory.errors, ...expectedRegisters.errors, ...expectedMemory.errors];
+
+  let stepLimit: number | undefined;
+  if (draft.stepLimitText.trim()) {
+    const parsedStepLimit = parseNumericLiteral(draft.stepLimitText);
+    if (parsedStepLimit === null || parsedStepLimit <= 0) {
+      errors.push("Step limit must be a positive integer.");
+    } else {
+      stepLimit = parsedStepLimit;
+    }
+  }
+
+  if (errors.length > 0) {
+    return { testCase: null, errors };
+  }
+
+  return {
+    testCase: {
+      id: draft.id,
+      label: draft.label.trim() || "Custom Case",
+      visible: true,
+      description: draft.description.trim() || "Custom testcase",
+      initialRegisters: registers.value,
+      initialMemory: memory.value,
+      expectedRegisters: expectedRegisters.value,
+      expectedMemory: expectedMemory.value,
+      stepLimit,
+    },
+    errors: [],
+  };
+}
+
+function loadCustomCases(problem: Problem): CustomCaseDraft[] {
+  const raw = safeLocalStorageGet(customCasesStorageKey(problem.id));
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as unknown[];
+    return parsed
+      .map((item, index) => {
+        if (!item || typeof item !== "object") {
+          return buildCustomCaseDraft(problem, index);
+        }
+        const draft = item as Partial<CustomCaseDraft>;
+        return {
+          id: typeof draft.id === "string" ? draft.id : `custom-${problem.id}-${index}`,
+          label: typeof draft.label === "string" ? draft.label : `Custom ${index + 1}`,
+          description: typeof draft.description === "string" ? draft.description : "Custom testcase",
+          initialRegistersText: typeof draft.initialRegistersText === "string" ? draft.initialRegistersText : "",
+          initialMemoryText: typeof draft.initialMemoryText === "string" ? draft.initialMemoryText : "",
+          expectedRegistersText: typeof draft.expectedRegistersText === "string" ? draft.expectedRegistersText : "",
+          expectedMemoryText: typeof draft.expectedMemoryText === "string" ? draft.expectedMemoryText : "",
+          stepLimitText: typeof draft.stepLimitText === "string" ? draft.stepLimitText : "",
+          createdAt: typeof draft.createdAt === "string" ? draft.createdAt : nowIso(),
+        };
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomCases(problemId: string, customCases: CustomCaseDraft[]): void {
+  if (customCases.length === 0) {
+    safeLocalStorageRemove(customCasesStorageKey(problemId));
+    return;
+  }
+  safeLocalStorageSet(customCasesStorageKey(problemId), JSON.stringify(customCases));
+}
+
+function loadSubmissionDetails(problemId: string): WorkspaceSubmitResultState[] {
+  const raw = safeLocalStorageGet(submissionDetailsStorageKey(problemId));
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as WorkspaceSubmitResultState[];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter((item) => item && item.kind === "submit" && typeof item.id === "string");
+  } catch {
+    return [];
+  }
+}
+
+function saveSubmissionDetails(problemId: string, submissions: WorkspaceSubmitResultState[]): void {
+  safeLocalStorageSet(submissionDetailsStorageKey(problemId), JSON.stringify(submissions.slice(0, 20)));
+}
+
+function mapCaseResults(
+  results: RunResult[],
+  casesById: Map<string, ProblemTestCase>,
+  customCaseIds: Set<string>
+): WorkspaceCaseResult[] {
+  return results
+    .map((result) => {
+      const sourceCase = casesById.get(result.caseId);
+      if (!sourceCase) {
+        return null;
+      }
+      return {
+        caseId: result.caseId,
+        label: result.label,
+        custom: customCaseIds.has(result.caseId),
+        visible: sourceCase.visible,
+        sourceCase,
+        result,
+      };
+    })
+    .filter((value): value is WorkspaceCaseResult => Boolean(value));
+}
+
+function buildRunState(
+  summary: RunSummary,
+  caseResults: WorkspaceCaseResult[],
+  codeSnapshot: string
+): WorkspaceRunResultState {
+  return {
+    kind: "run",
+    verdict: summary.verdict,
+    status: verdictToStatus(summary.verdict),
+    durationMs: Math.round(summary.totalTimeMs),
+    passed: summary.passedCount,
+    total: summary.totalCount,
+    totalSteps: summary.totalSteps,
+    caseResults,
+    createdAt: nowIso(),
+    logs: [`Ran ${summary.totalCount} debugging case${summary.totalCount === 1 ? "" : "s"}.`],
+    codeSnapshot,
+    selectedCaseId: summary.firstFailedResult?.caseId ?? caseResults[0]?.caseId ?? null,
+  };
+}
+
+function buildSubmitState(
+  summary: RunSummary,
+  caseResults: WorkspaceCaseResult[],
+  codeSnapshot: string,
+  id: string
+): WorkspaceSubmitResultState {
+  return {
+    id,
+    kind: "submit",
+    verdict: summary.verdict,
+    status: verdictToStatus(summary.verdict),
+    durationMs: Math.round(summary.totalTimeMs),
+    passed: summary.passedCount,
+    total: summary.totalCount,
+    totalSteps: summary.totalSteps,
+    caseResults,
+    createdAt: nowIso(),
+    logs: [`Submitted against ${summary.totalCount} official test case${summary.totalCount === 1 ? "" : "s"}.`],
+    codeSnapshot,
+    selectedCaseId: summary.firstFailedResult?.caseId ?? caseResults[0]?.caseId ?? null,
+  };
+}
+
+function buildMinimalSubmission(problemId: string, summary: RunSummary, code: string): ProblemSubmission {
+  return {
+    id: `${problemId}-${Date.now()}`,
+    problemId,
+    code,
+    verdict: summary.verdict,
+    passedCases: summary.passedCount,
+    totalCases: summary.totalCount,
+    stepsTaken: summary.totalSteps,
+    submittedAt: nowIso(),
+    failedCaseId: summary.firstFailedResult?.caseId,
+    errorMessage: summary.firstFailedResult?.errorMessage,
+    elapsedMs: Math.round(summary.totalTimeMs),
+  };
+}
+
+function highlightRiscvLine(line: string): string {
+  const commentIndex = line.indexOf("#");
+  const comment = commentIndex >= 0 ? line.slice(commentIndex) : "";
+  const codePart = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
+  const tokens = codePart.match(/0x[0-9a-fA-F]+|-?[0-9]+|[A-Za-z_.][A-Za-z0-9_.]*|[,:()[\]]|\s+|./g) ?? [];
+  const rendered = tokens
+    .map((token) => {
+      if (/^\s+$/u.test(token)) {
+        return token.replace(/ /gu, "&nbsp;").replace(/\t/gu, "&nbsp;&nbsp;");
+      }
+      if (/^[A-Za-z_][A-Za-z0-9_.]*:$/u.test(token)) {
+        return `<span class="pv-code-token pv-code-token--label">${escapeHtml(token)}</span>`;
+      }
+      if (DIRECTIVE_SET.has(token)) {
+        return `<span class="pv-code-token pv-code-token--directive">${escapeHtml(token)}</span>`;
+      }
+      if (KEYWORD_SET.has(token)) {
+        return `<span class="pv-code-token pv-code-token--keyword">${escapeHtml(token)}</span>`;
+      }
+      if (REGISTER_SET.has(token)) {
+        return `<span class="pv-code-token pv-code-token--register">${escapeHtml(token)}</span>`;
+      }
+      if (/^-?(0x[0-9a-fA-F]+|[0-9]+)$/u.test(token)) {
+        return `<span class="pv-code-token pv-code-token--number">${escapeHtml(token)}</span>`;
+      }
+      if (/^[,:()[\]]$/u.test(token)) {
+        return `<span class="pv-code-token pv-code-token--operator">${escapeHtml(token)}</span>`;
+      }
+      return escapeHtml(token);
+    })
+    .join("");
+
+  const renderedComment = comment
+    ? `<span class="pv-code-token pv-code-token--comment">${escapeHtml(comment)}</span>`
+    : "";
+  return `${rendered}${renderedComment}`;
+}
+
+function renderCodePreview(code: string): string {
+  const lines = code.split(/\r?\n/u);
+  return `
+    <pre class="pv-code-preview__body"><code>${lines
+      .map(
+        (line, index) => `
+          <span class="pv-code-line">
+            <span class="pv-code-line__no">${index + 1}</span>
+            <span class="pv-code-line__content">${highlightRiscvLine(line)}</span>
+          </span>
+        `
+      )
+      .join("")}</code></pre>
+  `;
+}
+
+function renderResultCaseInput(caseResult: WorkspaceCaseResult): string {
+  const source = caseResult.sourceCase;
+  const initialRegisters = Object.entries(source.initialRegisters)
+    .map(([registerName, value]) => `<div class="pv-detail-row"><span class="pv-detail-key">${escapeHtml(registerName)}</span><span class="pv-detail-value">${formatProblemDiffValue(value ?? 0)}</span></div>`)
+    .join("");
+  const initialMemory = (source.initialMemory ?? [])
+    .map((entry) => `<div class="pv-detail-row"><span class="pv-detail-key">mem[${formatHex(entry.address)}]</span><span class="pv-detail-value">${formatSignedValue(entry.value, entry.size ?? "word")}</span></div>`)
+    .join("");
+  const expectedRegisters = Object.entries(caseResult.result.expectedRegisters)
+    .map(([registerName, value]) => `<div class="pv-detail-row"><span class="pv-detail-key">${escapeHtml(registerName)}</span><span class="pv-detail-value">${formatProblemDiffValue(value ?? 0)}</span></div>`)
+    .join("");
+  const actualRegisters = Object.entries(caseResult.result.actualRegisters)
+    .filter(([registerName]) => registerName in caseResult.result.expectedRegisters)
+    .map(([registerName, value]) => `<div class="pv-detail-row"><span class="pv-detail-key">${escapeHtml(registerName)}</span><span class="pv-detail-value">${formatProblemDiffValue(value ?? 0)}</span></div>`)
+    .join("");
+  const expectedMemory = caseResult.result.expectedMemory
+    .map((entry) => `<div class="pv-detail-row"><span class="pv-detail-key">mem[${formatHex(entry.address)}]</span><span class="pv-detail-value">${formatProblemDiffValue(entry.value)}</span></div>`)
+    .join("");
+  const actualMemory = caseResult.result.actualMemory
+    .filter((entry) => caseResult.result.expectedMemory.some((expected) => expected.address === entry.address))
+    .map((entry) => `<div class="pv-detail-row"><span class="pv-detail-key">mem[${formatHex(entry.address)}]</span><span class="pv-detail-value">${formatProblemDiffValue(entry.value)}</span></div>`)
+    .join("");
+  const diffRows = caseResult.result.diff
+    .map(
+      (diff) => `
+        <div class="pv-diff-row">
+          <span class="pv-diff-label">${escapeHtml(diff.key)}</span>
+          <span class="pv-diff-expected">${escapeHtml(formatProblemDiffValue(diff.expected))}</span>
+          <span class="pv-diff-actual">${escapeHtml(formatProblemDiffValue(diff.actual))}</span>
+        </div>
+      `
+    )
+    .join("");
+
+  return `
+    <div class="pv-result-detail-grid">
+      <section class="pv-detail-card">
+        <div class="pv-section-head">Input</div>
+        ${initialRegisters || initialMemory
+          ? `${initialRegisters}${initialMemory}`
+          : `<div class="pv-console-empty">No explicit input registers.</div>`}
+      </section>
+      <section class="pv-detail-card">
+        <div class="pv-section-head">Expected</div>
+        ${expectedRegisters || expectedMemory
+          ? `${expectedRegisters}${expectedMemory}`
+          : `<div class="pv-console-empty">No expected output recorded.</div>`}
+      </section>
+      <section class="pv-detail-card">
+        <div class="pv-section-head">Actual</div>
+        ${actualRegisters || actualMemory
+          ? `${actualRegisters}${actualMemory}`
+          : `<div class="pv-console-empty">No actual output captured.</div>`}
+      </section>
+      <section class="pv-detail-card">
+        <div class="pv-section-head">Diff</div>
+        ${caseResult.result.errorMessage
+          ? `<div class="pv-asm-error"><div class="pv-asm-error__line">${caseResult.result.timedOut ? "Time Limit" : escapeHtml(resultStatusLabel(verdictToStatus(caseResult.result.verdict)))}</div><div class="pv-asm-error__msg">${escapeHtml(caseResult.result.errorMessage)}</div></div>`
+          : diffRows || `<div class="pv-all-pass-banner">Expected output matched exactly.</div>`}
+      </section>
+    </div>
+  `;
+}
+
 let monacoPromise: Promise<MonacoApi> | null = null;
 let riscLanguageDefined = false;
 
@@ -432,33 +1039,28 @@ function defineMonacoTheme(monaco: MonacoApi): void {
     base: "vs-dark",
     inherit: true,
     rules: [
-      { token: "comment", foreground: "6a9955", fontStyle: "italic" },
-      { token: "keyword", foreground: "569cd6", fontStyle: "bold" },
-      { token: "variable", foreground: "9cdcfe" },
-      { token: "number", foreground: "b5cea8" },
-      { token: "type", foreground: "4ec9b0" },
-      { token: "string", foreground: "ce9178" },
-      { token: "operator", foreground: "d4d4d4" },
+      { token: "comment", foreground: "6A9955", fontStyle: "italic" },
+      { token: "keyword", foreground: "569CD6", fontStyle: "bold" },
+      { token: "variable", foreground: "4FC1FF" },
+      { token: "number", foreground: "B5CEA8" },
+      { token: "type", foreground: "4EC9B0" },
+      { token: "string", foreground: "CE9178" },
+      { token: "operator", foreground: "D4D4D4" },
     ],
     colors: {
-      "editor.background": "#1e1e1e",
-      "editor.foreground": "#d4d4d4",
-      "editor.lineHighlightBackground": "#2a2d2e",
-      "editor.lineHighlightBorder": "#282828",
-      "editorLineNumber.foreground": "#858585",
-      "editorLineNumber.activeForeground": "#c6c6c6",
+      "editor.background": "#0a0a0a",
+      "editor.foreground": "#e6edf3",
+      "editor.lineHighlightBackground": "#171717",
+      "editor.lineHighlightBorder": "#202020",
+      "editorLineNumber.foreground": "#6e7681",
+      "editorLineNumber.activeForeground": "#e6edf3",
       "editor.selectionBackground": "#264f78",
-      "editor.inactiveSelectionBackground": "#3a3d41",
-      "editorCursor.foreground": "#aeafad",
-      "editorCursor.background": "#000000",
-      "editor.findMatchBackground": "#515c6a",
-      "editorBracketMatch.background": "#0064001a",
-      "editorBracketMatch.border": "#888888",
-      "editorGutter.background": "#1e1e1e",
-      "scrollbar.shadow": "#000000",
-      "scrollbarSlider.background": "#79797966",
-      "scrollbarSlider.hoverBackground": "#646464b3",
-      "scrollbarSlider.activeBackground": "#bfbfbf66",
+      "editor.inactiveSelectionBackground": "#2f2f2f",
+      "editorCursor.foreground": "#ffffff",
+      "editorCursor.background": "#0a0a0a",
+      "editorBracketMatch.background": "#1b4332",
+      "editorBracketMatch.border": "#22c55e",
+      "editorGutter.background": "#0a0a0a",
     },
   });
 }
@@ -471,9 +1073,7 @@ function defineRISCVLanguage(monaco: MonacoApi): void {
   monaco.languages.register({ id: RISCV_LANGUAGE_ID });
   monaco.languages.setMonarchTokensProvider(RISCV_LANGUAGE_ID, buildRiscvLanguageDefinition());
   monaco.languages.setLanguageConfiguration(RISCV_LANGUAGE_ID, {
-    comments: {
-      lineComment: "#",
-    },
+    comments: { lineComment: "#" },
     brackets: [
       ["(", ")"],
       ["[", "]"],
@@ -487,7 +1087,6 @@ function defineRISCVLanguage(monaco: MonacoApi): void {
       { open: "[", close: "]" },
     ],
   });
-
   riscLanguageDefined = true;
 }
 
@@ -528,6 +1127,8 @@ function loadMonaco(): Promise<MonacoApi> {
           reject(new Error("Monaco failed to expose the editor API"));
           return;
         }
+        defineMonacoTheme(host.monaco);
+        defineRISCVLanguage(host.monaco);
         resolve(host.monaco);
       },
       (error) => {
@@ -541,15 +1142,15 @@ function loadMonaco(): Promise<MonacoApi> {
 }
 
 function createMonacoEditor(monaco: MonacoApi, container: HTMLElement, code: string): MonacoEditorInstance {
-  monaco.editor.setTheme("vs-dark");
+  monaco.editor.setTheme(MONACO_THEME_NAME);
   return monaco.editor.create(container, {
     value: code,
-    language: "plaintext",
-    theme: "vs-dark",
-    fontFamily: "'Geist Mono', 'Fira Code', monospace",
-    fontLigatures: false,
-    fontSize: 13,
-    lineHeight: 20,
+    language: RISCV_LANGUAGE_ID,
+    theme: MONACO_THEME_NAME,
+    fontFamily: "'JetBrains Mono', 'Fira Code', 'Geist Mono', 'Cascadia Code', monospace",
+    fontLigatures: true,
+    fontSize: 14,
+    lineHeight: 22,
     tabSize: 2,
     insertSpaces: true,
     detectIndentation: false,
@@ -561,7 +1162,7 @@ function createMonacoEditor(monaco: MonacoApi, container: HTMLElement, code: str
     cursorWidth: 2,
     smoothScrolling: true,
     automaticLayout: true,
-    padding: { top: 12, bottom: 12 },
+    padding: { top: 16, bottom: 20 },
     lineNumbers: "on",
     lineNumbersMinChars: 3,
     glyphMargin: false,
@@ -612,6 +1213,7 @@ class ProblemsPageApp {
   private readonly nextButton = document.getElementById("pv-next") as HTMLButtonElement;
   private readonly timer = document.getElementById("pv-timer") as HTMLElement;
   private readonly fullscreenButton = document.getElementById("pv-fullscreen-btn") as HTMLButtonElement;
+  private readonly resultTabButton = document.getElementById("pv-result-tab") as HTMLButtonElement | null;
 
   private readonly main = document.getElementById("pv-main") as HTMLElement;
   private readonly leftPanel = document.getElementById("pv-left") as HTMLElement;
@@ -633,7 +1235,6 @@ class ProblemsPageApp {
   private readonly consoleBody = document.getElementById("pv-console-body") as HTMLElement;
   private readonly consoleClearButton = document.getElementById("pv-console-clear") as HTMLButtonElement;
   private readonly verdict = document.getElementById("pv-verdict") as HTMLElement;
-  private readonly verdictContent = document.getElementById("pv-verdict-content") as HTMLElement;
   private readonly verdictClose = document.getElementById("pv-verdict-close") as HTMLButtonElement;
   private readonly resetConfirm = document.getElementById("pv-reset-confirm") as HTMLElement;
   private readonly resetCancelButton = document.getElementById("pv-reset-cancel") as HTMLButtonElement;
@@ -643,15 +1244,10 @@ class ProblemsPageApp {
   private session: UserSession | null = null;
   private progress: ProblemProgress = loadProblemProgressForUser(null);
   private currentProblem: Problem | null = null;
-  private leftTab: LeftTab = "description";
-  private consoleTab: ConsoleTab = "testcase";
-  private activeVisibleCaseIndex = 0;
-  private latestSummary: RunSummary | null = null;
-  private expandedResultCaseId: string | null = null;
+  private viewState: ProblemViewState | null = null;
   private openHintIndices = new Set<number>();
   private searchTimer: number | null = null;
   private autosaveTimer: number | null = null;
-  private verdictTimer: number | null = null;
   private timerInterval: number | null = null;
   private timerSeconds = 0;
   private timerProblemId: string | null = null;
@@ -688,7 +1284,6 @@ class ProblemsPageApp {
     const id = getCurrentProblemId();
     const problem = id ? getProblem(id) : null;
     const mode = problem ? "problem" : "list";
-
     console.log("MODE:", mode);
     console.log("Problem ID:", id);
 
@@ -709,6 +1304,10 @@ class ProblemsPageApp {
     }
 
     void this.refreshSessionState();
+  }
+
+  private get state(): ProblemViewState | null {
+    return this.viewState;
   }
 
   private bindEvents(): void {
@@ -772,11 +1371,9 @@ class ProblemsPageApp {
       if (!row) {
         return;
       }
-
       if (event.key !== "Enter" && event.key !== " ") {
         return;
       }
-
       event.preventDefault();
       const problemId = row.dataset.problemId;
       if (!problemId) {
@@ -789,21 +1386,21 @@ class ProblemsPageApp {
     this.leftPanel.querySelectorAll<HTMLButtonElement>(".pv-tab").forEach((button) => {
       button.addEventListener("click", () => {
         const tab = button.dataset.tab as LeftTab | undefined;
-        if (!tab || !this.currentProblem) {
+        if (!tab || !this.currentProblem || !this.state) {
           return;
         }
-        this.leftTab = tab;
-        this.renderLeftBody();
+        this.state.activeLeftTab = tab;
+        this.renderWorkspace();
       });
     });
 
     this.consoleTabs.querySelectorAll<HTMLButtonElement>(".pv-console-tab").forEach((button) => {
       button.addEventListener("click", () => {
-        const tab = button.dataset.ctab as ConsoleTab | undefined;
-        if (!tab || !this.currentProblem) {
+        const tab = button.dataset.ctab as BottomTab | undefined;
+        if (!tab || !this.currentProblem || !this.state) {
           return;
         }
-        this.consoleTab = tab;
+        this.state.activeBottomTab = tab;
         this.renderConsoleBody();
       });
     });
@@ -837,16 +1434,19 @@ class ProblemsPageApp {
     });
 
     this.runButton.addEventListener("click", () => {
-      void this.executeRun(false);
+      void this.executeRun();
     });
     this.submitButton.addEventListener("click", () => {
-      void this.executeRun(true);
+      void this.executeSubmit();
     });
 
     this.consoleClearButton.addEventListener("click", () => {
-      this.latestSummary = null;
-      this.expandedResultCaseId = null;
-      this.consoleTab = "result";
+      if (!this.state) {
+        return;
+      }
+      this.state.resultNotice = null;
+      this.state.lastRunResult = null;
+      this.state.latestExecution = this.state.lastSubmitResult ? "submit" : null;
       this.renderConsoleBody();
     });
 
@@ -868,33 +1468,93 @@ class ProblemsPageApp {
       }
 
       const submissionRow = target?.closest<HTMLTableRowElement>("[data-submission-id]");
-      if (submissionRow) {
-        const submissionId = submissionRow.dataset.submissionId;
-        this.loadSubmissionById(submissionId ?? "");
+      if (submissionRow && this.state) {
+        this.state.selectedSubmissionId = submissionRow.dataset.submissionId ?? null;
+        this.state.activeLeftTab = "result";
+        this.renderWorkspace();
+        return;
+      }
+
+      const restoreButton = target?.closest<HTMLButtonElement>("[data-action='restore-submission-code']");
+      if (restoreButton && this.state) {
+        const submissionId = restoreButton.dataset.submissionId ?? "";
+        const submission = this.state.submissions.find((candidate) => candidate.id === submissionId);
+        if (submission) {
+          this.setEditorCode(submission.codeSnapshot);
+          this.state.currentCode = submission.codeSnapshot;
+          this.persistCurrentCode();
+        }
       }
     });
 
     this.consoleBody.addEventListener("click", (event) => {
       const target = event.target as HTMLElement | null;
-      const caseTab = target?.closest<HTMLButtonElement>(".pv-case-tab");
-      if (caseTab && this.currentProblem && this.consoleTab === "testcase") {
-        const caseIndex = Number.parseInt(caseTab.dataset.ci ?? "0", 10);
-        this.activeVisibleCaseIndex = Number.isFinite(caseIndex) ? caseIndex : 0;
-        this.renderConsoleBody();
+      if (!this.currentProblem || !this.state || !target) {
         return;
       }
 
-      const resultItem = target?.closest<HTMLElement>("[data-case-id]");
-      if (resultItem && this.consoleTab === "result") {
-        const caseId = resultItem.dataset.caseId ?? null;
-        this.expandedResultCaseId = this.expandedResultCaseId === caseId ? null : caseId;
-        this.renderConsoleBody();
+      const actionButton = target.closest<HTMLElement>("[data-action]");
+      if (actionButton) {
+        const action = actionButton.dataset.action;
+        if (action === "select-case") {
+          this.state.activeCaseId = actionButton.dataset.caseId ?? this.state.activeCaseId;
+          this.state.testcaseError = null;
+          this.renderConsoleBody();
+          return;
+        }
+        if (action === "add-case") {
+          this.addCustomCase();
+          return;
+        }
+        if (action === "duplicate-case") {
+          this.duplicateActiveCase();
+          return;
+        }
+        if (action === "delete-case") {
+          this.deleteActiveCustomCase();
+          return;
+        }
+        if (action === "reset-case") {
+          this.resetActiveCustomCase();
+          return;
+        }
+        if (action === "run-debug") {
+          void this.executeRun();
+          return;
+        }
+        if (action === "select-result-case") {
+          const caseId = actionButton.dataset.caseId ?? null;
+          this.selectResultCase(caseId);
+          return;
+        }
       }
+    });
+
+    this.consoleBody.addEventListener("input", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) || !this.state) {
+        return;
+      }
+
+      const customCaseId = target.dataset.customCaseId;
+      const field = target.dataset.field as CustomCaseField | undefined;
+      if (!customCaseId || !field) {
+        return;
+      }
+
+      const draft = this.state.customCases.find((candidate) => candidate.id === customCaseId);
+      if (!draft) {
+        return;
+      }
+
+      draft[field] = target.value;
+      this.state.testcaseError = null;
+      saveCustomCases(this.currentProblem!.id, this.state.customCases);
     });
 
     window.addEventListener("popstate", () => {
       const problemId = getCurrentProblemId();
-      if (problemId) {
+      if (problemId && getProblem(problemId)) {
         void this.showProblemView(problemId, false);
       } else {
         this.showListView(false);
@@ -924,7 +1584,6 @@ class ProblemsPageApp {
       if (this.problemLayout.hidden) {
         return;
       }
-
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;
       }
@@ -935,13 +1594,11 @@ class ProblemsPageApp {
         this.runButton.click();
         return;
       }
-
       if (modifier && event.shiftKey && event.key === "Enter") {
         event.preventDefault();
         this.submitButton.click();
         return;
       }
-
       if (event.key === "Escape") {
         this.verdict.hidden = true;
         this.resetConfirm.hidden = true;
@@ -969,7 +1626,6 @@ class ProblemsPageApp {
     try {
       this.session = await getSession();
       const guestProgress = loadProblemProgressForUser(null);
-
       if (this.session) {
         const scoped = loadProblemProgressForUser(this.session.userId);
         const remote = await loadProblemProgressFromApi(this.session.idToken);
@@ -986,7 +1642,7 @@ class ProblemsPageApp {
     } finally {
       this.renderList();
       if (this.currentProblem) {
-        this.renderLeftBody();
+        this.renderWorkspace();
       }
     }
   }
@@ -1113,13 +1769,13 @@ class ProblemsPageApp {
   }
 
   private showListView(pushHistory: boolean): void {
-    if (this.currentProblem && this.editor) {
+    if (this.currentProblem) {
       this.persistCurrentCode();
     }
 
     this.stopTimer();
     this.currentProblem = null;
-    this.latestSummary = null;
+    this.viewState = null;
     this.problemLayout.hidden = true;
     this.listLayout.hidden = false;
     (document.getElementById("problem-workspace-view") as HTMLElement | null)?.setAttribute("hidden", "");
@@ -1145,22 +1801,38 @@ class ProblemsPageApp {
       return;
     }
 
-    if (this.currentProblem && this.editor) {
+    if (this.currentProblem) {
       this.persistCurrentCode();
     }
 
     this.currentProblem = problem;
-    this.leftTab = "description";
-    this.consoleTab = "testcase";
-    this.activeVisibleCaseIndex = 0;
-    this.latestSummary = null;
-    this.expandedResultCaseId = null;
     this.openHintIndices.clear();
-
     const entry = ensureProblemEntry(this.progress, problem);
     for (let index = 0; index < (entry.hintsRevealed ?? 0); index += 1) {
       this.openHintIndices.add(index);
     }
+
+    const customCases = loadCustomCases(problem);
+    const submissions = loadSubmissionDetails(problem.id);
+    const firstVisibleCase = problem.testCases.find((candidate) => candidate.visible)?.id ?? problem.testCases[0]?.id ?? "";
+    const initialCaseId = customCases[0]?.id ?? firstVisibleCase;
+    const savedCode = loadProblemCode(problem.id) ?? entry.lastCode ?? problem.starterCode;
+
+    this.viewState = {
+      currentProblemId: problem.id,
+      currentCode: savedCode,
+      activeLeftTab: "description",
+      activeBottomTab: "testcase",
+      activeCaseId: initialCaseId,
+      customCases,
+      lastRunResult: null,
+      lastSubmitResult: submissions[0] ?? null,
+      latestExecution: null,
+      submissions,
+      selectedSubmissionId: null,
+      testcaseError: null,
+      resultNotice: null,
+    };
 
     this.listLayout.hidden = true;
     this.problemLayout.hidden = false;
@@ -1180,8 +1852,7 @@ class ProblemsPageApp {
     this.nextButton.disabled = problem.number >= this.problems.length;
     document.title = `${problem.number}. ${problem.title} - StudyRISC-V`;
 
-    this.renderLeftBody();
-    this.renderConsoleBody();
+    this.renderWorkspace();
 
     if (pushHistory) {
       window.history.pushState({ id: problem.id }, "", `/problems/?id=${encodeURIComponent(problem.id)}`);
@@ -1194,148 +1865,98 @@ class ProblemsPageApp {
     this.applyWorkspaceLayout();
     this.startTimer(problem.id);
 
-    const code = loadProblemCode(problem.id) ?? entry.lastCode ?? problem.starterCode;
     void this.ensureRuntime();
-    await this.ensureEditor(code);
+    await this.ensureEditor(savedCode);
   }
 
-  private async ensureRuntime(): Promise<WasmRuntime> {
-    this.runtimePromise ??= WasmRuntime.create();
-    return this.runtimePromise;
-  }
-
-  private async ensureEditor(code: string): Promise<void> {
-    this.monacoLoading.hidden = false;
-    if (!this.editor) {
-      this.editorHost.innerHTML = "";
-    }
-    delete this.editorHost.dataset.editorFallback;
-
-    try {
-      const el = this.editorHost;
-      this.monaco ??= await loadMonaco();
-      await nextFrame();
-      this.ensureEditorContainerHeight();
-
-      if (!el || el.clientWidth === 0 || el.clientHeight === 0) {
-        console.error("Editor container not ready -- aborting Monaco init");
-        this.mountEditorFallback(code);
-        return;
-      }
-
-      console.log("Loading Monaco...");
-
-      if (!this.editor) {
-        console.log("Monaco loaded");
-        this.editor = createMonacoEditor(this.monaco, el, code);
-        monacoHost().__editorInstance = this.editor;
-        monacoHost().__editorFallback = null;
-        this.editorFallback = null;
-        this.bindEditorAutosave();
-      } else {
-        this.editor.setValue(code);
-        this.editor.updateOptions({ readOnly: false });
-        monacoHost().__editorInstance = this.editor;
-      }
-
-      this.monacoLoading.hidden = true;
-      this.editor.layout();
-      this.editor.focus();
-    } catch (error) {
-      console.error("Monaco failed:", error);
-      this.mountEditorFallback(code);
-    }
-  }
-
-  private mountEditorFallback(code: string): void {
-    this.editor?.dispose();
-    this.editor = null;
-    monacoHost().__editorInstance = null;
-    this.editorHost.innerHTML = "";
-
-    const textarea = document.createElement("textarea");
-    textarea.className = "pv-editor-fallback";
-    textarea.value = code;
-    textarea.spellcheck = false;
-    this.editorHost.dataset.editorFallback = "true";
-    this.editorHost.appendChild(textarea);
-
-    this.editorFallback = textarea;
-    monacoHost().__editorFallback = textarea;
-    this.monacoLoading.hidden = true;
-
-    textarea.addEventListener("input", () => {
-      if (this.autosaveTimer) {
-        window.clearTimeout(this.autosaveTimer);
-      }
-      this.autosaveTimer = window.setTimeout(() => {
-        this.persistCurrentCode();
-      }, AUTO_SAVE_DELAY_MS);
-    });
-  }
-
-  private bindEditorAutosave(): void {
-    if (!this.editor || !this.currentProblem) {
+  private renderWorkspace(): void {
+    if (!this.currentProblem || !this.state) {
       return;
     }
 
-    this.editorChangeSubscription?.dispose();
-    this.editorChangeSubscription = this.editor.onDidChangeModelContent(() => {
-      if (this.autosaveTimer) {
-        window.clearTimeout(this.autosaveTimer);
-      }
-      this.autosaveTimer = window.setTimeout(() => {
-        this.persistCurrentCode();
-      }, AUTO_SAVE_DELAY_MS);
-    });
+    this.updateResultTab();
+    this.renderLeftBody();
+    this.renderConsoleBody();
   }
 
-  private persistCurrentCode(): void {
-    if (!this.currentProblem) {
+  private updateResultTab(): void {
+    if (!this.currentProblem || !this.state || !this.resultTabButton) {
       return;
     }
 
-    const code = this.getEditorCode();
-    saveProblemCode(this.currentProblem.id, code);
-    const entry = ensureProblemEntry(this.progress, this.currentProblem);
-    entry.lastCode = code;
-    entry.lastSavedAt = new Date().toISOString();
-    saveProblemProgressForUser(this.progress, this.session?.userId ?? null);
-    if (this.session) {
-      void syncProblemProgressToApi(this.progress, this.session.idToken);
+    const activeResult = this.getLeftPanelResult();
+    if (!activeResult) {
+      this.resultTabButton.hidden = true;
+      if (this.state.activeLeftTab === "result") {
+        this.state.activeLeftTab = "description";
+      }
+      return;
     }
+
+    this.resultTabButton.hidden = false;
+    this.resultTabButton.textContent = resultStatusLabel(activeResult.status);
+    this.resultTabButton.classList.toggle("pv-tab--accepted", activeResult.status === "accepted");
+    this.resultTabButton.classList.toggle("pv-tab--error", activeResult.status !== "accepted");
+  }
+
+  private getLeftPanelResult(): WorkspaceRunResultState | WorkspaceSubmitResultState | null {
+    if (!this.state) {
+      return null;
+    }
+    if (this.state.selectedSubmissionId) {
+      return this.state.submissions.find((submission) => submission.id === this.state!.selectedSubmissionId) ?? null;
+    }
+    return this.state.lastSubmitResult ?? this.state.lastRunResult;
+  }
+
+  private getBottomResult(): WorkspaceRunResultState | WorkspaceSubmitResultState | null {
+    if (!this.state) {
+      return null;
+    }
+    if (this.state.latestExecution === "submit") {
+      return this.state.lastSubmitResult;
+    }
+    if (this.state.latestExecution === "run") {
+      return this.state.lastRunResult;
+    }
+    return this.state.lastSubmitResult ?? this.state.lastRunResult;
   }
 
   private renderLeftBody(): void {
-    if (!this.currentProblem) {
+    if (!this.currentProblem || !this.state) {
       return;
     }
 
     this.leftPanel.querySelectorAll<HTMLButtonElement>(".pv-tab").forEach((button) => {
-      const active = button.dataset.tab === this.leftTab;
+      const active = !button.hidden && button.dataset.tab === this.state!.activeLeftTab;
       button.classList.toggle("active", active);
       button.setAttribute("aria-selected", String(active));
     });
 
-    if (this.leftTab === "description") {
-      this.leftBody.innerHTML = this.renderDescription(this.currentProblem);
-      return;
+    switch (this.state.activeLeftTab) {
+      case "description":
+        this.leftBody.innerHTML = this.renderDescription(this.currentProblem);
+        break;
+      case "result":
+        this.leftBody.innerHTML = this.renderResultPanel(this.currentProblem);
+        break;
+      case "hints":
+        this.leftBody.innerHTML = this.renderHints(this.currentProblem);
+        break;
+      case "editorial":
+        this.leftBody.innerHTML = this.renderEditorial(this.currentProblem);
+        break;
+      case "submissions":
+        this.leftBody.innerHTML = this.renderSubmissions(this.currentProblem);
+        break;
     }
-
-    if (this.leftTab === "hints") {
-      this.leftBody.innerHTML = this.renderHints(this.currentProblem);
-      return;
-    }
-
-    if (this.leftTab === "editorial") {
-      this.leftBody.innerHTML = this.renderEditorial(this.currentProblem);
-      return;
-    }
-
-    this.leftBody.innerHTML = this.renderSubmissions(this.currentProblem);
   }
 
   private renderDescription(problem: Problem): string {
+    const summary =
+      this.state?.latestExecution === "run"
+        ? this.state.lastRunResult ?? this.state.lastSubmitResult
+        : this.state?.lastSubmitResult ?? this.state?.lastRunResult;
     return `
       <div class="pv-problem-num">${problem.number}.</div>
       <h2 class="pv-problem-title">${escapeHtml(problem.title)}</h2>
@@ -1345,6 +1966,15 @@ class ProblemsPageApp {
         ${problem.tags.map((tag) => `<span class="pv-tag">${escapeHtml(tag)}</span>`).join("")}
         <span class="pv-meta-acceptance">${problem.acceptanceRate.toFixed(1)}% acceptance</span>
       </div>
+
+      ${summary
+        ? `
+            <section class="pv-inline-summary pv-inline-summary--${resultToneFromStatus(summary.status)}">
+              <div class="pv-inline-summary__title">${summary.kind === "submit" ? "Last submit" : "Last run"}: ${escapeHtml(resultStatusLabel(summary.status))}</div>
+              <div class="pv-inline-summary__meta">${summary.passed}/${summary.total} cases · ${summary.durationMs} ms · ${summary.totalSteps} steps</div>
+            </section>
+          `
+        : ""}
 
       <div class="pv-prose">${problem.description}</div>
 
@@ -1418,18 +2048,106 @@ class ProblemsPageApp {
     `;
   }
 
+  private renderResultPanel(problem: Problem): string {
+    const result = this.getLeftPanelResult();
+    if (!result) {
+      return `
+        <div class="pv-submissions-empty">
+          <p>No run or submit result yet.</p>
+          <p>Run the visible cases to debug, or submit to judge the full problem.</p>
+        </div>
+      `;
+    }
+
+    const selectedCase =
+      result.caseResults.find((caseResult) => caseResult.caseId === result.selectedCaseId) ??
+      result.caseResults[0] ??
+      null;
+    const summaryLine =
+      result.kind === "submit"
+        ? `${result.passed}/${result.total} official testcases passed`
+        : `${result.passed}/${result.total} debugging case${result.total === 1 ? "" : "s"} passed`;
+    const timestamp = formatRelativeDate(result.createdAt);
+
+    return `
+      <section class="pv-result-view">
+        <div class="pv-result-hero pv-result-hero--${resultToneFromStatus(result.status)}">
+          <div class="pv-result-hero__eyebrow">${result.kind === "submit" ? "Submission Result" : "Run Result"}</div>
+          <h3 class="pv-result-hero__title">${escapeHtml(resultStatusLabel(result.status))}</h3>
+          <p class="pv-result-hero__summary">${escapeHtml(summaryLine)}</p>
+          <div class="pv-result-metrics">
+            <div class="pv-result-metric">
+              <span class="pv-result-metric__label">Runtime</span>
+              <span class="pv-result-metric__value">${result.durationMs} ms</span>
+            </div>
+            <div class="pv-result-metric">
+              <span class="pv-result-metric__label">Steps</span>
+              <span class="pv-result-metric__value">${result.totalSteps}</span>
+            </div>
+            <div class="pv-result-metric">
+              <span class="pv-result-metric__label">Updated</span>
+              <span class="pv-result-metric__value">${escapeHtml(timestamp)}</span>
+            </div>
+          </div>
+        </div>
+
+        ${
+          selectedCase
+            ? `
+                <section class="pv-result-case">
+                  <div class="pv-section-head">${escapeHtml(selectedCase.label)}</div>
+                  ${renderResultCaseInput(selectedCase)}
+                </section>
+              `
+            : ""
+        }
+
+        <details class="pv-code-preview">
+          <summary>Code snapshot</summary>
+          ${renderCodePreview(result.codeSnapshot)}
+        </details>
+
+        ${
+          problem.relatedProblems?.length
+            ? `
+                <section class="pv-related">
+                  <div class="pv-section-head">Related Problems</div>
+                  <div class="pv-problem-meta">
+                    ${problem.relatedProblems
+                      .map((problemId) => {
+                        const related = getProblem(problemId);
+                        if (!related) {
+                          return "";
+                        }
+                        return `<a class="pv-tag" href="/problems/?id=${encodeURIComponent(related.id)}">${related.number}. ${escapeHtml(related.title)}</a>`;
+                      })
+                      .join("")}
+                  </div>
+                </section>
+              `
+            : ""
+        }
+
+        ${
+          result.kind === "submit"
+            ? `<button class="pv-submissions-action" type="button" data-action="restore-submission-code" data-submission-id="${escapeHtml(result.id)}">Load this code in editor</button>`
+            : ""
+        }
+      </section>
+    `;
+  }
+
   private renderHints(problem: Problem): string {
     const entry = ensureProblemEntry(this.progress, problem);
     const revealed = entry.hintsRevealed ?? 0;
 
     return `
-      <div class="pv-hints-intro">Hints are optional. Use them when you need to unblock yourself, not before.</div>
+      <div class="pv-hints-intro">Hints are optional. Reveal them one at a time when you need a nudge.</div>
       ${problem.hints
         .map((hint, index) => {
           const unlocked = index < revealed;
           const canReveal = index === revealed;
           const open = this.openHintIndices.has(index);
-
           if (!unlocked && !canReveal) {
             return `
               <div class="pv-hint-locked">
@@ -1460,7 +2178,7 @@ class ProblemsPageApp {
       return `
         <div class="pv-submissions-empty">
           <p>Editorial coming soon.</p>
-          <p>Try the problem first. This space will hold the walkthrough later.</p>
+          <p>Solve the problem first. This tab will hold the walkthrough later.</p>
         </div>
       `;
     }
@@ -1476,24 +2194,15 @@ class ProblemsPageApp {
     return `<div class="pv-prose">${problem.editorial}</div>`;
   }
 
-  private renderSubmissions(problem: Problem): string {
-    if (!this.session) {
-      return `
-        <div class="pv-submissions-empty">
-          <p>Sign in to save your submissions.</p>
-          <button class="pv-submissions-action" type="button" data-action="signin">Sign in</button>
-          <p>You can still run and submit locally.</p>
-        </div>
-      `;
-    }
-
-    const entry = this.progress[problem.id];
-    const submissions = [...(entry?.submissions ?? [])].sort((left, right) => Date.parse(right.submittedAt) - Date.parse(left.submittedAt));
+  private renderSubmissions(_problem: Problem): string {
+    const submissions = [...(this.state?.submissions ?? [])].sort(
+      (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt)
+    );
     if (submissions.length === 0) {
       return `
         <div class="pv-submissions-empty">
           <p>No submissions yet.</p>
-          <p>Run and submit to start building a history.</p>
+          <p>Submit to save a result snapshot for this problem.</p>
         </div>
       `;
     }
@@ -1504,6 +2213,7 @@ class ProblemsPageApp {
           <tr>
             <th>Status</th>
             <th>Runtime</th>
+            <th>Cases</th>
             <th>Time</th>
           </tr>
         </thead>
@@ -1512,9 +2222,10 @@ class ProblemsPageApp {
             .map(
               (submission) => `
                 <tr data-submission-id="${escapeHtml(submission.id)}">
-                  <td><span class="pv-submission-verdict pv-submission-verdict--${this.submissionTone(submission.verdict)}">${escapeHtml(this.submissionLabel(submission.verdict))}</span></td>
-                  <td>${escapeHtml(`${submission.stepsTaken} steps`)}</td>
-                  <td>${escapeHtml(formatRelativeDate(submission.submittedAt))}</td>
+                  <td><span class="pv-submission-verdict pv-submission-verdict--${resultToneFromStatus(submission.status)}">${escapeHtml(resultStatusLabel(submission.status))}</span></td>
+                  <td>${submission.durationMs} ms</td>
+                  <td>${submission.passed}/${submission.total}</td>
+                  <td>${escapeHtml(formatRelativeDate(submission.createdAt))}</td>
                 </tr>
               `
             )
@@ -1525,234 +2236,427 @@ class ProblemsPageApp {
   }
 
   private renderConsoleBody(): void {
-    if (!this.currentProblem) {
+    if (!this.currentProblem || !this.state) {
       this.consoleBody.innerHTML = "";
       return;
     }
 
     this.consoleTabs.querySelectorAll<HTMLButtonElement>(".pv-console-tab").forEach((button) => {
-      button.classList.toggle("active", button.dataset.ctab === this.consoleTab);
+      button.classList.toggle("active", button.dataset.ctab === this.state!.activeBottomTab);
     });
 
-    if (this.consoleTab === "testcase") {
-      this.consoleBody.innerHTML = this.renderTestcaseConsole(this.currentProblem);
+    if (this.state.activeBottomTab === "testcase") {
+      this.consoleBody.innerHTML = this.renderTestcasePanel(this.currentProblem);
       return;
     }
 
-    if (!this.latestSummary) {
-      this.consoleBody.innerHTML = `<div class="pv-console-empty">Run your code to see output.</div>`;
+    this.consoleBody.innerHTML = this.renderBottomResultPanel();
+  }
+
+  private getWorkspaceCases(): WorkspaceCase[] {
+    if (!this.currentProblem || !this.state) {
+      return [];
+    }
+
+    const official = this.currentProblem.testCases
+      .filter((candidate) => candidate.visible)
+      .map<WorkspaceCase>((testCase) => ({
+        id: testCase.id,
+        label: testCase.label,
+        description: testCase.description,
+        custom: false,
+        readonly: true,
+        testCase,
+      }));
+    const custom = this.state.customCases.map<WorkspaceCase>((draft) => ({
+      id: draft.id,
+      label: draft.label || "Custom Case",
+      description: draft.description,
+      custom: true,
+      readonly: false,
+      draft,
+    }));
+    return [...official, ...custom];
+  }
+
+  private getSelectedWorkspaceCase(): WorkspaceCase | null {
+    const cases = this.getWorkspaceCases();
+    if (cases.length === 0 || !this.state) {
+      return null;
+    }
+    return cases.find((candidate) => candidate.id === this.state!.activeCaseId) ?? cases[0] ?? null;
+  }
+
+  private renderTestcasePanel(_problem: Problem): string {
+    const cases = this.getWorkspaceCases();
+    const selected = this.getSelectedWorkspaceCase();
+    if (!selected || !this.state) {
+      return `<div class="pv-console-empty">No visible testcases.</div>`;
+    }
+
+    const readonly = selected.readonly;
+    const draft = selected.draft;
+    const sourceCase = selected.testCase;
+    const initialRegistersText = draft?.initialRegistersText ?? (sourceCase ? serializeRegisters(sourceCase.initialRegisters) : "");
+    const initialMemoryText = draft?.initialMemoryText ?? (sourceCase?.initialMemory?.length ? serializeMemory(sourceCase.initialMemory) : "");
+    const expectedRegistersText = draft?.expectedRegistersText ?? (sourceCase ? serializeRegisters(sourceCase.expectedRegisters) : "");
+    const expectedMemoryText = draft?.expectedMemoryText ?? (sourceCase?.expectedMemory?.length ? serializeMemory(sourceCase.expectedMemory) : "");
+    const stepLimitText = draft?.stepLimitText ?? (sourceCase?.stepLimit ? String(sourceCase.stepLimit) : "");
+
+    return `
+      <section class="pv-testcase-panel">
+        <div class="pv-case-toolbar">
+          <div class="pv-case-tabs">
+            ${cases
+              .map(
+                (candidate) => `
+                  <button
+                    class="pv-case-tab ${candidate.id === selected.id ? "active" : ""} ${candidate.custom ? "pv-case-tab--custom" : ""}"
+                    data-action="select-case"
+                    data-case-id="${escapeHtml(candidate.id)}"
+                    type="button"
+                  >
+                    ${escapeHtml(candidate.label)}
+                    ${candidate.custom ? `<span class="pv-case-pill">Custom</span>` : ""}
+                  </button>
+                `
+              )
+              .join("")}
+          </div>
+          <div class="pv-case-toolbar__actions">
+            <button class="pv-case-action-btn" type="button" data-action="add-case">+ Add Case</button>
+          </div>
+        </div>
+
+        <div class="pv-testcase-callout">
+          Run checks every visible official testcase plus every custom testcase shown here. Submit always uses the full official judge suite.
+        </div>
+
+        ${this.state.testcaseError ? `<div class="pv-testcase-error">${escapeHtml(this.state.testcaseError)}</div>` : ""}
+
+        <div class="pv-testcase-form">
+          <label class="pv-field">
+            <span class="pv-field__label">Case Label</span>
+            <input
+              class="pv-field__input"
+              type="text"
+              value="${escapeHtml(selected.label)}"
+              ${readonly ? "readonly" : ""}
+              data-custom-case-id="${draft?.id ?? ""}"
+              data-field="label"
+            />
+          </label>
+
+          <label class="pv-field">
+            <span class="pv-field__label">Notes</span>
+            <textarea
+              class="pv-field__textarea pv-field__textarea--sm"
+              ${readonly ? "readonly" : ""}
+              data-custom-case-id="${draft?.id ?? ""}"
+              data-field="description"
+            >${escapeHtml(draft?.description ?? sourceCase?.description ?? "")}</textarea>
+          </label>
+
+          <div class="pv-testcase-grid">
+            <label class="pv-field">
+              <span class="pv-field__label">Initial Registers</span>
+              <textarea
+                class="pv-field__textarea"
+                ${readonly ? "readonly" : ""}
+                data-custom-case-id="${draft?.id ?? ""}"
+                data-field="initialRegistersText"
+              >${escapeHtml(initialRegistersText)}</textarea>
+            </label>
+
+            <label class="pv-field">
+              <span class="pv-field__label">Initial Memory</span>
+              <textarea
+                class="pv-field__textarea"
+                ${readonly ? "readonly" : ""}
+                data-custom-case-id="${draft?.id ?? ""}"
+                data-field="initialMemoryText"
+              >${escapeHtml(initialMemoryText)}</textarea>
+            </label>
+
+            <label class="pv-field">
+              <span class="pv-field__label">Expected Registers</span>
+              <textarea
+                class="pv-field__textarea"
+                ${readonly ? "readonly" : ""}
+                data-custom-case-id="${draft?.id ?? ""}"
+                data-field="expectedRegistersText"
+              >${escapeHtml(expectedRegistersText)}</textarea>
+            </label>
+
+            <label class="pv-field">
+              <span class="pv-field__label">Expected Memory</span>
+              <textarea
+                class="pv-field__textarea"
+                ${readonly ? "readonly" : ""}
+                data-custom-case-id="${draft?.id ?? ""}"
+                data-field="expectedMemoryText"
+              >${escapeHtml(expectedMemoryText)}</textarea>
+            </label>
+          </div>
+
+          <label class="pv-field pv-field--inline">
+            <span class="pv-field__label">Step Limit</span>
+            <input
+              class="pv-field__input pv-field__input--xs"
+              type="text"
+              value="${escapeHtml(stepLimitText)}"
+              ${readonly ? "readonly" : ""}
+              data-custom-case-id="${draft?.id ?? ""}"
+              data-field="stepLimitText"
+            />
+          </label>
+
+          <div class="pv-case-actions">
+            <button class="pv-case-action-btn pv-case-action-btn--primary" type="button" data-action="run-debug">Run visible + custom cases</button>
+            <button class="pv-case-action-btn" type="button" data-action="duplicate-case">Duplicate Case</button>
+            ${selected.custom ? `<button class="pv-case-action-btn" type="button" data-action="reset-case">Reset Case</button>` : ""}
+            ${selected.custom ? `<button class="pv-case-action-btn pv-case-action-btn--danger" type="button" data-action="delete-case">Delete Case</button>` : ""}
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  private renderBottomResultPanel(): string {
+    if (!this.state) {
+      return `<div class="pv-console-empty">Run your code to see output.</div>`;
+    }
+
+    const result = this.getBottomResult();
+    if (!result) {
+      if (this.state.resultNotice) {
+        return `<div class="pv-console-empty" style="text-align:left">${escapeHtml(this.state.resultNotice)}</div>`;
+      }
+      return `<div class="pv-console-empty">Run your code to see output.</div>`;
+    }
+
+    const selected = result.caseResults.find((caseResult) => caseResult.caseId === result.selectedCaseId) ?? result.caseResults[0] ?? null;
+    return `
+      <section class="pv-test-result">
+        <div class="pv-test-result__summary pv-test-result__summary--${resultToneFromStatus(result.status)}">
+          <div class="pv-test-result__title">${escapeHtml(resultStatusLabel(result.status))}</div>
+          <div class="pv-test-result__meta">${result.passed}/${result.total} cases · ${result.durationMs} ms · ${result.totalSteps} steps</div>
+        </div>
+
+        <div class="pv-result-list">
+          ${result.caseResults
+            .map(
+              (caseResult) => `
+                <button
+                  class="pv-result-item ${caseResult.result.passed ? "pass" : "fail"} ${caseResult.caseId === selected?.caseId ? "is-active" : ""}"
+                  data-action="select-result-case"
+                  data-case-id="${escapeHtml(caseResult.caseId)}"
+                  type="button"
+                >
+                  <span class="pv-result-icon ${caseResult.result.passed ? "pass" : "fail"}">${caseResult.result.passed ? "✓" : "✗"}</span>
+                  <span class="pv-result-label">${escapeHtml(caseResult.label)}</span>
+                  <span class="pv-result-steps">${caseResult.result.executionTimeMs.toFixed(2)} ms · ${caseResult.result.stepsTaken} steps</span>
+                </button>
+              `
+            )
+            .join("")}
+        </div>
+
+        ${
+          selected
+            ? `
+                <section class="pv-result-detail">
+                  <div class="pv-section-head">${escapeHtml(selected.label)} Detail</div>
+                  ${renderResultCaseInput(selected)}
+                </section>
+              `
+            : ""
+        }
+      </section>
+    `;
+  }
+
+  private async ensureRuntime(): Promise<WasmRuntime> {
+    this.runtimePromise ??= WasmRuntime.create();
+    return this.runtimePromise;
+  }
+
+  private async ensureEditor(code: string): Promise<void> {
+    this.monacoLoading.hidden = false;
+    if (!this.editor) {
+      this.editorHost.innerHTML = "";
+    }
+    delete this.editorHost.dataset.editorFallback;
+
+    try {
+      const el = this.editorHost;
+      this.monaco ??= await loadMonaco();
+      await nextFrame();
+      this.ensureEditorContainerHeight();
+
+      if (!el || el.clientWidth === 0 || el.clientHeight === 0) {
+        console.error("Editor container not ready -- aborting Monaco init");
+        this.mountEditorFallback(code);
+        return;
+      }
+
+      console.log("Loading Monaco...");
+      if (!this.editor) {
+        console.log("Monaco loaded");
+        this.editor = createMonacoEditor(this.monaco, el, code);
+        monacoHost().__editorInstance = this.editor;
+        monacoHost().__editorFallback = null;
+        this.editorFallback = null;
+        this.bindEditorAutosave();
+      } else {
+        this.editor.setValue(code);
+        this.editor.updateOptions({ readOnly: false });
+        monacoHost().__editorInstance = this.editor;
+      }
+
+      this.monacoLoading.hidden = true;
+      this.editor.layout();
+      this.editor.focus();
+    } catch (error) {
+      console.error("Monaco failed:", error);
+      this.mountEditorFallback(code);
+    }
+  }
+
+  private mountEditorFallback(code: string): void {
+    this.editor?.dispose();
+    this.editor = null;
+    monacoHost().__editorInstance = null;
+    this.editorHost.innerHTML = "";
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "pv-editor-fallback";
+    textarea.value = code;
+    textarea.spellcheck = false;
+    this.editorHost.dataset.editorFallback = "true";
+    this.editorHost.appendChild(textarea);
+
+    this.editorFallback = textarea;
+    monacoHost().__editorFallback = textarea;
+    this.monacoLoading.hidden = true;
+
+    textarea.addEventListener("input", () => {
+      if (this.state) {
+        this.state.currentCode = textarea.value;
+      }
+      if (this.autosaveTimer) {
+        window.clearTimeout(this.autosaveTimer);
+      }
+      this.autosaveTimer = window.setTimeout(() => {
+        this.persistCurrentCode();
+      }, AUTO_SAVE_DELAY_MS);
+    });
+  }
+
+  private bindEditorAutosave(): void {
+    if (!this.editor) {
+      return;
+    }
+    this.editorChangeSubscription?.dispose();
+    this.editorChangeSubscription = this.editor.onDidChangeModelContent(() => {
+      if (this.state) {
+        this.state.currentCode = this.editor?.getValue() ?? "";
+      }
+      if (this.autosaveTimer) {
+        window.clearTimeout(this.autosaveTimer);
+      }
+      this.autosaveTimer = window.setTimeout(() => {
+        this.persistCurrentCode();
+      }, AUTO_SAVE_DELAY_MS);
+    });
+  }
+
+  private persistCurrentCode(): void {
+    if (!this.currentProblem || !this.state) {
       return;
     }
 
-    this.consoleBody.innerHTML = this.renderResultsConsole(this.latestSummary);
-  }
-
-  private renderTestcaseConsole(problem: Problem): string {
-    const visibleCases = problem.testCases.filter((testCase) => testCase.visible);
-    const activeCase = visibleCases[this.activeVisibleCaseIndex] ?? visibleCases[0];
-    if (!activeCase) {
-      return `<div class="pv-console-empty">No visible test cases.</div>`;
+    const code = this.getEditorCode();
+    this.state.currentCode = code;
+    saveProblemCode(this.currentProblem.id, code);
+    const entry = ensureProblemEntry(this.progress, this.currentProblem);
+    entry.lastCode = code;
+    entry.lastSavedAt = nowIso();
+    saveProblemProgressForUser(this.progress, this.session?.userId ?? null);
+    if (this.session) {
+      void syncProblemProgressToApi(this.progress, this.session.idToken);
     }
-
-    const showExpected = Boolean(this.latestSummary);
-    return `
-      <div class="pv-case-tabs">
-        ${visibleCases
-          .map(
-            (testCase, index) => `
-              <button class="pv-case-tab ${index === this.activeVisibleCaseIndex ? "active" : ""}" data-ci="${index}" type="button">
-                ${escapeHtml(testCase.label)}
-              </button>
-            `
-          )
-          .join("")}
-      </div>
-      ${visibleCases
-        .map(
-          (testCase, index) => `
-            <div class="pv-case-content ${index === this.activeVisibleCaseIndex ? "active" : ""}" data-ci="${index}">
-              <table class="pv-register-table">
-                <thead>
-                  <tr>
-                    <th>Register</th>
-                    <th>Initial Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${Object.entries(testCase.initialRegisters)
-                    .map(
-                      ([registerName, value]) => `
-                        <tr>
-                          <td class="pv-reg-name">${escapeHtml(registerName)}</td>
-                          <td class="pv-reg-val">${formatHex(value ?? 0)}<span class="pv-reg-dec">(${(value ?? 0) >> 0})</span></td>
-                        </tr>
-                      `
-                    )
-                    .join("")}
-                  ${(testCase.initialMemory ?? [])
-                    .map(
-                      (entry) => `
-                        <tr>
-                          <td class="pv-reg-name">mem[${formatHex(entry.address)}]</td>
-                          <td class="pv-reg-val">${formatSignedValue(entry.value, entry.size ?? "word")}</td>
-                        </tr>
-                      `
-                    )
-                    .join("")}
-                </tbody>
-              </table>
-              ${showExpected
-                ? `
-                    <div class="pv-section-head">Expected Output</div>
-                    <table class="pv-register-table">
-                      <thead>
-                        <tr>
-                          <th>Register</th>
-                          <th>Expected Value</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${Object.entries(testCase.expectedRegisters)
-                          .map(
-                            ([registerName, value]) => `
-                              <tr>
-                                <td class="pv-reg-name">${escapeHtml(registerName)}</td>
-                                <td class="pv-reg-val">${formatHex(value ?? 0)}<span class="pv-reg-dec">(${(value ?? 0) >> 0})</span></td>
-                              </tr>
-                            `
-                          )
-                          .join("")}
-                        ${(testCase.expectedMemory ?? [])
-                          .map(
-                            (entry) => `
-                              <tr>
-                                <td class="pv-reg-name">mem[${formatHex(entry.address)}]</td>
-                                <td class="pv-reg-val">${formatSignedValue(entry.value, entry.size ?? "word")}</td>
-                              </tr>
-                            `
-                          )
-                          .join("")}
-                      </tbody>
-                    </table>
-                  `
-                : ""}
-            </div>
-          `
-        )
-        .join("")}
-    `;
   }
 
-  private renderResultsConsole(summary: RunSummary): string {
-    const caseMap = new Map(this.currentProblem?.testCases.map((testCase) => [testCase.id, testCase]) ?? []);
-
-    return `
-      ${summary.verdict === "Accepted"
-        ? `<div class="pv-all-pass-banner">✓ Passed ${summary.passedCount}/${summary.totalCount} test cases</div>`
-        : ""}
-      <div class="pv-result-list">
-        ${summary.results
-          .map((result) => {
-            const visible = caseMap.get(result.caseId)?.visible ?? true;
-            const expanded = this.expandedResultCaseId === result.caseId;
-            const diffMarkup = this.renderResultDiff(result, visible, expanded);
-            return `
-              <div class="pv-result-item ${result.passed ? "pass" : "fail"}" data-case-id="${escapeHtml(result.caseId)}">
-                <span class="pv-result-icon ${result.passed ? "pass" : "fail"}">${result.passed ? "✓" : "✗"}</span>
-                <span class="pv-result-label">${escapeHtml(result.label)}</span>
-                <span class="pv-result-steps">${escapeHtml(`${result.stepsTaken} steps`)}</span>
-              </div>
-              ${diffMarkup}
-            `;
-          })
-          .join("")}
-      </div>
-    `;
-  }
-
-  private renderResultDiff(result: RunResult, visible: boolean, expanded: boolean): string {
-    const classes = `pv-result-diff${expanded ? " is-open" : ""}`;
-    if (result.passed) {
-      return `<div class="${classes}"></div>`;
+  private getEditorCode(): string {
+    if (this.editor) {
+      return this.editor.getValue();
     }
-
-    if (!visible) {
-      return `
-        <div class="${classes}">
-          <div class="pv-error-block">
-            Hidden test case feedback is withheld on submit. Use the visible cases to debug, then try again.
-          </div>
-        </div>
-      `;
+    if (this.editorFallback) {
+      return this.editorFallback.value;
     }
+    return monacoHost().__editorFallback?.value ?? "";
+  }
 
-    if (result.errorMessage) {
-      const label = result.timedOut ? "Time Limit" : result.verdict === "Assembly Error" ? "Assembly Error" : "Runtime Error";
-      return `
-        <div class="${classes}">
-          <div class="pv-asm-error">
-            <div class="pv-asm-error__line">${escapeHtml(label)}</div>
-            <div class="pv-asm-error__msg">${escapeHtml(result.errorMessage)}</div>
-          </div>
-        </div>
-      `;
+  private setEditorCode(code: string): void {
+    if (this.state) {
+      this.state.currentCode = code;
     }
-
-    return `
-      <div class="${classes}">
-        <div class="pv-diff-row">
-          <span class="pv-diff-label"></span>
-          <span class="pv-text-caption">Expected</span>
-          <span class="pv-text-caption">Actual</span>
-        </div>
-        ${result.diff
-          .map(
-            (diff) => `
-              <div class="pv-diff-row">
-                <span class="pv-diff-label">${escapeHtml(diff.key)}</span>
-                <span class="pv-diff-expected">${escapeHtml(formatProblemDiffValue(diff.expected))}</span>
-                <span class="pv-diff-actual">${escapeHtml(formatProblemDiffValue(diff.actual))}</span>
-              </div>
-            `
-          )
-          .join("")}
-      </div>
-    `;
+    if (this.editor) {
+      this.editor.setValue(code);
+      return;
+    }
+    if (this.editorFallback) {
+      this.editorFallback.value = code;
+      return;
+    }
+    const fallback = monacoHost().__editorFallback;
+    if (fallback) {
+      fallback.value = code;
+    }
   }
 
-  private clearConsole(): void {
-    this.consoleBody.innerHTML = "";
+  private setEditorReadOnly(readOnly: boolean): void {
+    if (this.editor) {
+      this.editor.updateOptions({ readOnly });
+    }
+    if (this.editorFallback) {
+      this.editorFallback.readOnly = readOnly;
+    }
+    const fallback = monacoHost().__editorFallback;
+    if (fallback) {
+      fallback.readOnly = readOnly;
+    }
   }
 
-  private showConsoleStatus(message: string): void {
-    this.consoleTab = "result";
-    this.consoleBody.innerHTML = `<div class="pv-console-empty" style="text-align:left">${escapeHtml(message)}</div>`;
-    this.consoleTabs.querySelectorAll<HTMLButtonElement>(".pv-console-tab").forEach((button) => {
-      button.classList.toggle("active", button.dataset.ctab === "result");
-    });
-  }
-
-  private showConsoleError(message: string): void {
-    this.consoleTab = "result";
-    this.consoleTabs.querySelectorAll<HTMLButtonElement>(".pv-console-tab").forEach((button) => {
-      button.classList.toggle("active", button.dataset.ctab === "result");
-    });
-    this.consoleBody.innerHTML = `
-      <div class="pv-asm-error">
-        <div class="pv-asm-error__line">Error</div>
-        <div class="pv-asm-error__msg">${escapeHtml(message)}</div>
-      </div>
-    `;
-  }
-
-  private async executeRun(isSubmit: boolean): Promise<void> {
-    if (!this.currentProblem || this.running) {
+  private async executeRun(): Promise<void> {
+    if (!this.currentProblem || !this.state || this.running) {
       return;
     }
 
     const source = this.getEditorCode();
     if (!source.trim()) {
-      this.showConsoleError("Editor is empty.");
+      this.state.resultNotice = null;
+      this.state.testcaseError = "Editor is empty.";
+      this.renderConsoleBody();
+      return;
+    }
+
+    const officialCases = this.currentProblem.testCases.filter((candidate) => candidate.visible);
+    const parsedCustomCases = this.state.customCases.map((draft) => ({ draft, parsed: parseCustomCaseDraft(draft) }));
+    const customErrors = parsedCustomCases.flatMap(({ parsed }) => parsed.errors);
+    if (customErrors.length > 0) {
+      this.state.testcaseError = customErrors[0] ?? "Custom testcase is invalid.";
+      this.state.activeBottomTab = "testcase";
+      this.renderConsoleBody();
+      return;
+    }
+
+    const customCases = parsedCustomCases.map((item) => item.parsed.testCase).filter((value): value is ProblemTestCase => Boolean(value));
+    const casesToRun = [...officialCases, ...customCases];
+    if (casesToRun.length === 0) {
+      this.state.testcaseError = "No testcase is available to run.";
+      this.renderConsoleBody();
       return;
     }
 
@@ -1760,7 +2664,9 @@ class ProblemsPageApp {
     try {
       runtime = await this.ensureRuntime();
     } catch (error) {
-      this.showConsoleError(error instanceof Error ? error.message : "Runtime not ready. Please wait.");
+      this.state.resultNotice = error instanceof Error ? error.message : "Runtime not ready.";
+      this.state.activeBottomTab = "result";
+      this.renderConsoleBody();
       return;
     }
 
@@ -1768,30 +2674,28 @@ class ProblemsPageApp {
     this.runButton.classList.add("is-loading");
     this.submitButton.classList.add("is-loading");
     this.setEditorReadOnly(true);
-    this.resetConfirm.hidden = true;
-    this.clearConsole();
-    this.showConsoleStatus(isSubmit ? "Running all test cases..." : "Running visible test cases...");
+    this.state.testcaseError = null;
+    this.state.resultNotice = `Running ${casesToRun.length} debugging case${casesToRun.length === 1 ? "" : "s"}...`;
+    this.state.activeBottomTab = "result";
+    this.renderConsoleBody();
 
     try {
-      const summary = isSubmit
-        ? await runAll(source, this.currentProblem, runtime)
-        : await runVisible(source, this.currentProblem, runtime);
-
-      this.latestSummary = summary;
-      this.expandedResultCaseId = summary.firstFailedResult?.caseId ?? null;
-      this.consoleTab = "result";
-      this.renderConsoleBody();
-
-      if (isSubmit) {
-        this.persistCurrentCode();
-        this.saveSubmission(summary, source);
-        this.showVerdict(summary);
-        if (summary.verdict === "Accepted") {
-          this.stopTimer();
-        }
+      const results: RunResult[] = [];
+      for (const testCase of casesToRun) {
+        results.push(await runTestCase(source, testCase, runtime));
       }
+      const summary = summarizeResults(results);
+      const casesById = new Map(casesToRun.map((testCase) => [testCase.id, testCase]));
+      const customCaseIds = new Set(customCases.map((testCase) => testCase.id));
+      const caseResults = mapCaseResults(results, casesById, customCaseIds);
+      this.state.lastRunResult = buildRunState(summary, caseResults, source);
+      this.state.latestExecution = "run";
+      this.state.resultNotice = null;
+      this.state.selectedSubmissionId = null;
+      this.renderWorkspace();
     } catch (error) {
-      this.showConsoleError(error instanceof Error ? error.message : "Execution failed.");
+      this.state.resultNotice = error instanceof Error ? error.message : "Execution failed.";
+      this.renderConsoleBody();
     } finally {
       this.running = false;
       this.runButton.classList.remove("is-loading");
@@ -1800,28 +2704,80 @@ class ProblemsPageApp {
     }
   }
 
-  private saveSubmission(summary: RunSummary, source: string): void {
-    if (!this.currentProblem) {
+  private async executeSubmit(): Promise<void> {
+    if (!this.currentProblem || !this.state || this.running) {
+      return;
+    }
+
+    const source = this.getEditorCode();
+    if (!source.trim()) {
+      this.state.activeLeftTab = "result";
+      this.state.resultNotice = "Editor is empty.";
+      this.renderWorkspace();
+      return;
+    }
+
+    let runtime: WasmRuntime;
+    try {
+      runtime = await this.ensureRuntime();
+    } catch (error) {
+      this.state.activeLeftTab = "result";
+      this.state.resultNotice = error instanceof Error ? error.message : "Runtime not ready.";
+      this.renderWorkspace();
+      return;
+    }
+
+    this.running = true;
+    this.runButton.classList.add("is-loading");
+    this.submitButton.classList.add("is-loading");
+    this.setEditorReadOnly(true);
+    this.state.resultNotice = "Submitting against the full judge...";
+    this.state.activeBottomTab = "result";
+    this.renderConsoleBody();
+
+    try {
+      const summary = await runAll(source, this.currentProblem, runtime);
+      const casesById = new Map(this.currentProblem.testCases.map((testCase) => [testCase.id, testCase]));
+      const submissionId = `${this.currentProblem.id}-${Date.now()}`;
+      const submissionDetail = buildSubmitState(summary, mapCaseResults(summary.results, casesById, new Set()), source, submissionId);
+      this.state.lastSubmitResult = submissionDetail;
+      this.state.submissions = [submissionDetail, ...this.state.submissions.filter((item) => item.id !== submissionId)].slice(0, 20);
+      this.state.latestExecution = "submit";
+      this.state.selectedSubmissionId = null;
+      this.state.activeLeftTab = "result";
+      this.state.resultNotice = null;
+      saveSubmissionDetails(this.currentProblem.id, this.state.submissions);
+      this.persistCurrentCode();
+      this.saveSubmission(summary, source, submissionDetail);
+      if (summary.verdict === "Accepted") {
+        this.stopTimer();
+      }
+      this.renderWorkspace();
+    } catch (error) {
+      this.state.activeLeftTab = "result";
+      this.state.resultNotice = error instanceof Error ? error.message : "Submission failed.";
+      this.renderWorkspace();
+    } finally {
+      this.running = false;
+      this.runButton.classList.remove("is-loading");
+      this.submitButton.classList.remove("is-loading");
+      this.setEditorReadOnly(false);
+    }
+  }
+
+  private saveSubmission(summary: RunSummary, source: string, detail: WorkspaceSubmitResultState): void {
+    if (!this.currentProblem || !this.state) {
       return;
     }
 
     const entry = ensureProblemEntry(this.progress, this.currentProblem);
-    const submission: ProblemSubmission = {
-      id: `${this.currentProblem.id}-${Date.now()}`,
-      problemId: this.currentProblem.id,
-      code: source,
-      verdict: summary.verdict,
-      passedCases: summary.passedCount,
-      totalCases: summary.totalCount,
-      stepsTaken: summary.totalSteps,
-      submittedAt: new Date().toISOString(),
-      failedCaseId: summary.firstFailedResult?.caseId,
-      errorMessage: summary.firstFailedResult?.errorMessage,
-      elapsedMs: this.timerSeconds * 1000,
-    };
+    const submission = buildMinimalSubmission(this.currentProblem.id, summary, source);
+    submission.id = detail.id;
+    submission.submittedAt = detail.createdAt;
+    submission.elapsedMs = detail.durationMs;
 
     entry.status = summary.verdict === "Accepted" ? "solved" : "attempted";
-    entry.submissions = [submission, ...entry.submissions];
+    entry.submissions = [submission, ...entry.submissions.filter((item) => item.id !== submission.id)].slice(0, 20);
     entry.lastCode = source;
     entry.lastSavedAt = submission.submittedAt;
     saveProblemCode(this.currentProblem.id, source);
@@ -1832,21 +2788,7 @@ class ProblemsPageApp {
       void saveProblemSubmissionToApi(submission, this.session.idToken);
     }
 
-    if (this.leftTab === "submissions") {
-      this.renderLeftBody();
-    }
     this.renderList();
-  }
-
-  private showVerdict(summary: RunSummary): void {
-    renderVerdictBanner(this.verdict, this.verdictContent, summary);
-    this.syncVerdictOffset();
-    if (this.verdictTimer) {
-      window.clearTimeout(this.verdictTimer);
-    }
-    this.verdictTimer = window.setTimeout(() => {
-      this.verdict.hidden = true;
-    }, VERDICT_DISMISS_MS);
   }
 
   private async toggleHint(index: number): Promise<void> {
@@ -1876,60 +2818,95 @@ class ProblemsPageApp {
     this.renderLeftBody();
   }
 
-  private loadSubmissionById(submissionId: string): void {
-    if (!this.currentProblem || !submissionId) {
+  private addCustomCase(): void {
+    if (!this.currentProblem || !this.state) {
       return;
     }
-
-    const entry = this.progress[this.currentProblem.id];
-    const submission = entry?.submissions.find((candidate) => candidate.id === submissionId);
-    if (!submission || !submission.code.trim()) {
-      return;
-    }
-
-    const confirmed = window.confirm("Load this submission? Your current code will be replaced.");
-    if (!confirmed) {
-      return;
-    }
-
-    this.setEditorCode(submission.code);
-    this.persistCurrentCode();
+    const draft = buildCustomCaseDraft(this.currentProblem, this.state.customCases.length, this.getSelectedWorkspaceCase()?.draft ?? this.getSelectedWorkspaceCase()?.testCase);
+    this.state.customCases = [...this.state.customCases, draft];
+    this.state.activeCaseId = draft.id;
+    this.state.testcaseError = null;
+    saveCustomCases(this.currentProblem.id, this.state.customCases);
+    this.renderConsoleBody();
   }
 
-  private submissionTone(verdict: ProblemVerdict): SubmissionTone {
-    switch (verdict) {
-      case "Accepted":
-        return "accepted";
-      case "Wrong Answer":
-        return "wrong";
-      case "Time Limit Exceeded":
-        return "tle";
-      default:
-        return "error";
+  private duplicateActiveCase(): void {
+    if (!this.currentProblem || !this.state) {
+      return;
+    }
+    const selected = this.getSelectedWorkspaceCase();
+    if (!selected) {
+      return;
+    }
+    const draft = buildCustomCaseDraft(
+      this.currentProblem,
+      this.state.customCases.length,
+      selected.draft ?? selected.testCase
+    );
+    this.state.customCases = [...this.state.customCases, draft];
+    this.state.activeCaseId = draft.id;
+    this.state.testcaseError = null;
+    saveCustomCases(this.currentProblem.id, this.state.customCases);
+    this.renderConsoleBody();
+  }
+
+  private deleteActiveCustomCase(): void {
+    if (!this.currentProblem || !this.state) {
+      return;
+    }
+    const selected = this.getSelectedWorkspaceCase();
+    if (!selected?.custom) {
+      return;
+    }
+    this.state.customCases = this.state.customCases.filter((draft) => draft.id !== selected.id);
+    const nextCase = this.getWorkspaceCases().find((candidate) => candidate.id !== selected.id) ?? this.currentProblem.testCases.find((candidate) => candidate.visible);
+    this.state.activeCaseId = nextCase?.id ?? this.currentProblem.testCases[0]?.id ?? "";
+    this.state.testcaseError = null;
+    saveCustomCases(this.currentProblem.id, this.state.customCases);
+    this.renderConsoleBody();
+  }
+
+  private resetActiveCustomCase(): void {
+    if (!this.currentProblem || !this.state) {
+      return;
+    }
+    const selected = this.getSelectedWorkspaceCase();
+    if (!selected?.custom || !selected.draft) {
+      return;
+    }
+    const replacement = buildCustomCaseDraft(this.currentProblem, 0);
+    replacement.id = selected.draft.id;
+    replacement.label = selected.draft.label;
+    const index = this.state.customCases.findIndex((draft) => draft.id === selected.id);
+    if (index >= 0) {
+      this.state.customCases.splice(index, 1, replacement);
+      saveCustomCases(this.currentProblem.id, this.state.customCases);
+      this.state.testcaseError = null;
+      this.renderConsoleBody();
     }
   }
 
-  private submissionLabel(verdict: ProblemVerdict): string {
-    switch (verdict) {
-      case "Accepted":
-        return "Accepted";
-      case "Wrong Answer":
-        return "Wrong Answer";
-      case "Runtime Error":
-        return "Runtime Error";
-      case "Time Limit Exceeded":
-        return "Time Limit";
-      case "Assembly Error":
-        return "Assembly Error";
+  private selectResultCase(caseId: string | null): void {
+    if (!caseId || !this.state) {
+      return;
     }
+    const bottomResult = this.getBottomResult();
+    if (bottomResult) {
+      bottomResult.selectedCaseId = caseId;
+    }
+    const leftResult = this.getLeftPanelResult();
+    if (leftResult) {
+      leftResult.selectedCaseId = caseId;
+    }
+    this.renderWorkspace();
   }
 
   private restoreStarterCode(): void {
-    if (!this.currentProblem) {
+    if (!this.currentProblem || !this.state) {
       return;
     }
-
     this.setEditorCode(this.currentProblem.starterCode);
+    this.state.currentCode = this.currentProblem.starterCode;
     safeLocalStorageSet(`problems_code_${this.currentProblem.id}`, this.currentProblem.starterCode);
     this.persistCurrentCode();
     this.resetConfirm.hidden = true;
@@ -1939,12 +2916,10 @@ class ProblemsPageApp {
     if (!this.currentProblem) {
       return;
     }
-
     const nextIndex = this.currentProblem.number - 1 + offset;
     if (nextIndex < 0 || nextIndex >= this.problems.length) {
       return;
     }
-
     const target = this.problems[nextIndex];
     if (!target) {
       return;
@@ -1994,7 +2969,6 @@ class ProblemsPageApp {
       this.leftPanel.style.flex = "";
       return;
     }
-
     const mainWidth = this.main.getBoundingClientRect().width;
     const saved = readStoredNumber(safeLocalStorageGet(PANEL_SPLIT_STORAGE_KEY), DEFAULT_LEFT_RATIO);
     const width = clampPanelSplit(saved * mainWidth, mainWidth);
@@ -2008,12 +2982,10 @@ class ProblemsPageApp {
       this.editorSection.style.flex = "";
       return;
     }
-
     const rightHeight = this.rightPanel.getBoundingClientRect().height;
     if (rightHeight === 0) {
       return;
     }
-
     const savedConsoleHeight = readStoredNumber(safeLocalStorageGet(CONSOLE_HEIGHT_STORAGE_KEY), DEFAULT_CONSOLE_HEIGHT);
     const editorHeight = clampEditorHeight(rightHeight - savedConsoleHeight - this.horizontalDivider.offsetHeight, rightHeight);
     this.editorSection.style.height = `${editorHeight}px`;
@@ -2062,12 +3034,10 @@ class ProblemsPageApp {
     if (this.problemLayout.hidden) {
       return;
     }
-
     if (window.innerWidth < 768 || this.fullscreen || this.leftPanel.style.display === "none") {
       this.verdict.style.left = "0px";
       return;
     }
-
     const offset = this.leftPanel.offsetWidth + this.verticalDivider.offsetWidth;
     this.verdict.style.left = `${offset}px`;
   }
@@ -2140,44 +3110,6 @@ class ProblemsPageApp {
     const monacoIframe = this.monacoContainer.querySelector("iframe") as HTMLElement | null;
     if (monacoIframe) {
       monacoIframe.style.pointerEvents = enabled ? "" : "none";
-    }
-  }
-
-  private getEditorCode(): string {
-    if (this.editor) {
-      return this.editor.getValue();
-    }
-    if (this.editorFallback) {
-      return this.editorFallback.value;
-    }
-    return monacoHost().__editorFallback?.value ?? "";
-  }
-
-  private setEditorCode(code: string): void {
-    if (this.editor) {
-      this.editor.setValue(code);
-      return;
-    }
-    if (this.editorFallback) {
-      this.editorFallback.value = code;
-      return;
-    }
-    const fallback = monacoHost().__editorFallback;
-    if (fallback) {
-      fallback.value = code;
-    }
-  }
-
-  private setEditorReadOnly(readOnly: boolean): void {
-    if (this.editor) {
-      this.editor.updateOptions({ readOnly });
-    }
-    if (this.editorFallback) {
-      this.editorFallback.readOnly = readOnly;
-    }
-    const fallback = monacoHost().__editorFallback;
-    if (fallback) {
-      fallback.readOnly = readOnly;
     }
   }
 }
