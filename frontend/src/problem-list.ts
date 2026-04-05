@@ -3,6 +3,7 @@ import { getSession, type UserSession } from "./auth";
 import { show as showAuthModal } from "./auth-page";
 import { initFooter } from "./footer";
 import { escapeHtml } from "./format";
+import { getEditorCode as readEditorCode, initRiscvEditor } from "./monaco-riscv";
 import { initNav } from "./nav";
 import type {
   Difficulty,
@@ -47,34 +48,13 @@ type MonacoEditorInstance = {
   getValue(): string;
   setValue(value: string): void;
   updateOptions(options: Record<string, unknown>): void;
-  layout(): void;
   focus(): void;
   dispose(): void;
   onDidChangeModelContent(listener: () => void): { dispose(): void };
 };
 
-type MonacoApi = {
-  languages: {
-    register(configuration: { id: string }): void;
-    setMonarchTokensProvider(languageId: string, provider: Record<string, unknown>): void;
-    setLanguageConfiguration(languageId: string, configuration: Record<string, unknown>): void;
-  };
-  editor: {
-    create(container: HTMLElement, options: Record<string, unknown>): MonacoEditorInstance;
-    defineTheme(name: string, theme: Record<string, unknown>): void;
-    setTheme(name: string): void;
-  };
-};
-
-type MonacoRequire = {
-  (modules: string[], onLoad: () => void, onError?: (error: unknown) => void): void;
-  config(config: { paths: Record<string, string> }): void;
-};
-
 type EditorWindow = Window &
   typeof globalThis & {
-    monaco?: MonacoApi;
-    require?: MonacoRequire;
     __editorInstance?: MonacoEditorInstance | null;
     __editorFallback?: HTMLTextAreaElement | null;
   };
@@ -173,13 +153,9 @@ type CustomCaseParseResult = {
   errors: string[];
 };
 
-const MONACO_CDN = "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs";
-
 export const MONACO_THEME_NAME = "riscv-dark";
 export const MONACO_LIGHT_THEME_NAME = "studyriscv-light";
 export const RISCV_LANGUAGE_ID = "riscv";
-
-const ACTIVE_DARK_THEME_NAME = "studyriscv-dark";
 
 export const RISCV_KEYWORDS = [
   "add", "sub", "sll", "slt", "sltu", "xor", "srl", "sra",
@@ -1048,204 +1024,8 @@ function renderResultCaseInput(caseResult: WorkspaceCaseResult): string {
   `;
 }
 
-let monacoPromise: Promise<MonacoApi> | null = null;
-let riscLanguageDefined = false;
-
 function monacoHost(): EditorWindow {
   return window as EditorWindow;
-}
-
-function currentMonacoThemeName(): string {
-  return document.documentElement.getAttribute("data-theme") === "light"
-    ? MONACO_LIGHT_THEME_NAME
-    : ACTIVE_DARK_THEME_NAME;
-}
-
-function defineMonacoThemes(monaco: MonacoApi): void {
-  const darkTheme = {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "comment", foreground: "5A6A5A", fontStyle: "italic" },
-      { token: "keyword", foreground: "4D87F5", fontStyle: "bold" },
-      { token: "keyword.directive", foreground: "A78BFA" },
-      { token: "variable.register", foreground: "22C55E" },
-      { token: "type.identifier", foreground: "F59E0B" },
-      { token: "number", foreground: "F87171" },
-      { token: "number.hex", foreground: "FB923C" },
-      { token: "string", foreground: "FDE68A" },
-      { token: "delimiter", foreground: "555555" },
-    ],
-    colors: {
-      "editor.background": "#0a0a0a",
-      "editor.foreground": "#e4e4e7",
-      "editor.lineHighlightBackground": "#111111",
-      "editor.lineHighlightBorder": "#00000000",
-      "editorLineNumber.foreground": "#3A3A3A",
-      "editorLineNumber.activeForeground": "#888888",
-      "editor.selectionBackground": "#2D6BE440",
-      "editor.inactiveSelectionBackground": "#2D6BE420",
-      "editorCursor.foreground": "#4D87F5",
-      "editorGutter.background": "#0a0a0a",
-      "editorIndentGuide.background1": "#1A1A1A",
-      "editorBracketMatch.background": "#2D6BE430",
-      "editorBracketMatch.border": "#2D6BE480",
-    },
-  } as const;
-
-  monaco.editor.defineTheme(MONACO_THEME_NAME, darkTheme);
-  monaco.editor.defineTheme(ACTIVE_DARK_THEME_NAME, darkTheme);
-
-  monaco.editor.defineTheme(MONACO_LIGHT_THEME_NAME, {
-    base: "vs",
-    inherit: true,
-    rules: [
-      { token: "comment", foreground: "6B7280", fontStyle: "italic" },
-      { token: "keyword", foreground: "2563EB", fontStyle: "bold" },
-      { token: "keyword.directive", foreground: "7C3AED" },
-      { token: "variable.register", foreground: "16A34A" },
-      { token: "type.identifier", foreground: "D97706" },
-      { token: "number", foreground: "DC2626" },
-      { token: "number.hex", foreground: "EA580C" },
-      { token: "string", foreground: "B45309" },
-      { token: "delimiter", foreground: "9CA3AF" },
-    ],
-    colors: {
-      "editor.background": "#fafafa",
-      "editor.foreground": "#111111",
-      "editor.lineHighlightBackground": "#f3f4f6",
-      "editorLineNumber.foreground": "#9ca3af",
-      "editorLineNumber.activeForeground": "#374151",
-      "editor.selectionBackground": "#2D6BE430",
-      "editorCursor.foreground": "#2D6BE4",
-    },
-  });
-}
-
-function defineRISCVLanguage(monaco: MonacoApi): void {
-  if (riscLanguageDefined) {
-    return;
-  }
-
-  monaco.languages.register({ id: RISCV_LANGUAGE_ID });
-  monaco.languages.setMonarchTokensProvider(RISCV_LANGUAGE_ID, buildRiscvLanguageDefinition());
-  monaco.languages.setLanguageConfiguration(RISCV_LANGUAGE_ID, {
-    comments: { lineComment: "#" },
-    brackets: [
-      ["(", ")"],
-      ["[", "]"],
-    ],
-    autoClosingPairs: [
-      { open: "(", close: ")" },
-      { open: "[", close: "]" },
-    ],
-    surroundingPairs: [
-      { open: "(", close: ")" },
-      { open: "[", close: "]" },
-    ],
-  });
-  riscLanguageDefined = true;
-}
-
-function loadMonaco(): Promise<MonacoApi> {
-  const host = monacoHost();
-
-  if (host.monaco) {
-    defineMonacoThemes(host.monaco);
-    defineRISCVLanguage(host.monaco);
-    return Promise.resolve(host.monaco);
-  }
-
-  if (monacoPromise) {
-    return monacoPromise;
-  }
-
-  monacoPromise = new Promise<MonacoApi>((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
-      reject(new Error("Monaco load timeout"));
-    }, 15000);
-
-    const requireJs = host.require;
-    if (!requireJs) {
-      window.clearTimeout(timeout);
-      reject(new Error("Monaco AMD loader unavailable"));
-      return;
-    }
-
-    requireJs.config({
-      paths: { vs: MONACO_CDN },
-    });
-
-    requireJs(
-      ["vs/editor/editor.main"],
-      () => {
-        window.clearTimeout(timeout);
-        if (!host.monaco) {
-          reject(new Error("Monaco failed to expose the editor API"));
-          return;
-        }
-        defineMonacoThemes(host.monaco);
-        defineRISCVLanguage(host.monaco);
-        resolve(host.monaco);
-      },
-      (error) => {
-        window.clearTimeout(timeout);
-        reject(error instanceof Error ? error : new Error(String(error)));
-      }
-    );
-  });
-
-  return monacoPromise;
-}
-
-function createMonacoEditor(monaco: MonacoApi, container: HTMLElement, code: string): MonacoEditorInstance {
-  const themeName = currentMonacoThemeName();
-  monaco.editor.setTheme(themeName);
-  return monaco.editor.create(container, {
-    value: code,
-    language: RISCV_LANGUAGE_ID,
-    theme: themeName,
-    fontFamily: "'JetBrains Mono', 'Fira Code', 'Geist Mono', 'Cascadia Code', monospace",
-    fontLigatures: true,
-    fontSize: 13,
-    lineHeight: 22,
-    tabSize: 2,
-    insertSpaces: true,
-    detectIndentation: false,
-    minimap: { enabled: false },
-    scrollBeyondLastLine: false,
-    renderLineHighlight: "all",
-    cursorBlinking: "smooth",
-    cursorStyle: "line",
-    cursorWidth: 2,
-    smoothScrolling: true,
-    automaticLayout: true,
-    padding: { top: 16, bottom: 16 },
-    lineNumbers: "on",
-    lineNumbersMinChars: 3,
-    glyphMargin: false,
-    folding: false,
-    renderWhitespace: "selection",
-    wordWrap: "off",
-    scrollbar: {
-      vertical: "auto",
-      horizontal: "auto",
-      verticalScrollbarSize: 6,
-      horizontalScrollbarSize: 6,
-    },
-    overviewRulerBorder: false,
-    hideCursorInOverviewRuler: true,
-    matchBrackets: "always",
-    bracketPairColorization: { enabled: false },
-    overviewRulerLanes: 0,
-    contextmenu: true,
-    quickSuggestions: false,
-    parameterHints: { enabled: false },
-    suggestOnTriggerCharacters: false,
-    acceptSuggestionOnEnter: "off",
-    tabCompletion: "off",
-    wordBasedSuggestions: "off",
-  });
 }
 
 class ProblemsPageApp {
@@ -1319,11 +1099,9 @@ class ProblemsPageApp {
   private timerInterval: number | null = null;
   private timerSeconds = 0;
   private timerProblemId: string | null = null;
-  private monaco: MonacoApi | null = null;
   private editor: MonacoEditorInstance | null = null;
   private editorFallback: HTMLTextAreaElement | null = null;
   private editorChangeSubscription: { dispose(): void } | null = null;
-  private editorThemeObserver: MutationObserver | null = null;
   private runtimePromise: Promise<WasmRuntime> | null = null;
   private running = false;
   private fullscreen = safeLocalStorageGet(FULLSCREEN_STORAGE_KEY) === "1";
@@ -1684,10 +1462,6 @@ class ProblemsPageApp {
       void this.refreshSessionState();
     });
 
-    window.addEventListener("beforeunload", () => {
-      this.stopEditorThemeSync();
-    });
-
     document.addEventListener("keydown", (event) => {
       if (this.problemLayout.hidden) {
         return;
@@ -1944,6 +1718,7 @@ class ProblemsPageApp {
       this.persistCurrentCode();
     }
 
+    this.disposeEditor();
     this.stopTimer();
     this.currentProblem = null;
     this.viewState = null;
@@ -1956,7 +1731,6 @@ class ProblemsPageApp {
     this.body.classList.remove("pv-body");
     this.verdict.hidden = true;
     this.resetConfirm.hidden = true;
-    this.stopEditorThemeSync();
     this.updateLanguagePill("idle");
     document.title = "Problems - StudyRISC-V";
 
@@ -1977,6 +1751,7 @@ class ProblemsPageApp {
     if (this.currentProblem) {
       this.persistCurrentCode();
     }
+    this.disposeEditor();
 
     this.currentProblem = problem;
     this.openHintIndices.clear();
@@ -2663,30 +2438,6 @@ class ProblemsPageApp {
     }
   }
 
-  private syncEditorTheme(): void {
-    if (!this.monaco) {
-      return;
-    }
-    this.monaco.editor.setTheme(currentMonacoThemeName());
-  }
-
-  private startEditorThemeSync(): void {
-    this.stopEditorThemeSync();
-    this.syncEditorTheme();
-    this.editorThemeObserver = new MutationObserver(() => {
-      this.syncEditorTheme();
-    });
-    this.editorThemeObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme", "class"],
-    });
-  }
-
-  private stopEditorThemeSync(): void {
-    this.editorThemeObserver?.disconnect();
-    this.editorThemeObserver = null;
-  }
-
   private async ensureRuntime(): Promise<WasmRuntime> {
     this.runtimePromise ??= WasmRuntime.create();
     return this.runtimePromise;
@@ -2694,75 +2445,54 @@ class ProblemsPageApp {
 
   private async ensureEditor(code: string): Promise<void> {
     this.monacoLoading.hidden = false;
-    if (!this.editor) {
-      this.editorHost.innerHTML = "";
-    }
-    delete this.editorHost.dataset.editorFallback;
     this.updateLanguagePill("idle");
+    this.editorHost.innerHTML = "";
+    delete this.editorHost.dataset.editorFallback;
 
-    try {
-      const el = this.editorHost;
-      console.log("Monaco: configuring require...");
-      this.monaco ??= await loadMonaco();
-      await nextFrame();
-      this.ensureEditorContainerHeight();
-      await nextFrame();
-      this.ensureEditorContainerHeight();
+    await nextFrame();
+    this.ensureEditorContainerHeight();
+    await nextFrame();
+    this.ensureEditorContainerHeight();
 
-      if (!el) {
-        console.error("Monaco: container not found:", "pv-editor");
-        this.mountEditorFallback(code);
-        return;
-      }
-
-      const rect = el.getBoundingClientRect();
-      console.log("Monaco container dimensions:", rect.width, "x", rect.height);
-      console.log("Monaco: loading editor.main...");
-      if (!this.editor) {
-        console.log("Monaco: editor.main loaded");
-        this.editor = createMonacoEditor(this.monaco, el, code);
-        this.startEditorThemeSync();
-        monacoHost().__editorInstance = this.editor;
-        monacoHost().__editorFallback = null;
-        this.editorFallback = null;
-        this.bindEditorAutosave();
-      } else {
-        this.editor.setValue(code);
-        this.editor.updateOptions({ readOnly: false });
-        monacoHost().__editorInstance = this.editor;
-        this.startEditorThemeSync();
-      }
-
-      this.updateLanguagePill("active", "RISC-V Assembly");
-      this.monacoLoading.hidden = true;
-      this.editor.focus();
-    } catch (error) {
-      console.error("Monaco CDN load failed:", error);
-      this.mountEditorFallback(code);
-    }
+    await new Promise<void>((resolve) => {
+      initRiscvEditor({
+        containerId: "pv-editor",
+        starterCode: code,
+        problemId: this.currentProblem?.id,
+        onReady: (editor) => {
+          this.editor = editor as MonacoEditorInstance;
+          this.editorFallback = null;
+          this.editorChangeSubscription?.dispose();
+          this.editorChangeSubscription = this.editor.onDidChangeModelContent(() => {
+            if (this.state) {
+              this.state.currentCode = this.editor?.getValue() ?? "";
+            }
+          });
+          this.updateLanguagePill("active");
+          this.monacoLoading.hidden = true;
+          this.editor.focus();
+          resolve();
+        },
+        onError: () => {
+          this.editorChangeSubscription?.dispose();
+          this.editorChangeSubscription = null;
+          this.editor = null;
+          this.updateLanguagePill("error", "Editor failed");
+          this.monacoLoading.hidden = true;
+          window.setTimeout(() => {
+            this.editorFallback = monacoHost().__editorFallback ?? null;
+            if (this.editorFallback) {
+              this.bindFallbackAutosave(this.editorFallback);
+            }
+          }, 0);
+          resolve();
+        },
+      });
+    });
   }
 
-  private mountEditorFallback(code: string): void {
-    this.editor?.dispose();
-    this.editor = null;
-    this.stopEditorThemeSync();
-    monacoHost().__editorInstance = null;
-    this.editorHost.innerHTML = "";
-
-    const textarea = document.createElement("textarea");
-    textarea.className = "pv-editor-fallback";
-    textarea.value = code;
-    textarea.spellcheck = false;
-    textarea.placeholder = "# Write your RISC-V assembly here";
-    this.editorHost.dataset.editorFallback = "true";
-    this.editorHost.appendChild(textarea);
-
-    this.editorFallback = textarea;
-    monacoHost().__editorFallback = textarea;
-    this.monacoLoading.hidden = true;
-    this.updateLanguagePill("error", "Editor failed");
-
-    textarea.addEventListener("input", () => {
+  private bindFallbackAutosave(textarea: HTMLTextAreaElement): void {
+    textarea.oninput = () => {
       if (this.state) {
         this.state.currentCode = textarea.value;
       }
@@ -2772,25 +2502,23 @@ class ProblemsPageApp {
       this.autosaveTimer = window.setTimeout(() => {
         this.persistCurrentCode();
       }, AUTO_SAVE_DELAY_MS);
-    });
+    };
   }
 
-  private bindEditorAutosave(): void {
-    if (!this.editor) {
-      return;
-    }
+  private disposeEditor(): void {
     this.editorChangeSubscription?.dispose();
-    this.editorChangeSubscription = this.editor.onDidChangeModelContent(() => {
-      if (this.state) {
-        this.state.currentCode = this.editor?.getValue() ?? "";
-      }
-      if (this.autosaveTimer) {
-        window.clearTimeout(this.autosaveTimer);
-      }
-      this.autosaveTimer = window.setTimeout(() => {
-        this.persistCurrentCode();
-      }, AUTO_SAVE_DELAY_MS);
-    });
+    this.editorChangeSubscription = null;
+    this.editor?.dispose();
+    this.editor = null;
+    this.editorFallback = null;
+    if (this.autosaveTimer) {
+      window.clearTimeout(this.autosaveTimer);
+      this.autosaveTimer = null;
+    }
+    monacoHost().__editorInstance = null;
+    monacoHost().__editorFallback = null;
+    this.editorHost.innerHTML = "";
+    this.monacoLoading.hidden = false;
   }
 
   private persistCurrentCode(): void {
@@ -2811,13 +2539,7 @@ class ProblemsPageApp {
   }
 
   private getEditorCode(): string {
-    if (this.editor) {
-      return this.editor.getValue();
-    }
-    if (this.editorFallback) {
-      return this.editorFallback.value;
-    }
-    return monacoHost().__editorFallback?.value ?? "";
+    return readEditorCode();
   }
 
   private setEditorCode(code: string): void {
