@@ -1930,6 +1930,10 @@ body.loaded .hero__visual {
   animation: marquee-scroll 52s linear infinite;
 }
 
+.landing-home .coverage-strip__marquee-wrap:hover .coverage-strip__track {
+  animation-play-state: paused;
+}
+
 @keyframes marquee-scroll {
   from { transform: translateX(0); }
   to   { transform: translateX(-33.333%); }
@@ -2693,9 +2697,9 @@ body.loaded .hero__visual {
 
 /* ─── Landing Polish Pass ─── */
 .landing-home {
-  --landing-max-width: 1360px;
-  --landing-max-width-wide: 1540px;
-  --landing-gutter: clamp(28px, 4vw, 64px);
+  --landing-max-width: 1440px;
+  --landing-max-width-wide: 1680px;
+  --landing-gutter: clamp(24px, 3.5vw, 56px);
   --landing-section-space: clamp(96px, 11vw, 168px);
   --landing-text-max: 620px;
 }
@@ -3488,6 +3492,10 @@ body.loaded .hero__visual {
   gap: 38px;
   padding: 18px 42px;
   animation-duration: 64s;
+}
+
+.landing-home .coverage-strip__marquee-wrap:hover .coverage-strip__track {
+  animation-play-state: paused;
 }
 
 .landing-home .cov-chip {
