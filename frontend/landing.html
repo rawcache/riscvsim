@@ -101,8 +101,8 @@
 
           <div class="hero__stats">
             <div class="hero__stat">
-              <span class="hero__stat-num">157+</span>
-              <span class="hero__stat-label">Regression Tests</span>
+              <span class="hero__stat-num">342</span>
+              <span class="hero__stat-label">Passing Tests</span>
             </div>
             <div class="hero__stat-sep"></div>
             <div class="hero__stat">
@@ -117,13 +117,13 @@
             <div class="hero__stat-sep"></div>
             <div class="hero__stat">
               <span class="hero__stat-num">RV32IM</span>
-              <span class="hero__stat-label">Full ISA</span>
+              <span class="hero__stat-label">Execution Core</span>
             </div>
           </div>
         </div>
 
         <div class="hero__right">
-          <div class="hero__code-window hero-code" id="heroCodeWindow">
+          <div class="hero__code-window hero-code" id="heroCodeWindow" data-landing-depth>
             <div class="hero__code-titlebar hero-code__bar">
               <div class="hero__code-dots">
                 <span class="hero__dot hero__dot--red"></span>
@@ -138,183 +138,437 @@
         </div>
       </section>
 
-      <section class="coverage-strip" data-opcode-band data-landing-section>
-        <div class="coverage-strip__quick" aria-live="polite">
-          <div class="coverage-strip__quick-label">Opcode Focus</div>
-          <div class="coverage-strip__quick-main">
-            <div class="coverage-strip__quick-name" data-opcode-name>ADDI</div>
-            <div class="coverage-strip__quick-desc" data-opcode-description>
-              Add an immediate constant to a register.
-            </div>
-          </div>
-          <div class="coverage-strip__quick-example" data-opcode-example>
-            addi x5, x0, 10
+      <section class="credibility-strip" data-landing-section>
+        <div class="section-shell section-shell--wide credibility-strip__inner">
+          <span class="credibility-strip__eyebrow">Built for coursework and self-study</span>
+          <div class="credibility-strip__items" aria-label="StudyRISC-V highlights">
+            <span>Georgia Tech friendly</span>
+            <span>Browser-based simulator</span>
+            <span>RV32IM execution</span>
+            <span>Lessons, labs, and checkpoints</span>
+            <span>Regression-backed behavior</span>
           </div>
         </div>
+      </section>
 
-        <div class="coverage-strip__detail">
-          <div class="coverage-strip__detail-meta">
-            <div class="coverage-strip__detail-label">Why it matters</div>
-            <div class="coverage-strip__detail-title" data-opcode-detail-title>
-              Immediate setup for constants and loop counters
-            </div>
-          </div>
-          <div class="coverage-strip__detail-body" data-opcode-detail-body>
-            Use <code>addi</code> when you need a fast register update without touching memory. It is the backbone of
-            loop counters, stack pointer movement, and constant setup.
-          </div>
-          <div class="coverage-strip__detail-visual">
-            <span class="coverage-strip__detail-tag">Machine effect</span>
-            <code class="coverage-strip__detail-flow" data-opcode-detail-flow>
-              x5 ← x0 + 10
-            </code>
-          </div>
-        </div>
-
-        <div class="coverage-strip__band">
-          <div class="coverage-strip__label">RV32IM</div>
-          <div class="coverage-strip__marquee-wrap">
-            <div class="coverage-strip__track" data-opcode-track aria-label="RISC-V opcode reference band"></div>
-          </div>
+      <section class="statement-block" data-landing-section>
+        <div class="section-shell">
+          <span class="section-kicker">Why StudyRISC-V</span>
+          <h2 class="statement-block__title">
+            Architecture learning should feel like inspecting a live system, not memorizing isolated instructions.
+          </h2>
+          <p class="statement-block__body">
+            StudyRISC-V keeps code, machine state, and conceptual visuals in one calm workspace so
+            every stack adjustment, memory access, and control-flow change has a visible place on screen.
+          </p>
         </div>
       </section>
 
       <section class="motion-showcase" aria-labelledby="motion-showcase-title" data-landing-section>
-        <div class="motion-showcase__header">
-          <span class="motion-showcase__eyebrow">Concepts In Motion</span>
-          <h2 class="motion-showcase__title" id="motion-showcase-title">
-            Three places where the machine stops feeling abstract.
-          </h2>
-          <p class="motion-showcase__sub">
-            Hover on desktop or watch the cards auto-play on mobile. Each one maps a hard RISC-V idea
-            to a visual model you can read in seconds.
-          </p>
+        <div class="section-shell section-shell--wide">
+          <div class="motion-showcase__header">
+            <span class="motion-showcase__eyebrow">Concepts In Motion</span>
+            <h2 class="motion-showcase__title" id="motion-showcase-title">
+              Three places where the machine stops feeling abstract.
+            </h2>
+            <p class="motion-showcase__sub">
+              Hover on desktop or watch the cards auto-play on mobile. Each one maps a hard RISC-V idea
+              to a visual model you can read in seconds.
+            </p>
+          </div>
+
+          <div class="motion-showcase__grid" data-landing-depth>
+            <article class="motion-card">
+              <div class="motion-card__copy">
+                <span class="motion-card__label">Stack Frames</span>
+                <h3 class="motion-card__title">Peel call frames open.</h3>
+                <p class="motion-card__body">
+                  See how saved registers and local slots stack into a frame instead of treating the stack like
+                  a list of mystery addresses.
+                </p>
+              </div>
+              <div class="motion-card__canvas" data-motion-demo="stack" aria-label="Interactive stack frame animation"></div>
+              <p class="motion-card__hint">Hover individual layers to fan the frame apart.</p>
+            </article>
+
+            <article class="motion-card">
+              <div class="motion-card__copy">
+                <span class="motion-card__label">Pipeline Flow</span>
+                <h3 class="motion-card__title">Trace an instruction through the datapath.</h3>
+                <p class="motion-card__body">
+                  IF, ID, EX, MEM, and WB stop being five letters on a slide and start reading like a sequence of
+                  concrete machine stages.
+                </p>
+              </div>
+              <div class="motion-card__canvas" data-motion-demo="pipeline" aria-label="Interactive pipeline stage animation"></div>
+              <p class="motion-card__hint">Move across the card to drive the instruction forward.</p>
+            </article>
+
+            <article class="motion-card">
+              <div class="motion-card__copy">
+                <span class="motion-card__label">Branch Prediction</span>
+                <h3 class="motion-card__title">Watch one path win.</h3>
+                <p class="motion-card__body">
+                  A prediction tree is easier to trust once you can see the search fan out, commit to a branch,
+                  and retract when the guess changes.
+                </p>
+              </div>
+              <div class="motion-card__canvas" data-motion-demo="branch" aria-label="Interactive branch prediction animation"></div>
+              <p class="motion-card__hint">Hover to reveal the tree and the predicted route.</p>
+            </article>
+          </div>
         </div>
+      </section>
 
-        <div class="motion-showcase__grid">
-          <article class="motion-card">
-            <div class="motion-card__copy">
-              <span class="motion-card__label">Stack Frames</span>
-              <h3 class="motion-card__title">Peel call frames open.</h3>
-              <p class="motion-card__body">
-                See how saved registers and local slots stack into a frame instead of treating the stack like
-                a list of mystery addresses.
-              </p>
+      <section class="story-block" data-landing-section>
+        <div class="section-shell section-shell--wide">
+          <div class="story-block__top">
+            <div class="story-block__eyebrow">01 / Stack intuition</div>
+            <h2 class="story-block__title">Understand the stack before you debug it.</h2>
+            <p class="story-block__copy">
+              Saved registers, local variables, and return addresses become readable when you can see
+              the frame grow from the top of memory instead of treating every offset like a formula.
+            </p>
+          </div>
+          <div class="story-block__visual story-surface stack-preview" data-landing-depth>
+            <div class="stack-preview__sidebar">
+              <span class="stack-preview__tag">Current frame</span>
+              <span class="stack-preview__pointer">sp → 0x7fffffec</span>
             </div>
-            <div class="motion-card__canvas" data-motion-demo="stack" aria-label="Interactive stack frame animation"></div>
-            <p class="motion-card__hint">Hover individual layers to fan the frame apart.</p>
-          </article>
+            <div class="stack-preview__grid">
+              <div class="stack-preview__column">
+                <div class="stack-slot">
+                  <span>0x7ffffffc</span>
+                  <strong>saved ra</strong>
+                  <em>0x00000148</em>
+                </div>
+                <div class="stack-slot stack-slot--active">
+                  <span>0x7ffffff8</span>
+                  <strong>saved s0</strong>
+                  <em>0x10000020</em>
+                </div>
+                <div class="stack-slot">
+                  <span>0x7ffffff4</span>
+                  <strong>local temp</strong>
+                  <em>12</em>
+                </div>
+                <div class="stack-slot">
+                  <span>0x7ffffff0</span>
+                  <strong>arg spill</strong>
+                  <em>x11</em>
+                </div>
+              </div>
+              <div class="stack-preview__notes">
+                <div class="surface-note">
+                  <span class="surface-note__label">Why it clicks</span>
+                  <p>Offsets stop being arbitrary once you can see exactly where <code>ra</code>, <code>s0</code>, and locals land.</p>
+                </div>
+                <div class="surface-note">
+                  <span class="surface-note__label">What you learn</span>
+                  <p>Frame setup, teardown, and caller-versus-callee saved rules become visible instead of implied.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-          <article class="motion-card">
-            <div class="motion-card__copy">
-              <span class="motion-card__label">Pipeline Flow</span>
-              <h3 class="motion-card__title">Trace an instruction through the datapath.</h3>
-              <p class="motion-card__body">
-                IF, ID, EX, MEM, and WB stop being five letters on a slide and start reading like a sequence of
-                concrete machine stages.
-              </p>
+      <section class="story-block story-block--alt" data-landing-section>
+        <div class="section-shell section-shell--wide">
+          <div class="story-block__top">
+            <div class="story-block__eyebrow">02 / Step execution</div>
+            <h2 class="story-block__title">Step through execution, not just outputs.</h2>
+            <p class="story-block__copy">
+              The point is not to reach the final register values faster. It is to see every machine transition
+              that produced them and catch the moment your mental model diverges from reality.
+            </p>
+          </div>
+          <div class="story-block__visual story-surface trace-preview" data-landing-depth>
+            <div class="trace-preview__steps">
+              <div class="trace-step">
+                <span>PC 0x20</span>
+                <strong>addi x5, x0, 5</strong>
+                <em>Seed loop counter</em>
+              </div>
+              <div class="trace-step trace-step--active">
+                <span>PC 0x24</span>
+                <strong>lw x6, 0(x2)</strong>
+                <em>Load next array element</em>
+              </div>
+              <div class="trace-step">
+                <span>PC 0x28</span>
+                <strong>add x10, x10, x6</strong>
+                <em>Accumulate running sum</em>
+              </div>
+              <div class="trace-step">
+                <span>PC 0x2c</span>
+                <strong>bne x5, x0, loop</strong>
+                <em>Decide whether to branch</em>
+              </div>
             </div>
-            <div class="motion-card__canvas" data-motion-demo="pipeline" aria-label="Interactive pipeline stage animation"></div>
-            <p class="motion-card__hint">Move across the card to drive the instruction forward.</p>
-          </article>
+            <div class="trace-preview__panels">
+              <div class="surface-note">
+                <span class="surface-note__label">Register delta</span>
+                <p><code>x6</code> changes from <code>0x00000000</code> to <code>0x00000014</code>.</p>
+              </div>
+              <div class="surface-note">
+                <span class="surface-note__label">Pseudo-C</span>
+                <p><code>x6 = *(x2 + 0)</code> keeps the instruction tied to meaning.</p>
+              </div>
+              <div class="surface-note">
+                <span class="surface-note__label">Machine view</span>
+                <p>The active line, current PC, and state delta stay visible in the same frame.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-          <article class="motion-card">
-            <div class="motion-card__copy">
-              <span class="motion-card__label">Branch Prediction</span>
-              <h3 class="motion-card__title">Watch one path win.</h3>
-              <p class="motion-card__body">
-                A prediction tree is easier to trust once you can see the search fan out, commit to a branch,
-                and retract when the guess changes.
-              </p>
+      <section class="story-block" data-landing-section>
+        <div class="section-shell section-shell--wide">
+          <div class="story-block__top">
+            <div class="story-block__eyebrow">03 / Practice on real problems</div>
+            <h2 class="story-block__title">Move from concepts to code without leaving the workflow.</h2>
+            <p class="story-block__copy">
+              Lessons, checkpoints, and LeetCode-style problems are part of the same product surface,
+              so practice feels like a continuation of the simulator instead of a separate tool.
+            </p>
+          </div>
+          <div class="story-block__visual story-surface problem-preview" data-landing-depth>
+            <div class="problem-preview__prompt">
+              <span class="problem-preview__label">Problem prompt</span>
+              <h3 class="problem-preview__title">Sum an array into <code>x10</code>.</h3>
+              <ul class="problem-preview__list">
+                <li>Read each 32-bit word with <code>lw</code>.</li>
+                <li>Use a loop counter and stop at the provided length.</li>
+                <li>Return the accumulated total in <code>x10</code>.</li>
+              </ul>
             </div>
-            <div class="motion-card__canvas" data-motion-demo="branch" aria-label="Interactive branch prediction animation"></div>
-            <p class="motion-card__hint">Hover to reveal the tree and the predicted route.</p>
-          </article>
+            <div class="problem-preview__checks">
+              <div class="problem-preview__result problem-preview__result--pass">
+                <span>Visible test 1</span>
+                <strong>Passed</strong>
+              </div>
+              <div class="problem-preview__result problem-preview__result--pass">
+                <span>Visible test 2</span>
+                <strong>Passed</strong>
+              </div>
+              <div class="problem-preview__result">
+                <span>Hidden edge cases</span>
+                <strong>3 queued</strong>
+              </div>
+              <div class="problem-preview__footer">
+                <span>Difficulty: Medium</span>
+                <span>Feedback stays in context</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="story-block story-block--alt" data-landing-section>
+        <div class="section-shell section-shell--wide">
+          <div class="story-block__top">
+            <div class="story-block__eyebrow">04 / Control flow</div>
+            <h2 class="story-block__title">See branching decisions and pipeline rhythm together.</h2>
+            <p class="story-block__copy">
+              Branches are hard because control flow is invisible in most tools. StudyRISC-V keeps the
+              active stage, the prediction, and the winning path legible at the same time.
+            </p>
+          </div>
+          <div class="story-block__visual story-surface flow-preview" data-landing-depth>
+            <div class="flow-preview__pipeline">
+              <div class="flow-stage">IF</div>
+              <div class="flow-stage">ID</div>
+              <div class="flow-stage flow-stage--active">EX</div>
+              <div class="flow-stage">MEM</div>
+              <div class="flow-stage">WB</div>
+            </div>
+            <div class="flow-preview__branch">
+              <span class="surface-note__label">Prediction tree</span>
+              <div class="flow-preview__paths">
+                <div class="flow-path">Fallthrough</div>
+                <div class="flow-path flow-path--active">Loop target</div>
+                <div class="flow-path">Return path</div>
+              </div>
+            </div>
+            <div class="flow-preview__legend">
+              <div class="surface-note">
+                <span class="surface-note__label">Current decision</span>
+                <p><code>bne x5, x0, loop</code> resolves true, so the program counter returns to <code>loop</code>.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       <section class="features" data-landing-section>
-        <div class="features__header">
-          <h2 class="features__title">
-            Everything you need to actually<br />
-            understand RISC-V.
-          </h2>
-          <p class="features__sub">Not just execute it.</p>
+        <div class="section-shell section-shell--wide">
+          <div class="features__header">
+            <span class="section-kicker">Product modules</span>
+            <h2 class="features__title">
+              One workspace, several ways to learn.
+            </h2>
+            <p class="features__sub">
+              Simulator, problems, quizzes, labs, and architecture visuals stay connected so the learning flow
+              feels progressive instead of fragmented.
+            </p>
+          </div>
+          <div class="features__grid">
+            <div class="feat-card feat-card--accent">
+              <div class="feat-card__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M4 12h11"></path><path d="m11 5 7 7-7 7"></path><path d="M4 5v14"></path></svg>
+              </div>
+              <h3 class="feat-card__title">Step. Inspect. Understand.</h3>
+              <p class="feat-card__body">
+                Execute one instruction at a time. Watch every register change, every memory write,
+                every PC jump. Step back if you missed something.
+              </p>
+            </div>
+
+            <div class="feat-card">
+              <div class="feat-card__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M8 8 4 12l4 4"></path><path d="m16 8 4 4-4 4"></path><path d="M10 19h4"></path></svg>
+              </div>
+              <h3 class="feat-card__title">Assembly in plain English.</h3>
+              <p class="feat-card__body">
+                Every instruction translates to a C-like expression in real time. <code>addi x1, x2, 10</code>
+                becomes <code>x1 = x2 + 10</code>. The gap between syntax and meaning, closed.
+              </p>
+            </div>
+
+            <div class="feat-card">
+              <div class="feat-card__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m12 3 8 4-8 4-8-4 8-4Z"></path><path d="m4 11 8 4 8-4"></path><path d="m4 15 8 4 8-4"></path></svg>
+              </div>
+              <h3 class="feat-card__title">
+                Watch the stack build live.
+                <span class="feat-badge">New</span>
+              </h3>
+              <p class="feat-card__body">
+                The only RISC-V simulator that visualizes your call stack frame by frame. See <code>ra</code> saved,
+                see <code>sp</code> move, and see the calling convention made concrete.
+              </p>
+            </div>
+
+            <div class="feat-card">
+              <div class="feat-card__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2H20v20H8.5A2.5 2.5 0 0 0 6 22"></path><path d="M6 4.5V22"></path></svg>
+              </div>
+              <h3 class="feat-card__title">20 lessons. Built for learners.</h3>
+              <p class="feat-card__body">
+                From binary arithmetic to function calls, each lesson builds on the last. Checkpoints gate progression so you never skip ahead.
+              </p>
+            </div>
+
+            <div class="feat-card">
+              <div class="feat-card__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-13h-7l0-7Z"></path></svg>
+              </div>
+              <h3 class="feat-card__title">15 coding problems.</h3>
+              <p class="feat-card__body">
+                LeetCode-style problem solving, RISC-V edition. Write real assembly, run it, and see pass/fail on each test case from Easy to Hard.
+              </p>
+              <a class="feat-card__link" href="/problems/">Try a problem →</a>
+            </div>
+
+            <div class="feat-card">
+              <div class="feat-card__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M7 18a4.6 4.6 0 0 1 0-9.2A5.5 5.5 0 0 1 17.5 8a4 4 0 1 1 .5 10H7Z"></path></svg>
+              </div>
+              <h3 class="feat-card__title">No install. Ever.</h3>
+              <p class="feat-card__body">
+                Runs entirely in your browser. The simulator core is compiled to WebAssembly for near-native speed. Open a tab and start coding.
+              </p>
+            </div>
+          </div>
         </div>
-        <div class="features__grid">
-          <div class="feat-card feat-card--accent">
-            <div class="feat-card__icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M4 12h11"></path><path d="m11 5 7 7-7 7"></path><path d="M4 5v14"></path></svg>
+      </section>
+
+      <section class="stats-band" data-landing-section>
+        <div class="section-shell section-shell--wide">
+          <div class="stats-band__header">
+            <span class="section-kicker">Built with rigor</span>
+            <h2 class="stats-band__title">Enough depth for real architecture coursework, calm enough to stay readable.</h2>
+          </div>
+          <div class="stats-band__grid">
+            <div class="stats-band__item">
+              <span class="stats-band__value">342</span>
+              <span class="stats-band__label">passing regression tests across the simulator and learning flow</span>
             </div>
-            <h3 class="feat-card__title">Step. Inspect. Understand.</h3>
-            <p class="feat-card__body">
-              Execute one instruction at a time. Watch every register change, every memory write,
-              every PC jump. Step back if you missed something.
+            <div class="stats-band__item">
+              <span class="stats-band__value">20</span>
+              <span class="stats-band__label">lessons that move from machine basics to function calls</span>
+            </div>
+            <div class="stats-band__item">
+              <span class="stats-band__value">15</span>
+              <span class="stats-band__label">problems for turning concepts into real assembly practice</span>
+            </div>
+            <div class="stats-band__item">
+              <span class="stats-band__value">RV32IM</span>
+              <span class="stats-band__label">browser-based core with registers, memory, and step execution</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="coverage-strip" data-opcode-band data-landing-section>
+        <div class="section-shell section-shell--wide">
+          <div class="coverage-strip__intro">
+            <span class="section-kicker">Concept explorer</span>
+            <h2 class="coverage-strip__title">Hover an opcode and trace what it really changes.</h2>
+            <p class="coverage-strip__lead">
+              The band keeps moving so the page stays alive. The panels above and below stay grounded so the meaning stays readable.
             </p>
           </div>
 
-          <div class="feat-card">
-            <div class="feat-card__icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M8 8 4 12l4 4"></path><path d="m16 8 4 4-4 4"></path><path d="M10 19h4"></path></svg>
+          <div class="coverage-strip__quick" aria-live="polite">
+            <div class="coverage-strip__quick-label">Opcode Focus</div>
+            <div class="coverage-strip__quick-main">
+              <div class="coverage-strip__quick-name" data-opcode-name>ADDI</div>
+              <div class="coverage-strip__quick-desc" data-opcode-description>
+                Add an immediate constant to a register.
+              </div>
             </div>
-            <h3 class="feat-card__title">Assembly in plain English.</h3>
-            <p class="feat-card__body">
-              Every instruction translates to a C-like expression in real time. <code>addi x1, x2, 10</code>
-              becomes <code>x1 = x2 + 10</code>. The gap between syntax and meaning, closed.
-            </p>
+            <div class="coverage-strip__quick-example" data-opcode-example>
+              addi x5, x0, 10
+            </div>
           </div>
 
-          <div class="feat-card">
-            <div class="feat-card__icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m12 3 8 4-8 4-8-4 8-4Z"></path><path d="m4 11 8 4 8-4"></path><path d="m4 15 8 4 8-4"></path></svg>
+          <div class="coverage-strip__detail">
+            <div class="coverage-strip__detail-meta">
+              <div class="coverage-strip__detail-label">Why it matters</div>
+              <div class="coverage-strip__detail-title" data-opcode-detail-title>
+                Immediate setup for constants and loop counters
+              </div>
             </div>
-            <h3 class="feat-card__title">
-              Watch the stack build live.
-              <span class="feat-badge">New</span>
-            </h3>
-            <p class="feat-card__body">
-              The only RISC-V simulator that visualizes your call stack frame by frame. See ra saved, see sp move, see the calling convention made concrete.
-            </p>
+            <div class="coverage-strip__detail-body" data-opcode-detail-body>
+              Use <code>addi</code> when you need a fast register update without touching memory. It is the backbone of
+              loop counters, stack pointer movement, and constant setup.
+            </div>
+            <div class="coverage-strip__detail-visual">
+              <span class="coverage-strip__detail-tag">Machine effect</span>
+              <code class="coverage-strip__detail-flow" data-opcode-detail-flow>
+                x5 ← x0 + 10
+              </code>
+            </div>
           </div>
 
-          <div class="feat-card">
-            <div class="feat-card__icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2H20v20H8.5A2.5 2.5 0 0 0 6 22"></path><path d="M6 4.5V22"></path></svg>
+          <div class="coverage-strip__band">
+            <div class="coverage-strip__label">RV32IM</div>
+            <div class="coverage-strip__marquee-wrap">
+              <div class="coverage-strip__track" data-opcode-track aria-label="RISC-V opcode reference band"></div>
             </div>
-            <h3 class="feat-card__title">20 lessons. Built for learners.</h3>
-            <p class="feat-card__body">
-              From binary arithmetic to function calls, each lesson builds on the last. Checkpoints gate progression so you never skip ahead.
-            </p>
-          </div>
-
-          <div class="feat-card">
-            <div class="feat-card__icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-13h-7l0-7Z"></path></svg>
-            </div>
-            <h3 class="feat-card__title">15 coding problems.</h3>
-            <p class="feat-card__body">
-              LeetCode-style problem solving, RISC-V edition. Write real assembly, run it, see pass/fail on each test case. Easy to Hard.
-            </p>
-            <a class="feat-card__link" href="/problems/">Try a problem →</a>
-          </div>
-
-          <div class="feat-card">
-            <div class="feat-card__icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M7 18a4.6 4.6 0 0 1 0-9.2A5.5 5.5 0 0 1 17.5 8a4 4 0 1 1 .5 10H7Z"></path></svg>
-            </div>
-            <h3 class="feat-card__title">No install. Ever.</h3>
-            <p class="feat-card__body">
-              Runs entirely in your browser. The simulator core is compiled to WebAssembly for near-native speed. Open a tab and start coding.
-            </p>
           </div>
         </div>
       </section>
 
       <section class="cta-bottom" data-landing-section>
         <div class="cta-bottom__inner">
+          <span class="section-kicker">Start learning</span>
           <h2 class="cta-bottom__title">Ready to actually understand RISC-V?</h2>
           <p class="cta-bottom__sub">
-            No install. No account. Open the simulator and start executing assembly in 10 seconds.
+            No install. No account. Open the simulator and start executing assembly in seconds, then move into problems and lessons when you are ready.
           </p>
           <div class="cta-bottom__btns">
             <a class="hero__cta-primary" href="/simulator/">Open Simulator →</a>

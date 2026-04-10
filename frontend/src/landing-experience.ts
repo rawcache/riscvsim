@@ -10,6 +10,8 @@ export function initLandingExperience(): void {
 
   const sections = Array.from(document.querySelectorAll<HTMLElement>("[data-landing-section]"));
   const hero = document.querySelector<HTMLElement>(".hero");
+  const nav = document.getElementById("site-nav");
+  const depthLayers = Array.from(document.querySelectorAll<HTMLElement>("[data-landing-depth]"));
 
   if ("IntersectionObserver" in window) {
     const observer = new IntersectionObserver(
@@ -47,10 +49,22 @@ export function initLandingExperience(): void {
 
   const updateScrollDepth = () => {
     ticking = false;
-    const rect = hero.getBoundingClientRect();
     const viewportHeight = window.innerHeight || 1;
-    const progress = clamp((0 - rect.top) / Math.max(viewportHeight, 1), 0, 1);
-    body.style.setProperty("--landing-hero-parallax", `${(progress * 18).toFixed(2)}px`);
+
+    if (hero) {
+      const rect = hero.getBoundingClientRect();
+      const progress = clamp((0 - rect.top) / Math.max(viewportHeight, 1), 0, 1);
+      body.style.setProperty("--landing-hero-parallax", `${(progress * 18).toFixed(2)}px`);
+    }
+
+    nav?.classList.toggle("is-scrolled", window.scrollY > 12);
+
+    for (const layer of depthLayers) {
+      const rect = layer.getBoundingClientRect();
+      const centered = clamp((rect.top + rect.height * 0.5 - viewportHeight * 0.55) / viewportHeight, -1, 1);
+      const shift = clamp(centered * -12, -12, 12);
+      layer.style.setProperty("--landing-depth-shift", `${shift.toFixed(2)}px`);
+    }
   };
 
   const requestUpdate = () => {

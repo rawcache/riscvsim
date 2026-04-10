@@ -3,49 +3,87 @@
   top: 0;
   z-index: 1000;
   width: 100%;
-  height: 64px;
-  background: color-mix(in srgb, var(--bg-base) 86%, transparent);
+  height: 72px;
+  background: color-mix(in srgb, var(--bg-base) 82%, transparent);
   border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--text-primary) 2%, transparent);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--text-primary) 3%, transparent);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, backdrop-filter 180ms ease;
+}
+
+.site-nav.is-scrolled {
+  background: color-mix(in srgb, var(--bg-base) 90%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--border) 92%, transparent);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--text-primary) 4%, transparent),
+    0 12px 28px color-mix(in srgb, var(--bg-base) 18%, transparent);
 }
 
 /* LIGHT MODE */
 [data-theme="light"] .site-nav,
 :root:not([data-theme="dark"]) .site-nav {
-  background: rgba(247, 245, 242, 0.95);
+  background: color-mix(in srgb, var(--bg-base) 90%, transparent);
 }
 
 /* === INNER === */
 .nav-inner {
   width: 100%;
   margin: 0;
-  padding: 0 24px 0 28px;
-  height: 64px;
+  padding: 0 32px 0 36px;
+  height: 72px;
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 20px;
 }
 
 /* === LOGO === */
 .nav-logo {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   font-family: "Geist Mono", monospace;
-  font-size: 15px;
+  font-size: 15.5px;
   font-weight: 700;
   color: var(--text-primary);
   text-decoration: none;
   letter-spacing: -0.01em;
-  margin-right: 20px;
+  margin-right: 22px;
+  flex-shrink: 0;
+}
+
+.nav-logo__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--bg-surface) 86%, transparent);
   flex-shrink: 0;
 }
 
 .nav-logo__mark {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
+}
+
+.nav-logo__fallback {
+  display: none;
+  color: var(--accent);
+  font-family: "Geist Mono", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.nav-logo--fallback .nav-logo__mark {
+  display: none;
+}
+
+.nav-logo--fallback .nav-logo__fallback {
+  display: inline-flex;
 }
 
 .nav-logo__text {
@@ -63,12 +101,12 @@
 
 .nav-link {
   font-family: "Geist", sans-serif;
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 400;
   color: var(--text-secondary);
   text-decoration: none;
-  padding: 9px 12px;
-  border-radius: 8px;
+  padding: 10px 13px;
+  border-radius: 10px;
   background: none;
   border: none;
   cursor: pointer;
@@ -182,7 +220,7 @@
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-left: auto;
   flex-shrink: 0;
   min-width: auto;
@@ -192,14 +230,14 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 38px;
-  padding: 0 12px;
+  min-height: 40px;
+  padding: 0 13px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 11px;
   background: color-mix(in srgb, var(--bg-surface) 72%, transparent);
   color: var(--text-secondary);
   font-family: "Geist", sans-serif;
-  font-size: 13px;
+  font-size: 13.5px;
   cursor: pointer;
   transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
 }
@@ -241,14 +279,14 @@
 
 .nav-signin-btn {
   font-family: "Geist", sans-serif;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
   color: #fff;
   background: var(--accent);
   border: none;
-  border-radius: 8px;
-  padding: 0 16px;
-  min-height: 38px;
+  border-radius: 10px;
+  padding: 0 17px;
+  min-height: 40px;
   cursor: pointer;
   transition: opacity 150ms ease;
   white-space: nowrap;
@@ -260,11 +298,11 @@
 
 .nav-theme-toggle,
 .nav-hamburger {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   background: none;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1061,7 +1099,7 @@
 
 .nav-mobile-menu {
   position: fixed;
-  top: 64px;
+  top: 72px;
   left: 0;
   right: 0;
   bottom: 0;

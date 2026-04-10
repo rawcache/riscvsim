@@ -94,8 +94,11 @@ function renderNav(config: NavConfig): string {
   return `
     <div class="nav-mobile-shell">
       <div class="nav-inner">
-        <a href="/" class="nav-logo">
-          <img class="nav-logo__mark" src="/favicon-chip.svg" alt="" aria-hidden="true" />
+        <a href="/" class="nav-logo" aria-label="StudyRISC-V home">
+          <span class="nav-logo__badge" aria-hidden="true">
+            <img class="nav-logo__mark" src="/favicon-chip.svg" alt="" />
+            <span class="nav-logo__fallback">SR</span>
+          </span>
           <span class="nav-logo__text">StudyRISC-V</span>
         </a>
         <div class="nav-links">
@@ -222,6 +225,8 @@ export function initNav(config: NavConfig): void {
   const themeToggle = root.querySelector<HTMLButtonElement>("#theme-toggle");
   const mobileThemeToggle = root.querySelector<HTMLButtonElement>("#nav-mobile-theme-toggle");
   const searchBtn = root.querySelector<HTMLButtonElement>("#nav-search-btn");
+  const logoLink = root.querySelector<HTMLAnchorElement>(".nav-logo");
+  const logoMark = root.querySelector<HTMLImageElement>(".nav-logo__mark");
   const mobileSignin = root.querySelector<HTMLButtonElement>("#nav-mobile-signin-btn");
   const desktopSignin = root.querySelector<HTMLButtonElement>("#auth-signin-btn");
   const userButton = root.querySelector<HTMLElement>("#auth-user-btn");
@@ -239,6 +244,15 @@ export function initNav(config: NavConfig): void {
     authMenu.style.display = "none";
     authMenu.removeAttribute("data-ready");
     authMenu.removeAttribute("data-init");
+  }
+  if (logoLink && logoMark) {
+    const enableLogoFallback = () => {
+      logoLink.classList.add("nav-logo--fallback");
+    };
+    logoMark.addEventListener("error", enableLogoFallback, { once: true });
+    if (logoMark.complete && logoMark.naturalWidth === 0) {
+      enableLogoFallback();
+    }
   }
 
   const closeAllDropdowns = () => {
