@@ -40,14 +40,14 @@
 .nav-logo {
   display: inline-flex;
   align-items: center;
-  gap: 11px;
+  gap: 10px;
   font-family: "Geist Mono", monospace;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text-primary);
   text-decoration: none;
-  letter-spacing: -0.01em;
-  margin-right: 32px;
+  letter-spacing: -0.02em;
+  margin-right: 36px;
   flex-shrink: 0;
 }
 
@@ -59,8 +59,8 @@
 }
 
 .nav-logo__mark {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
 }
 
