@@ -120,19 +120,23 @@
         </div>
 
         <div class="hero__right">
-          <div id="heroCodeWindow" class="hero__code-window hero-code">
-            <div class="hero__code-titlebar hero-code__bar">
-              <div class="hero-code__dots">
-                <button class="hero-code__window-btn hero-code__window-btn--close" id="heroCodeClose" aria-label="Close"></button>
-                <button class="hero-code__window-btn hero-code__window-btn--minimize" aria-label="Minimize"></button>
-                <button class="hero-code__window-btn hero-code__window-btn--maximize" id="heroCodeNext" aria-label="Next program"></button>
+          <div class="hero__code-window">
+            <div class="hero__code-titlebar">
+              <div class="hero__code-dots">
+                <span class="hero__dot hero__dot--red"></span>
+                <span class="hero__dot hero__dot--yellow"></span>
+                <span class="hero__dot hero__dot--green"></span>
               </div>
-              <span class="hero__code-filename hero-code__label" id="heroCodeLabel">factorial.s</span>
-              <div class="hero-code__bar-spacer"></div>
+              <span class="hero__code-filename">factorial.s</span>
             </div>
-            <div class="hero__code-body hero-code__body">
-              <div id="heroCode" class="hero-code__content" aria-live="polite" aria-label="Animated assembly code"></div>
-            </div>
+<pre class="hero__code-body"><code># factorial of 5
+<span class="tok-keyword">addi</span> <span class="tok-register">x1</span>, <span class="tok-register">x0</span>, <span class="tok-number">5</span>    <span class="tok-comment"># n</span>
+<span class="tok-keyword">addi</span> <span class="tok-register">x2</span>, <span class="tok-register">x0</span>, <span class="tok-number">1</span>    <span class="tok-comment"># result</span>
+<span class="tok-label">fact:</span>
+  <span class="tok-keyword">mul</span>  <span class="tok-register">x2</span>, <span class="tok-register">x2</span>, <span class="tok-register">x1</span>
+  <span class="tok-keyword">addi</span> <span class="tok-register">x1</span>, <span class="tok-register">x1</span>, <span class="tok-number">-1</span>
+  <span class="tok-keyword">bne</span>  <span class="tok-register">x1</span>, <span class="tok-register">x0</span>, <span class="tok-label">fact</span>
+</code></pre>
           </div>
 
           <div class="hero__reg-panel">
@@ -157,27 +161,73 @@
       </section>
 
       <section class="coverage-strip">
-        <div class="coverage-strip__label">Full RV32IM instruction set coverage</div>
-        <div class="coverage-strip__chips">
-          <span class="cov-chip">ADD</span>
-          <span class="cov-chip">SUB</span>
-          <span class="cov-chip">MUL</span>
-          <span class="cov-chip">DIV</span>
-          <span class="cov-chip">LW</span>
-          <span class="cov-chip">SW</span>
-          <span class="cov-chip">BEQ</span>
-          <span class="cov-chip">BNE</span>
-          <span class="cov-chip">JAL</span>
-          <span class="cov-chip">JALR</span>
-          <span class="cov-chip">LUI</span>
-          <span class="cov-chip">AUIPC</span>
-          <span class="cov-chip">SLL</span>
-          <span class="cov-chip">SRL</span>
-          <span class="cov-chip">SRA</span>
-          <span class="cov-chip">AND</span>
-          <span class="cov-chip">OR</span>
-          <span class="cov-chip">XOR</span>
-          <span class="cov-chip cov-chip--muted">+40 more</span>
+        <div class="coverage-strip__label">RV32IM</div>
+        <div class="coverage-strip__marquee-wrap">
+          <div class="coverage-strip__track" aria-hidden="true">
+            <span class="cov-chip">ADD</span>
+            <span class="cov-chip">SUB</span>
+            <span class="cov-chip">MUL</span>
+            <span class="cov-chip">DIV</span>
+            <span class="cov-chip">REM</span>
+            <span class="cov-chip">LW</span>
+            <span class="cov-chip">SW</span>
+            <span class="cov-chip">LB</span>
+            <span class="cov-chip">SB</span>
+            <span class="cov-chip">BEQ</span>
+            <span class="cov-chip">BNE</span>
+            <span class="cov-chip">BLT</span>
+            <span class="cov-chip">BGE</span>
+            <span class="cov-chip">JAL</span>
+            <span class="cov-chip">JALR</span>
+            <span class="cov-chip">LUI</span>
+            <span class="cov-chip">AUIPC</span>
+            <span class="cov-chip">SLL</span>
+            <span class="cov-chip">SRL</span>
+            <span class="cov-chip">SRA</span>
+            <span class="cov-chip">AND</span>
+            <span class="cov-chip">OR</span>
+            <span class="cov-chip">XOR</span>
+            <span class="cov-chip">SLLI</span>
+            <span class="cov-chip">SRLI</span>
+            <span class="cov-chip">SRAI</span>
+            <span class="cov-chip">ADDI</span>
+            <span class="cov-chip">SLTI</span>
+            <span class="cov-chip">ANDI</span>
+            <span class="cov-chip">ORI</span>
+            <span class="cov-chip">XORI</span>
+            <!-- duplicate for seamless loop -->
+            <span class="cov-chip">ADD</span>
+            <span class="cov-chip">SUB</span>
+            <span class="cov-chip">MUL</span>
+            <span class="cov-chip">DIV</span>
+            <span class="cov-chip">REM</span>
+            <span class="cov-chip">LW</span>
+            <span class="cov-chip">SW</span>
+            <span class="cov-chip">LB</span>
+            <span class="cov-chip">SB</span>
+            <span class="cov-chip">BEQ</span>
+            <span class="cov-chip">BNE</span>
+            <span class="cov-chip">BLT</span>
+            <span class="cov-chip">BGE</span>
+            <span class="cov-chip">JAL</span>
+            <span class="cov-chip">JALR</span>
+            <span class="cov-chip">LUI</span>
+            <span class="cov-chip">AUIPC</span>
+            <span class="cov-chip">SLL</span>
+            <span class="cov-chip">SRL</span>
+            <span class="cov-chip">SRA</span>
+            <span class="cov-chip">AND</span>
+            <span class="cov-chip">OR</span>
+            <span class="cov-chip">XOR</span>
+            <span class="cov-chip">SLLI</span>
+            <span class="cov-chip">SRLI</span>
+            <span class="cov-chip">SRAI</span>
+            <span class="cov-chip">ADDI</span>
+            <span class="cov-chip">SLTI</span>
+            <span class="cov-chip">ANDI</span>
+            <span class="cov-chip">ORI</span>
+            <span class="cov-chip">XORI</span>
+          </div>
         </div>
       </section>
 
