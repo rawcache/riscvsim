@@ -135,6 +135,7 @@ export function initOpcodeBand(): void {
   }
 
   const track = root.querySelector<HTMLElement>("[data-opcode-track]");
+  const marqueeWrap = root.querySelector<HTMLElement>(".coverage-strip__marquee-wrap");
   const name = root.querySelector<HTMLElement>("[data-opcode-name]");
   const description = root.querySelector<HTMLElement>("[data-opcode-description]");
   const example = root.querySelector<HTMLElement>("[data-opcode-example]");
@@ -142,7 +143,7 @@ export function initOpcodeBand(): void {
   const detailBody = root.querySelector<HTMLElement>("[data-opcode-detail-body]");
   const detailFlow = root.querySelector<HTMLElement>("[data-opcode-detail-flow]");
 
-  if (!track || !name || !description || !example || !detailTitle || !detailBody || !detailFlow) {
+  if (!track || !marqueeWrap || !name || !description || !example || !detailTitle || !detailBody || !detailFlow) {
     return;
   }
 
@@ -176,6 +177,18 @@ export function initOpcodeBand(): void {
     });
   };
 
+  const chipFromPoint = (clientX: number, clientY: number): HTMLElement | null => {
+    const hit = document.elementFromPoint(clientX, clientY);
+    if (!(hit instanceof HTMLElement)) {
+      return null;
+    }
+    const chip = hit.closest<HTMLElement>(".cov-chip");
+    if (!chip || !track.contains(chip)) {
+      return null;
+    }
+    return chip;
+  };
+
   const syncFromKey = (key: string) => {
     const nextIndex = OPCODES.findIndex((opcode) => opcode.key === key);
     if (nextIndex === -1) {
@@ -187,12 +200,8 @@ export function initOpcodeBand(): void {
 
   applyActiveState(OPCODES[activeIndex]);
 
-  track.addEventListener("pointerover", (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-    const chip = target.closest<HTMLElement>(".cov-chip");
+  marqueeWrap.addEventListener("pointermove", (event) => {
+    const chip = chipFromPoint(event.clientX, event.clientY);
     const key = chip?.dataset.opcodeKey;
     if (!key) {
       return;
@@ -201,9 +210,19 @@ export function initOpcodeBand(): void {
     syncFromKey(key);
   });
 
-  root.addEventListener("pointerleave", () => {
+  marqueeWrap.addEventListener("pointerleave", () => {
     hoverKey = null;
     applyActiveState(OPCODES[activeIndex]);
+  });
+
+  track.addEventListener("pointerdown", (event) => {
+    const chip = chipFromPoint(event.clientX, event.clientY);
+    const key = chip?.dataset.opcodeKey;
+    if (!key) {
+      return;
+    }
+    hoverKey = key;
+    syncFromKey(key);
   });
 
   track.addEventListener("focusin", (event) => {

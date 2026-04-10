@@ -2,6 +2,8 @@ import "./auth-page";
 import { initAuthUi } from "./auth-ui";
 import { captureReferralParam } from "./referrals";
 
+const faviconChipUrl = new URL("../favicon-chip.svg", import.meta.url).href;
+
 export interface NavConfig {
   activePage:
     | "problems"
@@ -96,7 +98,7 @@ function renderNav(config: NavConfig): string {
       <div class="nav-inner">
         <a href="/" class="nav-logo" aria-label="StudyRISC-V home">
           <span class="nav-logo__badge" aria-hidden="true">
-            <img class="nav-logo__mark" src="/favicon-chip.svg" alt="" />
+            <img class="nav-logo__mark" src="${faviconChipUrl}" alt="" />
             <span class="nav-logo__fallback">SR</span>
           </span>
           <span class="nav-logo__text">StudyRISC-V</span>
