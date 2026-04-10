@@ -1307,9 +1307,9 @@ body.loaded .hero__visual {
   --landing-highlight-border: color-mix(in srgb, var(--accent) 18%, var(--border));
   --landing-chip-bg: color-mix(in srgb, var(--bg-surface) 84%, var(--bg-base));
   --landing-chip-bg-active: color-mix(in srgb, var(--accent) 14%, var(--bg-surface));
-  --landing-shadow-soft: 0 12px 32px color-mix(in srgb, var(--text-primary) 8%, transparent);
+  --landing-shadow-soft: 0 8px 20px color-mix(in srgb, var(--text-primary) 5%, transparent);
   --landing-shadow-panel:
-    0 24px 60px color-mix(in srgb, var(--text-primary) 10%, transparent),
+    0 14px 34px color-mix(in srgb, var(--text-primary) 7%, transparent),
     0 0 0 1px color-mix(in srgb, var(--bg-surface) 72%, transparent);
   font-family: var(--font-body);
   font-size: 15px;
@@ -1349,9 +1349,9 @@ body.loaded .hero__visual {
   --landing-highlight-border: color-mix(in srgb, var(--accent) 24%, var(--border));
   --landing-chip-bg: color-mix(in srgb, var(--bg-surface) 90%, var(--bg-base));
   --landing-chip-bg-active: color-mix(in srgb, var(--accent) 18%, var(--bg-surface));
-  --landing-shadow-soft: 0 18px 42px rgba(0, 0, 0, 0.34);
+  --landing-shadow-soft: 0 14px 30px rgba(0, 0, 0, 0.24);
   --landing-shadow-panel:
-    0 32px 80px rgba(0, 0, 0, 0.54),
+    0 22px 54px rgba(0, 0, 0, 0.36),
     0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
@@ -1435,16 +1435,29 @@ body.loaded .hero__visual {
 /* ─── HERO ─── */
 .landing-home .hero {
   display: grid;
-  grid-template-columns: 55fr 45fr;
+  grid-template-columns: minmax(0, 1.06fr) minmax(420px, 0.94fr);
   align-items: center;
-  gap: 64px;
-  padding: 80px 80px 88px;
+  gap: 76px;
+  padding: 88px 88px 94px 72px;
   box-sizing: border-box;
   width: 100%;
   min-height: 0;
   background: var(--bg-base);
   margin: 0;
   overflow: hidden;
+  opacity: 0;
+  filter: blur(12px);
+  transform: translateY(18px);
+  transition:
+    opacity 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-home.loaded .hero {
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0);
 }
 
 .landing-home .hero__left {
@@ -1454,6 +1467,7 @@ body.loaded .hero__visual {
   gap: 0;
   width: 100%;
   min-width: 0;
+  transform: translate3d(0, calc(var(--landing-hero-parallax, 0px) * -1), 0);
 }
 
 .landing-home .hero__eyebrow {
@@ -1649,11 +1663,14 @@ body.loaded .hero__visual {
   width: 100%;
   min-width: 0;
   align-self: center;
+  justify-content: flex-end;
+  transform: translate3d(0, calc(var(--landing-hero-parallax, 0px) * 0.7), 0);
 }
 
 /* Code window: static <pre> display */
 .landing-home .hero__code-window {
   width: 100%;
+  max-width: 560px;
   box-sizing: border-box;
   background: var(--landing-panel-bg);
   border: 1px solid var(--landing-panel-border);
@@ -1773,6 +1790,19 @@ body.loaded .hero__visual {
     var(--bg-base);
   overflow: hidden;
   position: relative;
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(20px);
+  transition:
+    opacity 340ms ease,
+    filter 340ms ease,
+    transform 340ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-home .coverage-strip.is-visible {
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0);
 }
 
 .landing-home .coverage-strip__quick,
@@ -1997,6 +2027,19 @@ body.loaded .hero__visual {
   border-top: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   overflow: hidden;
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(20px);
+  transition:
+    opacity 340ms ease,
+    filter 340ms ease,
+    transform 340ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-home .motion-showcase.is-visible {
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0);
 }
 
 .landing-home .motion-showcase__header {
@@ -2193,6 +2236,19 @@ body.loaded .hero__visual {
   background: color-mix(in srgb, var(--bg-surface) 74%, var(--bg-base));
   margin: 0;
   border-top: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(20px);
+  transition:
+    opacity 340ms ease,
+    filter 340ms ease,
+    transform 340ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-home .features.is-visible {
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0);
 }
 
 .landing-home .features__header {
@@ -2341,6 +2397,19 @@ body.loaded .hero__visual {
   border-top: 1px solid color-mix(in srgb, var(--accent) 12%, var(--border));
   text-align: center;
   overflow: hidden;
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(20px);
+  transition:
+    opacity 340ms ease,
+    filter 340ms ease,
+    transform 340ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-home .cta-bottom.is-visible {
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0);
 }
 
 /* Subtle blue radial glow */

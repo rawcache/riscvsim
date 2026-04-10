@@ -126,6 +126,9 @@ function renderNav(config: NavConfig): string {
             </div>
           </div>
           <a href="https://github.com/rawcache/riscvsim" class="nav-link${isGithub ? " nav-link-active" : ""}" target="_blank" rel="noopener">GitHub</a>
+        </div>
+        <div class="nav-actions">
+          <div id="nav-status-badge" class="nav-status-badge${config.activePage === "simulator" ? " visible" : ""}"></div>
           <button id="nav-search-btn" class="nav-search-btn" type="button" aria-label="Search site">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <circle cx="11" cy="11" r="8"></circle>
@@ -134,9 +137,6 @@ function renderNav(config: NavConfig): string {
             <span class="nav-search-btn__text">Search</span>
             <kbd class="nav-search-btn__kbd">${getSearchKbd()}</kbd>
           </button>
-        </div>
-        <div class="nav-actions">
-          <div id="nav-status-badge" class="nav-status-badge${config.activePage === "simulator" ? " visible" : ""}"></div>
           <button id="auth-signin-btn" class="nav-signin-btn" type="button">Sign in</button>
           <div class="auth-menu">
             <button id="auth-user-btn" class="auth-user-btn nav-user-menu" type="button" hidden aria-label="Open account menu"></button>

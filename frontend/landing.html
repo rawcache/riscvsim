@@ -52,14 +52,17 @@
     <link rel="stylesheet" href="./src/styles/auth.css" />
     <link rel="stylesheet" href="./src/styles/learn.css" />
     <link rel="stylesheet" href="./src/styles/landing.css" />
-    <link rel="icon" type="image/svg+xml" href="./favicon-chip.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-chip.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
   </head>
   <body class="landing-page landing-home">
     <nav id="site-nav"></nav>
     <section id="landingResumeBar" class="landing-resume-bar" hidden></section>
 
     <main class="landing-main">
-      <section class="hero">
+      <section class="hero" data-landing-section>
         <div class="hero__left">
           <div class="hero__eyebrow">
             <span class="hero__pill">Free for GT students</span>
@@ -135,7 +138,7 @@
         </div>
       </section>
 
-      <section class="coverage-strip" data-opcode-band>
+      <section class="coverage-strip" data-opcode-band data-landing-section>
         <div class="coverage-strip__quick" aria-live="polite">
           <div class="coverage-strip__quick-label">Opcode Focus</div>
           <div class="coverage-strip__quick-main">
@@ -176,7 +179,7 @@
         </div>
       </section>
 
-      <section class="motion-showcase" aria-labelledby="motion-showcase-title">
+      <section class="motion-showcase" aria-labelledby="motion-showcase-title" data-landing-section>
         <div class="motion-showcase__header">
           <span class="motion-showcase__eyebrow">Concepts In Motion</span>
           <h2 class="motion-showcase__title" id="motion-showcase-title">
@@ -230,7 +233,7 @@
         </div>
       </section>
 
-      <section class="features">
+      <section class="features" data-landing-section>
         <div class="features__header">
           <h2 class="features__title">
             Everything you need to actually<br />
@@ -307,7 +310,7 @@
         </div>
       </section>
 
-      <section class="cta-bottom">
+      <section class="cta-bottom" data-landing-section>
         <div class="cta-bottom__inner">
           <h2 class="cta-bottom__title">Ready to actually understand RISC-V?</h2>
           <p class="cta-bottom__sub">
@@ -1261,6 +1264,7 @@
       import { initClipBubble, showClipLine } from "./src/clip-ui.ts";
       import { initFooter } from "./src/footer.ts";
       import { initLandingAnimations } from "./src/landing-animations.ts";
+      import { initLandingExperience } from "./src/landing-experience.ts";
       import { initOpcodeBand } from "./src/landing-opcode-band.ts";
       import { getLesson, getLessons, loadProgress } from "./src/lessons.ts";
       import { initNav } from "./src/nav.ts";
@@ -1333,6 +1337,7 @@
       document.addEventListener("DOMContentLoaded", () => {
         initNav({ activePage: "landing" });
         initFooter();
+        initLandingExperience();
         initLandingAnimations();
         initOpcodeBand();
         void renderLandingResume();
