@@ -232,6 +232,60 @@
         </div>
       </section>
 
+      <section class="motion-showcase" aria-labelledby="motion-showcase-title">
+        <div class="motion-showcase__header">
+          <span class="motion-showcase__eyebrow">Concepts In Motion</span>
+          <h2 class="motion-showcase__title" id="motion-showcase-title">
+            Three places where the machine stops feeling abstract.
+          </h2>
+          <p class="motion-showcase__sub">
+            Hover on desktop or watch the cards auto-play on mobile. Each one maps a hard RISC-V idea
+            to a visual model you can read in seconds.
+          </p>
+        </div>
+
+        <div class="motion-showcase__grid">
+          <article class="motion-card">
+            <div class="motion-card__copy">
+              <span class="motion-card__label">Stack Frames</span>
+              <h3 class="motion-card__title">Peel call frames open.</h3>
+              <p class="motion-card__body">
+                See how saved registers and local slots stack into a frame instead of treating the stack like
+                a list of mystery addresses.
+              </p>
+            </div>
+            <div class="motion-card__canvas" data-motion-demo="stack" aria-label="Interactive stack frame animation"></div>
+            <p class="motion-card__hint">Hover individual layers to fan the frame apart.</p>
+          </article>
+
+          <article class="motion-card">
+            <div class="motion-card__copy">
+              <span class="motion-card__label">Pipeline Flow</span>
+              <h3 class="motion-card__title">Trace an instruction through the datapath.</h3>
+              <p class="motion-card__body">
+                IF, ID, EX, MEM, and WB stop being five letters on a slide and start reading like a sequence of
+                concrete machine stages.
+              </p>
+            </div>
+            <div class="motion-card__canvas" data-motion-demo="pipeline" aria-label="Interactive pipeline stage animation"></div>
+            <p class="motion-card__hint">Move across the card to drive the instruction forward.</p>
+          </article>
+
+          <article class="motion-card">
+            <div class="motion-card__copy">
+              <span class="motion-card__label">Branch Prediction</span>
+              <h3 class="motion-card__title">Watch one path win.</h3>
+              <p class="motion-card__body">
+                A prediction tree is easier to trust once you can see the search fan out, commit to a branch,
+                and retract when the guess changes.
+              </p>
+            </div>
+            <div class="motion-card__canvas" data-motion-demo="branch" aria-label="Interactive branch prediction animation"></div>
+            <p class="motion-card__hint">Hover to reveal the tree and the predicted route.</p>
+          </article>
+        </div>
+      </section>
+
       <section class="features">
         <div class="features__header">
           <h2 class="features__title">
@@ -1262,6 +1316,7 @@
       import { getSession } from "./src/auth.ts";
       import { initClipBubble, showClipLine } from "./src/clip-ui.ts";
       import { initFooter } from "./src/footer.ts";
+      import { initLandingAnimations } from "./src/landing-animations.ts";
       import { getLesson, getLessons, loadProgress } from "./src/lessons.ts";
       import { initNav } from "./src/nav.ts";
 
@@ -1333,6 +1388,7 @@
       document.addEventListener("DOMContentLoaded", () => {
         initNav({ activePage: "landing" });
         initFooter();
+        initLandingAnimations();
         void renderLandingResume();
         initClipBubble();
         window.addEventListener("studyriscv-auth-changed", () => {
