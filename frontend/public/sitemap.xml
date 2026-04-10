@@ -6,6 +6,26 @@
     <changefreq>weekly</changefreq>
   </url>
   <url>
+    <loc>https://studyriscv.com/riscv-simulator/</loc>
+    <priority>0.95</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
+    <loc>https://studyriscv.com/learn-riscv/</loc>
+    <priority>0.9</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
+    <loc>https://studyriscv.com/riscv-assembly-tutorial/</loc>
+    <priority>0.9</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
+    <loc>https://studyriscv.com/riscv-instructions/</loc>
+    <priority>0.9</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
     <loc>https://studyriscv.com/problems/</loc>
     <priority>0.9</priority>
     <changefreq>weekly</changefreq>
@@ -42,12 +62,32 @@
   </url>
   <url>
     <loc>https://studyriscv.com/about/</loc>
-    <priority>0.5</priority>
+    <priority>0.6</priority>
     <changefreq>monthly</changefreq>
   </url>
   <url>
     <loc>https://studyriscv.com/docs/</loc>
-    <priority>0.7</priority>
+    <priority>0.85</priority>
     <changefreq>weekly</changefreq>
+  </url>
+  <url>
+    <loc>https://studyriscv.com/leaderboard/</loc>
+    <priority>0.6</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
+    <loc>https://studyriscv.com/groups/</loc>
+    <priority>0.5</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
+    <loc>https://studyriscv.com/terms/</loc>
+    <priority>0.3</priority>
+    <changefreq>yearly</changefreq>
+  </url>
+  <url>
+    <loc>https://studyriscv.com/privacy/</loc>
+    <priority>0.3</priority>
+    <changefreq>yearly</changefreq>
   </url>
 </urlset>

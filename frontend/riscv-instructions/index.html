@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RISC-V Instructions Explained | StudyRISC-V</title>
+    <meta
+      name="description"
+      content="RISC-V instructions explained with examples for arithmetic, memory, branches, jumps, and stack operations. Use StudyRISC-V to inspect each opcode."
+    />
+    <meta property="og:title" content="RISC-V Instructions Explained | StudyRISC-V" />
+    <meta
+      property="og:description"
+      content="Learn what common RISC-V instructions do, when to use them, and how to inspect their effects in the StudyRISC-V simulator."
+    />
+    <meta property="og:image" content="https://studyriscv.com/og-image.png" />
+    <meta property="og:url" content="https://studyriscv.com/riscv-instructions/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://studyriscv.com/riscv-instructions/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore theme bootstrap failures.
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="../src/styles/global.css" />
+    <link rel="stylesheet" href="../src/styles/nav.css" />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/auth.css" />
+    <link rel="stylesheet" href="../src/styles/landing.css" />
+    <link rel="stylesheet" href="../src/styles/seo.css" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-chip.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+  </head>
+  <body class="landing-page seo-guide-page">
+    <nav id="site-nav"></nav>
+
+    <main class="seo-page-main">
+      <div class="seo-guide">
+        <section class="seo-guide__hero">
+          <div>
+            <span class="seo-guide__eyebrow">Guide · RISC-V instructions</span>
+            <h1 class="seo-guide__title">RISC-V instructions explained by effect</h1>
+            <p class="seo-guide__lede">
+              The easiest way to learn RISC-V instructions is to group them by what they do to the
+              machine: arithmetic changes register values, loads and stores move data, branches redirect
+              control flow, and stack-oriented code preserves execution context. StudyRISC-V lets you
+              inspect each category live in the browser.
+            </p>
+            <div class="seo-guide__actions">
+              <a class="seo-guide__primary" href="/simulator/">Inspect instructions in the simulator</a>
+              <a class="seo-guide__secondary" href="/docs/">Open the full docs</a>
+            </div>
+          </div>
+          <div class="seo-guide__hero-side">
+            <div class="seo-guide__side-card">
+              <div class="seo-guide__side-label">Use this page for</div>
+              <p>
+                Fast instruction-set orientation, opcode examples, and internal links to the broader
+                <a href="/docs/">reference docs</a>, <a href="/learn-riscv/">beginner guide</a>, and
+                <a href="/riscv-assembly-tutorial/">assembly tutorial</a>.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Reading opcodes</div>
+            <h2 class="seo-section__title">Think in destination, sources, and control consequences.</h2>
+          </div>
+          <div class="seo-prose">
+            <p>
+              Most RISC-V instructions become easier once you read them as small state transitions.
+              Identify the destination register or memory location, then identify the source operands,
+              and finally ask whether the program counter changes. This framing works for arithmetic
+              instructions like <code>add</code>, memory instructions like <code>lw</code>, and control
+              instructions like <code>beq</code> or <code>jal</code>. Once you apply that habit
+              consistently, unfamiliar mnemonics stop being opaque.
+            </p>
+            <p>
+              The categories below cover the instructions most students touch first. They are also the
+              ones that show up repeatedly in StudyRISC-V lessons, problems, and the opcode explorer on
+              the landing page.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-grid">
+          <article class="seo-card">
+            <div class="seo-card__eyebrow">Arithmetic and logic</div>
+            <h3><code>add</code>, <code>addi</code>, <code>sub</code>, <code>and</code>, <code>or</code>, <code>xor</code></h3>
+            <p>
+              These instructions compute a value from registers or an immediate and write the result to
+              a destination register. They are the backbone of counters, address formation, and boolean
+              masking.
+            </p>
+          </article>
+          <article class="seo-card">
+            <div class="seo-card__eyebrow">Memory</div>
+            <h3><code>lw</code>, <code>lh</code>, <code>lb</code>, <code>sw</code>, <code>sh</code>, <code>sb</code></h3>
+            <p>
+              Loads read from memory into a register. Stores write from a register into memory. These
+              instructions make the load-store model concrete.
+            </p>
+          </article>
+          <article class="seo-card">
+            <div class="seo-card__eyebrow">Branches and jumps</div>
+            <h3><code>beq</code>, <code>bne</code>, <code>blt</code>, <code>jal</code>, <code>jalr</code></h3>
+            <p>
+              These instructions redirect execution. They define loops, conditions, function calls, and
+              returns by changing the next program counter value.
+            </p>
+          </article>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Common instruction families</div>
+            <h2 class="seo-section__title">Learn the most used RISC-V instructions first.</h2>
+          </div>
+          <div class="seo-prose">
+            <h3>Arithmetic and immediates</h3>
+            <p>
+              <code>addi</code> is often the first instruction students truly internalize, because it
+              can initialize registers, advance pointers, and update counters. <code>add</code> and
+              <code>sub</code> extend that same pattern to two-register arithmetic. Instructions like
+              <code>sll</code>, <code>srl</code>, and <code>sra</code> add bit shifting, while
+              <code>andi</code>, <code>ori</code>, and <code>xori</code> support masking and toggling.
+            </p>
+            <h3>Loads and stores</h3>
+            <p>
+              <code>lw</code> and <code>sw</code> are usually the first memory instructions you need,
+              but the byte and halfword variants matter whenever layout and sign extension become part of
+              the problem. These instructions are easiest to learn by tracing the effective address and
+              checking memory after each step in the simulator.
+            </p>
+            <h3>Comparisons and branches</h3>
+            <p>
+              The branch family controls loops and conditionals. <code>beq</code> and <code>bne</code>
+              compare equality, while <code>blt</code>, <code>bge</code>, <code>bltu</code>, and
+              <code>bgeu</code> distinguish signed from unsigned comparisons. This distinction matters a
+              lot more once values stop being purely positive.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-callout">
+          <div class="seo-section__eyebrow">Short example</div>
+          <h2 class="seo-section__title">A few instructions can already show the whole machine model.</h2>
+          <div class="seo-code">
+            <pre><code>addi a0, x0, 5
+addi a1, x0, 7
+add  a2, a0, a1
+sw   a2, 0(sp)
+lw   t0, 0(sp)</code></pre>
+          </div>
+          <div class="seo-prose">
+            <p>
+              In five lines, you see register initialization, arithmetic, a store into memory, and a
+              load back into a register. If you inspect this sequence in the
+              <a href="/simulator/">StudyRISC-V simulator</a>, you can verify the register writes, the
+              memory word at the stack pointer, and the exact moment the loaded value reappears in
+              <code>t0</code>.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Control-flow instructions</div>
+            <h2 class="seo-section__title">Jumps and returns are where instruction semantics become program structure.</h2>
+          </div>
+          <div class="seo-prose">
+            <p>
+              <code>jal</code> and <code>jalr</code> deserve special attention because they underpin
+              function calls and returns. <code>jal</code> writes the return address and jumps to a
+              label. <code>jalr</code> computes the target from a register, which is why returning via
+              <code>ra</code> works. Once you pair those instructions with stack saves and restores, you
+              have the core mechanism behind procedure calls in RISC-V.
+            </p>
+            <p>
+              This is also where instruction meaning becomes architectural behavior. A call is not just
+              a jump. It is a saved continuation point, a new stack frame, and a contract about which
+              registers survive the call. That is why instruction reference pages are useful, but a
+              simulator remains necessary for deep understanding.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Next references</div>
+            <h2 class="seo-section__title">Pair opcode lookup with tutorials and hands-on practice.</h2>
+          </div>
+          <div class="seo-prose">
+            <p>
+              Use this page when you need a quick map of the common RISC-V instructions. Use
+              <a href="/riscv-assembly-tutorial/">the assembly tutorial</a> for full worked patterns,
+              <a href="/learn-riscv/">the beginner guide</a> for conceptual sequencing, and the
+              <a href="/docs/">docs</a> for deeper reference sections on memory, calling convention, and
+              simulator controls. Then reinforce the instruction set in <a href="/problems/">problems</a>
+              or <a href="/checkpoints/">checkpoints</a> where the opcodes have to cooperate inside a
+              larger solution.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-cta">
+          <h2>Inspect every opcode in a browser-based RISC-V simulator built for explanation.</h2>
+          <p>
+            Open StudyRISC-V to trace arithmetic, memory, and branch instructions one step at a time
+            with register inspection and visual learning tools.
+          </p>
+          <div class="seo-guide__actions">
+            <a class="seo-guide__primary" href="/simulator/">Open the simulator</a>
+            <a class="seo-guide__secondary" href="/docs/">Open the docs</a>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer id="site-footer"></footer>
+    <script type="module" src="../src/seo-pages.ts"></script>
+  </body>
+</html>

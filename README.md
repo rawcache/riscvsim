@@ -112,29 +112,51 @@ If you deploy on Amplify or another static host, add rewrites for the multi-page
 
 | Source | Target | Status |
 |---|---|---|
+| `http://www.studyriscv.com/<*>` | `https://studyriscv.com/<*>` | `301` |
+| `http://studyriscv.com/<*>` | `https://studyriscv.com/<*>` | `301` |
+| `https://www.studyriscv.com/<*>` | `https://studyriscv.com/<*>` | `301` |
+| `/landing.html` | `/` | `301` |
+| `/terms-of-use/` | `/terms/` | `301` |
+| `/terms-of-use` | `/terms/` | `301` |
+| `/privacy-policy/` | `/privacy/` | `301` |
+| `/privacy-policy` | `/privacy/` | `301` |
+| `/do-not-sell/` | `/privacy/#do-not-sell` | `301` |
+| `/do-not-sell` | `/privacy/#do-not-sell` | `301` |
+| `/riscv-simulator/` | `/riscv-simulator/index.html` | `200` |
+| `/riscv-simulator` | `/riscv-simulator/` | `301` |
+| `/learn-riscv/` | `/learn-riscv/index.html` | `200` |
+| `/learn-riscv` | `/learn-riscv/` | `301` |
+| `/riscv-assembly-tutorial/` | `/riscv-assembly-tutorial/index.html` | `200` |
+| `/riscv-assembly-tutorial` | `/riscv-assembly-tutorial/` | `301` |
+| `/riscv-instructions/` | `/riscv-instructions/index.html` | `200` |
+| `/riscv-instructions` | `/riscv-instructions/` | `301` |
 | `/learn/` | `/learn/index.html` | `200` |
-| `/learn` | `/learn/index.html` | `200` |
+| `/learn` | `/learn/` | `301` |
 | `/quiz/` | `/quiz/index.html` | `200` |
-| `/quiz` | `/quiz/index.html` | `200` |
+| `/quiz` | `/quiz/` | `301` |
 | `/labs/` | `/labs/index.html` | `200` |
-| `/labs` | `/labs/index.html` | `200` |
+| `/labs` | `/labs/` | `301` |
 | `/problems/` | `/problems/index.html` | `200` |
-| `/problems` | `/problems/index.html` | `200` |
+| `/problems` | `/problems/` | `301` |
 | `/problems/<*>` | `/problems/index.html` | `200` |
 | `/checkpoints/` | `/checkpoints/index.html` | `200` |
-| `/checkpoints` | `/checkpoints/index.html` | `200` |
+| `/checkpoints` | `/checkpoints/` | `301` |
 | `/challenges/` | `/challenges/index.html` | `200` |
-| `/challenges` | `/challenges/index.html` | `200` |
+| `/challenges` | `/challenges/` | `301` |
 | `/leaderboard/` | `/leaderboard/index.html` | `200` |
-| `/leaderboard` | `/leaderboard/index.html` | `200` |
+| `/leaderboard` | `/leaderboard/` | `301` |
 | `/profile/` | `/profile/index.html` | `200` |
-| `/profile` | `/profile/index.html` | `200` |
+| `/profile` | `/profile/` | `301` |
 | `/groups/` | `/groups/index.html` | `200` |
-| `/groups` | `/groups/index.html` | `200` |
+| `/groups` | `/groups/` | `301` |
 | `/about/` | `/about/index.html` | `200` |
-| `/about` | `/about/index.html` | `200` |
+| `/about` | `/about/` | `301` |
 | `/docs/` | `/docs/index.html` | `200` |
-| `/docs` | `/docs/index.html` | `200` |
+| `/docs` | `/docs/` | `301` |
+| `/terms/` | `/terms/index.html` | `200` |
+| `/terms` | `/terms/` | `301` |
+| `/privacy/` | `/privacy/index.html` | `200` |
+| `/privacy` | `/privacy/` | `301` |
 
 Weekly digest data is already structured on the client. To turn the digest preview into real weekly email delivery later, add an SES-backed Lambda that reads the same summary fields now rendered on `/leaderboard/`.
 

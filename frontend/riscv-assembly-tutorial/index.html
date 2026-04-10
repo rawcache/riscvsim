@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RISC-V Assembly Tutorial with Examples | StudyRISC-V</title>
+    <meta
+      name="description"
+      content="RISC-V assembly tutorial with practical examples for arithmetic, loops, memory, stack frames, and function calls. Run every pattern in StudyRISC-V."
+    />
+    <meta property="og:title" content="RISC-V Assembly Tutorial with Examples | StudyRISC-V" />
+    <meta
+      property="og:description"
+      content="Learn RISC-V assembly through practical examples, simulator workflows, and step-by-step explanations tied to registers, memory, and control flow."
+    />
+    <meta property="og:image" content="https://studyriscv.com/og-image.png" />
+    <meta property="og:url" content="https://studyriscv.com/riscv-assembly-tutorial/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://studyriscv.com/riscv-assembly-tutorial/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore theme bootstrap failures.
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="../src/styles/global.css" />
+    <link rel="stylesheet" href="../src/styles/nav.css" />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/auth.css" />
+    <link rel="stylesheet" href="../src/styles/landing.css" />
+    <link rel="stylesheet" href="../src/styles/seo.css" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-chip.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+  </head>
+  <body class="landing-page seo-guide-page">
+    <nav id="site-nav"></nav>
+
+    <main class="seo-page-main">
+      <div class="seo-guide">
+        <section class="seo-guide__hero">
+          <div>
+            <span class="seo-guide__eyebrow">Guide · RISC-V assembly tutorial</span>
+            <h1 class="seo-guide__title">RISC-V assembly tutorial for real programs</h1>
+            <p class="seo-guide__lede">
+              This RISC-V assembly tutorial focuses on the patterns you actually need to read and write:
+              arithmetic, loops, memory access, branches, stack frames, and function calls. Every idea
+              becomes easier when you can run it in StudyRISC-V and inspect the machine state after
+              each instruction.
+            </p>
+            <div class="seo-guide__actions">
+              <a class="seo-guide__primary" href="/simulator/">Run examples in the simulator</a>
+              <a class="seo-guide__secondary" href="/riscv-instructions/">Browse RISC-V instructions</a>
+            </div>
+          </div>
+          <div class="seo-guide__hero-side">
+            <div class="seo-guide__side-card">
+              <div class="seo-guide__side-label">Core takeaway</div>
+              <h2 class="seo-guide__side-title">Assembly gets easier when you read it as state transitions.</h2>
+              <p>
+                Each instruction changes a small part of the machine. Trace that change, and larger
+                patterns like loops and function calls become manageable.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Foundation</div>
+            <h2 class="seo-section__title">How to read RISC-V assembly without getting lost</h2>
+          </div>
+          <div class="seo-prose">
+            <p>
+              The simplest way to approach RISC-V assembly is to ask the same questions for every line.
+              Which registers are being read? Which register or memory location is being written? Does
+              the program counter move normally, or does control flow change? Once you ask those three
+              questions consistently, a program stops looking like a wall of mnemonics and starts
+              looking like a sequence of state updates.
+            </p>
+            <p>
+              In this RISC-V assembly tutorial, we will build from small patterns to larger ones. Start
+              with arithmetic and immediates. Then learn memory access. Then move into branches and
+              loops. Finally, connect everything through stack frames and function calls. That order
+              mirrors how most real programs are composed.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-grid">
+          <article class="seo-card">
+            <div class="seo-card__eyebrow">Arithmetic</div>
+            <h3>Build values in registers</h3>
+            <p>
+              Instructions like <code>addi</code>, <code>add</code>, and <code>sub</code> are the
+              building blocks for counters, pointer updates, and intermediate results.
+            </p>
+          </article>
+          <article class="seo-card">
+            <div class="seo-card__eyebrow">Memory</div>
+            <h3>Use loads and stores deliberately</h3>
+            <p>
+              <code>lw</code>, <code>lh</code>, <code>lb</code>, and their store variants show how data
+              moves between memory and registers in a load-store ISA.
+            </p>
+          </article>
+          <article class="seo-card">
+            <div class="seo-card__eyebrow">Control flow</div>
+            <h3>Trace branches and jumps carefully</h3>
+            <p>
+              Loops and conditions are just repeated PC updates. Branch instructions determine which
+              block of code executes next.
+            </p>
+          </article>
+        </section>
+
+        <section class="seo-callout">
+          <div class="seo-section__eyebrow">Example</div>
+          <h2 class="seo-section__title">Arithmetic and loop counters</h2>
+          <div class="seo-code">
+            <pre><code>addi t0, x0, 0
+addi t1, x0, 10
+loop:
+addi t0, t0, 1
+blt  t0, t1, loop</code></pre>
+          </div>
+          <div class="seo-prose">
+            <p>
+              This is a compact example, but it teaches several useful patterns. <code>t0</code> acts
+              as the loop counter, <code>t1</code> stores the upper bound, and the branch checks whether
+              the loop should continue. If you run this in the <a href="/simulator/">StudyRISC-V
+              simulator</a>, watch both registers and the program counter. The branch is not an abstract
+              condition anymore; it is a concrete decision about where execution continues.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Memory access</div>
+            <h2 class="seo-section__title">Arrays and pointers are easier when you inspect addresses.</h2>
+          </div>
+          <div class="seo-prose">
+            <p>
+              A common stumbling block in RISC-V assembly is pointer math. Students know conceptually
+              that arrays are contiguous in memory, but they lose track of addresses once offsets show
+              up in code. The solution is to trace one address at a time. When you compute
+              <code>base + index * 4</code>, pause and verify the address. When you issue a
+              <code>lw</code>, check which word was read. When you issue a <code>sw</code>, inspect the
+              destination in memory. This is where an interactive simulator is dramatically more useful
+              than a printed code listing.
+            </p>
+            <p>
+              The same principle applies to strings, buffers, and stack-resident locals. Memory access
+              becomes much clearer once every effective address is visible in context.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Function calls</div>
+            <h2 class="seo-section__title">Stack frames turn procedure calls into readable structure.</h2>
+          </div>
+          <div class="seo-prose">
+            <p>
+              A RISC-V assembly tutorial would be incomplete without stack frames. When one function
+              calls another, the machine needs a place to preserve return addresses, saved registers, and
+              local storage. That is why prologues often adjust <code>sp</code>, save <code>ra</code>,
+              and optionally save <code>s0</code> or other callee-saved registers.
+            </p>
+            <p>
+              The mental shift is important: a stack frame is not just bookkeeping. It is the layout that
+              allows nested execution contexts to coexist safely. If you inspect the stack in the
+              simulator while stepping through a function call, you can watch that frame form and later
+              unwind. That makes calling convention much easier to internalize than reading a table in
+              isolation.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Practice plan</div>
+            <h2 class="seo-section__title">Use examples, then reinforce them with problems.</h2>
+          </div>
+          <div class="seo-prose">
+            <p>
+              After working through examples, apply the same patterns in
+              <a href="/problems/">RISC-V practice problems</a> and
+              <a href="/checkpoints/">checkpoint exercises</a>. Problems force you to reconstruct a
+              solution from the primitives you just learned, which is where real fluency begins. If you
+              need more explanation, move back to <a href="/learn-riscv/">the beginner guide</a> or the
+              <a href="/docs/">full docs</a>. If you need a quicker mnemonic refresher, use the
+              <a href="/riscv-instructions/">instruction reference</a>.
+            </p>
+            <p>
+              That loop between example, execution, and practice is what makes a RISC-V assembly tutorial
+              useful instead of merely readable.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-cta">
+          <h2>Run each assembly pattern where you can see registers, memory, and stack state update live.</h2>
+          <p>
+            Open StudyRISC-V, load a sample, and step through it line by line until the behavior feels
+            obvious instead of symbolic.
+          </p>
+          <div class="seo-guide__actions">
+            <a class="seo-guide__primary" href="/simulator/">Open the simulator</a>
+            <a class="seo-guide__secondary" href="/problems/">Solve a practice problem</a>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer id="site-footer"></footer>
+    <script type="module" src="../src/seo-pages.ts"></script>
+  </body>
+</html>

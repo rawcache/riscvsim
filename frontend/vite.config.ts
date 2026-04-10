@@ -30,6 +30,10 @@ export default defineConfig({
     rollupOptions: {
       input: {
         landing: resolve(__dirname, "landing.html"),
+        riscvSimulator: resolve(__dirname, "riscv-simulator/index.html"),
+        learnRiscv: resolve(__dirname, "learn-riscv/index.html"),
+        riscvAssemblyTutorial: resolve(__dirname, "riscv-assembly-tutorial/index.html"),
+        riscvInstructions: resolve(__dirname, "riscv-instructions/index.html"),
         problems: resolve(__dirname, "problems/index.html"),
         learn: resolve(__dirname, "learn/index.html"),
         quiz: resolve(__dirname, "quiz/index.html"),

@@ -51,6 +51,10 @@ function iconSchool(): string {
   return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m3 10 9-5 9 5-9 5-9-5Z"></path><path d="M7 12.5V16c0 1.6 2.2 3 5 3s5-1.4 5-3v-3.5"></path></svg>`;
 }
 
+function iconCpu(): string {
+  return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect><path d="M4 10h3M4 14h3M17 10h3M17 14h3M10 4v3M14 4v3M10 17v3M14 17v3"></path></svg>`;
+}
+
 function sunMoonSvg(): string {
   return `<span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path></svg></span><span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></span>`;
 }
@@ -128,6 +132,14 @@ function renderNav(config: NavConfig): string {
                 <div class="nav-dropdown-icon">${iconSchool()}</div>
                 <div><span class="nav-dropdown-title">ECE 2035 Guide</span><span class="nav-dropdown-desc">Georgia Tech course reference</span></div>
               </a>
+              <a href="/learn-riscv/" class="nav-dropdown-item">
+                <div class="nav-dropdown-icon">${iconBook()}</div>
+                <div><span class="nav-dropdown-title">Learn RISC-V</span><span class="nav-dropdown-desc">Beginner guide and assembly tutorial</span></div>
+              </a>
+              <a href="/riscv-simulator/" class="nav-dropdown-item">
+                <div class="nav-dropdown-icon">${iconCpu()}</div>
+                <div><span class="nav-dropdown-title">RISC-V Simulator</span><span class="nav-dropdown-desc">Guide to the interactive simulator</span></div>
+              </a>
             </div>
           </div>
           <a href="https://github.com/rawcache/riscvsim" class="nav-link${isGithub ? " nav-link-active" : ""}" target="_blank" rel="noopener">GitHub</a>
@@ -166,6 +178,7 @@ function renderNav(config: NavConfig): string {
         <a href="/quiz/" class="nav-mobile-link">Quizzes</a>
         <a href="/labs/" class="nav-mobile-link">Labs</a>
         <a href="/checkpoints/" class="nav-mobile-link">Checkpoints</a>
+        <a href="/learn-riscv/" class="nav-mobile-link">Learn RISC-V</a>
         <a href="/about/" class="nav-mobile-link${config.activePage === "about" ? " nav-link-active" : ""}">About</a>
         <a href="https://github.com/rawcache/riscvsim" class="nav-mobile-link" target="_blank" rel="noopener">GitHub</a>
         <div class="nav-mobile-actions">

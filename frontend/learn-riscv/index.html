@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Learn RISC-V from the Fundamentals | StudyRISC-V</title>
+    <meta
+      name="description"
+      content="Learn RISC-V with a beginner-friendly guide to registers, memory, control flow, and stack frames. Start with StudyRISC-V lessons and simulator."
+    />
+    <meta property="og:title" content="Learn RISC-V from the Fundamentals | StudyRISC-V" />
+    <meta
+      property="og:description"
+      content="A beginner-friendly path for learning RISC-V, from register basics to stack frames, branches, and simulator-driven practice."
+    />
+    <meta property="og:image" content="https://studyriscv.com/og-image.png" />
+    <meta property="og:url" content="https://studyriscv.com/learn-riscv/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://studyriscv.com/learn-riscv/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore theme bootstrap failures.
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="../src/styles/global.css" />
+    <link rel="stylesheet" href="../src/styles/nav.css" />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/auth.css" />
+    <link rel="stylesheet" href="../src/styles/landing.css" />
+    <link rel="stylesheet" href="../src/styles/seo.css" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-chip.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+  </head>
+  <body class="landing-page seo-guide-page">
+    <nav id="site-nav"></nav>
+
+    <main class="seo-page-main">
+      <div class="seo-guide">
+        <section class="seo-guide__hero">
+          <div>
+            <span class="seo-guide__eyebrow">Guide · Learn RISC-V</span>
+            <h1 class="seo-guide__title">Learn RISC-V with the machine in view</h1>
+            <p class="seo-guide__lede">
+              If you want to learn RISC-V, the fastest path is to combine clear explanations with an
+              interactive environment. StudyRISC-V helps beginners understand registers, memory,
+              branches, stack frames, and instruction flow by tying lessons directly to a browser-based
+              simulator.
+            </p>
+            <div class="seo-guide__actions">
+              <a class="seo-guide__primary" href="/learn/">Browse the lessons</a>
+              <a class="seo-guide__secondary" href="/simulator/">Open the simulator</a>
+            </div>
+          </div>
+          <div class="seo-guide__hero-side">
+            <div class="seo-guide__side-card">
+              <div class="seo-guide__side-label">Beginner path</div>
+              <h2 class="seo-guide__side-title">Registers, instructions, memory, and stack frames in one study loop.</h2>
+              <p>
+                Learn the concept, step through an example, then reinforce it with a problem or quiz
+                before moving on to the next topic.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Start here</div>
+            <h2 class="seo-section__title">What makes RISC-V easier to learn than it looks</h2>
+          </div>
+          <div class="seo-prose">
+            <p>
+              RISC-V looks intimidating at first because assembly strips away the abstractions most
+              programmers rely on. You see registers instead of named variables, explicit loads and
+              stores instead of automatic memory access, and branches instead of structured loops. But
+              that simplicity is exactly what makes the ISA teachable. Each instruction does a small,
+              predictable job. Once you understand how those small state changes combine, larger
+              programs stop feeling mysterious.
+            </p>
+            <p>
+              To learn RISC-V effectively, focus on three layers at once. First, know the core machine
+              state: registers, memory, the program counter, and the stack pointer. Second, understand
+              the shape of the instruction set: arithmetic, logic, loads, stores, branches, and jumps.
+              Third, practice tracing real programs so you can connect syntax to behavior. StudyRISC-V
+              is designed around that progression.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-grid">
+          <article class="seo-card">
+            <div class="seo-card__eyebrow">Registers</div>
+            <h3>Learn what each register is for</h3>
+            <p>
+              RISC-V gives you general-purpose registers plus ABI conventions. Understanding
+              <code>a</code>, <code>t</code>, and <code>s</code> registers makes function calls and
+              debugging much more predictable.
+            </p>
+          </article>
+          <article class="seo-card">
+            <div class="seo-card__eyebrow">Memory</div>
+            <h3>Read loads and stores as data movement</h3>
+            <p>
+              The load-store model becomes much easier once you can watch addresses and values change in
+              a memory panel while stepping through <code>lw</code>, <code>sw</code>, and pointer math.
+            </p>
+          </article>
+          <article class="seo-card">
+            <div class="seo-card__eyebrow">Control flow</div>
+            <h3>Branching stops feeling magical</h3>
+            <p>
+              Loops, conditions, and function calls all become easier when you trace how the program
+              counter changes under branches, jumps, and returns.
+            </p>
+          </article>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Learning order</div>
+            <h2 class="seo-section__title">A practical sequence for learning RISC-V</h2>
+          </div>
+          <div class="seo-prose">
+            <h3>1. Start with registers and immediates</h3>
+            <p>
+              Before you write loops or functions, get comfortable moving values through registers.
+              Instructions like <code>addi</code>, <code>add</code>, <code>sub</code>, and
+              <code>lui</code> teach you how the ISA constructs values and preserves intermediate
+              results. This stage is mostly about reading operands confidently.
+            </p>
+            <h3>2. Add memory access</h3>
+            <p>
+              Next, learn how addresses are formed and how values move between registers and memory.
+              This is where the data segment, the stack, and pointer offsets start to matter. Use the
+              simulator to observe exactly where <code>lw</code> and <code>sw</code> land.
+            </p>
+            <h3>3. Learn branches and loops</h3>
+            <p>
+              Conditional control flow is the bridge between isolated instructions and full programs.
+              Trace <code>beq</code>, <code>bne</code>, <code>blt</code>, and
+              <code>jal</code> until you can predict the next PC update.
+            </p>
+            <h3>4. Move into stack frames and calling convention</h3>
+            <p>
+              Once you can follow branches, function calls become much easier. Study how <code>sp</code>
+              changes, where <code>ra</code> is saved, and why caller-saved versus callee-saved
+              registers matter. This is the point where the stack visualizer becomes especially useful.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-callout">
+          <div class="seo-section__eyebrow">StudyRISC-V workflow</div>
+          <h2 class="seo-section__title">Turn lessons into practice instead of leaving concepts isolated.</h2>
+          <div class="seo-prose">
+            <p>
+              Reading about RISC-V once is not enough. The concepts settle when you move back and forth
+              between explanation and execution. A good loop looks like this: read a lesson in
+              <a href="/learn/">the curriculum</a>, open the <a href="/simulator/">simulator</a>,
+              type or load a sample program, step through it, then apply the same idea in
+              <a href="/problems/">practice problems</a>, <a href="/checkpoints/">checkpoints</a>, or
+              <a href="/quiz/">quizzes</a>.
+            </p>
+            <p>
+              That pattern is what makes StudyRISC-V more than a static guide. The site connects a
+              learning path, execution tooling, and assessment. If you are trying to learn RISC-V for a
+              course, interview prep, or systems intuition, that integrated loop matters more than a
+              single reference page.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Helpful references</div>
+            <h2 class="seo-section__title">Use guides for beginners and references for precision.</h2>
+          </div>
+          <div class="seo-prose">
+            <p>
+              As you learn RISC-V, it helps to separate explanation from lookup. Use
+              <a href="/riscv-assembly-tutorial/">the assembly tutorial</a> when you want worked
+              examples and patterns. Use <a href="/riscv-instructions/">the instructions page</a> when
+              you want a concise explanation of an opcode and a short example. Use the
+              <a href="/docs/">documentation</a> when you need a deeper reference for registers,
+              calling convention, memory layout, and simulator controls.
+            </p>
+            <p>
+              That layered structure reduces friction. Beginners do not have to wade through the entire
+              instruction set at once, and experienced students can still find exact answers quickly.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-cta">
+          <h2>Learn RISC-V by stepping through it, not by staring at static slides.</h2>
+          <p>
+            Open the simulator, inspect the registers, and use the lesson sequence to build a real
+            mental model of how RISC-V programs execute.
+          </p>
+          <div class="seo-guide__actions">
+            <a class="seo-guide__primary" href="/learn/">Start the StudyRISC-V curriculum</a>
+            <a class="seo-guide__secondary" href="/riscv-assembly-tutorial/">Read the assembly tutorial</a>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer id="site-footer"></footer>
+    <script type="module" src="../src/seo-pages.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RISC-V Simulator for Learning Assembly | StudyRISC-V</title>
+    <meta
+      name="description"
+      content="RISC-V simulator guide with step-by-step execution, register inspection, and visual stack views. Learn what simulators do and run code in StudyRISC-V."
+    />
+    <meta property="og:title" content="RISC-V Simulator for Learning Assembly | StudyRISC-V" />
+    <meta
+      property="og:description"
+      content="See what a RISC-V simulator does, why step execution matters, and how StudyRISC-V helps you inspect registers, memory, and control flow."
+    />
+    <meta property="og:image" content="https://studyriscv.com/og-image.png" />
+    <meta property="og:url" content="https://studyriscv.com/riscv-simulator/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://studyriscv.com/riscv-simulator/" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem("studyriscv-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch {
+          // Ignore theme bootstrap failures.
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="../src/styles/global.css" />
+    <link rel="stylesheet" href="../src/styles/nav.css" />
+    <link rel="stylesheet" href="../src/styles/tokens.css" />
+    <link rel="stylesheet" href="../src/styles/auth.css" />
+    <link rel="stylesheet" href="../src/styles/landing.css" />
+    <link rel="stylesheet" href="../src/styles/seo.css" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-chip.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+  </head>
+  <body class="landing-page seo-guide-page">
+    <nav id="site-nav"></nav>
+
+    <main class="seo-page-main">
+      <div class="seo-guide">
+        <section class="seo-guide__hero">
+          <div>
+            <span class="seo-guide__eyebrow">Guide · RISC-V simulator</span>
+            <h1 class="seo-guide__title">RISC-V simulator built for understanding</h1>
+            <p class="seo-guide__lede">
+              A RISC-V simulator is useful only if it shows more than final output. StudyRISC-V is an
+              interactive RISC-V simulator that lets you step through instructions, inspect registers,
+              watch stack frames change, and connect assembly syntax to machine behavior in one screen.
+            </p>
+            <div class="seo-guide__actions">
+              <a class="seo-guide__primary" href="/simulator/">Open the RISC-V simulator</a>
+              <a class="seo-guide__secondary" href="/learn-riscv/">Learn RISC-V fundamentals</a>
+            </div>
+          </div>
+          <div class="seo-guide__hero-side">
+            <div class="seo-guide__side-card">
+              <div class="seo-guide__side-label">Why students use it</div>
+              <h2 class="seo-guide__side-title">Step execution, register inspection, and visual learning in one workspace.</h2>
+              <p>
+                Instead of bouncing between lecture notes, a debugger, and a register table, you can
+                trace one instruction at a time and immediately see what changed.
+              </p>
+            </div>
+            <div class="seo-guide__side-card">
+              <div class="seo-guide__side-label">Best next steps</div>
+              <p>
+                Continue with the <a href="/riscv-assembly-tutorial/">RISC-V assembly tutorial</a>,
+                study the <a href="/riscv-instructions/">instruction reference</a>, or jump into
+                <a href="/problems/">practice problems</a> once the workflow feels natural.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Overview</div>
+            <h2 class="seo-section__title">What is a RISC-V simulator?</h2>
+          </div>
+          <div class="seo-prose">
+            <p>
+              A RISC-V simulator is software that models how a RISC-V processor executes instructions.
+              Instead of running your program on physical hardware, the simulator emulates the fetch,
+              decode, execute, memory, and write-back behavior of the architecture. That means you can
+              load assembly code, run it instruction by instruction, and observe the state of registers,
+              memory, the program counter, and the stack without needing a physical board.
+            </p>
+            <p>
+              For beginners, the value is not just convenience. A browser-based RISC-V simulator lets
+              you slow the machine down until every <code>addi</code>, <code>lw</code>, and
+              <code>jal</code> becomes understandable. You can see where a branch target comes from,
+              why the stack pointer moved, and which register actually changed. That kind of visibility
+              is what turns architecture from memorization into intuition.
+            </p>
+            <p>
+              StudyRISC-V focuses on that explanatory layer. The simulator is not just a place to run
+              code. It is a place to inspect cause and effect, compare instructions, and learn how
+              RISC-V assembly maps onto the machine model you see in class.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-grid">
+          <article class="seo-card">
+            <div class="seo-card__eyebrow">Execution</div>
+            <h3>Step one instruction at a time</h3>
+            <p>
+              Assemble your program, advance one instruction, and inspect the exact state transition
+              that happened. This is the fastest way to understand the effect of arithmetic, branches,
+              jumps, and stores.
+            </p>
+          </article>
+          <article class="seo-card">
+            <div class="seo-card__eyebrow">Inspection</div>
+            <h3>Read registers and memory together</h3>
+            <p>
+              Registers, memory, the stack pointer, and the effect log live side by side. You do not
+              need to guess which value moved or why a word landed at a particular address.
+            </p>
+          </article>
+          <article class="seo-card">
+            <div class="seo-card__eyebrow">Learning</div>
+            <h3>Connect code to architecture concepts</h3>
+            <p>
+              The same environment ties into <a href="/learn/">lessons</a>,
+              <a href="/checkpoints/">checkpoints</a>, <a href="/quiz/">quizzes</a>, and the
+              <a href="/docs/">docs</a>, so the simulator becomes part of a complete workflow.
+            </p>
+          </article>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Why simulators matter</div>
+            <h2 class="seo-section__title">Architecture is easier when the machine is visible.</h2>
+          </div>
+          <div class="seo-prose">
+            <p>
+              Students often get stuck on RISC-V because the tools available to them are optimized for
+              correctness, not comprehension. They can assemble and run code, but they cannot easily see
+              why a bug happened. A RISC-V simulator with good inspection tools changes that. When you
+              can step forward, step backward, and read the state after every instruction, debugging
+              becomes a learning loop instead of a guessing game.
+            </p>
+            <p>
+              Simulators are especially important for topics like calling convention, stack frames,
+              pointer arithmetic, and branches. These ideas unfold over several instructions. If the
+              only signal you see is a final output value, you miss the intermediate reasoning. With
+              step execution, register inspection, and visual stack learning, you can track how
+              <code>sp</code>, <code>ra</code>, local variables, and addresses evolve over time.
+            </p>
+            <p>
+              That matters whether you are preparing for Georgia Tech coursework, self-studying
+              computer architecture, or using RISC-V assembly to sharpen systems intuition before
+              interview prep. The more visible the machine is, the faster the mental model solidifies.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-callout">
+          <div class="seo-section__eyebrow">Inside StudyRISC-V</div>
+          <h2 class="seo-section__title">What this RISC-V simulator shows that static notes cannot</h2>
+          <div class="seo-prose">
+            <p>
+              StudyRISC-V is built around the idea that execution state should be inspectable at every
+              moment. The editor lets you assemble raw RV32IM code. The disassembly view shows encoded
+              instructions and the current program counter. The pseudo-C explainer translates the active
+              instruction into a higher-level mental model. The register file and memory panel show
+              exact values, and the call-stack visualizer makes frame layout visible during nested
+              calls.
+            </p>
+            <p>
+              That makes the tool useful for more than demonstration. You can use it to verify whether
+              a loop counter is signed or unsigned, whether a branch target is correct, whether a store
+              landed in the data segment, and whether a function preserved callee-saved registers.
+              Because it runs in the browser, it is also frictionless: open the page and start
+              tracing.
+            </p>
+          </div>
+          <div class="seo-code">
+            <pre><code>addi sp, sp, -16
+sw   ra, 12(sp)
+sw   s0, 8(sp)
+addi s0, sp, 16
+jal  ra, factorial</code></pre>
+          </div>
+        </section>
+
+        <section class="seo-section">
+          <div>
+            <div class="seo-section__eyebrow">Where to go next</div>
+            <h2 class="seo-section__title">Use the simulator with lessons, practice, and instruction reference.</h2>
+          </div>
+          <div class="seo-prose">
+            <p>
+              The best way to use a RISC-V simulator is as part of a broader learning path. Start with
+              <a href="/learn-riscv/">a beginner-friendly RISC-V overview</a> if the ISA is new to
+              you. Move into the <a href="/riscv-assembly-tutorial/">assembly tutorial</a> to see
+              concrete examples of arithmetic, loops, memory access, and function calls. Use the
+              <a href="/riscv-instructions/">RISC-V instructions guide</a> when you want a quicker
+              opcode explanation. Then open the <a href="/simulator/">simulator</a> and step through
+              each example until you can predict the next state change before it happens.
+            </p>
+            <p>
+              Once the fundamentals feel comfortable, reinforce them with
+              <a href="/problems/">coding problems</a>, <a href="/checkpoints/">graded checkpoints</a>,
+              and <a href="/quiz/">quizzes</a>. Those modules turn the RISC-V simulator from a demo
+              into an active study tool.
+            </p>
+          </div>
+        </section>
+
+        <section class="seo-cta">
+          <h2>Open the simulator and watch the machine state change in real time.</h2>
+          <p>
+            If you are searching for a RISC-V simulator that explains stack frames, registers, memory,
+            and control flow instead of hiding them, start in StudyRISC-V and step through a sample
+            program now.
+          </p>
+          <div class="seo-guide__actions">
+            <a class="seo-guide__primary" href="/simulator/">Launch the RISC-V simulator</a>
+            <a class="seo-guide__secondary" href="/problems/">Practice RISC-V problems</a>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer id="site-footer"></footer>
+    <script type="module" src="../src/seo-pages.ts"></script>
+  </body>
+</html>

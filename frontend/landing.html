@@ -3,17 +3,50 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>StudyRISC-V</title>
+    <title>RISC-V Simulator for Learning Assembly | StudyRISC-V</title>
     <meta
       name="description"
-      content="StudyRISC-V is a browser-based RISC-V simulator with step execution, register inspection, and pseudo-C translation."
+      content="Interactive RISC-V simulator with step-by-step execution, register inspection, and visual learning tools for stack, pipeline, memory, and control flow."
     />
-    <meta property="og:title" content="StudyRISC-V — Learn RISC-V Assembly" />
-    <meta property="og:description" content="The first RISC-V simulator built for understanding. 20 lessons, free for GT students." />
+    <meta property="og:title" content="RISC-V Simulator for Learning Assembly | StudyRISC-V" />
+    <meta property="og:description" content="Study RISC-V with step-by-step execution, register inspection, architecture visuals, and guided lessons in one browser-based simulator." />
     <meta property="og:image" content="https://studyriscv.com/og-image.png" />
-    <meta property="og:url" content="https://studyriscv.com" />
+    <meta property="og:url" content="https://studyriscv.com/" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="canonical" href="https://studyriscv.com/" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "StudyRISC-V",
+        "url": "https://studyriscv.com/",
+        "logo": "https://studyriscv.com/favicon-chip.svg"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "StudyRISC-V",
+        "url": "https://studyriscv.com/",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://studyriscv.com/docs/?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "StudyRISC-V",
+        "applicationCategory": "DeveloperTool",
+        "operatingSystem": "Web",
+        "url": "https://studyriscv.com/",
+        "description": "Browser-based RISC-V simulator with step-by-step execution, register inspection, and visual learning tools."
+      }
+    </script>
     <script>
       (() => {
         const { hash, origin, pathname } = window.location;
@@ -71,14 +104,15 @@
           </div>
 
           <h1 class="hero__headline">
-            Learn RISC-V.<br />
-            See the machine<br />
-            think.
+            Interactive RISC-V Simulator<br />
+            built for<br />
+            understanding
           </h1>
 
           <p class="hero__sub">
-            The only RISC-V simulator built for understanding, not just execution. Step through
-            assembly, watch the stack grow, and finally see what the CPU is actually doing.
+            StudyRISC-V gives you step-by-step execution, register inspection, and visual learning in
+            one calm workspace. Trace assembly, watch the stack grow, and finally see what the CPU is
+            actually doing.
           </p>
 
           <div class="hero__cta-row">
@@ -165,6 +199,32 @@
             StudyRISC-V keeps code, machine state, and conceptual visuals in one calm workspace.
             Every stack adjustment, memory access, and control-flow change has a visible place on screen.
           </p>
+        </div>
+      </section>
+
+      <section class="simulator-explainer" data-landing-section>
+        <div class="section-shell section-shell--wide simulator-explainer__layout">
+          <div class="simulator-explainer__intro">
+            <span class="simulator-explainer__eyebrow">What is a RISC-V simulator?</span>
+            <h2 class="simulator-explainer__title">A RISC-V simulator shows how code changes registers, memory, and control flow.</h2>
+          </div>
+          <div class="simulator-explainer__body">
+            <p>
+              A RISC-V simulator emulates the machine so you can assemble a program, execute one
+              instruction at a time, and inspect state without needing physical hardware. The best
+              simulators do more than run code. They expose the stack, registers, memory, and branches
+              so you can see why the machine behaves the way it does.
+            </p>
+            <p>
+              StudyRISC-V is an interactive RISC-V simulator built for visual learning. It combines
+              step-by-step execution, register inspection, opcode explanations, and architecture visuals
+              so the machine stays visible while you learn.
+            </p>
+            <div class="simulator-explainer__links">
+              <a href="/riscv-simulator/">Read the RISC-V simulator guide →</a>
+              <a href="/riscv-assembly-tutorial/">Start the assembly tutorial →</a>
+            </div>
+          </div>
         </div>
       </section>
 

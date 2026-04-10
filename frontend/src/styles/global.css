@@ -48,14 +48,14 @@ pre,
 }
 
 .site-footer__inner {
-  width: min(1100px, calc(100% - 48px));
+  width: min(1440px, calc(100% - 48px));
   margin: 0 auto;
-  padding: 48px 0 32px;
+  padding: 56px 0 32px;
 }
 
 .site-footer__grid {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr 0.8fr;
+  grid-template-columns: 1.3fr 0.8fr 0.8fr 0.8fr;
   gap: 32px;
 }
 
@@ -78,6 +78,18 @@ pre,
 .site-footer__tagline {
   max-width: 240px;
   margin-top: 8px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .site-footer__heading {
