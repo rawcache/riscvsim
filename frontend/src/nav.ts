@@ -94,7 +94,10 @@ function renderNav(config: NavConfig): string {
   return `
     <div class="nav-mobile-shell">
       <div class="nav-inner">
-        <a href="/" class="nav-logo">StudyRISC-V</a>
+        <a href="/" class="nav-logo">
+          <img class="nav-logo__mark" src="/favicon-chip.svg" alt="" aria-hidden="true" />
+          <span class="nav-logo__text">StudyRISC-V</span>
+        </a>
         <div class="nav-links">
           <a href="/problems/" class="nav-link${isProblems ? " nav-link-active" : ""}">Problems</a>
           <a href="/learn/" class="nav-link${isLearn ? " nav-link-active" : ""}">Learn</a>

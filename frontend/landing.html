@@ -120,43 +120,17 @@
         </div>
 
         <div class="hero__right">
-          <div class="hero__code-window">
-            <div class="hero__code-titlebar">
+          <div class="hero__code-window hero-code" id="heroCodeWindow">
+            <div class="hero__code-titlebar hero-code__bar">
               <div class="hero__code-dots">
                 <span class="hero__dot hero__dot--red"></span>
                 <span class="hero__dot hero__dot--yellow"></span>
                 <span class="hero__dot hero__dot--green"></span>
               </div>
-              <span class="hero__code-filename">factorial.s</span>
+              <span class="hero__code-filename hero-code__label" id="heroCodeLabel">factorial.s</span>
               <div class="hero__code-titlebar-spacer"></div>
             </div>
-<pre class="hero__code-body"><code># factorial of 5
-<span class="tok-keyword">addi</span> <span class="tok-register">x1</span>, <span class="tok-register">x0</span>, <span class="tok-number">5</span>    <span class="tok-comment"># n</span>
-<span class="tok-keyword">addi</span> <span class="tok-register">x2</span>, <span class="tok-register">x0</span>, <span class="tok-number">1</span>    <span class="tok-comment"># result</span>
-<span class="tok-label">fact:</span>
-  <span class="tok-keyword">mul</span>  <span class="tok-register">x2</span>, <span class="tok-register">x2</span>, <span class="tok-register">x1</span>
-  <span class="tok-keyword">addi</span> <span class="tok-register">x1</span>, <span class="tok-register">x1</span>, <span class="tok-number">-1</span>
-  <span class="tok-keyword">bne</span>  <span class="tok-register">x1</span>, <span class="tok-register">x0</span>, <span class="tok-label">fact</span>
-</code></pre>
-          </div>
-
-          <div class="hero__reg-panel">
-            <div class="hero__reg-title">Register File</div>
-            <div class="hero__reg-row hero__reg-row--highlight">
-              <span class="hero__reg-name">x1</span>
-              <span class="hero__reg-val">0x00000001</span>
-              <span class="hero__reg-dec">(1)</span>
-            </div>
-            <div class="hero__reg-row hero__reg-row--highlight">
-              <span class="hero__reg-name">x2</span>
-              <span class="hero__reg-val">0x00000078</span>
-              <span class="hero__reg-dec">(120)</span>
-            </div>
-            <div class="hero__reg-row">
-              <span class="hero__reg-name">pc</span>
-              <span class="hero__reg-val">0x00000018</span>
-              <span class="hero__reg-dec"></span>
-            </div>
+            <pre class="hero__code-body hero-code__body hero-code__content" id="heroCode"></pre>
           </div>
         </div>
       </section>
@@ -172,13 +146,6 @@
           </div>
           <div class="coverage-strip__quick-example" data-opcode-example>
             addi x5, x0, 10
-          </div>
-        </div>
-
-        <div class="coverage-strip__band">
-          <div class="coverage-strip__label">RV32IM</div>
-          <div class="coverage-strip__marquee-wrap">
-            <div class="coverage-strip__track" data-opcode-track aria-label="RISC-V opcode reference band"></div>
           </div>
         </div>
 
@@ -198,6 +165,13 @@
             <code class="coverage-strip__detail-flow" data-opcode-detail-flow>
               x5 ← x0 + 10
             </code>
+          </div>
+        </div>
+
+        <div class="coverage-strip__band">
+          <div class="coverage-strip__label">RV32IM</div>
+          <div class="coverage-strip__marquee-wrap">
+            <div class="coverage-strip__track" data-opcode-track aria-label="RISC-V opcode reference band"></div>
           </div>
         </div>
       </section>
