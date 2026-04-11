@@ -8227,3 +8227,324 @@ body:not(.is-mobile) .mobile-menu-backdrop {
     transition: none !important;
   }
 }
+
+/* ============================================================
+   DESIGN OVERHAUL — dark, Linear-quality, Inter + JetBrains Mono
+   ============================================================ */
+
+/* ── Nav offset ───────────────────────────────────────────── */
+body.simulator-page {
+  padding-top: var(--nav-height, 64px);
+}
+
+/* ── Simulator app: full-width, no max-width constraint ──── */
+.simulator-app {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* ── Layout fills remaining viewport height ──────────────── */
+@media (min-width: 1400px) {
+  .simulator-layout {
+    grid-template-columns: minmax(280px, 320px) 1fr 280px !important;
+    height: calc(100vh - var(--nav-height, 64px)) !important;
+    margin-top: 0 !important;
+    gap: 0 !important;
+    border-top: 1px solid var(--border);
+  }
+}
+
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .simulator-layout {
+    grid-template-columns: minmax(260px, 300px) 1fr 260px !important;
+    height: calc(100vh - var(--nav-height, 64px)) !important;
+    margin-top: 0 !important;
+    gap: 0 !important;
+    border-top: 1px solid var(--border);
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1199px) {
+  .simulator-layout {
+    grid-template-columns: minmax(220px, 260px) 1fr 220px !important;
+    height: calc(100vh - var(--nav-height, 64px)) !important;
+    margin-top: 0 !important;
+    gap: 0 !important;
+    border-top: 1px solid var(--border);
+  }
+}
+
+/* ── Panel: remove rounded corners, edge-to-edge feel ────── */
+.sim-column--left .sim-panel,
+.sim-column--right .sim-panel {
+  border-radius: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+}
+
+.sim-column--left {
+  border-right: 1px solid var(--border) !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sim-column--right {
+  border-left: 1px solid var(--border) !important;
+}
+
+.sim-column--center .sim-panel {
+  border-radius: 0 !important;
+  border: 0 !important;
+}
+
+/* ── Panel headers ────────────────────────────────────────── */
+.panel-header {
+  font-size: 11px !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  color: var(--text-muted) !important;
+  font-family: var(--font-body) !important;
+}
+
+/* ── Replace all hardcoded legacy font references ─────────── */
+.register-cell__abi,
+.register-cell__xnum,
+.register-cell__old-value,
+.register-cell__value,
+.reg-diff-arrow,
+.reg-diff-ra,
+.register-show-all,
+.disasm-addr,
+.disasm-encoding,
+.disasm-mnemonic,
+.disasm-operands,
+.disasm-comment,
+.disasm-operand,
+.disasm-punct,
+.disasm-tooltip *,
+.memory-watch-row__addr,
+.memory-watch-row__value,
+.memory-write-item,
+.memory-word-row,
+.memory-ascii-row,
+.memory-view-tab,
+.disasm-header,
+.disassembly-header,
+.call-stack-header,
+.effects-header,
+.pseudo-c-header {
+  font-family: var(--font-mono) !important;
+}
+
+.lesson-panel__title,
+.lesson-breadcrumb,
+.lesson-step-title,
+.lesson-step-body,
+.register-show-all {
+  font-family: var(--font-body) !important;
+}
+
+/* ── Button styles ────────────────────────────────────────── */
+
+/* Assemble: indigo */
+#assemble.sim-button--primary,
+.sim-button--primary {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+  height: 36px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  border-radius: var(--radius-md) !important;
+}
+
+#assemble.sim-button--primary:hover:not(:disabled),
+.sim-button--primary:hover:not(:disabled) {
+  background: var(--accent-hover) !important;
+  border-color: var(--accent-hover) !important;
+}
+
+/* Step / StepBack: dark surface, light text */
+#step.sim-button--outline,
+#stepBack.sim-button--outline {
+  background: #1e1e1e !important;
+  border-color: #2e2e2e !important;
+  color: #f5f5f5 !important;
+}
+
+#step.sim-button--outline:hover:not(:disabled),
+#stepBack.sim-button--outline:hover:not(:disabled) {
+  background: #262626 !important;
+  border-color: #3e3e3e !important;
+}
+
+/* Run: green */
+#run.sim-button--outline {
+  background: #166534 !important;
+  border-color: #166534 !important;
+  color: #4ade80 !important;
+}
+
+#run.sim-button--outline:hover:not(:disabled) {
+  background: #15803d !important;
+  border-color: #15803d !important;
+}
+
+/* Reset: transparent ghost */
+.sim-button--danger {
+  background: transparent !important;
+  border-color: var(--text-muted) !important;
+  color: var(--text-muted) !important;
+}
+
+.sim-button--danger:hover:not(:disabled) {
+  border-color: var(--danger) !important;
+  color: var(--danger) !important;
+  background: transparent !important;
+}
+
+/* ── Source textarea ──────────────────────────────────────── */
+.source-textarea {
+  font-family: var(--font-mono) !important;
+  font-size: 13px !important;
+  background: #0d0d0d !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+/* ── Select dropdown ──────────────────────────────────────── */
+.sim-select {
+  background: #111111 !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+.sim-select:hover {
+  border-color: #2e2e2e !important;
+}
+
+/* ── Center tabs ──────────────────────────────────────────── */
+.center-tab-button {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--text-muted) !important;
+}
+
+.center-tab-button:hover {
+  color: var(--text-secondary) !important;
+}
+
+.center-tab-button.is-active {
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--accent) !important;
+}
+
+/* ── Disassembly rows ─────────────────────────────────────── */
+.disasm-addr {
+  color: var(--accent) !important;
+  font-size: 12px !important;
+}
+
+.disasm-mnemonic {
+  color: #f5f5f5 !important;
+  font-size: 13px !important;
+}
+
+.disasm-operands {
+  color: #a5b4fc !important;
+  font-size: 13px !important;
+}
+
+.disasm-operand.is-register {
+  color: #a5b4fc !important;
+}
+
+.disasm-operand.is-immediate {
+  color: #fbbf24 !important;
+}
+
+.disasm-line.disasm-pc-current {
+  background: rgba(26, 26, 46, 0.9) !important;
+  border-left-color: var(--accent) !important;
+}
+
+.disasm-line.disasm-pc-current .disasm-mnemonic {
+  color: var(--accent-hover) !important;
+}
+
+/* ── Effects ──────────────────────────────────────────────── */
+.effect-entry__label {
+  color: var(--accent-hover) !important;
+}
+
+.effect-entry--reg .effect-entry__after {
+  color: var(--success) !important;
+}
+
+.effect-entry--mem .effect-entry__after {
+  color: var(--success) !important;
+}
+
+.effect-entry__before {
+  color: var(--danger) !important;
+  text-decoration: line-through !important;
+}
+
+.effect-entry--pc .effect-entry__after {
+  color: var(--accent) !important;
+}
+
+/* ── Register cells ───────────────────────────────────────── */
+.register-cell__abi,
+.register-cell__name {
+  color: var(--accent-hover) !important;
+}
+
+.register-cell__value {
+  color: #a5b4fc !important;
+}
+
+.register-cell__xnum {
+  color: var(--text-muted) !important;
+}
+
+/* Changed register flash: green */
+@keyframes register-flash-new {
+  0% {
+    background: rgba(74, 222, 128, 0.15);
+    border-color: rgba(74, 222, 128, 0.5);
+  }
+  100% {
+    background: var(--bg-elevated);
+    border-color: var(--border);
+  }
+}
+
+.register-cell.is-changed {
+  animation: register-flash-new 800ms ease forwards !important;
+}
+
+/* ── Pseudo-C syntax colors ───────────────────────────────── */
+.pseudo-keyword {
+  color: #c084fc !important;
+}
+
+.pseudo-value,
+.pseudo-literal {
+  color: var(--success) !important;
+}
+
+.pseudo-reg,
+.pseudo-register {
+  color: var(--accent) !important;
+}
+
+/* ── Status line ──────────────────────────────────────────── */
+.status-line {
+  font-size: 12px !important;
+  color: var(--text-muted) !important;
+  font-family: var(--font-mono) !important;
+}
+

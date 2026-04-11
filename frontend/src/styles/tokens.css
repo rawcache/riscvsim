@@ -1,86 +1,109 @@
+/* ============================================================
+   DESIGN TOKENS — dark-first, indigo accent
+   ============================================================ */
 :root {
-  --font-display: "Geist", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-body: "Geist", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: "Geist Mono", "DM Mono", "SFMono-Regular", "SF Mono", "Menlo", monospace;
+  /* Typography */
+  --font-display: "Inter", system-ui, -apple-system, sans-serif;
+  --font-body:    "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono:    "JetBrains Mono", "SFMono-Regular", "SF Mono", Menlo, monospace;
 
+  /* Type scale */
   --step--1: 0.8rem;
-  --step-0: 1rem;
-  --step-1: 1.25rem;
-  --step-2: 1.5625rem;
-  --step-3: 1.9531rem;
-  --step-4: 2.4414rem;
-  --step-5: 3.0518rem;
-  --step-6: 3.8147rem;
+  --step-0:  1rem;
+  --step-1:  1.25rem;
+  --step-2:  1.5625rem;
+  --step-3:  1.9531rem;
+  --step-4:  2.4414rem;
+  --step-5:  3.0518rem;
+  --step-6:  3.8147rem;
 
+  /* Weight */
   --fw-normal: 400;
   --fw-medium: 500;
-  --fw-bold: 700;
+  --fw-bold:   700;
 
-  --bg-base: #f7f5f2;
-  --bg-surface: #ffffff;
-  --bg-elevated: #f0ede8;
-  --border: #e2ddd6;
-  --text-primary: #1a1816;
-  --text-secondary: #6b6560;
-  --text-muted: #a09890;
-  --accent: #2d6be4;
-  --accent-hover: #1f54c4;
-  --accent-subtle: #ebf0fd;
-  --success: #16a34a;
-  --warning: #d97706;
-  --danger: #dc2626;
-  --highlight-new: #fef3c7;
-  --highlight-prev: #f0fdf4;
-  --pc-current: #ebf0fd;
-  --pc-prev: #f5f3ff;
+  /* Dark palette (default) */
+  --bg-base:     #0a0a0a;
+  --bg-surface:  #111111;
+  --bg-elevated: #161616;
+  --border:      #1e1e1e;
+  --border-hover:#2e2e2e;
+  --text-primary:   #f5f5f5;
+  --text-secondary: #888888;
+  --text-muted:     #555555;
+  --accent:         #6366f1;
+  --accent-hover:   #818cf8;
+  --accent-subtle:  rgba(99,102,241,0.10);
+  --accent-border:  rgba(99,102,241,0.30);
+  --success:   #4ade80;
+  --warning:   #fbbf24;
+  --danger:    #f87171;
+  --highlight-new:  rgba(99,102,241,0.12);
+  --highlight-prev: rgba(99,102,241,0.06);
+  --pc-current:     rgba(99,102,241,0.10);
+  --pc-prev:        rgba(99,102,241,0.05);
 
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
+  /* Spacing */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
   --space-10: 40px;
   --space-12: 48px;
   --space-16: 64px;
   --space-20: 80px;
   --space-24: 96px;
 
+  /* Radii */
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 20px;
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.14);
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.7);
 
+  /* Animation */
   --transition: 150ms ease;
+
+  /* Nav */
+  --nav-height: 64px;
 }
 
-[data-theme="dark"] {
-  --bg-base: #0f0e0d;
-  --bg-surface: #1a1917;
-  --bg-elevated: #242220;
-  --border: #2e2b28;
-  --text-primary: #f5f3f0;
-  --text-secondary: #9b9590;
-  --text-muted: #5c5852;
-  --accent: #4d87f5;
-  --accent-hover: #6699f7;
-  --accent-subtle: #1a2640;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --highlight-new: #2d2500;
-  --highlight-prev: #0d2010;
-  --pc-current: #1a2640;
-  --pc-prev: #1e1a30;
+/* Light mode overrides (if user ever toggles light) */
+[data-theme="light"] {
+  --bg-base:        #f7f5f2;
+  --bg-surface:     #ffffff;
+  --bg-elevated:    #f0ede8;
+  --border:         #e2ddd6;
+  --border-hover:   #c8c3bd;
+  --text-primary:   #1a1816;
+  --text-secondary: #6b6560;
+  --text-muted:     #a09890;
+  --accent:         #4f52d9;
+  --accent-hover:   #3d40c4;
+  --accent-subtle:  rgba(79,82,217,0.08);
+  --accent-border:  rgba(79,82,217,0.25);
+  --success:   #16a34a;
+  --warning:   #d97706;
+  --danger:    #dc2626;
+  --highlight-new:  #fef3c7;
+  --highlight-prev: #f0fdf4;
+  --pc-current:     rgba(79,82,217,0.08);
+  --pc-prev:        rgba(79,82,217,0.04);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.14);
 }
 
+/* ── Global resets ───────────────────────────────────────── */
 html {
-  font-size: 16px;
+  font-size: 15px;
 }
 
 *,

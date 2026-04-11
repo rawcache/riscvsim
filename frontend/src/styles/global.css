@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 
 *,
 *::before,
@@ -9,29 +9,29 @@
 }
 
 :root {
-  --font-display: "Geist", system-ui, -apple-system, sans-serif;
-  --font-body: "Geist", system-ui, -apple-system, sans-serif;
-  --font-mono: "Geist Mono", "DM Mono", monospace;
+  --font-display: "Inter", system-ui, -apple-system, sans-serif;
+  --font-body:    "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono:    "JetBrains Mono", "SFMono-Regular", "SF Mono", Menlo, monospace;
 }
 
 html,
 body {
-  background: #080808;
   margin: 0;
   padding: 0;
 }
 
 html {
-  font-family: "Geist", system-ui, -apple-system, sans-serif;
-  font-size: 16px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.7;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  font-family: "Geist", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.7;
   color: var(--text-primary);
   background: var(--bg-base);
 }
@@ -39,9 +39,11 @@ body {
 code,
 pre,
 .mono {
-  font-family: "Geist Mono", "DM Mono", monospace;
+  font-family: var(--font-mono);
+  font-size: 13px;
 }
 
+/* ── Footer ─────────────────────────────────────────────────────────── */
 .site-footer {
   border-top: 1px solid var(--border);
   background: var(--bg-base);
