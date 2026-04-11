@@ -1,20 +1,21 @@
 version: 1
 frontend:
-  phases:
-    preBuild:
-      commands:
-        - cd $CODEBUILD_SRC_DIR/riscvsim/frontend && npm ci
-    build:
-      commands:
-        - export VITE_COGNITO_USER_POOL_ID=us-east-1_l7sOznZYZ
-        - export VITE_COGNITO_CLIENT_ID=5rpv8jp09pq566dajslno6c9rr
-        - export VITE_COGNITO_DOMAIN=studyriscv.auth.us-east-1.amazoncognito.com
-        - export VITE_API_ENDPOINT=https://hsyyxozom8.execute-api.us-east-1.amazonaws.com
-        - cd $CODEBUILD_SRC_DIR/riscvsim/frontend && npm run build
-  artifacts:
-    baseDirectory: frontend/dist
-    files:
-      - '**/*'
-  cache:
-    paths:
-      - $CODEBUILD_SRC_DIR/riscvsim/frontend/node_modules/**/*
+    phases:
+        preBuild:
+            commands:
+                - 'curl --proto ''=https'' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
+                - 'source $HOME/.cargo/env'
+                - 'curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh'
+                - 'cd frontend && npm ci'
+        build:
+            commands:
+                - 'cd $CODEBUILD_SRC_DIR/studyriscv-private/rust-core && wasm-pack build --target web --out-dir ../frontend/src/pkg'
+                - 'export SKIP_PUBLIC_CHECK=1 && cd $CODEBUILD_SRC_DIR/studyriscv-private/frontend && npm install && npm run build'
+    artifacts:
+        baseDirectory: frontend/dist
+        files:
+            - '**/*'
+    cache:
+        paths:
+            - 'frontend/node_modules/**/*'
+            - '$HOME/.cargo/**/*'
