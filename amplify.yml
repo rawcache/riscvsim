@@ -9,8 +9,8 @@ frontend:
                 - 'cd frontend && npm ci'
         build:
             commands:
-                - 'cd $CODEBUILD_SRC_DIR/studyriscv-private/rust-core && wasm-pack build --target web --out-dir ../frontend/src/pkg'
-                - 'export SKIP_PUBLIC_CHECK=1 && cd $CODEBUILD_SRC_DIR/studyriscv-private/frontend && npm install && npm run build'
+                - 'cd rust-core && wasm-pack build --target web --out-dir ../frontend/src/pkg'
+                - 'cd frontend && npm run build'
     artifacts:
         baseDirectory: frontend/dist
         files:
