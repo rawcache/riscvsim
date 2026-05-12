@@ -450,18 +450,6 @@ body.loaded .hero__visual {
   transition: border-color 400ms ease;
 }
 
-.hero-code.is-pulsing {
-  animation: hero-code-pulse 350ms ease;
-  border-color: var(--accent);
-}
-
-.hero-code.is-content-hidden .hero-code__content {
-  opacity: 0;
-}
-
-.hero-code.is-collapsed .hero-code__body {
-  height: 0;
-}
 
 .hero-code__bar {
   display: grid;
@@ -941,207 +929,6 @@ body.loaded .hero__visual {
   min-width: 220px;
 }
 
-#chip-wrapper {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 1000;
-  width: 82px;
-  height: 82px;
-  opacity: 0;
-  transform: translateY(80px);
-  transition:
-    opacity 600ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    transform 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  pointer-events: auto;
-}
-
-#chip-wrapper.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-#chip-reactor {
-  width: 100%;
-  height: 100%;
-  transform-origin: center;
-}
-
-#chip-wrapper.is-reacting #chip-reactor {
-  animation: chip-hop 800ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-#chip-stage {
-  width: 100%;
-  height: 100%;
-  transform-origin: center;
-  animation: chip-bob 4s ease-in-out infinite;
-}
-
-#chip-wrapper.is-peeking #chip-stage {
-  animation: chip-peek 1.8s ease-in-out forwards;
-}
-
-#chip-wrapper.is-reacting #chip-stage {
-  animation: none;
-}
-
-#chip-stage,
-#chip-stage * {
-  pointer-events: none;
-}
-
-.cpu-pet__svg {
-  width: 100%;
-  height: 100%;
-}
-
-.cpu-pet__eye {
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform 150ms ease-out;
-}
-
-.cpu-pet__svg.chip-eyes-closed .cpu-pet__eye {
-  transform: scaleY(0.1);
-  transition-duration: 100ms;
-  transition-timing-function: ease-in;
-}
-
-#chip-wrapper.is-blinking .cpu-pet__eye {
-  animation: chip-blink 200ms ease-in-out;
-}
-
-.cpu-pet__mouth {
-  transition: opacity 160ms ease;
-}
-
-.cpu-pet__mouth--happy {
-  opacity: 0;
-}
-
-#chip-wrapper.is-reacting .cpu-pet__mouth--neutral {
-  opacity: 0;
-}
-
-#chip-wrapper.is-reacting .cpu-pet__mouth--happy {
-  opacity: 1;
-}
-
-.cpu-pet__mouth--scared,
-.cpu-pet__mouth--annoyed,
-.cpu-pet__brow {
-  opacity: 0;
-  transition: opacity 160ms ease;
-}
-
-#chip-wrapper.is-annoyed .cpu-pet__mouth--neutral,
-#chip-wrapper.is-annoyed .cpu-pet__mouth--happy {
-  opacity: 0;
-}
-
-#chip-wrapper.is-annoyed .cpu-pet__mouth--annoyed,
-#chip-wrapper.is-annoyed .cpu-pet__brow {
-  opacity: 1;
-}
-
-#chip-wrapper.is-annoyed #chip-stage {
-  animation: chip-annoyed 260ms ease-in-out 2;
-}
-
-.cpu-pet__pin-dot {
-  animation: pin-pulse 1.6s ease-in-out infinite;
-  animation-delay: var(--pin-delay, 0ms);
-}
-
-#chip-wrapper.chip-pins-fast .cpu-pet__pin-dot {
-  animation-duration: 0.3s;
-}
-
-@keyframes chip-bob {
-  0%,
-  100% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  25% {
-    transform: translate(-3px, -2px) rotate(-2deg);
-  }
-  50% {
-    transform: translate(2px, -6px) rotate(1deg);
-  }
-  75% {
-    transform: translate(4px, -1px) rotate(2deg);
-  }
-}
-
-@keyframes chip-hop {
-  0% {
-    transform: translateY(0) scale(1);
-  }
-  25% {
-    transform: translateY(-16px) scale(1.1);
-  }
-  58% {
-    transform: translateY(0) scale(1);
-  }
-  68% {
-    transform: translateY(0) scaleX(1.1) scaleY(0.85);
-  }
-  100% {
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes chip-peek {
-  0% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  20% {
-    transform: translate(-5px, -4px) rotate(-8deg);
-  }
-  50% {
-    transform: translate(4px, -8px) rotate(6deg);
-  }
-  80% {
-    transform: translate(-2px, -5px) rotate(-4deg);
-  }
-  100% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-}
-
-@keyframes chip-annoyed {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1) rotate(0deg);
-  }
-  30% {
-    transform: translate(-1px, 0) rotate(-3deg);
-  }
-  60% {
-    transform: translate(1px, 0) rotate(3deg);
-  }
-}
-
-@keyframes chip-blink {
-  0%,
-  100% {
-    transform: scaleY(1);
-  }
-  50% {
-    transform: scaleY(0.1);
-  }
-}
-
-@keyframes pin-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
-}
 
 @media (max-width: 960px) {
   .hero {
@@ -1169,16 +956,6 @@ body.loaded .hero__visual {
 @media (max-width: 768px) {
   .hero {
     min-height: auto;
-  }
-
-  #chip-wrapper {
-    display: none;
-  }
-}
-
-@media (hover: none), (pointer: coarse) {
-  #chip-wrapper {
-    display: none;
   }
 }
 
@@ -1230,25 +1007,6 @@ body.loaded .hero__visual {
 
   .landing-cta {
     padding-inline: var(--space-4);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  #chip-wrapper {
-    opacity: 1;
-    transform: translateY(0);
-    transition: none;
-  }
-
-  #chip-reactor {
-    transition: none;
-  }
-
-  #chip-stage,
-  #chip-wrapper.is-peeking #chip-stage,
-  #chip-wrapper.is-reacting #chip-reactor,
-  .cpu-pet__pin-dot {
-    animation: none;
   }
 }
 
@@ -1765,17 +1523,6 @@ body.loaded .hero__visual {
   opacity: 0;
 }
 
-.landing-home .hero__code-window.is-collapsed .hero__code-body {
-  min-height: 0;
-  height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-}
-
-.landing-home .hero__code-window.is-pulsing {
-  animation: hero-code-pulse 350ms ease;
-  border-color: var(--accent);
-}
 
 /* ─── COVERAGE STRIP (marquee) ─── */
 .landing-home .coverage-strip {
@@ -2225,15 +1972,6 @@ body.loaded .hero__visual {
   overflow: visible;
 }
 
-.landing-home .motion-card__hint {
-  margin: 0;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 /* ─── FEATURES ─── */
 .landing-home .features {
   padding: 88px 80px 96px;
@@ -2465,10 +2203,6 @@ body.loaded .hero__visual {
 }
 
 /* ─── CHIP PET ─── */
-.landing-home #chip-wrapper {
-  right: 24px;
-  bottom: 24px;
-}
 
 /* ─── RESPONSIVE ─── */
 @media (max-width: 1100px) {
@@ -2688,10 +2422,6 @@ body.loaded .hero__visual {
 
   .landing-home .cta-bottom {
     padding: 64px 24px 72px;
-  }
-
-  #chip-wrapper {
-    display: none;
   }
 }
 
@@ -3109,8 +2839,6 @@ body.loaded .hero__visual {
 .landing-home .motion-card__canvas::before { opacity: 0.12; }
 .landing-home .motion-card__canvas::after  { width: 64px; height: 64px; filter: blur(22px); opacity: 0.7; }
 
-/* Remove the hint text */
-.landing-home .motion-card__hint { display: none; }
 
 /* ─── STORY BLOCKS ─── */
 
@@ -3785,10 +3513,6 @@ body.loaded .hero__visual {
   padding-top: 32px;
 }
 
-.landing-home #chip-wrapper,
-.landing-home #clip-bubble {
-  display: none !important;
-}
 
 /* ─── REDUCED MOTION ─── */
 

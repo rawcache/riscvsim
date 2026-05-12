@@ -594,93 +594,12 @@
 
     <footer id="site-footer"></footer>
 
-    <div id="chip-wrapper" aria-hidden="true">
-      <div id="chip-reactor">
-        <div id="chip-stage">
-          <svg id="chipSvg" class="cpu-pet__svg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="cpuPetBodyGradient" x1="16" y1="16" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" style="stop-color: var(--chip-body-top)" />
-                <stop offset="100%" style="stop-color: var(--chip-body-bottom)" />
-              </linearGradient>
-            </defs>
-            <g class="cpu-pet__pins">
-                <line x1="16" y1="22" x2="10" y2="22" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="16" y1="26" x2="10" y2="26" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="16" y1="30" x2="10" y2="30" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="16" y1="34" x2="10" y2="34" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="48" y1="22" x2="54" y2="22" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="48" y1="26" x2="54" y2="26" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="48" y1="30" x2="54" y2="30" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="48" y1="34" x2="54" y2="34" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="22" y1="16" x2="22" y2="10" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="26" y1="16" x2="26" y2="10" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="30" y1="16" x2="30" y2="10" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="34" y1="16" x2="34" y2="10" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="22" y1="48" x2="22" y2="54" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="26" y1="48" x2="26" y2="54" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="30" y1="48" x2="30" y2="54" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-                <line x1="34" y1="48" x2="34" y2="54" stroke="var(--chip-stroke)" stroke-width="2" stroke-linecap="round" />
-            </g>
-            <g>
-                <circle class="cpu-pet__pin-dot" cx="10" cy="22" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 0ms" />
-                <circle class="cpu-pet__pin-dot" cx="10" cy="26" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 200ms" />
-                <circle class="cpu-pet__pin-dot" cx="10" cy="30" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 400ms" />
-                <circle class="cpu-pet__pin-dot" cx="10" cy="34" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 600ms" />
-                <circle class="cpu-pet__pin-dot" cx="54" cy="22" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 0ms" />
-                <circle class="cpu-pet__pin-dot" cx="54" cy="26" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 200ms" />
-                <circle class="cpu-pet__pin-dot" cx="54" cy="30" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 400ms" />
-                <circle class="cpu-pet__pin-dot" cx="54" cy="34" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 600ms" />
-                <circle class="cpu-pet__pin-dot" cx="22" cy="10" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 0ms" />
-                <circle class="cpu-pet__pin-dot" cx="26" cy="10" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 200ms" />
-                <circle class="cpu-pet__pin-dot" cx="30" cy="10" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 400ms" />
-                <circle class="cpu-pet__pin-dot" cx="34" cy="10" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 600ms" />
-                <circle class="cpu-pet__pin-dot" cx="22" cy="54" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 0ms" />
-                <circle class="cpu-pet__pin-dot" cx="26" cy="54" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 200ms" />
-                <circle class="cpu-pet__pin-dot" cx="30" cy="54" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 400ms" />
-                <circle class="cpu-pet__pin-dot" cx="34" cy="54" r="1.5" fill="var(--chip-stroke)" opacity="0.5" style="--pin-delay: 600ms" />
-            </g>
-            <rect x="16" y="16" width="32" height="32" rx="4" ry="4" fill="url(#cpuPetBodyGradient)" stroke="var(--chip-stroke)" stroke-width="2.2" />
-            <rect x="22" y="22" width="20" height="20" rx="2" fill="var(--chip-die-fill)" stroke="var(--chip-stroke)" stroke-width="1.6" />
-            <rect x="24" y="24" width="6" height="2" fill="var(--chip-stroke)" opacity="0.6" />
-            <rect x="24" y="28" width="10" height="2" fill="var(--chip-stroke)" opacity="0.6" />
-            <rect x="24" y="32" width="8" height="2" fill="var(--chip-stroke)" opacity="0.6" />
-            <rect x="24" y="36" width="5" height="2" fill="var(--chip-stroke)" opacity="0.6" />
-            <g class="cpu-pet__eye cpu-pet__eye--left">
-              <circle cx="27" cy="30" r="2.4" fill="var(--text-primary)" />
-              <circle id="chipLeftPupil" cx="27" cy="30" r="1" fill="var(--accent)" />
-            </g>
-            <g class="cpu-pet__eye cpu-pet__eye--right">
-              <circle cx="37" cy="30" r="2.4" fill="var(--text-primary)" />
-              <circle id="chipRightPupil" cx="37" cy="30" r="1" fill="var(--accent)" />
-            </g>
-            <path class="cpu-pet__brow cpu-pet__brow--left" d="M24 26.5 29 27.8" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
-            <path class="cpu-pet__brow cpu-pet__brow--right" d="M35 27.8 40 26.5" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
-            <path class="cpu-pet__mouth cpu-pet__mouth--neutral" d="M 27 35 Q 32 38.5 37 35" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
-            <path class="cpu-pet__mouth cpu-pet__mouth--happy" d="M 26 34.5 Q 32 40 38 34.5" stroke="var(--text-primary)" stroke-width="1.9" fill="none" stroke-linecap="round" />
-            <path class="cpu-pet__mouth cpu-pet__mouth--scared" d="M 27 37 Q 32 32.8 37 37" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
-            <path class="cpu-pet__mouth cpu-pet__mouth--annoyed" d="M 27 36.2 L 37 36.2" stroke="var(--text-primary)" stroke-width="1.8" fill="none" stroke-linecap="round" />
-          </svg>
-        </div>
-      </div>
-    </div>
-
     <script>
       (() => {
-        const root = document.documentElement;
         const body = document.body;
         const heroCodeWindow = document.getElementById("heroCodeWindow");
         const heroCode = document.getElementById("heroCode");
         const heroCodeLabel = document.getElementById("heroCodeLabel");
-        const heroCodeClose = document.getElementById("heroCodeClose");
-        const heroCodeNext = document.getElementById("heroCodeNext");
-        const heroCodePulse = document.getElementById("heroCodePulse");
-        const chipWrapper = document.getElementById("chip-wrapper");
-        const chipReactor = document.getElementById("chip-reactor");
-        const chipStage = document.getElementById("chip-stage");
-        const chipSvg = document.getElementById("chipSvg");
-        const chipLeftPupil = document.getElementById("chipLeftPupil");
-        const chipRightPupil = document.getElementById("chipRightPupil");
         const HERO_PROGRAMS = [
           {
             filename: "sum_loop.s",
@@ -1087,7 +1006,7 @@
           setHeroFilename(HERO_PROGRAMS[programIndex].filename);
 
           if (heroCodeWindow instanceof HTMLElement) {
-            heroCodeWindow.classList.remove("is-content-hidden", "is-collapsed");
+            heroCodeWindow.classList.remove("is-content-hidden");
           }
 
           if (heroReducedMotion) {
@@ -1134,357 +1053,10 @@
           }, preFadeDelay + fadeDuration);
         }
 
-        function closeHeroTerminal() {
-          if (!(heroCodeWindow instanceof HTMLElement) || heroState.isTransitioning) {
-            return;
-          }
-
-          clearHeroTimers();
-          heroState.isTransitioning = true;
-          heroCodeWindow.classList.add("is-content-hidden");
-
-          heroTimers.fade = window.setTimeout(() => {
-            heroCodeWindow.classList.add("is-collapsed");
-          }, 200);
-
-          heroTimers.reopen = window.setTimeout(() => {
-            heroCodeWindow.classList.remove("is-collapsed");
-            resetHeroProgram(heroState.programIndex);
-            if (heroReducedMotion) {
-              renderFullHeroProgram(heroState.programIndex);
-            } else {
-              renderHeroCode(true);
-            }
-            heroCodeWindow.classList.remove("is-content-hidden");
-            heroState.isTransitioning = false;
-            if (!heroReducedMotion) {
-              scheduleHeroTyping(stepHeroTyping, heroTypingDelay(180));
-            }
-          }, 1700);
-        }
-
-        function showNextHeroProgram() {
-          if (heroState.isTransitioning) {
-            return;
-          }
-
-          renderFullHeroProgram(heroState.programIndex);
-          transitionHeroProgram((heroState.programIndex + 1) % HERO_PROGRAMS.length, {
-            preFadeDelay: 150,
-            fadeDuration: 200,
-            showCurrentProgram: false,
-          });
-        }
-
-        function pulseHeroTerminal() {
-          if (!(heroCodeWindow instanceof HTMLElement)) {
-            return;
-          }
-          heroCodeWindow.classList.remove("is-pulsing");
-          void heroCodeWindow.offsetWidth;
-          heroCodeWindow.classList.add("is-pulsing");
-          window.clearTimeout(heroTimers.pulse);
-          heroTimers.pulse = window.setTimeout(() => {
-            heroCodeWindow.classList.remove("is-pulsing");
-          }, 400);
-        }
-
-        function initChipPet() {
-          if (
-            !(chipWrapper instanceof HTMLElement) ||
-            !(chipReactor instanceof HTMLElement) ||
-            !(chipStage instanceof HTMLElement) ||
-            !(chipSvg instanceof SVGSVGElement) ||
-            !(chipLeftPupil instanceof SVGCircleElement) ||
-            !(chipRightPupil instanceof SVGCircleElement)
-          ) {
-            return;
-          }
-
-          if (window.matchMedia("(hover: none)").matches || window.innerWidth <= 768) {
-            return;
-          }
-
-          const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-          let lastPointerX = window.innerWidth - 32;
-          let lastPointerY = window.innerHeight - 32;
-          let lastEyeUpdate = 0;
-          let eyeLockUntil = 0;
-          let eyeUnlockTimer = 0;
-          let blinkTimer = 0;
-          let blinkClassTimer = 0;
-          let peekTimer = 0;
-          let reactionOpenTimer = 0;
-          let reactionResetTimer = 0;
-          let fastPinsTimer = 0;
-          let annoyedTimer = 0;
-          const BLINK_MAX = 4;
-          const FAST_MAX = 8;
-          let chipClickCount = 0;
-          let chipClickWindowStartedAt = 0;
-
-          function setPupils(angle, offset) {
-            chipLeftPupil.setAttribute("cx", (27 + Math.cos(angle) * offset).toFixed(2));
-            chipLeftPupil.setAttribute("cy", (30 + Math.sin(angle) * offset).toFixed(2));
-            chipRightPupil.setAttribute("cx", (37 + Math.cos(angle) * offset).toFixed(2));
-            chipRightPupil.setAttribute("cy", (30 + Math.sin(angle) * offset).toFixed(2));
-          }
-
-          function centerPupils() {
-            chipLeftPupil.setAttribute("cx", "27");
-            chipLeftPupil.setAttribute("cy", "30");
-            chipRightPupil.setAttribute("cx", "37");
-            chipRightPupil.setAttribute("cy", "30");
-          }
-
-          function updateEyes(cursorX, cursorY) {
-            const rect = chipWrapper.getBoundingClientRect();
-            const chipCX = rect.left + rect.width / 2;
-            const chipCY = rect.top + rect.height / 2;
-            const angle = Math.atan2(cursorY - chipCY, cursorX - chipCX);
-            const distance = Math.hypot(cursorX - chipCX, cursorY - chipCY);
-            const offset = Math.min(distance / 200, 1) * 1.5;
-            setPupils(angle, offset);
-          }
-
-          function triggerBlink() {
-            if (chipWrapper.classList.contains("is-reacting")) {
-              return;
-            }
-            chipWrapper.classList.remove("is-blinking");
-            void chipWrapper.offsetWidth;
-            chipWrapper.classList.add("is-blinking");
-            window.clearTimeout(blinkClassTimer);
-            blinkClassTimer = window.setTimeout(() => {
-              chipWrapper.classList.remove("is-blinking");
-            }, 200);
-          }
-
-          function scheduleBlink() {
-            const nextDelay = Math.random() * 4000 + 3000;
-            blinkTimer = window.setTimeout(() => {
-              triggerBlink();
-              if (Math.random() < 0.25) {
-                window.setTimeout(() => {
-                  triggerBlink();
-                }, 350);
-              }
-              scheduleBlink();
-            }, nextDelay);
-          }
-
-          function schedulePeek() {
-            if (reducedMotion) {
-              return;
-            }
-            const nextDelay = Math.random() * 6000 + 8000;
-            peekTimer = window.setTimeout(() => {
-              if (chipWrapper.classList.contains("is-reacting")) {
-                schedulePeek();
-                return;
-              }
-              chipWrapper.classList.add("is-peeking");
-              window.setTimeout(() => {
-                chipWrapper.classList.remove("is-peeking");
-                schedulePeek();
-              }, 1800);
-            }, nextDelay);
-          }
-
-          function lockEyes(angle, duration) {
-            eyeLockUntil = performance.now() + duration;
-            setPupils(angle, 1.5);
-            window.clearTimeout(eyeUnlockTimer);
-            eyeUnlockTimer = window.setTimeout(() => {
-              eyeLockUntil = 0;
-              updateEyes(lastPointerX, lastPointerY);
-            }, duration);
-          }
-
-          function angleToElement(element) {
-            const rect = element.getBoundingClientRect();
-            const chipRect = chipWrapper.getBoundingClientRect();
-            const chipCX = chipRect.left + chipRect.width / 2;
-            const chipCY = chipRect.top + chipRect.height / 2;
-            const targetX = rect.left + rect.width / 2;
-            const targetY = rect.top + rect.height / 2;
-            return Math.atan2(targetY - chipCY, targetX - chipCX);
-          }
-
-          function setFastPins() {
-            chipWrapper.classList.add("chip-pins-fast");
-            window.clearTimeout(fastPinsTimer);
-            fastPinsTimer = window.setTimeout(() => {
-              chipWrapper.classList.remove("chip-pins-fast");
-            }, 1000);
-          }
-
-          function playChipClickReaction(options = {}) {
-            const { rapidPins = false } = options;
-
-            chipWrapper.classList.remove("is-peeking");
-            chipWrapper.classList.remove("is-reacting");
-            chipSvg.classList.remove("chip-eyes-closed");
-
-            if (rapidPins) {
-              setFastPins();
-            }
-
-            window.clearTimeout(reactionOpenTimer);
-            window.clearTimeout(reactionResetTimer);
-            window.clearTimeout(eyeUnlockTimer);
-
-            chipWrapper.classList.add("is-reacting");
-            chipSvg.classList.add("chip-eyes-closed");
-            centerPupils();
-            eyeLockUntil = performance.now() + 600;
-
-            reactionOpenTimer = window.setTimeout(() => {
-              chipSvg.classList.remove("chip-eyes-closed");
-              centerPupils();
-            }, reducedMotion ? 1 : 200);
-
-            eyeUnlockTimer = window.setTimeout(() => {
-              eyeLockUntil = 0;
-              updateEyes(lastPointerX, lastPointerY);
-            }, 600);
-
-            reactionResetTimer = window.setTimeout(() => {
-              chipWrapper.classList.remove("is-reacting");
-              updateEyes(lastPointerX, lastPointerY);
-            }, reducedMotion ? 220 : 800);
-          }
-
-          function flashChipAnnoyed() {
-            chipWrapper.classList.add("is-annoyed");
-            window.clearTimeout(annoyedTimer);
-            annoyedTimer = window.setTimeout(() => {
-              chipWrapper.classList.remove("is-annoyed");
-            }, reducedMotion ? 220 : 520);
-          }
-
-          function handleChipClick() {
-            const now = performance.now();
-
-            if (now - chipClickWindowStartedAt > 2200) {
-              chipClickWindowStartedAt = now;
-              chipClickCount = 0;
-            }
-
-            chipClickCount += 1;
-
-            if (chipClickCount <= BLINK_MAX) {
-              triggerBlink();
-              playChipClickReaction();
-              return;
-            }
-
-            if (chipClickCount <= FAST_MAX) {
-              playChipClickReaction({ rapidPins: true });
-              return;
-            }
-
-            flashChipAnnoyed();
-            playChipClickReaction({ rapidPins: true });
-            chipClickCount = 0;
-            chipClickWindowStartedAt = now;
-          }
-
-          function handleCtaClick() {
-            playChipClickReaction({ rapidPins: true });
-          }
-
-          function handleSignInClick() {
-            playChipClickReaction();
-          }
-
-          function handleGenericButtonClick(target) {
-            lockEyes(angleToElement(target), 600);
-            triggerBlink();
-          }
-
-          chipWrapper.addEventListener("click", (e) => {
-            e.stopPropagation();
-            handleChipClick();
-          });
-
-          document.addEventListener(
-            "mousemove",
-            (event) => {
-              lastPointerX = event.clientX;
-              lastPointerY = event.clientY;
-
-              const now = performance.now();
-              if (now - lastEyeUpdate < 16) {
-                return;
-              }
-              lastEyeUpdate = now;
-
-              if (eyeLockUntil > now) {
-                return;
-              }
-
-              updateEyes(event.clientX, event.clientY);
-            },
-            { passive: true }
-          );
-
-          document.addEventListener("click", (event) => {
-            const target = event.target;
-            if (!(target instanceof Element)) {
-              return;
-            }
-
-            const heroCta = target.closest("#hero-cta-primary");
-            if (heroCta instanceof Element) {
-              handleCtaClick();
-              return;
-            }
-
-            if (target.closest("#auth-signin-btn")) {
-              handleSignInClick();
-              return;
-            }
-
-            const interactive = target.closest("button, a");
-            if (interactive instanceof Element) {
-              handleGenericButtonClick(interactive);
-            }
-          });
-
-          if (reducedMotion) {
-            chipWrapper.classList.add("is-visible");
-          } else {
-            window.setTimeout(() => {
-              chipWrapper.classList.add("is-visible");
-            }, 800);
-          }
-
-          updateEyes(lastPointerX, lastPointerY);
-          scheduleBlink();
-          schedulePeek();
-        }
-
-        heroCodeClose?.addEventListener("click", (event) => {
-          event.preventDefault();
-          closeHeroTerminal();
-        });
-
-        heroCodeNext?.addEventListener("click", (event) => {
-          event.preventDefault();
-          showNextHeroProgram();
-        });
-
-        heroCodePulse?.addEventListener("click", (event) => {
-          event.preventDefault();
-          pulseHeroTerminal();
-        });
-
         document.addEventListener("DOMContentLoaded", () => {
           body.classList.add("loaded");
           body.classList.add("hero-loaded");
           startHeroProgram(0);
-          initChipPet();
 
           const cards = document.querySelectorAll(".js-reveal");
           const observer = new IntersectionObserver(
@@ -1527,9 +1099,7 @@
       })();
     </script>
     <script type="module">
-      import { getClipLine } from "./src/clip-dialogue.ts";
       import { getSession } from "./src/auth.ts";
-      import { initClipBubble, showClipLine } from "./src/clip-ui.ts";
       import { initFooter } from "./src/footer.ts";
       import { initLandingAnimations } from "./src/landing-animations.ts";
       import { initLandingExperience } from "./src/landing-experience.ts";
@@ -1609,24 +1179,9 @@
         initLandingAnimations();
         initOpcodeBand();
         void renderLandingResume();
-        initClipBubble();
         window.addEventListener("studyriscv-auth-changed", () => {
           void renderLandingResume();
         });
-        let isFirstVisit = false;
-        try {
-          isFirstVisit = !window.localStorage.getItem("studyriscv_visited");
-          window.localStorage.setItem("studyriscv_visited", "1");
-        } catch {
-          isFirstVisit = false;
-        }
-        const event = isFirstVisit ? "first-visit" : "landing-load";
-        const clipLine = getClipLine(event, { isFirstVisit });
-        if (clipLine) {
-          window.setTimeout(() => {
-            showClipLine(clipLine);
-          }, 1800);
-        }
       });
 
       const MINI_PROGRAM = `# Add two numbers
