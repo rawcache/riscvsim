@@ -97,440 +97,158 @@
     <main class="landing-main">
 
       <!-- ─── HERO ─── -->
-      <section class="hero" data-landing-section>
-        <div class="hero__left">
-          <div class="hero__eyebrow">
-            <span class="hero__pill">Free for Georgia Tech students</span>
-          </div>
-
-          <h1 class="hero__headline">
-            Interactive RISC-V Simulator<br />
-            built for<br />
-            understanding
+      <section class="lp-hero" data-landing-section>
+        <div class="lp-hero__glow" aria-hidden="true"></div>
+        <div class="lp-hero__left">
+          <h1 class="lp-hero__headline">
+            Learn RISC-V.<br />Actually understand it.
           </h1>
-
-          <p class="hero__sub">
-            StudyRISC-V gives you step-by-step execution, register inspection, and visual learning in
-            one calm workspace. Trace assembly, watch the stack grow, and finally see what the CPU is
-            actually doing.
+          <p class="lp-hero__sub">
+            Step-by-step execution, register inspection, and visual learning.
+            Built for computer architecture students.
           </p>
-
-          <div class="hero__cta-row">
-            <a class="hero__cta-primary" id="hero-cta-primary" href="/simulator/">Open Simulator →</a>
-            <a class="hero__cta-secondary" href="/learn/">Browse Lessons</a>
+          <div class="lp-hero__cta-row">
+            <a class="lp-btn lp-btn--primary" href="/simulator/">Open Simulator</a>
+            <a class="lp-btn lp-btn--ghost" href="/learn/">Browse Lessons</a>
           </div>
-
-          <div class="hero__proof">
-            <div class="hero__proof-item">
-              <span class="hero__proof-num">342</span>
-              <span class="hero__proof-label">Regression tests</span>
+          <div class="lp-stats-bar">
+            <div class="lp-stats-bar__item">
+              <span class="lp-stats-bar__num">342</span>
+              <span class="lp-stats-bar__label">Regression Tests</span>
             </div>
-            <div class="hero__proof-sep"></div>
-            <div class="hero__proof-item">
-              <span class="hero__proof-num">20</span>
-              <span class="hero__proof-label">Lessons</span>
+            <div class="lp-stats-bar__sep" aria-hidden="true"></div>
+            <div class="lp-stats-bar__item">
+              <span class="lp-stats-bar__num">20</span>
+              <span class="lp-stats-bar__label">Lessons</span>
             </div>
-            <div class="hero__proof-sep"></div>
-            <div class="hero__proof-item">
-              <span class="hero__proof-num">15</span>
-              <span class="hero__proof-label">Problems</span>
+            <div class="lp-stats-bar__sep" aria-hidden="true"></div>
+            <div class="lp-stats-bar__item">
+              <span class="lp-stats-bar__num">15</span>
+              <span class="lp-stats-bar__label">Problems</span>
             </div>
-            <div class="hero__proof-sep"></div>
-            <div class="hero__proof-item">
-              <span class="hero__proof-num">RV32IM</span>
-              <span class="hero__proof-label">Core ISA</span>
+            <div class="lp-stats-bar__sep" aria-hidden="true"></div>
+            <div class="lp-stats-bar__item">
+              <span class="lp-stats-bar__num">RV32IM</span>
+              <span class="lp-stats-bar__label">Core ISA</span>
             </div>
           </div>
         </div>
 
-        <div class="hero__right">
-          <div class="hero__code-window hero-code" id="heroCodeWindow" data-landing-depth>
-            <div class="hero__code-titlebar hero-code__bar">
-              <div class="hero__code-dots">
-                <span class="hero__dot hero__dot--red"></span>
-                <span class="hero__dot hero__dot--yellow"></span>
-                <span class="hero__dot hero__dot--green"></span>
-              </div>
-              <span class="hero__code-filename hero-code__label" id="heroCodeLabel">factorial.s</span>
-              <div class="hero__code-titlebar-spacer"></div>
+        <div class="lp-hero__right">
+          <div class="lp-code-window" id="lpCodeWindow">
+            <div class="lp-code-window__bar">
+              <span class="lp-dot lp-dot--red"></span>
+              <span class="lp-dot lp-dot--yellow"></span>
+              <span class="lp-dot lp-dot--green"></span>
+              <span class="lp-code-window__filename" id="lpCodeFilename">factorial.s</span>
             </div>
-            <pre class="hero__code-body hero-code__body hero-code__content" id="heroCode"></pre>
+            <pre class="lp-code-window__body" id="lpCodeBody" aria-label="RISC-V assembly typewriter preview"></pre>
           </div>
         </div>
       </section>
 
-      <!-- ─── CREDIBILITY ─── -->
-      <section class="credibility-strip" data-landing-section>
-        <div class="section-shell section-shell--wide">
-          <div class="credibility-strip__inner">
-            <div class="credibility-strip__items" aria-label="StudyRISC-V highlights">
-              <span class="credibility-item">
-                <svg class="credibility-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                Georgia Tech friendly
-              </span>
-              <span class="credibility-item">
-                <svg class="credibility-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-                Runs in your browser
-              </span>
-              <span class="credibility-item">
-                <svg class="credibility-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 12h11"></path><path d="m11 5 7 7-7 7"></path><path d="M4 5v14"></path></svg>
-                RV32IM step execution
-              </span>
-              <span class="credibility-item">
-                <svg class="credibility-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2H20v20H8.5A2.5 2.5 0 0 0 6 22"></path><path d="M6 4.5V22"></path></svg>
-                20 lessons + checkpoints
-              </span>
-              <span class="credibility-item">
-                <svg class="credibility-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-13h-7l0-7Z"></path></svg>
-                15 coding problems
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
+      <!-- ─── FIG PANELS ─── -->
+      <section class="lp-figs" data-landing-section>
+        <div class="lp-figs__grid">
 
-      <!-- ─── STATEMENT ─── -->
-      <section class="statement-block" data-landing-section>
-        <div class="section-shell">
-          <h2 class="statement-block__title">
-            Architecture learning should feel like inspecting a live system.
-          </h2>
-          <p class="statement-block__body">
-            StudyRISC-V keeps code, machine state, and conceptual visuals in one calm workspace.
-            Every stack adjustment, memory access, and control-flow change has a visible place on screen.
-          </p>
-        </div>
-      </section>
-
-      <section class="simulator-explainer" data-landing-section>
-        <div class="section-shell section-shell--wide simulator-explainer__layout">
-          <div class="simulator-explainer__intro">
-            <span class="simulator-explainer__eyebrow">What is a RISC-V simulator?</span>
-            <h2 class="simulator-explainer__title">A RISC-V simulator shows how code changes registers, memory, and control flow.</h2>
-          </div>
-          <div class="simulator-explainer__body">
-            <p>
-              A RISC-V simulator emulates the machine so you can assemble a program, execute one
-              instruction at a time, and inspect state without needing physical hardware. The best
-              simulators do more than run code. They expose the stack, registers, memory, and branches
-              so you can see why the machine behaves the way it does.
+          <article class="lp-fig-panel">
+            <span class="lp-fig-panel__label">FIG 01</span>
+            <h2 class="lp-fig-panel__title">Step. Rewind. Understand.</h2>
+            <p class="lp-fig-panel__desc">
+              Execute any RV32IM instruction one step at a time. Step backwards through execution
+              history. Watch registers change in real time.
             </p>
-            <p>
-              StudyRISC-V is an interactive RISC-V simulator built for visual learning. It combines
-              step-by-step execution, register inspection, opcode explanations, and architecture visuals
-              so the machine stays visible while you learn.
+            <div class="lp-fig-panel__visual" aria-hidden="true">
+              <div class="lp-pipeline-anim">
+                <div class="lp-pipeline-anim__stage" data-stage="0">IF</div>
+                <div class="lp-pipeline-anim__stage" data-stage="1">ID</div>
+                <div class="lp-pipeline-anim__stage" data-stage="2">EX</div>
+              </div>
+            </div>
+          </article>
+
+          <article class="lp-fig-panel">
+            <span class="lp-fig-panel__label">FIG 02</span>
+            <h2 class="lp-fig-panel__title">Assembly to plain English.</h2>
+            <p class="lp-fig-panel__desc">
+              Every instruction translates to a pseudo-C expression.
+              <code>addi x1, x0, 5</code> becomes <code>x1 = 0 + 5</code>.
+              No more guessing what the CPU is doing.
             </p>
-            <div class="simulator-explainer__links">
-              <a href="/riscv-simulator/">Read the RISC-V simulator guide →</a>
-              <a href="/riscv-assembly-tutorial/">Start the assembly tutorial →</a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ─── CONCEPTS IN MOTION ─── -->
-      <section class="motion-showcase" aria-labelledby="motion-showcase-title" data-landing-section>
-        <div class="section-shell section-shell--wide">
-          <div class="motion-showcase__header">
-            <h2 class="motion-showcase__title" id="motion-showcase-title">
-              Three places where the machine stops feeling abstract.
-            </h2>
-          </div>
-
-          <div class="motion-showcase__grid" data-landing-depth>
-            <article class="motion-card">
-              <div class="motion-card__copy">
-                <span class="motion-card__label">Stack frames</span>
-                <h3 class="motion-card__title">Peel call frames open.</h3>
-                <p class="motion-card__body">
-                  See saved registers, local slots, and return addresses stack into a frame — not a list of mystery offsets.
-                </p>
-              </div>
-              <div class="motion-card__canvas" data-motion-demo="stack" aria-label="Interactive stack frame animation"></div>
-            </article>
-
-            <article class="motion-card">
-              <div class="motion-card__copy">
-                <span class="motion-card__label">Pipeline flow</span>
-                <h3 class="motion-card__title">Trace an instruction through the datapath.</h3>
-                <p class="motion-card__body">
-                  IF, ID, EX, MEM, WB stop being five letters on a slide and start reading like concrete machine stages.
-                </p>
-              </div>
-              <div class="motion-card__canvas" data-motion-demo="pipeline" aria-label="Interactive pipeline stage animation"></div>
-            </article>
-
-            <article class="motion-card">
-              <div class="motion-card__copy">
-                <span class="motion-card__label">Branch prediction</span>
-                <h3 class="motion-card__title">Watch one path win.</h3>
-                <p class="motion-card__body">
-                  A prediction tree is easier to trust once you can see it fan out, commit to a branch, and retract on a miss.
-                </p>
-              </div>
-              <div class="motion-card__canvas" data-motion-demo="branch" aria-label="Interactive branch prediction animation"></div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- ─── STORY BLOCKS ─── -->
-      <section class="story-block" data-landing-section>
-        <div class="section-shell section-shell--wide">
-          <div class="story-block__layout">
-            <div class="story-block__text">
-              <div class="story-block__num">01</div>
-              <h2 class="story-block__title">Understand the stack before you debug it.</h2>
-              <p class="story-block__copy">
-                Saved registers, local variables, and return addresses become readable when you can see
-                the frame grow from the top of memory. Offsets stop being arbitrary.
-              </p>
-              <a class="story-block__link" href="/simulator/">Open the simulator →</a>
-            </div>
-            <div class="story-block__visual story-surface stack-preview" data-landing-depth>
-              <div class="stack-preview__header">
-                <span class="stack-preview__pointer">sp → 0x7fffffec</span>
-              </div>
-              <div class="stack-preview__column">
-                <div class="stack-slot">
-                  <span class="stack-slot__addr">0x7ffffffc</span>
-                  <strong class="stack-slot__name">saved ra</strong>
-                  <em class="stack-slot__val">0x00000148</em>
-                </div>
-                <div class="stack-slot stack-slot--active">
-                  <span class="stack-slot__addr">0x7ffffff8</span>
-                  <strong class="stack-slot__name">saved s0</strong>
-                  <em class="stack-slot__val">0x10000020</em>
-                </div>
-                <div class="stack-slot">
-                  <span class="stack-slot__addr">0x7ffffff4</span>
-                  <strong class="stack-slot__name">local temp</strong>
-                  <em class="stack-slot__val">12</em>
-                </div>
-                <div class="stack-slot">
-                  <span class="stack-slot__addr">0x7ffffff0</span>
-                  <strong class="stack-slot__name">arg spill</strong>
-                  <em class="stack-slot__val">x11</em>
-                </div>
+            <div class="lp-fig-panel__visual lp-fig-panel__visual--static" aria-hidden="true">
+              <div class="lp-translate">
+                <span class="lp-translate__asm">addi x1, x0, 5</span>
+                <span class="lp-translate__arrow">→</span>
+                <span class="lp-translate__c">x1 = 0 + 5;</span>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
+          </article>
 
-      <section class="story-block story-block--flip" data-landing-section>
-        <div class="section-shell section-shell--wide">
-          <div class="story-block__layout">
-            <div class="story-block__text">
-              <div class="story-block__num">02</div>
-              <h2 class="story-block__title">Step through execution, not just outputs.</h2>
-              <p class="story-block__copy">
-                The goal is not to reach final register values faster. It is to see every machine
-                transition and catch the moment your mental model diverges from reality.
-              </p>
-              <a class="story-block__link" href="/simulator/">Try step execution →</a>
-            </div>
-            <div class="story-block__visual story-surface trace-preview" data-landing-depth>
-              <div class="trace-preview__steps">
-                <div class="trace-step">
-                  <span class="trace-step__pc">PC 0x20</span>
-                  <strong class="trace-step__inst">addi x5, x0, 5</strong>
-                  <em class="trace-step__note">Seed loop counter</em>
-                </div>
-                <div class="trace-step trace-step--active">
-                  <span class="trace-step__pc">PC 0x24</span>
-                  <strong class="trace-step__inst">lw x6, 0(x2)</strong>
-                  <em class="trace-step__note">Load next element</em>
-                </div>
-                <div class="trace-step">
-                  <span class="trace-step__pc">PC 0x28</span>
-                  <strong class="trace-step__inst">add x10, x10, x6</strong>
-                  <em class="trace-step__note">Accumulate sum</em>
-                </div>
-                <div class="trace-step">
-                  <span class="trace-step__pc">PC 0x2c</span>
-                  <strong class="trace-step__inst">bne x5, x0, loop</strong>
-                  <em class="trace-step__note">Branch or continue</em>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="story-block" data-landing-section>
-        <div class="section-shell section-shell--wide">
-          <div class="story-block__layout">
-            <div class="story-block__text">
-              <div class="story-block__num">03</div>
-              <h2 class="story-block__title">Practice on real problems, in the same workflow.</h2>
-              <p class="story-block__copy">
-                Lessons, checkpoints, and LeetCode-style problems are part of one product surface.
-                Practice feels like a continuation of the simulator, not a separate tool.
-              </p>
-              <a class="story-block__link" href="/problems/">Browse problems →</a>
-            </div>
-            <div class="story-block__visual story-surface problem-preview" data-landing-depth>
-              <div class="problem-preview__prompt">
-                <h3 class="problem-preview__title">Sum an array into <code>x10</code>.</h3>
-                <ul class="problem-preview__list">
-                  <li>Read each word with <code>lw</code></li>
-                  <li>Loop with a counter, stop at the provided length</li>
-                  <li>Return the total in <code>x10</code></li>
-                </ul>
-              </div>
-              <div class="problem-preview__checks">
-                <div class="problem-preview__result problem-preview__result--pass">
-                  <span>Visible test 1</span>
-                  <strong>Passed</strong>
-                </div>
-                <div class="problem-preview__result problem-preview__result--pass">
-                  <span>Visible test 2</span>
-                  <strong>Passed</strong>
-                </div>
-                <div class="problem-preview__result">
-                  <span>Hidden edge cases</span>
-                  <strong>3 queued</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="story-block story-block--flip" data-landing-section>
-        <div class="section-shell section-shell--wide">
-          <div class="story-block__layout">
-            <div class="story-block__text">
-              <div class="story-block__num">04</div>
-              <h2 class="story-block__title">See branching and pipeline rhythm together.</h2>
-              <p class="story-block__copy">
-                Branches are hard because control flow is invisible in most tools. StudyRISC-V keeps
-                the active stage, the prediction, and the winning path legible at the same time.
-              </p>
-              <a class="story-block__link" href="/simulator/">Explore the simulator →</a>
-            </div>
-            <div class="story-block__visual story-surface flow-preview" data-landing-depth>
-              <div class="flow-preview__pipeline">
-                <div class="flow-stage">IF</div>
-                <div class="flow-stage">ID</div>
-                <div class="flow-stage flow-stage--active">EX</div>
-                <div class="flow-stage">MEM</div>
-                <div class="flow-stage">WB</div>
-              </div>
-              <div class="flow-preview__branch">
-                <div class="flow-preview__paths">
-                  <div class="flow-path">Fallthrough</div>
-                  <div class="flow-path flow-path--active">Loop target</div>
-                  <div class="flow-path">Return path</div>
-                </div>
-              </div>
-              <div class="flow-preview__decision">
-                <code class="flow-decision__inst">bne x5, x0, loop</code>
-                <span class="flow-decision__result">→ branch taken</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ─── CAPABILITIES ─── -->
-      <section class="features" data-landing-section>
-        <div class="section-shell section-shell--wide">
-          <div class="features__header">
-            <h2 class="features__title">
-              One workspace. Several ways to learn.
-            </h2>
-            <p class="features__sub">
-              Simulator, lessons, problems, quizzes, and architecture visuals stay connected so
-              learning feels progressive, not fragmented.
+          <article class="lp-fig-panel">
+            <span class="lp-fig-panel__label">FIG 03</span>
+            <h2 class="lp-fig-panel__title">Problems that teach, not just test.</h2>
+            <p class="lp-fig-panel__desc">
+              15 RISC-V problems with test cases, hints, and automated grading. Each one maps to a
+              real concept from your computer architecture course.
             </p>
-          </div>
-          <div class="features__grid">
-            <div class="feat-card feat-card--accent">
-              <div class="feat-card__icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M4 12h11"></path><path d="m11 5 7 7-7 7"></path><path d="M4 5v14"></path></svg>
+            <div class="lp-fig-panel__visual" aria-hidden="true">
+              <div class="lp-progress-rows">
+                <div class="lp-progress-row">
+                  <span class="lp-progress-row__label">Loops</span>
+                  <div class="lp-progress-row__bar"><div class="lp-progress-row__fill" style="--fill-pct: 80%; --fill-delay: 0ms;"></div></div>
+                </div>
+                <div class="lp-progress-row">
+                  <span class="lp-progress-row__label">Memory</span>
+                  <div class="lp-progress-row__bar"><div class="lp-progress-row__fill" style="--fill-pct: 60%; --fill-delay: 300ms;"></div></div>
+                </div>
+                <div class="lp-progress-row">
+                  <span class="lp-progress-row__label">Functions</span>
+                  <div class="lp-progress-row__bar"><div class="lp-progress-row__fill" style="--fill-pct: 45%; --fill-delay: 600ms;"></div></div>
+                </div>
               </div>
-              <h3 class="feat-card__title">Step. Inspect. Understand.</h3>
-              <p class="feat-card__body">
-                Execute one instruction at a time. Watch every register change, every memory write, every PC jump.
-              </p>
             </div>
+          </article>
 
-            <div class="feat-card">
-              <div class="feat-card__icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M8 8 4 12l4 4"></path><path d="m16 8 4 4-4 4"></path><path d="M10 19h4"></path></svg>
-              </div>
-              <h3 class="feat-card__title">Assembly in plain English.</h3>
-              <p class="feat-card__body">
-                Every instruction translates to a C-like expression. <code>addi x1, x2, 10</code> becomes <code>x1 = x2 + 10</code>.
-              </p>
-            </div>
-
-            <div class="feat-card">
-              <div class="feat-card__icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m12 3 8 4-8 4-8-4 8-4Z"></path><path d="m4 11 8 4 8-4"></path><path d="m4 15 8 4 8-4"></path></svg>
-              </div>
-              <h3 class="feat-card__title">Live stack visualization.</h3>
-              <p class="feat-card__body">
-                Watch the call stack build frame by frame. See <code>ra</code> saved, <code>sp</code> move, calling conventions made concrete.
-              </p>
-            </div>
-
-            <div class="feat-card">
-              <div class="feat-card__icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2H20v20H8.5A2.5 2.5 0 0 0 6 22"></path><path d="M6 4.5V22"></path></svg>
-              </div>
-              <h3 class="feat-card__title">20 structured lessons.</h3>
-              <p class="feat-card__body">
-                From binary arithmetic to function calls. Checkpoints gate progression so you build real understanding.
-              </p>
-            </div>
-
-            <div class="feat-card">
-              <div class="feat-card__icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-13h-7l0-7Z"></path></svg>
-              </div>
-              <h3 class="feat-card__title">15 coding problems.</h3>
-              <p class="feat-card__body">
-                LeetCode-style, RISC-V edition. Write real assembly, run it against test cases from Easy to Hard.
-              </p>
-              <a class="feat-card__link" href="/problems/">Try a problem →</a>
-            </div>
-
-            <div class="feat-card">
-              <div class="feat-card__icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M7 18a4.6 4.6 0 0 1 0-9.2A5.5 5.5 0 0 1 17.5 8a4 4 0 1 1 .5 10H7Z"></path></svg>
-              </div>
-              <h3 class="feat-card__title">No install. Open a tab.</h3>
-              <p class="feat-card__body">
-                The simulator core is compiled to WebAssembly. Browser-native, near-native speed. Start in seconds.
-              </p>
-            </div>
-          </div>
         </div>
       </section>
 
-      <!-- ─── STATS ─── -->
-      <section class="stats-band" data-landing-section>
-        <div class="section-shell section-shell--wide">
-          <div class="stats-band__grid">
-            <div class="stats-band__item">
-              <span class="stats-band__value">342</span>
-              <span class="stats-band__label">Regression tests across the simulator and learning flow</span>
-            </div>
-            <div class="stats-band__item">
-              <span class="stats-band__value">20</span>
-              <span class="stats-band__label">Lessons moving from machine basics to function calls</span>
-            </div>
-            <div class="stats-band__item">
-              <span class="stats-band__value">15</span>
-              <span class="stats-band__label">Coding problems, Easy through Hard</span>
-            </div>
-            <div class="stats-band__item">
-              <span class="stats-band__value">RV32IM</span>
-              <span class="stats-band__label">Browser-based core with registers, memory, and step execution</span>
-            </div>
+      <!-- ─── SOCIAL PROOF STRIP ─── -->
+      <section class="lp-proof-strip" data-landing-section aria-label="Courses that use StudyRISC-V">
+        <div class="lp-proof-strip__track-wrap">
+          <div class="lp-proof-strip__track">
+            <span class="lp-proof-strip__item">CS 61C Berkeley</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item">ECE 3058 Georgia Tech</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item">CS 3410 Cornell</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item">ECE 2035 Georgia Tech</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item">CS 61 Harvard</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item">ECE 4100 Georgia Tech</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item">CS 152 Berkeley</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item">ECE 2500 Purdue</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <!-- duplicate for seamless loop -->
+            <span class="lp-proof-strip__item" aria-hidden="true">CS 61C Berkeley</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item" aria-hidden="true">ECE 3058 Georgia Tech</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item" aria-hidden="true">CS 3410 Cornell</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item" aria-hidden="true">ECE 2035 Georgia Tech</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item" aria-hidden="true">CS 61 Harvard</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item" aria-hidden="true">ECE 4100 Georgia Tech</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item" aria-hidden="true">CS 152 Berkeley</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
+            <span class="lp-proof-strip__item" aria-hidden="true">ECE 2500 Purdue</span>
+            <span class="lp-proof-strip__sep" aria-hidden="true"></span>
           </div>
         </div>
       </section>
@@ -574,20 +292,14 @@
         </div>
       </section>
 
-      <!-- ─── CTA ─── -->
-      <section class="cta-bottom" data-landing-section>
-        <div class="section-shell">
-          <div class="cta-bottom__inner">
-            <h2 class="cta-bottom__title">Ready to actually understand RISC-V?</h2>
-            <p class="cta-bottom__sub">
-              No install. No account required. Open the simulator and start executing assembly in seconds.
-            </p>
-            <div class="cta-bottom__btns">
-              <a class="hero__cta-primary" href="/simulator/">Open Simulator →</a>
-              <a class="hero__cta-secondary" href="/learn/">Browse Lessons</a>
-            </div>
-          </div>
-        </div>
+      <!-- ─── BOTTOM CTA ─── -->
+      <section class="lp-bottom-cta" data-landing-section>
+        <h2 class="lp-bottom-cta__headline">Start for free. No account required.</h2>
+        <p class="lp-bottom-cta__sub">
+          The simulator runs entirely in your browser. Open it now and write your first RISC-V
+          program in under two minutes.
+        </p>
+        <a class="lp-btn lp-btn--primary" href="/simulator/">Open Simulator</a>
       </section>
 
     </main>
@@ -596,505 +308,174 @@
 
     <script>
       (() => {
-        const body = document.body;
-        const heroCodeWindow = document.getElementById("heroCodeWindow");
-        const heroCode = document.getElementById("heroCode");
-        const heroCodeLabel = document.getElementById("heroCodeLabel");
-        const HERO_PROGRAMS = [
-          {
-            filename: "sum_loop.s",
-            lines: [
-              "# compute sum of array",
-              "la   x1, arr",
-              "addi x2, x0, 5    # count",
-              "addi x3, x0, 0    # sum",
-              "loop:",
-              "  lw   x4, 0(x1)",
-              "  add  x3, x3, x4",
-              "  addi x1, x1, 4",
-              "  addi x2, x2, -1",
-              "  bne  x2, x0, loop",
-            ],
-          },
-          {
-            filename: "factorial.s",
-            lines: [
-              "# factorial of 5",
-              "addi x1, x0, 5    # n",
-              "addi x2, x0, 1    # result",
-              "fact:",
-              "  mul  x2, x2, x1",
-              "  addi x1, x1, -1",
-              "  bne  x1, x0, fact",
-            ],
-          },
-          {
-            filename: "strlen.s",
-            lines: [
-              "# string length",
-              "la   x1, str",
-              "addi x2, x0, 0    # len",
-              "count:",
-              "  lb   x3, 0(x1)",
-              "  beq  x3, x0, done",
-              "  addi x1, x1, 1",
-              "  addi x2, x2, 1",
-              "  j    count",
-              "done:",
-            ],
-          },
-          {
-            filename: "fib.s",
-            lines: [
-              "# fibonacci sequence",
-              "addi x1, x0, 0    # a",
-              "addi x2, x0, 1    # b",
-              "addi x3, x0, 8    # count",
-              "fib:",
-              "  add  x4, x1, x2",
-              "  mv   x1, x2",
-              "  mv   x2, x4",
-              "  addi x3, x3, -1",
-              "  bne  x3, x0, fib",
-            ],
-          },
-          {
-            filename: "swap.s",
-            lines: [
-              "# swap two values",
-              "addi x1, x0, 42   # a",
-              "addi x2, x0, 17   # b",
-              "xor  x1, x1, x2",
-              "xor  x2, x1, x2",
-              "xor  x1, x1, x2   # swapped",
-            ],
-          },
+        /* ── Typewriter for the hero code window ── */
+        const SNIPPET = [
+          { text: "addi x1, x0, 5",   type: "code" },
+          { text: "addi x2, x0, 1",   type: "code" },
+          { text: "loop:",             type: "label" },
+          { text: "  beq x1, x0, done", type: "code" },
+          { text: "  mul x2, x2, x1", type: "code" },
+          { text: "  addi x1, x1, -1",type: "code" },
+          { text: "  j loop",         type: "code" },
+          { text: "done:",            type: "label" },
         ];
-        const HERO_MNEMONICS = new Set([
-          "addi",
-          "add",
-          "sub",
-          "mul",
-          "la",
-          "lw",
-          "sw",
-          "lb",
-          "sb",
-          "mv",
-          "j",
-          "bne",
-          "beq",
-          "blt",
-          "bge",
-          "jal",
-          "jalr",
-          "xor",
-          "and",
-          "or",
-          "slli",
-          "srli",
-          "srai",
-          "lui",
-          "auipc",
-          "ret",
-          "call",
-        ]);
-        const HERO_NEIGHBOR_KEYS = {
-          a: ["s", "q"],
-          d: ["f", "s"],
-          i: ["o", "u"],
-          x: ["z", "c"],
-          l: ["k", ";"],
-          w: ["e", "q"],
-          b: ["v", "n"],
-          0: ["9", "o"],
-          ",": [".", "m"],
-        };
-        const BASE_TYPE_SPEED = 55;
-        const SPEED_VARIANCE = 20;
-        const PAUSE_AFTER_LINE = 180;
-        const PAUSE_AFTER_HASH = 120;
-        const DELETE_SPEED = 40;
-        const TYPO_PAUSE = 300;
-        const TYPO_PROBABILITY = 0.008;
-        const registerPattern =
-          /^(?:x(?:[0-9]|[12][0-9]|3[01])|zero|ra|sp|gp|tp|t[0-6]|s(?:[0-9]|1[01])|fp|a[0-7])$/;
-        const numberPattern = /^-?(?:0x[0-9a-f]+|\d+)$/i;
-        const heroReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const heroTypingScale = window.matchMedia("(max-width: 768px)").matches ? 1 / 1.5 : 1;
-        const heroTimers = {
-          typing: 0,
-          autoCycle: 0,
-          fade: 0,
-          switchProgram: 0,
-          reopen: 0,
-          labelSwap: 0,
-          labelFade: 0,
-          pulse: 0,
-        };
-        const heroState = {
-          programIndex: 0,
-          lineIndex: 0,
-          charIndex: 0,
-          completedLines: [],
-          currentLineText: "",
-          currentLineTypoUsed: false,
-          isTransitioning: false,
-        };
 
-        function escapeHtml(value) {
-          return value
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/\"/g, "&quot;")
-            .replace(/'/g, "&#39;");
+        const CHAR_DELAY = 120;
+        const LINE_PAUSE = 180;
+        const END_PAUSE  = 2000;
+        const FADE_DURATION = 400;
+
+        const REGISTERS   = /\b(x0|x1|x2|x3|x4|x5|x6|x7|x8|x9|x10|x11|x12|x13|x14|x15|x16|x17|x18|x19|x20|x21|x22|x23|x24|x25|x26|x27|x28|x29|x30|x31|zero|ra|sp|gp|tp|t[0-6]|s[0-9]|s10|s11|fp|a[0-7])\b/g;
+        const MNEMONICS   = /^(\s*)(addi|add|sub|mul|div|rem|and|or|xor|sll|srl|sra|lw|sw|lb|sb|lh|sh|beq|bne|blt|bge|bltu|bgeu|j|jal|jalr|lui|auipc|mv|ret|call|la|li)(\b)/;
+        const LABELS_RE   = /^(\s*)([A-Za-z_.$][\w.$]*:)/;
+        const NUMBERS_RE  = /\b(-?(?:0x[0-9a-fA-F]+|\d+))\b/g;
+
+        function esc(s) {
+          return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
         }
 
-        function clearHeroTimers() {
-          Object.keys(heroTimers).forEach((key) => {
-            window.clearTimeout(heroTimers[key]);
-            heroTimers[key] = 0;
-          });
-        }
-
-        function heroProgram() {
-          return HERO_PROGRAMS[heroState.programIndex];
-        }
-
-        function heroTypingDelay(duration) {
-          if (heroReducedMotion) {
-            return 0;
-          }
-          return Math.max(0, Math.round(duration * heroTypingScale));
-        }
-
-        function scheduleHeroTyping(callback, delay) {
-          window.clearTimeout(heroTimers.typing);
-          heroTimers.typing = window.setTimeout(callback, delay);
-        }
-
-        function setHeroFilename(filename) {
-          if (heroCodeLabel instanceof HTMLElement) {
-            heroCodeLabel.textContent = filename;
-          }
-        }
-
-        function crossfadeHeroFilename(filename) {
-          if (!(heroCodeLabel instanceof HTMLElement)) {
-            return;
-          }
-          if (heroReducedMotion) {
-            heroCodeLabel.textContent = filename;
-            return;
-          }
-          window.clearTimeout(heroTimers.labelSwap);
-          window.clearTimeout(heroTimers.labelFade);
-          heroCodeLabel.classList.add("is-fading");
-          heroTimers.labelSwap = window.setTimeout(() => {
-            heroCodeLabel.textContent = filename;
-          }, 150);
-          heroTimers.labelFade = window.setTimeout(() => {
-            heroCodeLabel.classList.remove("is-fading");
-          }, 300);
-        }
-
-        function highlightInline(text) {
-          const tokenPattern =
-            /\b(?:x(?:[0-9]|[12][0-9]|3[01])|zero|ra|sp|gp|tp|t[0-6]|s(?:[0-9]|1[01])|fp|a[0-7])\b|-?(?:0x[0-9a-f]+|\d+)/gi;
-          let cursor = 0;
-          let html = "";
-          for (const match of text.matchAll(tokenPattern)) {
-            const index = match.index ?? 0;
-            const token = match[0];
-            html += escapeHtml(text.slice(cursor, index));
-            if (registerPattern.test(token)) {
-              html += `<span class="hero-code__register">${escapeHtml(token)}</span>`;
-            } else if (numberPattern.test(token)) {
-              html += `<span class="hero-code__number">${escapeHtml(token)}</span>`;
-            } else {
-              html += escapeHtml(token);
-            }
-            cursor = index + token.length;
-          }
-          html += escapeHtml(text.slice(cursor));
-          return html;
-        }
-
-        function renderHeroLine(line, showCursor) {
-          const commentIndex = line.indexOf("#");
-          const codePart = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
-          const commentPart = commentIndex >= 0 ? line.slice(commentIndex) : "";
-          const leading = codePart.match(/^\s*/)?.[0] ?? "";
-          let remainder = codePart.slice(leading.length);
-          let labelHtml = "";
-          let mnemonicHtml = "";
-
-          const labelMatch = remainder.match(/^([A-Za-z_.$][\w.$]*:)(\s*)/);
+        function highlightLine(raw) {
+          const labelMatch = raw.match(LABELS_RE);
           if (labelMatch) {
-            labelHtml = `<span class="hero-code__label-ref">${escapeHtml(labelMatch[1])}</span>${escapeHtml(labelMatch[2])}`;
-            remainder = remainder.slice(labelMatch[0].length);
+            const indent = esc(labelMatch[1]);
+            const label  = `<span class="lp-tw__label">${esc(labelMatch[2])}</span>`;
+            const rest   = esc(raw.slice(labelMatch[0].length));
+            return `${indent}${label}${rest}`;
           }
 
-          const mnemonicMatch = remainder.match(/^([A-Za-z.]+)(\s*)/);
-          if (mnemonicMatch && HERO_MNEMONICS.has(mnemonicMatch[1].toLowerCase())) {
-            mnemonicHtml = `<span class="hero-code__mnemonic">${escapeHtml(mnemonicMatch[1])}</span>${escapeHtml(mnemonicMatch[2])}`;
-            remainder = remainder.slice(mnemonicMatch[0].length);
+          const mnemonicMatch = raw.match(MNEMONICS);
+          let html = "";
+          let remainder = raw;
+
+          if (mnemonicMatch) {
+            html += esc(mnemonicMatch[1]);
+            html += `<span class="lp-tw__mnemonic">${esc(mnemonicMatch[2])}</span>`;
+            remainder = raw.slice(mnemonicMatch[1].length + mnemonicMatch[2].length);
           }
 
-          const commentHtml = commentPart
-            ? `<span class="hero-code__comment">${escapeHtml(commentPart)}</span>`
-            : "";
-          const cursorHtml = showCursor ? '<span class="hero-code__cursor" aria-hidden="true"></span>' : "";
-
-          return `<div class="hero-code__line">${escapeHtml(leading)}${labelHtml}${mnemonicHtml}${highlightInline(
-            remainder
-          )}${commentHtml}${cursorHtml}</div>`;
+          let regHtml = esc(remainder);
+          regHtml = regHtml.replace(REGISTERS, '<span class="lp-tw__register">$1</span>');
+          regHtml = regHtml.replace(NUMBERS_RE, '<span class="lp-tw__number">$1</span>');
+          return html + regHtml;
         }
 
-        function renderHeroCode(showCursor = true) {
-          if (!(heroCode instanceof HTMLElement)) {
+        const win    = document.getElementById("lpCodeWindow");
+        const body   = document.getElementById("lpCodeBody");
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        if (!win || !body) return;
+
+        let lineIdx = 0;
+        let charIdx = 0;
+        let completedLines = [];
+        let timer = 0;
+        let fading = false;
+
+        function renderAll(showCursor) {
+          let html = "";
+          for (const line of completedLines) {
+            html += `<div class="lp-tw__line">${highlightLine(line)}</div>`;
+          }
+          if (lineIdx < SNIPPET.length) {
+            const partial = SNIPPET[lineIdx].text.slice(0, charIdx);
+            const cursor  = showCursor ? '<span class="lp-tw__cursor" aria-hidden="true"></span>' : "";
+            html += `<div class="lp-tw__line">${highlightLine(partial)}${cursor}</div>`;
+          }
+          body.innerHTML = html;
+          body.scrollTop = body.scrollHeight;
+        }
+
+        function reset() {
+          lineIdx = 0;
+          charIdx = 0;
+          completedLines = [];
+        }
+
+        function startFadeRestart() {
+          fading = true;
+          win.classList.add("lp-code-window--fading");
+          timer = window.setTimeout(() => {
+            reset();
+            renderAll(false);
+            win.classList.remove("lp-code-window--fading");
+            fading = false;
+            timer = window.setTimeout(tick, CHAR_DELAY);
+          }, FADE_DURATION);
+        }
+
+        function tick() {
+          if (fading) return;
+          if (lineIdx >= SNIPPET.length) {
+            renderAll(false);
+            timer = window.setTimeout(startFadeRestart, END_PAUSE);
             return;
           }
-
-          const currentLines = heroState.completedLines
-            .map((line) => renderHeroLine(line, false))
-            .join("");
-          const shouldRenderCurrentLine =
-            heroState.lineIndex < heroProgram().lines.length ||
-            heroState.currentLineText.length > 0 ||
-            heroState.completedLines.length === 0;
-          const currentLineHtml = shouldRenderCurrentLine
-            ? renderHeroLine(heroState.currentLineText, showCursor)
-            : "";
-
-          heroCode.innerHTML = `${currentLines}${currentLineHtml}`;
-          heroCode.scrollTop = heroCode.scrollHeight;
+          const line = SNIPPET[lineIdx].text;
+          charIdx += 1;
+          renderAll(true);
+          if (charIdx >= line.length) {
+            completedLines.push(line);
+            lineIdx += 1;
+            charIdx = 0;
+            timer = window.setTimeout(tick, LINE_PAUSE);
+          } else {
+            timer = window.setTimeout(tick, CHAR_DELAY);
+          }
         }
 
-        function resetHeroProgram(programIndex) {
-          heroState.programIndex = programIndex;
-          heroState.lineIndex = 0;
-          heroState.charIndex = 0;
-          heroState.completedLines = [];
-          heroState.currentLineText = "";
-          heroState.currentLineTypoUsed = false;
+        if (reducedMotion) {
+          completedLines = SNIPPET.map(s => s.text);
+          lineIdx = SNIPPET.length;
+          renderAll(false);
+        } else {
+          renderAll(true);
+          timer = window.setTimeout(tick, CHAR_DELAY);
         }
 
-        function renderFullHeroProgram(programIndex) {
-          resetHeroProgram(programIndex);
-          heroState.completedLines = HERO_PROGRAMS[programIndex].lines.slice();
-          heroState.lineIndex = HERO_PROGRAMS[programIndex].lines.length;
-          heroState.currentLineText = "";
-          renderHeroCode(false);
-        }
-
-        function heroNeighborKey(char) {
-          const options = HERO_NEIGHBOR_KEYS[char.toLowerCase()] ?? ["s", "d", "f"];
-          const replacement = options[Math.floor(Math.random() * options.length)];
-          return char === char.toUpperCase() ? replacement.toUpperCase() : replacement;
-        }
-
-        function buildTypoText(line) {
-          const typoLength = Math.min(Math.random() < 0.55 ? 1 : 2, line.length - heroState.charIndex - 1);
-          let typoText = "";
-          for (let index = 0; index < typoLength; index += 1) {
-            typoText += heroNeighborKey(line.charAt(heroState.charIndex + index) || line.charAt(heroState.charIndex));
-          }
-          return typoText;
-        }
-
-        function deleteHeroTypo(prefix, typoText) {
-          heroState.currentLineText = prefix + typoText;
-          renderHeroCode(true);
-
-          if (typoText.length === 0) {
-            scheduleHeroTyping(stepHeroTyping, heroTypingDelay(DELETE_SPEED));
-            return;
-          }
-
-          scheduleHeroTyping(() => {
-            deleteHeroTypo(prefix, typoText.slice(0, -1));
-          }, heroTypingDelay(DELETE_SPEED));
-        }
-
-        function maybeTypeTypo(line) {
-          const trimmedLine = line.trimStart();
-          const commentIndex = line.indexOf("#");
-          const eligible =
-            !trimmedLine.startsWith("#") &&
-            !heroState.currentLineTypoUsed &&
-            heroState.charIndex >= 3 &&
-            heroState.charIndex < line.length - 1 &&
-            (commentIndex === -1 || heroState.charIndex < commentIndex);
-
-          if (!eligible || Math.random() >= TYPO_PROBABILITY) {
-            return false;
-          }
-
-          const prefix = line.slice(0, heroState.charIndex);
-          const typoText = buildTypoText(line);
-          heroState.currentLineTypoUsed = true;
-          heroState.currentLineText = prefix + typoText;
-          renderHeroCode(true);
-          scheduleHeroTyping(() => {
-            deleteHeroTypo(prefix, typoText);
-          }, heroTypingDelay(TYPO_PAUSE));
-          return true;
-        }
-
-        function finalizeHeroLine() {
-          const currentLine = heroProgram().lines[heroState.lineIndex];
-          heroState.completedLines.push(currentLine);
-          heroState.lineIndex += 1;
-          heroState.charIndex = 0;
-          heroState.currentLineText = "";
-          heroState.currentLineTypoUsed = false;
-
-          if (heroState.lineIndex >= heroProgram().lines.length) {
-            renderFullHeroProgram(heroState.programIndex);
-            if (!heroReducedMotion) {
-              heroTimers.autoCycle = window.setTimeout(() => {
-                transitionHeroProgram((heroState.programIndex + 1) % HERO_PROGRAMS.length, {
-                  preFadeDelay: 0,
-                  fadeDuration: 300,
-                });
-              }, 2400);
-            }
-            return;
-          }
-
-          renderHeroCode(true);
-          scheduleHeroTyping(stepHeroTyping, 0);
-        }
-
-        function stepHeroTyping() {
-          if (heroReducedMotion || heroState.isTransitioning) {
-            return;
-          }
-
-          const line = heroProgram().lines[heroState.lineIndex];
-          if (typeof line !== "string") {
-            return;
-          }
-
-          if (maybeTypeTypo(line)) {
-            return;
-          }
-
-          heroState.charIndex += 1;
-          heroState.currentLineText = line.slice(0, heroState.charIndex);
-          renderHeroCode(true);
-
-          if (heroState.charIndex >= line.length) {
-            scheduleHeroTyping(finalizeHeroLine, heroTypingDelay(PAUSE_AFTER_LINE));
-            return;
-          }
-
-          const typedCharacter = line.charAt(heroState.charIndex - 1);
-          const characterDelay =
-            BASE_TYPE_SPEED +
-            Math.round((Math.random() * 2 - 1) * SPEED_VARIANCE) +
-            (typedCharacter === "#" ? PAUSE_AFTER_HASH : 0);
-          scheduleHeroTyping(stepHeroTyping, heroTypingDelay(characterDelay));
-        }
-
-        function startHeroProgram(programIndex) {
-          clearHeroTimers();
-          heroState.isTransitioning = false;
-          resetHeroProgram(programIndex);
-          setHeroFilename(HERO_PROGRAMS[programIndex].filename);
-
-          if (heroCodeWindow instanceof HTMLElement) {
-            heroCodeWindow.classList.remove("is-content-hidden");
-          }
-
-          if (heroReducedMotion) {
-            renderFullHeroProgram(programIndex);
-            return;
-          }
-
-          renderHeroCode(true);
-          scheduleHeroTyping(stepHeroTyping, heroTypingDelay(220));
-        }
-
-        function transitionHeroProgram(nextProgramIndex, options = {}) {
-          if (!(heroCodeWindow instanceof HTMLElement)) {
-            return;
-          }
-
-          const { preFadeDelay = 0, fadeDuration = 300, showCurrentProgram = false } = options;
-          clearHeroTimers();
-          heroState.isTransitioning = true;
-
-          if (showCurrentProgram) {
-            renderFullHeroProgram(heroState.programIndex);
-          }
-
-          crossfadeHeroFilename(HERO_PROGRAMS[nextProgramIndex].filename);
-
-          heroTimers.fade = window.setTimeout(() => {
-            heroCodeWindow.classList.add("is-content-hidden");
-          }, preFadeDelay);
-
-          heroTimers.switchProgram = window.setTimeout(() => {
-            resetHeroProgram(nextProgramIndex);
-            if (heroReducedMotion) {
-              renderFullHeroProgram(nextProgramIndex);
-            } else {
-              renderHeroCode(true);
-            }
-            heroCodeWindow.classList.remove("is-content-hidden");
-            heroState.programIndex = nextProgramIndex;
-            heroState.isTransitioning = false;
-            if (!heroReducedMotion) {
-              scheduleHeroTyping(stepHeroTyping, heroTypingDelay(180));
-            }
-          }, preFadeDelay + fadeDuration);
-        }
-
+        /* ── IntersectionObserver fade-up for all landing sections ── */
         document.addEventListener("DOMContentLoaded", () => {
-          body.classList.add("loaded");
-          body.classList.add("hero-loaded");
-          startHeroProgram(0);
+          document.body.classList.add("loaded");
 
-          const cards = document.querySelectorAll(".js-reveal");
-          const observer = new IntersectionObserver(
+          const targets = document.querySelectorAll("[data-landing-section]");
+          const io = new IntersectionObserver(
             (entries) => {
-              entries.forEach((entry) => {
-                if (entry.isIntersecting) {
-                  entry.target.classList.add("is-visible");
-                  observer.unobserve(entry.target);
+              entries.forEach((e) => {
+                if (e.isIntersecting) {
+                  e.target.classList.add("lp-visible");
+                  io.unobserve(e.target);
                 }
               });
             },
-            { threshold: 0.2 }
+            { threshold: 0.15 }
           );
+          targets.forEach((el) => io.observe(el));
 
-          cards.forEach((card, index) => {
-            card.style.setProperty("--reveal-delay", `${index * 80}ms`);
-            observer.observe(card);
-          });
-
-          const coverageStrip = document.querySelector(".coverage-pills");
-          const pills = document.querySelectorAll(".js-pill");
-          pills.forEach((pill, index) => {
-            pill.style.setProperty("--pill-delay", `${index * 40}ms`);
-          });
-
-          if (coverageStrip && pills.length > 0) {
-            const pillObserver = new IntersectionObserver(
-              (entries) => {
-                entries.forEach((entry) => {
-                  if (!entry.isIntersecting) return;
-                  pills.forEach((pill) => pill.classList.add("is-visible"));
-                  pillObserver.unobserve(entry.target);
-                });
-              },
-              { threshold: 0.3 }
-            );
-            pillObserver.observe(coverageStrip);
+          /* pipeline animation active stage cycling */
+          const stages = document.querySelectorAll(".lp-pipeline-anim__stage");
+          let activeStage = 0;
+          if (stages.length > 0 && !reducedMotion) {
+            stages[activeStage].classList.add("lp-pipeline-anim__stage--active");
+            setInterval(() => {
+              stages[activeStage].classList.remove("lp-pipeline-anim__stage--active");
+              activeStage = (activeStage + 1) % stages.length;
+              stages[activeStage].classList.add("lp-pipeline-anim__stage--active");
+            }, 900);
           }
+
+          /* progress bar fill trigger */
+          const fills = document.querySelectorAll(".lp-progress-row__fill");
+          const fillObs = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((e) => {
+                if (e.isIntersecting) {
+                  e.target.classList.add("lp-progress-row__fill--animate");
+                  fillObs.unobserve(e.target);
+                }
+              });
+            },
+            { threshold: 0.3 }
+          );
+          fills.forEach((f) => fillObs.observe(f));
         });
       })();
     </script>
@@ -1183,92 +564,6 @@
           void renderLandingResume();
         });
       });
-
-      const MINI_PROGRAM = `# Add two numbers
-addi x1, x0, 10    # x1 = 10
-addi x2, x0, 20    # x2 = 20
-add  x3, x1, x2    # x3 = x1 + x2`;
-
-      const MINI_ABI = ["zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2"];
-
-      function translateRiscvToClike(instText) {
-        const normalized = instText.trim().replace(/\s+/g, " ");
-        const tokens = normalized.replace(/,/g, " ").split(/\s+/);
-        const op = (tokens[0] || "").toLowerCase();
-        const a = tokens[1];
-        const b = tokens[2];
-        const c = tokens[3];
-
-        const binOp = (symbol) => `${a} = ${b} ${symbol} ${c};`;
-        const immOp = (symbol) => `${a} = ${b} ${symbol} ${c};`;
-
-        if (op === "addi") return immOp("+");
-        if (op === "add") return binOp("+");
-        if (op === "sub") return binOp("-");
-        if (op === "and") return binOp("&");
-        if (op === "or") return binOp("|");
-        if (op === "xor") return binOp("^");
-        if (op === "sll") return binOp("<<");
-        if (op === "srl") return `${a} = ((unsigned)${b}) >> ${c};`;
-        if (op === "sra") return `${a} = ((int)${b}) >> ${c};`;
-        if (op === "mul") return binOp("*");
-        if (op === "div") return `${a} = ((int)${b}) / ((int)${c});`;
-        if (op === "divu") return `${a} = ${b} / ${c};`;
-        if (op === "rem") return `${a} = ((int)${b}) % ((int)${c});`;
-        if (op === "remu") return `${a} = ${b} % ${c};`;
-        if (op === "slti") return `${a} = ((int)${b} < ${c}) ? 1 : 0;`;
-        if (op === "slt") return `${a} = ((int)${b} < (int)${c}) ? 1 : 0;`;
-        if (op === "sltu") return `${a} = (${b} < ${c}) ? 1 : 0;`;
-
-        const loadMatch = normalized.match(/^(\w+)\s+(\w+)\s*,\s*([^)]+)\((\w+)\)$/i);
-        if (loadMatch) {
-          const loadOp = loadMatch[1].toLowerCase();
-          const rd = loadMatch[2];
-          const imm = loadMatch[3];
-          const rs1 = loadMatch[4];
-          if (loadOp === "lw") return `${rd} = *(u32*)(${rs1} + ${imm});`;
-          if (loadOp === "lh") return `${rd} = *(i16*)(${rs1} + ${imm});`;
-          if (loadOp === "lhu") return `${rd} = *(u16*)(${rs1} + ${imm});`;
-          if (loadOp === "lb") return `${rd} = *(i8*)(${rs1} + ${imm});`;
-          if (loadOp === "lbu") return `${rd} = *(u8*)(${rs1} + ${imm});`;
-          if (loadOp === "jalr") return `tmp = pc + 4; pc = (${rs1} + ${imm}) & ~1; ${rd} = tmp;`;
-        }
-
-        const storeMatch = normalized.match(/^(\w+)\s+(\w+)\s*,\s*([^)]+)\((\w+)\)$/i);
-        if (storeMatch) {
-          const storeOp = storeMatch[1].toLowerCase();
-          const rs2 = storeMatch[2];
-          const imm = storeMatch[3];
-          const rs1 = storeMatch[4];
-          if (storeOp === "sw") return `*(u32*)(${rs1} + ${imm}) = ${rs2};`;
-          if (storeOp === "sh") return `*(u16*)(${rs1} + ${imm}) = ${rs2};`;
-          if (storeOp === "sb") return `*(u8*)(${rs1} + ${imm}) = ${rs2};`;
-        }
-
-        if (op === "beq") return `if (${a} == ${b}) pc = ${c}; else pc += 4;`;
-        if (op === "bne") return `if (${a} != ${b}) pc = ${c}; else pc += 4;`;
-        if (op === "blt") return `if ((int)${a} < (int)${b}) pc = ${c}; else pc += 4;`;
-        if (op === "bge") return `if ((int)${a} >= (int)${b}) pc = ${c}; else pc += 4;`;
-        if (op === "bltu") return `if (${a} < ${b}) pc = ${c}; else pc += 4;`;
-        if (op === "bgeu") return `if (${a} >= ${b}) pc = ${c}; else pc += 4;`;
-        if (op === "jal") return `tmp = pc + 4; pc = ${c ?? b}; ${a ?? "x1"} = tmp;`;
-        if (op === "lui") return `${a} = ${b} << 12;`;
-        if (op === "auipc") return `${a} = pc + (${b} << 12);`;
-        if (op === "ecall") return "trap_ecall();";
-
-        return normalized;
-      }
-
-      function buildClikeMap(disasm) {
-        const map = new Map();
-        for (const line of disasm ?? []) {
-          if (!line.label) {
-            map.set(line.pc, translateRiscvToClike(line.text));
-          }
-        }
-        return map;
-      }
-
     </script>
   </body>
 </html>
