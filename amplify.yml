@@ -9,8 +9,8 @@ frontend:
                 - 'cd frontend && npm ci'
         build:
             commands:
-                - 'cd rust-core && wasm-pack build --target web --out-dir ../frontend/src/pkg'
-                - 'cd frontend && npm run build'
+                - 'cd $CODEBUILD_SRC_DIR/rust-core && wasm-pack build --target web --out-dir $CODEBUILD_SRC_DIR/frontend/src/pkg'
+                - 'cd $CODEBUILD_SRC_DIR/frontend && npm run build'
     artifacts:
         baseDirectory: frontend/dist
         files:
