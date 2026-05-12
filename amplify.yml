@@ -12,7 +12,7 @@ frontend:
                 - 'cd $CODEBUILD_SRC_DIR/studyriscv-private/rust-core && wasm-pack build --target web --out-dir $CODEBUILD_SRC_DIR/studyriscv-private/frontend/src/pkg'
                 - 'cd $CODEBUILD_SRC_DIR/studyriscv-private/frontend && npm run build'
     artifacts:
-        baseDirectory: frontend/dist
+        baseDirectory: $CODEBUILD_SRC_DIR/studyriscv-private/frontend/dist
         files:
             - '**/*'
     cache:
