@@ -6,9 +6,14 @@ frontend:
                 - 'curl --proto ''=https'' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
                 - 'source $HOME/.cargo/env'
                 - 'curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh'
+                - 'echo "CODEBUILD_SRC_DIR=$CODEBUILD_SRC_DIR"'
+                - 'echo "PWD=$(pwd)"'
+                - 'ls -la'
                 - 'cd frontend && npm ci'
         build:
             commands:
+                - 'echo "BUILD PWD=$(pwd)"'
+                - 'ls -la'
                 - 'cd $CODEBUILD_SRC_DIR/rust-core && wasm-pack build --target web --out-dir $CODEBUILD_SRC_DIR/frontend/src/pkg'
                 - 'cd $CODEBUILD_SRC_DIR/frontend && npm run build'
     artifacts:
