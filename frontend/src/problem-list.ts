@@ -269,12 +269,24 @@ export function formatTimerValue(totalSeconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-export function getCurrentProblemId(search = typeof window !== "undefined" ? window.location.search : ""): string | null {
-  return new URLSearchParams(search).get("id");
+export function getCurrentProblemId(
+  search = typeof window !== "undefined" ? window.location.search : "",
+  pathname = typeof window !== "undefined" ? window.location.pathname : "",
+): string | null {
+  const queryId = new URLSearchParams(search).get("id");
+  if (queryId) {
+    return queryId;
+  }
+
+  const match = pathname.match(/^\/problems\/([^/?#]+)\/?$/);
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
-export function getCurrentProblem(search = typeof window !== "undefined" ? window.location.search : ""): Problem | null {
-  return getProblem(getCurrentProblemId(search)) ?? null;
+export function getCurrentProblem(
+  search = typeof window !== "undefined" ? window.location.search : "",
+  pathname = typeof window !== "undefined" ? window.location.pathname : "",
+): Problem | null {
+  return getProblem(getCurrentProblemId(search, pathname)) ?? null;
 }
 
 function getCurrentTagFilter(search = typeof window !== "undefined" ? window.location.search : ""): ProblemTag | "" {
@@ -1786,7 +1798,7 @@ class ProblemsPageApp {
     this.problemLayout.hidden = false;
     (document.getElementById("problems-list-view") as HTMLElement | null)?.setAttribute("hidden", "");
     (document.getElementById("problem-workspace-view") as HTMLElement | null)?.removeAttribute("hidden");
-    this.nav.hidden = true;
+    this.nav.hidden = false;
     this.footer.hidden = true;
     this.body.classList.add("pv-body");
     this.verdict.hidden = true;

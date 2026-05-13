@@ -910,24 +910,23 @@
 }
 
 .pv-body {
-  padding-top: 0 !important;
+  padding-top: var(--nav-height, 64px) !important;
 }
 
-.pv-body #site-nav,
 .pv-body #site-footer {
   display: none !important;
 }
 
 .pv-body .problems-shell {
-  min-height: 100vh;
-  height: 100vh;
+  min-height: calc(100vh - var(--nav-height, 64px));
+  height: calc(100vh - var(--nav-height, 64px));
   background: var(--pv-bg-page);
 }
 
 .pv-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: calc(100vh - var(--nav-height, 64px));
   background: var(--pv-bg-page);
   overflow: hidden;
 }

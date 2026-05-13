@@ -23,6 +23,7 @@ export interface NavConfig {
 
 const THEME_KEY = "studyriscv-theme";
 const CLOSE_DELAY_MS = 80;
+const HOME_HREF = "/";
 let searchShortcutBound = false;
 
 function getSearchKbd(): string {
@@ -115,7 +116,7 @@ function renderNav(config: NavConfig): string {
   return `
     <div class="nav-mobile-shell">
       <div class="nav-inner">
-        <a href="/" class="nav-logo" aria-label="StudyRISC-V home">
+        <a href="${HOME_HREF}" class="nav-logo" aria-label="StudyRISC-V home">
           <span class="nav-logo__badge" aria-hidden="true">
             <img class="nav-logo__mark" src="${faviconChipUrl}" alt="" />
             <span class="nav-logo__fallback">SR</span>
@@ -325,6 +326,7 @@ export function initNav(config: NavConfig): void {
     authMenu.removeAttribute("data-ready");
     authMenu.removeAttribute("data-init");
   }
+  logoLink?.setAttribute("href", HOME_HREF);
   if (logoLink && logoMark) {
     const enableLogoFallback = () => {
       logoLink.classList.add("nav-logo--fallback");

@@ -1,6 +1,8 @@
 .checkpoints-page {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding-top: var(--nav-height, 64px);
+  scrollbar-gutter: stable;
 }
 
 .checkpoints-page .cp-shell {
