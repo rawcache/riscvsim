@@ -8554,3 +8554,285 @@ body.simulator-page {
   font-family: var(--font-mono) !important;
 }
 
+/* ============================================================
+   SIMULATOR WORKBENCH REFRESH
+   ============================================================ */
+
+body.simulator-page {
+  --sim-workspace-bg: color-mix(in srgb, var(--bg-base) 94%, var(--accent) 6%);
+  --sim-panel-bg: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  --sim-panel-hi: color-mix(in srgb, var(--bg-elevated) 90%, var(--accent) 10%);
+  --sim-panel-soft: color-mix(in srgb, var(--bg-surface) 82%, var(--bg-base) 18%);
+  --sim-border: color-mix(in srgb, var(--border) 86%, var(--accent) 14%);
+  --sim-border-strong: color-mix(in srgb, var(--border) 68%, var(--accent) 32%);
+  --sim-shadow: 0 18px 50px color-mix(in srgb, var(--bg-base) 72%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 220px),
+    var(--sim-workspace-bg);
+}
+
+body.simulator-page:not(.is-mobile) .simulator-app {
+  min-height: calc(100vh - var(--nav-height, 64px));
+  padding: 14px;
+  background: transparent;
+}
+
+body.simulator-page:not(.is-mobile) .simulator-layout {
+  grid-template-columns: minmax(320px, 0.9fr) minmax(500px, 1.45fr) minmax(280px, 0.82fr) !important;
+  height: calc(100vh - var(--nav-height, 64px) - 28px) !important;
+  gap: 14px !important;
+  border-top: 0 !important;
+  font-size: 12px;
+}
+
+body.simulator-page:not(.is-mobile) .sim-column {
+  gap: 14px;
+  min-height: 0;
+}
+
+body.simulator-page:not(.is-mobile) .sim-column--left,
+body.simulator-page:not(.is-mobile) .sim-column--right {
+  border: 0 !important;
+}
+
+body.simulator-page:not(.is-mobile) .sim-column--left,
+body.simulator-page:not(.is-mobile) .sim-column--right,
+body.simulator-page:not(.is-mobile) .sim-column--center {
+  overflow: hidden;
+}
+
+body.simulator-page:not(.is-mobile) .sim-column--left {
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+body.simulator-page:not(.is-mobile) .sim-panel {
+  border: 1px solid var(--sim-border) !important;
+  border-radius: 8px !important;
+  background: var(--sim-panel-bg) !important;
+  box-shadow: var(--sim-shadow) !important;
+}
+
+body.simulator-page:not(.is-mobile) .sim-column--left .sim-panel,
+body.simulator-page:not(.is-mobile) .sim-column--right .sim-panel,
+body.simulator-page:not(.is-mobile) .sim-column--center .sim-panel {
+  border-left: 1px solid var(--sim-border) !important;
+  border-right: 1px solid var(--sim-border) !important;
+}
+
+body.simulator-page:not(.is-mobile) .sim-panel--center-tabs,
+body.simulator-page:not(.is-mobile) .memory-panel,
+body.simulator-page:not(.is-mobile) .register-file-section {
+  min-height: 0;
+}
+
+body.simulator-page:not(.is-mobile) .sim-panel--center-tabs {
+  flex: 1 1 58%;
+}
+
+body.simulator-page:not(.is-mobile) .memory-panel {
+  flex: 1 1 42%;
+}
+
+body.simulator-page:not(.is-mobile) .register-file-section {
+  height: 100%;
+}
+
+body.simulator-page:not(.is-mobile) .panel-header,
+body.simulator-page:not(.is-mobile) .center-tab-panel__header,
+body.simulator-page:not(.is-mobile) .memory-header-row {
+  min-height: 38px;
+  padding: 0 14px !important;
+  background: var(--sim-panel-hi);
+  border-bottom: 1px solid var(--sim-border) !important;
+  color: var(--text-secondary) !important;
+  letter-spacing: 0.08em !important;
+}
+
+body.simulator-page:not(.is-mobile) .panel-body {
+  background: color-mix(in srgb, var(--sim-panel-bg) 96%, var(--accent) 4%);
+}
+
+body.simulator-page:not(.is-mobile) .control-row--editor-primary,
+body.simulator-page:not(.is-mobile) .control-row--editor-secondary {
+  gap: 8px;
+}
+
+body.simulator-page:not(.is-mobile) .sim-button {
+  min-height: 34px !important;
+  border-radius: 7px !important;
+  font-family: var(--font-body) !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+}
+
+body.simulator-page:not(.is-mobile) #assemble.sim-button--primary,
+body.simulator-page:not(.is-mobile) .sim-button--primary {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--bg-base) !important;
+}
+
+body.simulator-page:not(.is-mobile) #step.sim-button--outline,
+body.simulator-page:not(.is-mobile) #stepBack.sim-button--outline,
+body.simulator-page:not(.is-mobile) #run.sim-button--outline {
+  background: var(--bg-elevated) !important;
+  border-color: var(--sim-border) !important;
+  color: var(--text-primary) !important;
+}
+
+body.simulator-page:not(.is-mobile) #run.sim-button--outline {
+  border-color: color-mix(in srgb, var(--success) 42%, var(--sim-border)) !important;
+  color: var(--success) !important;
+}
+
+body.simulator-page:not(.is-mobile) .sim-button--danger {
+  border-color: color-mix(in srgb, var(--danger) 36%, var(--sim-border)) !important;
+  color: var(--danger) !important;
+}
+
+body.simulator-page:not(.is-mobile) .sim-select,
+body.simulator-page:not(.is-mobile) .memory-address-input,
+body.simulator-page:not(.is-mobile) .memory-follow-select,
+body.simulator-page:not(.is-mobile) .leaderboard-search {
+  border-color: var(--sim-border) !important;
+  border-radius: 7px !important;
+  background: var(--bg-base) !important;
+  color: var(--text-primary) !important;
+}
+
+body.simulator-page:not(.is-mobile) .run-speed-panel,
+body.simulator-page:not(.is-mobile) .shortcut-hint-bar,
+body.simulator-page:not(.is-mobile) .status-line,
+body.simulator-page:not(.is-mobile) .shared-link-banner {
+  border: 1px solid var(--sim-border);
+  border-radius: 8px;
+  background: var(--sim-panel-soft);
+}
+
+body.simulator-page:not(.is-mobile) .editor-container {
+  min-height: 0 !important;
+  border-color: var(--sim-border) !important;
+  border-radius: 8px !important;
+  background: var(--bg-base) !important;
+}
+
+body.simulator-page:not(.is-mobile) .source-textarea,
+body.simulator-page:not(.is-mobile) .highlight-display,
+body.simulator-page:not(.is-mobile) .line-numbers span {
+  font-family: var(--font-mono) !important;
+  font-size: 12px !important;
+}
+
+body.simulator-page:not(.is-mobile) .line-numbers,
+body.simulator-page:not(.is-mobile) .editor-inner {
+  background: color-mix(in srgb, var(--bg-base) 94%, var(--accent) 6%);
+}
+
+body.simulator-page:not(.is-mobile) .center-tabs {
+  min-height: 42px;
+  padding: 4px;
+  gap: 4px;
+  background: var(--sim-panel-hi);
+  border-bottom: 1px solid var(--sim-border);
+}
+
+body.simulator-page:not(.is-mobile) .center-tab-button {
+  min-height: 32px;
+  border-radius: 7px;
+  border-bottom: 0 !important;
+}
+
+body.simulator-page:not(.is-mobile) .center-tab-button.is-active {
+  background: var(--accent-subtle);
+  color: var(--text-primary) !important;
+}
+
+body.simulator-page:not(.is-mobile) .disasm-progress-meta,
+body.simulator-page:not(.is-mobile) .effect-filter-bar,
+body.simulator-page:not(.is-mobile) .memory-panel-toolbar,
+body.simulator-page:not(.is-mobile) .memory-watch-controls {
+  background: color-mix(in srgb, var(--sim-panel-bg) 88%, var(--bg-base) 12%);
+  border-color: var(--sim-border) !important;
+}
+
+body.simulator-page:not(.is-mobile) .disasm-line {
+  border-radius: 6px;
+  margin: 2px 8px;
+}
+
+body.simulator-page:not(.is-mobile) .disasm-line.disasm-pc-current {
+  background: var(--accent-subtle) !important;
+  border-left-color: var(--accent) !important;
+}
+
+body.simulator-page:not(.is-mobile) .disasm-mnemonic,
+body.simulator-page:not(.is-mobile) .disasm-operands,
+body.simulator-page:not(.is-mobile) .disasm-operand.is-register,
+body.simulator-page:not(.is-mobile) .register-cell__value {
+  color: var(--text-primary) !important;
+}
+
+body.simulator-page:not(.is-mobile) .disasm-addr,
+body.simulator-page:not(.is-mobile) .register-cell__abi,
+body.simulator-page:not(.is-mobile) .register-cell__name,
+body.simulator-page:not(.is-mobile) .pseudo-reg,
+body.simulator-page:not(.is-mobile) .pseudo-register {
+  color: var(--accent) !important;
+}
+
+body.simulator-page:not(.is-mobile) .memory-view-tab,
+body.simulator-page:not(.is-mobile) .memory-word-format,
+body.simulator-page:not(.is-mobile) .effect-filter-button {
+  border-color: var(--sim-border) !important;
+  border-radius: 7px !important;
+  background: var(--bg-elevated) !important;
+  color: var(--text-secondary) !important;
+}
+
+body.simulator-page:not(.is-mobile) .memory-view-tab.is-active,
+body.simulator-page:not(.is-mobile) .memory-word-format.is-active,
+body.simulator-page:not(.is-mobile) .effect-filter-button[aria-pressed="true"] {
+  background: var(--accent-subtle) !important;
+  border-color: var(--sim-border-strong) !important;
+  color: var(--text-primary) !important;
+}
+
+body.simulator-page:not(.is-mobile) .memory-stack {
+  gap: 12px !important;
+  padding: 12px !important;
+}
+
+body.simulator-page:not(.is-mobile) .memory-stack .memory-section,
+body.simulator-page:not(.is-mobile) .register-cell {
+  border-color: var(--sim-border) !important;
+  background: color-mix(in srgb, var(--bg-elevated) 70%, transparent) !important;
+}
+
+body.simulator-page:not(.is-mobile) .register-grid {
+  gap: 6px !important;
+  padding: 8px !important;
+}
+
+body.simulator-page:not(.is-mobile) .register-cell {
+  min-height: 38px !important;
+  padding: 6px 8px !important;
+  border-radius: 7px !important;
+}
+
+body.simulator-page:not(.is-mobile) .register-cell.is-changed {
+  animation: register-flash-new 800ms ease forwards !important;
+}
+
+@media (min-width: 1200px) and (max-width: 1399px) {
+  body.simulator-page:not(.is-mobile) .simulator-layout {
+    grid-template-columns: minmax(300px, 0.9fr) minmax(450px, 1.35fr) minmax(250px, 0.76fr) !important;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1199px) {
+  body.simulator-page:not(.is-mobile) .simulator-layout {
+    grid-template-columns: minmax(280px, 0.9fr) minmax(390px, 1.25fr) minmax(220px, 0.72fr) !important;
+    gap: 10px !important;
+  }
+}

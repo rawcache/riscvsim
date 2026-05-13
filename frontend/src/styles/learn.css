@@ -1644,6 +1644,11 @@
   margin-top: 24px;
 }
 
+.quiz-page .diagnostic-card + .challenge-grid {
+  margin-top: 16px;
+  padding-top: 8px;
+}
+
 .quiz-question__dots {
   display: flex;
   justify-content: center;

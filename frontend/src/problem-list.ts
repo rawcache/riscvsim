@@ -1121,18 +1121,6 @@ class ProblemsPageApp {
   async init(): Promise<void> {
     console.log("Problems loaded:", this.problems.length);
 
-    try {
-      initNav({ activePage: "problems" });
-    } catch (error) {
-      console.error("Problems nav failed to initialize.", error);
-    }
-
-    try {
-      initFooter();
-    } catch (error) {
-      console.error("Problems footer failed to initialize.", error);
-    }
-
     bindVerdictClose(this.verdictClose, this.verdict);
 
     const urlTag = getCurrentTagFilter();
@@ -3065,7 +3053,28 @@ class ProblemsPageApp {
   }
 }
 
+function initProblemsChrome(): void {
+  try {
+    initNav({ activePage: "problems" });
+  } catch (error) {
+    console.error("Problems nav failed to initialize.", error);
+  }
+
+  try {
+    initFooter();
+  } catch (error) {
+    console.error("Problems footer failed to initialize.", error);
+  }
+
+  const nav = document.getElementById("site-nav") as HTMLElement | null;
+  if (nav) {
+    nav.hidden = false;
+  }
+}
+
 function bootProblemsPage(): void {
+  initProblemsChrome();
+
   const listLayout = document.getElementById("pl-layout");
   const problemLayout = document.getElementById("pv-layout");
   if (!listLayout || !problemLayout) {

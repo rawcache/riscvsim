@@ -48,10 +48,6 @@ function iconBook(): string {
   return `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2H20v20H8.5A2.5 2.5 0 0 0 6 22"></path><path d="M6 4.5V22"></path><path d="M10 7h7M10 11h7M10 15h5"></path></svg>`;
 }
 
-function iconCode(): string {
-  return `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>`;
-}
-
 function iconCpu(): string {
   return `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect><path d="M4 10h3M4 14h3M17 10h3M17 14h3M10 4v3M14 4v3M10 17v3M14 17v3"></path></svg>`;
 }
@@ -176,20 +172,6 @@ function renderNav(config: NavConfig): string {
                   <span class="nav-mega-body">
                     <span class="nav-mega-title">Docs</span>
                     <span class="nav-mega-desc">Instruction reference and guides</span>
-                  </span>
-                </a>
-                <a href="/learn-riscv/" class="nav-mega-item">
-                  <span class="nav-mega-icon">${iconCode()}</span>
-                  <span class="nav-mega-body">
-                    <span class="nav-mega-title">Assembly Tutorial</span>
-                    <span class="nav-mega-desc">Beginner RISC-V assembly guide</span>
-                  </span>
-                </a>
-                <a href="/riscv-instructions/" class="nav-mega-item">
-                  <span class="nav-mega-icon">${iconCpu()}</span>
-                  <span class="nav-mega-body">
-                    <span class="nav-mega-title">Instruction Reference</span>
-                    <span class="nav-mega-desc">RV32IM opcode table and encoding</span>
                   </span>
                 </a>
                 <a href="/about/" class="nav-mega-item${config.activePage === "about" ? " nav-mega-item--active" : ""}">

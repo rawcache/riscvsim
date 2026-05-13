@@ -1,6 +1,6 @@
 .checkpoints-page {
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: scroll;
   padding-top: var(--nav-height, 64px);
   scrollbar-gutter: stable;
 }
