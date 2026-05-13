@@ -4,78 +4,33 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RISC-V Simulator for Learning Assembly | StudyRISC-V</title>
-    <meta
-      name="description"
-      content="Interactive RISC-V simulator with step-by-step execution, register inspection, and visual learning tools for stack, pipeline, memory, and control flow."
-    />
+    <meta name="description" content="Interactive RISC-V simulator with step-by-step execution, register inspection, and visual learning tools for stack, pipeline, memory, and control flow." />
     <meta property="og:title" content="RISC-V Simulator for Learning Assembly | StudyRISC-V" />
-    <meta property="og:description" content="Study RISC-V with step-by-step execution, register inspection, architecture visuals, and guided lessons in one browser-based simulator." />
+    <meta property="og:description" content="Write assembly, step through execution, inspect registers and memory, and see how each instruction changes the machine state." />
     <meta property="og:image" content="https://studyriscv.com/og-image.png" />
     <meta property="og:url" content="https://studyriscv.com/" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="canonical" href="https://studyriscv.com/" />
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "StudyRISC-V",
-        "url": "https://studyriscv.com/",
-        "logo": "https://studyriscv.com/favicon-chip.svg"
-      }
-    </script>
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "StudyRISC-V",
-        "url": "https://studyriscv.com/",
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": "https://studyriscv.com/docs/?q={search_term_string}",
-          "query-input": "required name=search_term_string"
-        }
-      }
-    </script>
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        "name": "StudyRISC-V",
-        "applicationCategory": "DeveloperTool",
-        "operatingSystem": "Web",
-        "url": "https://studyriscv.com/",
-        "description": "Browser-based RISC-V simulator with step-by-step execution, register inspection, and visual learning tools."
-      }
-    </script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"StudyRISC-V","url":"https://studyriscv.com/","logo":"https://studyriscv.com/favicon-chip.svg"}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"StudyRISC-V","url":"https://studyriscv.com/","potentialAction":{"@type":"SearchAction","target":"https://studyriscv.com/docs/?q={search_term_string}","query-input":"required name=search_term_string"}}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"StudyRISC-V","applicationCategory":"DeveloperTool","operatingSystem":"Web","url":"https://studyriscv.com/","description":"Browser-based RISC-V simulator with step-by-step execution, register inspection, and visual learning tools."}</script>
     <script>
       (() => {
         const { hash, origin, pathname } = window.location;
-        if (hash.startsWith("#p=")) {
-          const target = new URL("/simulator/", origin);
-          target.hash = hash;
-          window.location.replace(target.toString());
-          return;
+        if (hash.startsWith('#p=')) {
+          const t = new URL('/simulator/', origin); t.hash = hash;
+          window.location.replace(t.toString()); return;
         }
-        if (pathname === "/landing.html") {
-          window.location.replace(new URL("/", origin).toString());
-        }
+        if (pathname === '/landing.html') window.location.replace(new URL('/', origin).toString());
       })();
     </script>
     <script>
       (() => {
         try {
-          const storedTheme = window.localStorage.getItem("studyriscv-theme");
-          if (!storedTheme) {
-            window.localStorage.setItem("studyriscv-theme", "dark");
-            document.documentElement.dataset.theme = "dark";
-            return;
-          }
-          if (storedTheme === "dark") {
-            document.documentElement.dataset.theme = "dark";
-          }
-        } catch {
-          // ignore
-        }
+          const s = window.localStorage.getItem('studyriscv-theme');
+          if (!s) { window.localStorage.setItem('studyriscv-theme','dark'); document.documentElement.dataset.theme='dark'; return; }
+          if (s === 'dark') document.documentElement.dataset.theme = 'dark';
+        } catch {}
       })();
     </script>
     <link rel="stylesheet" href="./src/styles/tokens.css" />
@@ -93,325 +48,344 @@
     <nav id="site-nav"></nav>
     <section id="landingResumeBar" class="landing-resume-bar" hidden></section>
 
+    <!-- ════════════════════════════════════════════════════════
+         ATMOSPHERE LAYER — fixed, sits behind everything
+    ════════════════════════════════════════════════════════ -->
+    <div class="atm" id="atmosphere" aria-hidden="true">
+      <!-- SVG grain filter -->
+      <svg class="atm__grain-svg" xmlns="http://www.w3.org/2000/svg">
+        <filter id="grain-filter">
+          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#grain-filter)" opacity="0.035" />
+      </svg>
+
+      <!-- Circuit grid -->
+      <div class="atm__grid"></div>
+
+      <!-- Diagonal beams -->
+      <div class="atm__beam atm__beam--1"></div>
+      <div class="atm__beam atm__beam--2"></div>
+      <div class="atm__beam atm__beam--3"></div>
+
+      <!-- Radial glows -->
+      <div class="atm__glow atm__glow--top"></div>
+      <div class="atm__glow atm__glow--mid"></div>
+
+      <!-- Floating code glyphs -->
+      <div class="atm__glyphs" id="atmGlyphs"></div>
+    </div>
+
     <main class="lp-main">
 
-      <!-- ═══════════════════════════════════════════════════
-           SECTION 1 — HERO
-      ═══════════════════════════════════════════════════ -->
-      <section class="hero lp-hero" data-landing-section>
-        <div class="lp-hero__left">
+      <!-- ════════════════════════════════════════════════════
+           HERO
+      ════════════════════════════════════════════════════ -->
+      <section class="hero lp-hero" data-landing-section id="lpHero">
+        <div class="lp-hero__content">
 
-          <div class="lp-eyebrow lp-anim lp-anim--0">
-            Free for Georgia Tech students
-          </div>
-
-          <h1 class="lp-hero__headline lp-anim lp-anim--1">
-            Learn RISC-V.<br />Actually understand&nbsp;it.
-          </h1>
-
-          <p class="lp-hero__sub lp-anim lp-anim--2">
-            Step-by-step execution, register inspection, and visual learning in one calm
-            workspace. Trace assembly, watch the stack grow, and finally see what the CPU
-            is actually doing.
-          </p>
-
-          <div class="lp-cta-row lp-anim lp-anim--3">
-            <a class="lp-btn lp-btn--filled" href="/simulator/">Open Simulator</a>
-            <a class="lp-btn lp-btn--ghost" href="/learn/">Browse Lessons</a>
-          </div>
-
-          <div class="lp-stats-bar lp-anim lp-anim--4">
-            <div class="lp-stat">
-              <span class="lp-stat__num" data-count="342">342</span>
-              <span class="lp-stat__label">REGRESSION TESTS</span>
+          <div class="lp-hero__left">
+            <p class="lp-eyebrow lp-in lp-in--0">RISC-V Learning Platform</p>
+            <h1 class="lp-hero__h1 lp-in lp-in--1">Step through<br />the machine.</h1>
+            <p class="lp-hero__sub lp-in lp-in--2">
+              Write assembly, step through execution, inspect registers and memory,
+              and see how each instruction changes the machine state.
+            </p>
+            <div class="lp-cta-row lp-in lp-in--3">
+              <a class="lp-btn lp-btn--primary" href="/simulator/">Open Simulator</a>
+              <a class="lp-btn lp-btn--ghost" href="/learn/">Browse Lessons</a>
             </div>
-            <div class="lp-stats-bar__sep" aria-hidden="true"></div>
-            <div class="lp-stat">
-              <span class="lp-stat__num" data-count="20">20</span>
-              <span class="lp-stat__label">LESSONS</span>
-            </div>
-            <div class="lp-stats-bar__sep" aria-hidden="true"></div>
-            <div class="lp-stat">
-              <span class="lp-stat__num" data-count="15">15</span>
-              <span class="lp-stat__label">PROBLEMS</span>
-            </div>
-            <div class="lp-stats-bar__sep" aria-hidden="true"></div>
-            <div class="lp-stat">
-              <span class="lp-stat__num lp-stat__num--text">RV32IM</span>
-              <span class="lp-stat__label">CORE ISA</span>
+            <div class="lp-trust lp-in lp-in--4">
+              <span class="lp-trust__item"><span class="lp-trust__num" data-count="342">342</span> regression tests</span>
+              <span class="lp-trust__dot" aria-hidden="true"></span>
+              <span class="lp-trust__item"><span class="lp-trust__num" data-count="20">20</span> lessons</span>
+              <span class="lp-trust__dot" aria-hidden="true"></span>
+              <span class="lp-trust__item">RV32IM core</span>
             </div>
           </div>
 
-        </div>
+          <!-- ── SIMULATOR MOCKUP ────────────────────────── -->
+          <div class="lp-hero__right lp-in lp-in--2" id="lpMockupHero">
+            <div class="lp-sim" id="lpSim">
 
-        <div class="lp-hero__right lp-anim lp-anim--2">
-          <div class="lp-hero__glow" aria-hidden="true"></div>
-          <div class="lp-terminal" id="lpTerminal">
-            <div class="lp-terminal__bar">
-              <span class="lp-dot lp-dot--red" aria-hidden="true"></span>
-              <span class="lp-dot lp-dot--yellow" aria-hidden="true"></span>
-              <span class="lp-dot lp-dot--green" aria-hidden="true"></span>
-              <span class="lp-terminal__filename">factorial.s</span>
-            </div>
-            <div class="lp-terminal__divider" aria-hidden="true"></div>
-            <pre class="lp-terminal__code" id="lpTerminalCode" aria-label="RISC-V assembly typewriter preview"></pre>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══════════════════════════════════════════════════
-           SECTION 2 — INTRO STATEMENT
-      ═══════════════════════════════════════════════════ -->
-      <section class="lp-statement reveal" data-landing-section>
-        <p class="lp-statement__text">
-          RISC-V is the <span class="lp-statement__em">foundation</span> of modern computer
-          architecture. StudyRISC-V is the first tool built specifically to make it
-          <span class="lp-statement__em">intuitive</span> — not just correct.
-        </p>
-      </section>
-
-      <!-- ═══════════════════════════════════════════════════
-           SECTION 3 — FIG PANELS
-      ═══════════════════════════════════════════════════ -->
-      <section class="lp-figs reveal" data-landing-section>
-        <div class="lp-figs__header">
-          <span class="lp-overline">THE SYSTEM</span>
-          <h2 class="lp-figs__headline">Built different. Built for learning.</h2>
-        </div>
-
-        <div class="lp-figs__grid">
-
-          <!-- FIG 01 -->
-          <article class="lp-fig">
-            <span class="lp-fig__label">FIG 01</span>
-            <h3 class="lp-fig__title">Step. Rewind. Understand.</h3>
-            <p class="lp-fig__desc">Execute any RV32IM instruction one step at a time. Step backwards. Watch every register change in real time.</p>
-            <div class="lp-fig__visual" aria-hidden="true">
-              <div class="lp-pipeline" id="lpPipeline">
-                <div class="lp-pipeline__stage" data-stage="0">IF</div>
-                <div class="lp-pipeline__arrow" aria-hidden="true"></div>
-                <div class="lp-pipeline__stage" data-stage="1">ID</div>
-                <div class="lp-pipeline__arrow" aria-hidden="true"></div>
-                <div class="lp-pipeline__stage" data-stage="2">EX</div>
-                <div class="lp-pipeline__arrow" aria-hidden="true"></div>
-                <div class="lp-pipeline__stage" data-stage="3">WB</div>
+              <!-- Status bar -->
+              <div class="lp-sim__status">
+                <span class="lp-sim__status-item">PC <span class="lp-sim__status-val" id="simPc">0x00000020</span></span>
+                <span class="lp-sim__status-sep" aria-hidden="true"></span>
+                <span class="lp-sim__status-item">Cycle <span class="lp-sim__status-val" id="simCycle">4</span></span>
+                <span class="lp-sim__status-sep" aria-hidden="true"></span>
+                <span class="lp-sim__status-item lp-sim__status-mode">STEP</span>
+                <span class="lp-sim__status-right">factorial.s</span>
               </div>
-            </div>
-          </article>
 
-          <!-- FIG 02 -->
-          <article class="lp-fig">
-            <span class="lp-fig__label">FIG 02</span>
-            <h3 class="lp-fig__title">Assembly to plain English.</h3>
-            <p class="lp-fig__desc">Every instruction maps to a pseudo-C expression so you always know what the CPU is actually computing.</p>
-            <div class="lp-fig__visual" aria-hidden="true">
-              <div class="lp-translate" id="lpTranslate">
-                <code class="lp-translate__asm">
-                  <span class="tw-mnemonic">addi</span> <span class="tw-reg">x1</span>, <span class="tw-reg">x0</span>, <span class="tw-num">5</span>
-                </code>
-                <span class="lp-translate__arrow">→</span>
-                <code class="lp-translate__c">x1 = 0 + 5</code>
-              </div>
-            </div>
-          </article>
+              <div class="lp-sim__body">
 
-          <!-- FIG 03 -->
-          <article class="lp-fig">
-            <span class="lp-fig__label">FIG 03</span>
-            <h3 class="lp-fig__title">Problems that teach, not just test.</h3>
-            <p class="lp-fig__desc">15 structured problems with hints, test cases, and automated grading mapped directly to your course curriculum.</p>
-            <div class="lp-fig__visual" aria-hidden="true">
-              <div class="lp-progress-rows" id="lpProgressRows">
-                <div class="lp-prow">
-                  <span class="lp-prow__label">Loops</span>
-                  <div class="lp-prow__track"><div class="lp-prow__fill" data-target="80" style="--delay:0ms"></div></div>
+                <!-- Editor panel -->
+                <div class="lp-sim__editor" id="simEditor">
+                  <div class="lp-sim__panel-label">ASSEMBLY</div>
+                  <div class="lp-sim__code" id="simCode">
+                    <div class="lp-sim__line" data-pc="0x10">
+                      <span class="sim-addr">0x10</span>
+                      <span class="sim-asm"><span class="sim-mne">addi</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x0</span>, <span class="sim-num">5</span></span>
+                    </div>
+                    <div class="lp-sim__line" data-pc="0x14">
+                      <span class="sim-addr">0x14</span>
+                      <span class="sim-asm"><span class="sim-mne">addi</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x0</span>, <span class="sim-num">1</span></span>
+                    </div>
+                    <div class="lp-sim__line lp-sim__line--label" data-pc="loop">
+                      <span class="sim-addr"></span>
+                      <span class="sim-asm sim-label">loop:</span>
+                    </div>
+                    <div class="lp-sim__line" data-pc="0x1c" id="simActiveLine">
+                      <span class="sim-addr">0x1c</span>
+                      <span class="sim-asm"><span class="sim-mne">mul</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x2</span>, <span class="sim-reg">x1</span></span>
+                    </div>
+                    <div class="lp-sim__line" data-pc="0x20">
+                      <span class="sim-addr">0x20</span>
+                      <span class="sim-asm"><span class="sim-mne">addi</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x1</span>, <span class="sim-num">-1</span></span>
+                    </div>
+                    <div class="lp-sim__line" data-pc="0x24">
+                      <span class="sim-addr">0x24</span>
+                      <span class="sim-asm"><span class="sim-mne">bne</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x0</span>, loop</span>
+                    </div>
+                    <div class="lp-sim__line lp-sim__line--label" data-pc="done">
+                      <span class="sim-addr"></span>
+                      <span class="sim-asm sim-label">done:</span>
+                    </div>
+                  </div>
+                  <!-- pseudo-c strip -->
+                  <div class="lp-sim__pseudoc" id="simPseudoc">
+                    <span class="lp-sim__pseudoc-comment">// effect</span>
+                    <span class="lp-sim__pseudoc-code" id="simPseudocCode">x2 = x2 * x1</span>
+                  </div>
                 </div>
-                <div class="lp-prow">
-                  <span class="lp-prow__label">Memory</span>
-                  <div class="lp-prow__track"><div class="lp-prow__fill" data-target="60" style="--delay:300ms"></div></div>
-                </div>
-                <div class="lp-prow">
-                  <span class="lp-prow__label">Functions</span>
-                  <div class="lp-prow__track"><div class="lp-prow__fill" data-target="45" style="--delay:600ms"></div></div>
+
+                <!-- Right column: registers + memory + stack -->
+                <div class="lp-sim__right">
+
+                  <!-- Register file -->
+                  <div class="lp-sim__panel lp-sim__regs" id="simRegs">
+                    <div class="lp-sim__panel-label">REGISTERS</div>
+                    <table class="lp-sim__reg-table" id="simRegTable">
+                      <tbody>
+                        <tr><td class="sim-rn">x0</td><td class="sim-rv">0x00000000</td></tr>
+                        <tr id="simR1"><td class="sim-rn">x1</td><td class="sim-rv">0x00000005</td></tr>
+                        <tr id="simR2"><td class="sim-rn">x2</td><td class="sim-rv">0x00000001</td></tr>
+                        <tr><td class="sim-rn">x3</td><td class="sim-rv">0x00000000</td></tr>
+                        <tr><td class="sim-rn">x4</td><td class="sim-rv">0x00000000</td></tr>
+                        <tr><td class="sim-rn">ra</td><td class="sim-rv">0x00000000</td></tr>
+                        <tr><td class="sim-rn">sp</td><td class="sim-rv">0x7FFFFFF8</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Memory snippet -->
+                  <div class="lp-sim__panel lp-sim__mem" id="simMem">
+                    <div class="lp-sim__panel-label">MEMORY</div>
+                    <table class="lp-sim__mem-table">
+                      <tbody>
+                        <tr><td class="sim-ma">0x7FFFFFF8</td><td class="sim-mv">0x00000005</td></tr>
+                        <tr id="simMemActive"><td class="sim-ma">0x7FFFFFFC</td><td class="sim-mv">0x00000001</td></tr>
+                        <tr><td class="sim-ma">0x80000000</td><td class="sim-mv">0x00000000</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Stack -->
+                  <div class="lp-sim__panel lp-sim__stack-panel" id="simStackPanel">
+                    <div class="lp-sim__panel-label">STACK</div>
+                    <div class="lp-sim__stack" id="simStack">
+                      <div class="lp-sim__frame">saved ra</div>
+                      <div class="lp-sim__frame lp-sim__frame--active">loop var x1</div>
+                      <div class="lp-sim__frame lp-sim__frame--sp">← sp</div>
+                    </div>
+                  </div>
+
                 </div>
               </div>
             </div>
-          </article>
+          </div>
 
         </div>
       </section>
 
-      <!-- ═══════════════════════════════════════════════════
-           SECTION 4 — SCROLLYTELLING
-      ═══════════════════════════════════════════════════ -->
-      <section class="lp-scroll reveal" data-landing-section>
-        <div class="lp-scroll__inner">
+      <!-- ════════════════════════════════════════════════════
+           SCROLL REVEAL — sticky mockup + feature blocks
+      ════════════════════════════════════════════════════ -->
+      <section class="lp-reveal" data-landing-section id="lpReveal">
+        <div class="lp-reveal__inner">
 
-          <!-- Sticky left panel -->
-          <div class="lp-scroll__sticky">
-            <div class="lp-mockup" id="lpMockup">
-
-              <!-- STATE: registers -->
-              <div class="lp-mockup__state" id="lpStateRegisters">
-                <div class="lp-mockup__label">REGISTER FILE</div>
-                <table class="lp-reg-table" id="lpRegTable">
-                  <tbody>
-                    <tr data-reg="0"><td class="lp-reg-table__name">x0</td><td class="lp-reg-table__val">0x00000000</td></tr>
-                    <tr data-reg="1"><td class="lp-reg-table__name">x1</td><td class="lp-reg-table__val">0x00000148</td></tr>
-                    <tr data-reg="2"><td class="lp-reg-table__name">x2</td><td class="lp-reg-table__val">0x7FFFFFF0</td></tr>
-                    <tr data-reg="3"><td class="lp-reg-table__name">x3</td><td class="lp-reg-table__val">0x00000005</td></tr>
-                    <tr data-reg="4"><td class="lp-reg-table__name">x4</td><td class="lp-reg-table__val">0x00000001</td></tr>
-                    <tr data-reg="5"><td class="lp-reg-table__name">x5</td><td class="lp-reg-table__val">0x00000014</td></tr>
-                    <tr data-reg="6"><td class="lp-reg-table__name">x6</td><td class="lp-reg-table__val">0x00000078</td></tr>
-                    <tr data-reg="7"><td class="lp-reg-table__name">x7</td><td class="lp-reg-table__val">0x10000000</td></tr>
+          <!-- Sticky mockup column -->
+          <div class="lp-reveal__sticky">
+            <div class="lp-reveal__mockup" id="lpRevealMockup">
+              <!-- Changes per scroll block via JS -->
+              <div class="lp-rm lp-rm--regs" id="rmRegs">
+                <div class="lp-rm__header">
+                  <span class="lp-rm__chip">REGISTER FILE</span>
+                  <span class="lp-rm__chip lp-rm__chip--dim">RV32IM</span>
+                </div>
+                <table class="lp-rm__table">
+                  <tbody id="rmRegBody">
+                    <tr><td class="rm-rn">x0</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
+                    <tr><td class="rm-rn">x1</td><td class="rm-rv">0x00000005</td><td class="rm-ra"></td></tr>
+                    <tr id="rmR2" class="rm-changed"><td class="rm-rn">x2</td><td class="rm-rv" id="rmR2Val">0x00000001</td><td class="rm-ra">← changed</td></tr>
+                    <tr><td class="rm-rn">x3</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
+                    <tr><td class="rm-rn">x4</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
+                    <tr><td class="rm-rn">ra</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
+                    <tr><td class="rm-rn">sp</td><td class="rm-rv">0x7FFFFFF8</td><td class="rm-ra"></td></tr>
+                    <tr><td class="rm-rn">a0</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
                   </tbody>
                 </table>
               </div>
 
-              <!-- STATE: pseudo-c -->
-              <div class="lp-mockup__state lp-mockup__state--hidden" id="lpStatePseudoc">
-                <div class="lp-mockup__label">PSEUDO-C TRANSLATOR</div>
-                <div class="lp-pseudoc" id="lpPseudoc">
-                  <div class="lp-pseudoc__asm"><span class="tw-mnemonic">addi</span> <span class="tw-reg">x1</span>, <span class="tw-reg">x0</span>, <span class="tw-num">5</span></div>
-                  <div class="lp-pseudoc__effect"><span class="lp-pseudoc__comment">// effect:</span> x1 = 0 + 5</div>
+              <div class="lp-rm lp-rm--instr lp-rm--hidden" id="rmInstr">
+                <div class="lp-rm__header">
+                  <span class="lp-rm__chip">INSTRUCTION</span>
+                  <span class="lp-rm__chip lp-rm__chip--dim">PC 0x001c</span>
+                </div>
+                <div class="lp-rm__instr-row" id="rmInstrCycle">
+                  <div class="lp-rm__asm"><span class="sim-mne">mul</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x2</span>, <span class="sim-reg">x1</span></div>
+                  <div class="lp-rm__arrow">↓</div>
+                  <div class="lp-rm__clike" id="rmClike">x2 = x2 * x1</div>
+                  <div class="lp-rm__note">Multiply two registers, write back to x2</div>
+                </div>
+                <div class="lp-rm__instr-grid">
+                  <div class="lp-rm__field"><span class="lp-rm__field-label">opcode</span><span class="lp-rm__field-val">MUL</span></div>
+                  <div class="lp-rm__field"><span class="lp-rm__field-label">rd</span><span class="lp-rm__field-val">x2</span></div>
+                  <div class="lp-rm__field"><span class="lp-rm__field-label">rs1</span><span class="lp-rm__field-val">x2</span></div>
+                  <div class="lp-rm__field"><span class="lp-rm__field-label">rs2</span><span class="lp-rm__field-val">x1</span></div>
                 </div>
               </div>
 
-              <!-- STATE: stack -->
-              <div class="lp-mockup__state lp-mockup__state--hidden" id="lpStateStack">
-                <div class="lp-mockup__label">STACK VISUALIZER</div>
-                <div class="lp-stack" id="lpStack">
-                  <div class="lp-stack__frame">saved registers</div>
-                  <div class="lp-stack__frame">return address</div>
-                  <div class="lp-stack__frame">frame data</div>
-                  <div class="lp-stack__frame lp-stack__frame--sp">sp = 0x7FFFFFF0</div>
+              <div class="lp-rm lp-rm--stack lp-rm--hidden" id="rmStack">
+                <div class="lp-rm__header">
+                  <span class="lp-rm__chip">CALL STACK</span>
+                  <span class="lp-rm__chip lp-rm__chip--dim">sp = 0x7FFFFFF0</span>
+                </div>
+                <div class="lp-rm__stack" id="rmStackFrames">
+                  <div class="lp-rm__frame rm-frame--hi">loop() · frame</div>
+                  <div class="lp-rm__frame">saved ra = 0x148</div>
+                  <div class="lp-rm__frame">saved s0 = 0x0</div>
+                  <div class="lp-rm__frame rm-frame--sp">← sp = 0x7FFFFFF0</div>
                 </div>
               </div>
-
             </div>
           </div>
 
-          <!-- Scrolling right blocks -->
-          <div class="lp-scroll__blocks">
+          <!-- Scrolling feature blocks -->
+          <div class="lp-reveal__blocks">
 
-            <div class="lp-scroll__block" data-state="registers">
-              <span class="lp-overline">REGISTER FILE</span>
-              <h2 class="lp-scroll__title">Watch every register change live.</h2>
-              <p class="lp-scroll__body">The register file updates in real time as you step through execution. Changed registers flash with a brief highlight so your eye goes exactly where the action is.</p>
+            <div class="lp-reveal__block" data-rm="regs">
+              <span class="lp-tag">01</span>
+              <h2 class="lp-reveal__h2">Registers update as you step.</h2>
+              <p class="lp-reveal__p">
+                Every instruction writes a result. The register file shows you exactly which register changed,
+                what it changed to, and how many cycles the operation took.
+                Nothing is hidden behind an abstraction layer.
+              </p>
             </div>
 
-            <div class="lp-scroll__block" data-state="pseudoc">
-              <span class="lp-overline">PSEUDO-C TRANSLATOR</span>
-              <h2 class="lp-scroll__title">See the instruction. Understand the effect.</h2>
-              <p class="lp-scroll__body">Below every instruction in the simulator, a plain English pseudo-C translation explains exactly what changed and why. No more black-box execution.</p>
+            <div class="lp-reveal__block" data-rm="instr">
+              <span class="lp-tag">02</span>
+              <h2 class="lp-reveal__h2">Every instruction has a visible effect.</h2>
+              <p class="lp-reveal__p">
+                RISC-V is easier when the machine state is not hidden. Below every instruction,
+                a pseudo-C translation describes the exact computation — register operands,
+                memory addressing, and control flow included.
+              </p>
             </div>
 
-            <div class="lp-scroll__block" data-state="stack">
-              <span class="lp-overline">STACK VISUALIZER</span>
-              <h2 class="lp-scroll__title">The stack is no longer invisible.</h2>
-              <p class="lp-scroll__body">Every push and pop is visualized as the stack grows and shrinks. Frame boundaries are labeled. sp is always visible. You never lose track of where you are.</p>
+            <div class="lp-reveal__block" data-rm="stack">
+              <span class="lp-tag">03</span>
+              <h2 class="lp-reveal__h2">The stack becomes visible.</h2>
+              <p class="lp-reveal__p">
+                Frame boundaries, saved registers, and the stack pointer are labeled
+                and updated in real time. Push and pop, call and return — every frame
+                transition is explicit and traceable.
+              </p>
             </div>
 
           </div>
         </div>
       </section>
 
-      <!-- ═══════════════════════════════════════════════════
-           SECTION 5 — OPCODE EXPLORER
-      ═══════════════════════════════════════════════════ -->
-      <section class="coverage-strip lp-opcodes reveal" data-opcode-band data-landing-section>
-        <div class="lp-opcodes__intro">
-          <span class="lp-overline">INSTRUCTION SET</span>
-          <h2 class="lp-opcodes__title">Explore the RV32IM instruction set.</h2>
-          <p class="lp-opcodes__lead">Hover any opcode to see what it does, what it changes, and why it matters.</p>
-        </div>
-
-        <div class="coverage-strip__panels lp-opcodes__panels">
-          <div class="coverage-strip__quick" aria-live="polite">
-            <div class="coverage-strip__quick-name" data-opcode-name>ADDI</div>
-            <div class="coverage-strip__quick-desc" data-opcode-description>Add an immediate constant to a register.</div>
-            <code class="coverage-strip__quick-example" data-opcode-example>addi x5, x0, 10</code>
+      <!-- ════════════════════════════════════════════════════
+           OPCODE EXPLORER
+      ════════════════════════════════════════════════════ -->
+      <section class="coverage-strip lp-opcodes" data-opcode-band data-landing-section>
+        <div class="lp-w">
+          <div class="lp-opcodes__intro">
+            <span class="lp-tag">ISA</span>
+            <h2 class="lp-opcodes__h2">Explore the RV32IM instruction set.</h2>
+            <p class="lp-opcodes__lead">Hover any opcode to see its encoding, effect, and a concrete example.</p>
           </div>
-          <div class="coverage-strip__detail">
-            <div class="coverage-strip__detail-title" data-opcode-detail-title>Immediate setup for constants and loop counters</div>
-            <div class="coverage-strip__detail-body" data-opcode-detail-body>Use addi for quick register updates without touching memory. It shows up everywhere: loop indexes, stack pointer movement, and small constant setup.</div>
-            <code class="coverage-strip__detail-flow" data-opcode-detail-flow>x5 ← x0 + 10</code>
+          <div class="coverage-strip__panels lp-opcodes__panels">
+            <div class="coverage-strip__quick" aria-live="polite">
+              <div class="coverage-strip__quick-name" data-opcode-name>ADDI</div>
+              <div class="coverage-strip__quick-desc" data-opcode-description>Add an immediate constant to a register.</div>
+              <code class="coverage-strip__quick-example" data-opcode-example>addi x5, x0, 10</code>
+            </div>
+            <div class="coverage-strip__detail">
+              <div class="coverage-strip__detail-title" data-opcode-detail-title>Immediate setup for constants and loop counters</div>
+              <div class="coverage-strip__detail-body" data-opcode-detail-body>Use addi for quick register updates without touching memory. It shows up everywhere: loop indexes, stack pointer movement, and small constant setup.</div>
+              <code class="coverage-strip__detail-flow" data-opcode-detail-flow>x5 ← x0 + 10</code>
+            </div>
           </div>
-        </div>
-
-        <div class="coverage-strip__band lp-opcodes__band">
-          <div class="coverage-strip__label">RV32IM</div>
-          <div class="coverage-strip__marquee-wrap lp-opcodes__marquee">
-            <div class="coverage-strip__track" data-opcode-track aria-label="RISC-V opcode reference band"></div>
+          <div class="coverage-strip__band">
+            <div class="coverage-strip__label">RV32IM</div>
+            <div class="coverage-strip__marquee-wrap">
+              <div class="coverage-strip__track" data-opcode-track aria-label="RISC-V opcode reference band"></div>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- ═══════════════════════════════════════════════════
-           SECTION 6 — COURSE STRIP
-      ═══════════════════════════════════════════════════ -->
-      <section class="lp-courses reveal" data-landing-section aria-label="Courses that use StudyRISC-V">
+      <!-- ════════════════════════════════════════════════════
+           COURSE STRIP
+      ════════════════════════════════════════════════════ -->
+      <section class="lp-courses" data-landing-section aria-label="Courses using StudyRISC-V">
         <div class="lp-courses__wrap">
           <div class="lp-courses__track">
-            <span class="lp-courses__item">CS 61C Berkeley</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item">ECE 3058 Georgia Tech</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item">CS 3410 Cornell</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item">ECE 2035 Georgia Tech</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item">CS 61 Harvard</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item">ECE 4100 Georgia Tech</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item">CS 152 Berkeley</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item">ECE 2500 Purdue</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item">ECE 3150 Cornell</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item">EECS 151 Berkeley</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item">CS 2200 Georgia Tech</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <!-- duplicate for seamless loop -->
-            <span class="lp-courses__item" aria-hidden="true">CS 61C Berkeley</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item" aria-hidden="true">ECE 3058 Georgia Tech</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item" aria-hidden="true">CS 3410 Cornell</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item" aria-hidden="true">ECE 2035 Georgia Tech</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item" aria-hidden="true">CS 61 Harvard</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item" aria-hidden="true">ECE 4100 Georgia Tech</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item" aria-hidden="true">CS 152 Berkeley</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item" aria-hidden="true">ECE 2500 Purdue</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item" aria-hidden="true">ECE 3150 Cornell</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item" aria-hidden="true">EECS 151 Berkeley</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
-            <span class="lp-courses__item" aria-hidden="true">CS 2200 Georgia Tech</span>
-            <span class="lp-courses__sep" aria-hidden="true"></span>
+            <span class="lp-ci">CS 61C Berkeley</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci">ECE 3058 Georgia Tech</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci">CS 3410 Cornell</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci">ECE 2035 Georgia Tech</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci">CS 61 Harvard</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci">ECE 4100 Georgia Tech</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci">CS 152 Berkeley</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci">ECE 2500 Purdue</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci">ECE 3150 Cornell</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci">EECS 151 Berkeley</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci">CS 2200 Georgia Tech</span><span class="lp-csep" aria-hidden="true"></span>
+            <!-- duplicate for loop -->
+            <span class="lp-ci" aria-hidden="true">CS 61C Berkeley</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci" aria-hidden="true">ECE 3058 Georgia Tech</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci" aria-hidden="true">CS 3410 Cornell</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci" aria-hidden="true">ECE 2035 Georgia Tech</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci" aria-hidden="true">CS 61 Harvard</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci" aria-hidden="true">ECE 4100 Georgia Tech</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci" aria-hidden="true">CS 152 Berkeley</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci" aria-hidden="true">ECE 2500 Purdue</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci" aria-hidden="true">ECE 3150 Cornell</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci" aria-hidden="true">EECS 151 Berkeley</span><span class="lp-csep" aria-hidden="true"></span>
+            <span class="lp-ci" aria-hidden="true">CS 2200 Georgia Tech</span><span class="lp-csep" aria-hidden="true"></span>
           </div>
         </div>
       </section>
 
-      <!-- ═══════════════════════════════════════════════════
-           SECTION 7 — BOTTOM CTA
-      ═══════════════════════════════════════════════════ -->
-      <section class="lp-cta reveal" data-landing-section>
+      <!-- ════════════════════════════════════════════════════
+           BOTTOM CTA
+      ════════════════════════════════════════════════════ -->
+      <section class="lp-cta" data-landing-section>
         <div class="lp-cta__glow" aria-hidden="true"></div>
-        <h2 class="lp-cta__headline">Start for free. No account required.</h2>
-        <p class="lp-cta__sub">The simulator runs entirely in your browser using WebAssembly. Write your first RISC-V program in under two minutes.</p>
-        <div class="lp-cta__btns">
-          <a class="lp-btn lp-btn--filled" href="/simulator/">Open Simulator</a>
-          <a class="lp-btn lp-btn--ghost" href="/learn/">Browse Lessons</a>
+        <div class="lp-w lp-cta__inner">
+          <h2 class="lp-cta__h2">From assembly to execution state,<br />one step at a time.</h2>
+          <p class="lp-cta__sub">No install. No account. The simulator runs entirely in your browser.</p>
+          <div class="lp-cta__btns">
+            <a class="lp-btn lp-btn--primary" href="/simulator/">Open Simulator</a>
+            <a class="lp-btn lp-btn--ghost" href="/learn/">Browse Lessons</a>
+          </div>
         </div>
       </section>
 
@@ -419,402 +393,320 @@
 
     <footer id="site-footer"></footer>
 
-    <!-- ═══════════════════════════════════════════════════
-         INLINE SCRIPTS — no external deps
-    ═══════════════════════════════════════════════════ -->
+    <!-- ════════════════════════════════════════════════════
+         INLINE SCRIPTS
+    ════════════════════════════════════════════════════ -->
     <script>
     (() => {
       'use strict';
 
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      /* ── reduced motion guard ── */
+      const rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      /* ── helpers ── */
-      function esc(s) {
-        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      }
-
-      /* ══════════════════════════════════════
-         HERO TYPEWRITER
-      ══════════════════════════════════════ */
-      const SNIPPET_LINES = [
-        { raw: 'addi x1, x0, 5' },
-        { raw: 'addi x2, x0, 1' },
-        { raw: 'loop:' },
-        { raw: '  beq x1, x0, done' },
-        { raw: '  mul x2, x2, x1' },
-        { raw: '  addi x1, x1, -1' },
-        { raw: '  j loop' },
-        { raw: 'done:' },
+      /* ══════════════════════════════════════════════
+         ATMOSPHERE GLYPHS
+      ══════════════════════════════════════════════ */
+      const GLYPH_POOL = [
+        'addi','x0','mul','0xFF','beq','lw','sw','PC','sp','ra',
+        'x1','0x1c','WB','EX','ID','IF','jal','ret','bne','0x7F',
+        'x2','blt','0b1010','0x00','add','xor','andi','lui',
       ];
-
-      const REG_RE  = /\b(x\d{1,2}|zero|ra|sp|gp|tp|t[0-6]|s\d{1,2}|fp|a[0-7])\b/g;
-      const MNE_RE  = /^(\s*)(addi|add|sub|mul|div|rem|and|or|xor|sll|srl|sra|lw|sw|lb|sb|lh|sh|beq|bne|blt|bge|bltu|bgeu|j|jal|jalr|lui|auipc|mv|ret|call|la|li)(\b)/;
-      const LAB_RE  = /^(\s*)([A-Za-z_.$][\w.$]*:)/;
-      const NUM_RE  = /(-?(?:0x[0-9a-fA-F]+|\d+))/g;
-
-      function hlLine(raw) {
-        const labM = raw.match(LAB_RE);
-        if (labM) {
-          return esc(labM[1]) + '<span class="tw-label">' + esc(labM[2]) + '</span>';
-        }
-        const mnM = raw.match(MNE_RE);
-        let html = '';
-        let rest = raw;
-        if (mnM) {
-          html += esc(mnM[1]) + '<span class="tw-mnemonic">' + esc(mnM[2]) + '</span>';
-          rest = raw.slice(mnM[1].length + mnM[2].length);
-        }
-        // registers, then numbers, on the remaining text
-        let regHtml = esc(rest);
-        regHtml = regHtml.replace(REG_RE, '<span class="tw-reg">$1</span>');
-        regHtml = regHtml.replace(NUM_RE, '<span class="tw-num">$1</span>');
-        return html + regHtml;
-      }
-
-      const termCode = document.getElementById('lpTerminalCode');
-      const term     = document.getElementById('lpTerminal');
-      if (termCode && term) {
-        let lineIdx = 0;
-        let charIdx = 0;
-        let done    = [];
-        let timer   = 0;
-
-        function render(showCursor) {
-          let html = '';
-          for (const l of done) html += '<div class="tw-line">' + hlLine(l) + '</div>';
-          if (lineIdx < SNIPPET_LINES.length) {
-            const partial = SNIPPET_LINES[lineIdx].raw.slice(0, charIdx);
-            const cur = showCursor ? '<span class="tw-cursor" aria-hidden="true"></span>' : '';
-            html += '<div class="tw-line">' + hlLine(partial) + cur + '</div>';
-          }
-          termCode.innerHTML = html;
-        }
-
-        function reset() {
-          lineIdx = 0; charIdx = 0; done = [];
-        }
-
-        function restart() {
-          term.classList.add('lp-terminal--fade');
-          timer = setTimeout(() => {
-            reset();
-            render(false);
-            term.classList.remove('lp-terminal--fade');
-            timer = setTimeout(tick, 60);
-          }, 400);
-        }
-
-        function tick() {
-          if (lineIdx >= SNIPPET_LINES.length) {
-            render(false);
-            timer = setTimeout(restart, 3000);
-            return;
-          }
-          const line = SNIPPET_LINES[lineIdx].raw;
-          charIdx++;
-          render(true);
-          if (charIdx >= line.length) {
-            done.push(line);
-            lineIdx++;
-            charIdx = 0;
-            timer = setTimeout(tick, 60);
-          } else {
-            timer = setTimeout(tick, 60);
-          }
-        }
-
-        if (reduced) {
-          done = SNIPPET_LINES.map(l => l.raw);
-          lineIdx = SNIPPET_LINES.length;
-          render(false);
-        } else {
-          render(true);
-          timer = setTimeout(tick, 300);
+      const glyphContainer = document.getElementById('atmGlyphs');
+      if (glyphContainer && !rm) {
+        for (let i = 0; i < 22; i++) {
+          const el = document.createElement('span');
+          el.className = 'atm__glyph';
+          el.textContent = GLYPH_POOL[i % GLYPH_POOL.length];
+          el.style.cssText = [
+            `left:${Math.random() * 98}%`,
+            `top:${Math.random() * 300}%`,
+            `opacity:${(Math.random() * 0.06 + 0.02).toFixed(3)}`,
+            `font-size:${Math.floor(Math.random() * 4 + 9)}px`,
+            `animation-delay:${(Math.random() * 8).toFixed(1)}s`,
+            `animation-duration:${(Math.random() * 14 + 12).toFixed(1)}s`,
+          ].join(';');
+          glyphContainer.appendChild(el);
         }
       }
 
-      /* ══════════════════════════════════════
-         HERO STAT COUNTER ANIMATION
-      ══════════════════════════════════════ */
-      function animateCount(el) {
+      /* ══════════════════════════════════════════════
+         SCROLL PARALLAX — drives --scroll-pct on <html>
+      ══════════════════════════════════════════════ */
+      if (!rm) {
+        let ticking = false;
+        const root = document.documentElement;
+        function onScroll() {
+          if (ticking) return;
+          ticking = true;
+          requestAnimationFrame(() => {
+            const pct = window.scrollY / Math.max(document.body.scrollHeight - window.innerHeight, 1);
+            root.style.setProperty('--scroll-pct', pct.toFixed(4));
+            root.style.setProperty('--scroll-y', window.scrollY + 'px');
+            ticking = false;
+          });
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+      }
+
+      /* ══════════════════════════════════════════════
+         HERO ENTRANCE — triggers after DOM ready
+      ══════════════════════════════════════════════ */
+      document.addEventListener('DOMContentLoaded', () => {
+        document.body.classList.add('loaded', 'hero-loaded');
+      });
+
+      /* ══════════════════════════════════════════════
+         STAT COUNT-UP
+      ══════════════════════════════════════════════ */
+      function countUp(el) {
+        if (rm) return;
         const target = parseInt(el.dataset.count, 10);
-        if (!target || reduced) return;
+        if (!target) return;
         const start = performance.now();
-        const dur   = 1200;
-        function step(now) {
+        const dur = 1400;
+        (function step(now) {
           const t = Math.min((now - start) / dur, 1);
-          const ease = 1 - Math.pow(1 - t, 3);
+          const ease = 1 - Math.pow(1 - t, 4);
           el.textContent = Math.round(ease * target).toString();
           if (t < 1) requestAnimationFrame(step);
-          else el.textContent = target.toString();
-        }
-        requestAnimationFrame(step);
+          else el.textContent = String(target);
+        })(start);
       }
 
-      const statsBar = document.querySelector('.lp-stats-bar');
-      if (statsBar) {
+      const trustEl = document.querySelector('.lp-trust');
+      if (trustEl) {
         const io = new IntersectionObserver(entries => {
           entries.forEach(e => {
             if (!e.isIntersecting) return;
-            e.currentTarget.querySelectorAll('[data-count]').forEach(animateCount);
+            e.currentTarget.querySelectorAll('[data-count]').forEach(countUp);
             io.disconnect();
           });
-        }, { threshold: 0.5 });
-        io.observe(statsBar);
+        }, { threshold: 0.6 });
+        io.observe(trustEl);
       }
 
-      /* ══════════════════════════════════════
-         PIPELINE ANIMATION (FIG 01)
-      ══════════════════════════════════════ */
-      const pipeline = document.getElementById('lpPipeline');
-      if (pipeline && !reduced) {
-        const stages = Array.from(pipeline.querySelectorAll('[data-stage]'));
-        let active = 0;
-        function cycleStage() {
-          stages.forEach(s => s.classList.remove('lp-pipeline__stage--on'));
-          stages[active].classList.add('lp-pipeline__stage--on');
-          active = (active + 1) % stages.length;
-        }
-        cycleStage();
-        setInterval(cycleStage, 600);
-      }
+      /* ══════════════════════════════════════════════
+         SIMULATOR MOCKUP LIVE ANIMATION
+      ══════════════════════════════════════════════ */
+      const FACTORIAL_STEPS = [
+        { pc:'0x00000010', cycle:1, activeIdx:0, r1:5, r2:1, pseudoc:'x1 = 0 + 5' },
+        { pc:'0x00000014', cycle:2, activeIdx:1, r1:5, r2:1, pseudoc:'x2 = 0 + 1' },
+        { pc:'0x0000001c', cycle:4, activeIdx:3, r1:5, r2:5, pseudoc:'x2 = x2 * x1' },
+        { pc:'0x00000020', cycle:5, activeIdx:4, r1:4, r2:5, pseudoc:'x1 = x1 + (-1)' },
+        { pc:'0x00000024', cycle:6, activeIdx:5, r1:4, r2:5, pseudoc:'if x1 ≠ 0 → pc = loop' },
+        { pc:'0x0000001c', cycle:7, activeIdx:3, r1:4, r2:20, pseudoc:'x2 = x2 * x1' },
+        { pc:'0x00000020', cycle:8, activeIdx:4, r1:3, r2:20, pseudoc:'x1 = x1 + (-1)' },
+        { pc:'0x0000001c', cycle:10, activeIdx:3, r1:3, r2:60, pseudoc:'x2 = x2 * x1' },
+      ];
 
-      /* ══════════════════════════════════════
-         TRANSLATE ANIMATION (FIG 02)
-      ══════════════════════════════════════ */
-      const translateEl = document.getElementById('lpTranslate');
-      if (translateEl && !reduced) {
-        const pairs = [
-          { asm: '<span class="tw-mnemonic">addi</span> <span class="tw-reg">x1</span>, <span class="tw-reg">x0</span>, <span class="tw-num">5</span>', c: 'x1 = 0 + 5' },
-          { asm: '<span class="tw-mnemonic">lw</span> <span class="tw-reg">x2</span>, 0(<span class="tw-reg">x1</span>)', c: 'x2 = mem[x1 + 0]' },
-          { asm: '<span class="tw-mnemonic">beq</span> <span class="tw-reg">x1</span>, <span class="tw-reg">x0</span>, done', c: 'if (x1 == 0) goto done' },
-          { asm: '<span class="tw-mnemonic">mul</span> <span class="tw-reg">x3</span>, <span class="tw-reg">x1</span>, <span class="tw-reg">x2</span>', c: 'x3 = x1 * x2' },
-        ];
-        let pi = 0;
-        const asmEl   = translateEl.querySelector('.lp-translate__asm');
-        const arrowEl = translateEl.querySelector('.lp-translate__arrow');
-        const cEl     = translateEl.querySelector('.lp-translate__c');
+      const simLines = document.querySelectorAll('.lp-sim__line');
+      const simPcEl  = document.getElementById('simPc');
+      const simCycEl = document.getElementById('simCycle');
+      const simPcEl2 = null;
+      const simR1El  = document.getElementById('simR1');
+      const simR2El  = document.getElementById('simR2');
+      const simPCEl  = document.getElementById('simPseudocCode');
+      const simMemActiveEl = document.getElementById('simMemActive');
 
-        function showPair(idx) {
-          const p = pairs[idx];
-          // reset
-          [asmEl, arrowEl, cEl].forEach(el => {
-            el.classList.remove('lp-translate--in', 'lp-translate--arrow-in');
-            el.style.opacity = '0';
-          });
-          if (asmEl) asmEl.innerHTML = p.asm;
-          if (cEl)   cEl.textContent  = p.c;
-          // sequence: asm -> arrow -> c
-          setTimeout(() => { if (asmEl) { asmEl.style.opacity = ''; asmEl.classList.add('lp-translate--in'); } }, 50);
-          setTimeout(() => { if (arrowEl) { arrowEl.style.opacity = ''; arrowEl.classList.add('lp-translate--arrow-in'); } }, 350);
-          setTimeout(() => { if (cEl) { cEl.style.opacity = ''; cEl.classList.add('lp-translate--in'); } }, 650);
-        }
+      let stepIdx = 0;
 
-        showPair(0);
-        setInterval(() => {
-          [asmEl, arrowEl, cEl].forEach(el => { el.style.opacity = '0'; });
-          setTimeout(() => { pi = (pi + 1) % pairs.length; showPair(pi); }, 400);
-        }, 4000);
-      }
+      function hexStr(n) { return '0x' + n.toString(16).toUpperCase().padStart(8,'0'); }
 
-      /* ══════════════════════════════════════
-         PROGRESS ROWS (FIG 03)
-      ══════════════════════════════════════ */
-      const progRows = document.getElementById('lpProgressRows');
-      if (progRows) {
-        const fills = Array.from(progRows.querySelectorAll('.lp-prow__fill'));
-        const io = new IntersectionObserver(entries => {
-          entries.forEach(e => {
-            if (!e.isIntersecting) return;
-            fills.forEach(f => {
-              const delay = f.style.getPropertyValue('--delay') || '0ms';
-              const target = f.dataset.target || '0';
-              setTimeout(() => {
-                f.style.width = target + '%';
-              }, parseInt(delay, 10));
-            });
-            io.disconnect();
-          });
-        }, { threshold: 0.3 });
-        io.observe(progRows);
-      }
+      function applySimStep(s) {
+        if (simPcEl) simPcEl.textContent = s.pc;
+        if (simCycEl) simCycEl.textContent = String(s.cycle);
+        if (simPCEl) simPCEl.textContent = s.pseudoc;
 
-      /* ══════════════════════════════════════
-         SCROLLYTELLING
-      ══════════════════════════════════════ */
-      const mockup        = document.getElementById('lpMockup');
-      const stateReg      = document.getElementById('lpStateRegisters');
-      const statePseudoc  = document.getElementById('lpStatePseudoc');
-      const stateStack    = document.getElementById('lpStateStack');
-      const scrollBlocks  = Array.from(document.querySelectorAll('.lp-scroll__block'));
+        simLines.forEach((l, i) => {
+          l.classList.toggle('lp-sim__line--active', i === s.activeIdx);
+        });
 
-      function showMockupState(name) {
-        const states = { registers: stateReg, pseudoc: statePseudoc, stack: stateStack };
-        Object.entries(states).forEach(([key, el]) => {
-          if (!el) return;
-          if (key === name) {
-            el.classList.remove('lp-mockup__state--hidden');
-          } else {
-            el.classList.add('lp-mockup__state--hidden');
+        if (simR1El) {
+          const prevR1 = simR1El.querySelector('.sim-rv');
+          if (prevR1) {
+            const old = prevR1.textContent;
+            const nxt = hexStr(s.r1);
+            if (old !== nxt) { prevR1.textContent = nxt; flashRow(simR1El); }
           }
+        }
+        if (simR2El) {
+          const prevR2 = simR2El.querySelector('.sim-rv');
+          if (prevR2) {
+            const old = prevR2.textContent;
+            const nxt = hexStr(s.r2);
+            if (old !== nxt) { prevR2.textContent = nxt; flashRow(simR2El); }
+          }
+        }
+      }
+
+      function flashRow(row) {
+        row.classList.remove('sim-row-flash');
+        void row.offsetWidth;
+        row.classList.add('sim-row-flash');
+        setTimeout(() => row.classList.remove('sim-row-flash'), 800);
+      }
+
+      if (!rm) {
+        applySimStep(FACTORIAL_STEPS[0]);
+        setInterval(() => {
+          stepIdx = (stepIdx + 1) % FACTORIAL_STEPS.length;
+          applySimStep(FACTORIAL_STEPS[stepIdx]);
+        }, 1800);
+      } else {
+        applySimStep(FACTORIAL_STEPS[2]);
+        simLines.forEach((l, i) => l.classList.toggle('lp-sim__line--active', i === 3));
+      }
+
+      /* ══════════════════════════════════════════════
+         REVEAL MOCKUP — scrollytelling state switch
+      ══════════════════════════════════════════════ */
+      const rmRegs  = document.getElementById('rmRegs');
+      const rmInstr = document.getElementById('rmInstr');
+      const rmStack = document.getElementById('rmStack');
+      const rmR2Val = document.getElementById('rmR2Val');
+      const rmClike = document.getElementById('rmClike');
+      const rmStackFrames = document.getElementById('rmStackFrames');
+
+      const RM_PANELS = { regs: rmRegs, instr: rmInstr, stack: rmStack };
+
+      function showRM(name) {
+        Object.entries(RM_PANELS).forEach(([k, el]) => {
+          if (!el) return;
+          el.classList.toggle('lp-rm--hidden', k !== name);
         });
       }
 
-      if (scrollBlocks.length > 0) {
-        const blockIO = new IntersectionObserver(entries => {
+      const revealBlocks = document.querySelectorAll('.lp-reveal__block');
+      if (revealBlocks.length) {
+        const bio = new IntersectionObserver(entries => {
           entries.forEach(e => {
             if (e.isIntersecting && e.target instanceof HTMLElement) {
-              showMockupState(e.target.dataset.state || 'registers');
+              showRM(e.target.dataset.rm || 'regs');
             }
           });
         }, { threshold: 0.5 });
-        scrollBlocks.forEach(b => blockIO.observe(b));
+        revealBlocks.forEach(b => bio.observe(b));
       }
 
-      /* ── Register table random flicker ── */
-      const regTable = document.getElementById('lpRegTable');
-      if (regTable && !reduced) {
-        const HEX_VALS = [
-          '0x00000005','0x00000078','0x00000148','0x10000000',
-          '0x7FFFFFF0','0xDEADBEEF','0x0000001C','0x00000003',
-        ];
-        const rows = Array.from(regTable.querySelectorAll('tr[data-reg]'));
+      /* live register cycling in reveal panel */
+      const REVEAL_VALS = [1, 5, 20, 60, 120];
+      let rvIdx = 0;
+      if (rmR2Val && !rm) {
         setInterval(() => {
-          const row = rows[Math.floor(Math.random() * rows.length)];
-          const valCell = row.querySelector('.lp-reg-table__val');
-          if (valCell) {
-            valCell.textContent = HEX_VALS[Math.floor(Math.random() * HEX_VALS.length)];
-            row.classList.add('lp-reg-table__row--flash');
-            setTimeout(() => row.classList.remove('lp-reg-table__row--flash'), 600);
-          }
-        }, 1500);
+          rvIdx = (rvIdx + 1) % REVEAL_VALS.length;
+          rmR2Val.textContent = hexStr(REVEAL_VALS[rvIdx]);
+          const row = document.getElementById('rmR2');
+          if (row) flashRow(row);
+        }, 1800);
       }
 
-      /* ── Pseudo-C cycling ── */
-      const pseudocEl = document.getElementById('lpPseudoc');
-      if (pseudocEl && !reduced) {
-        const PAIRS = [
-          { asm: '<span class="tw-mnemonic">addi</span> <span class="tw-reg">x1</span>, <span class="tw-reg">x0</span>, <span class="tw-num">5</span>', c: 'x1 = 0 + 5' },
-          { asm: '<span class="tw-mnemonic">lw</span> <span class="tw-reg">x2</span>, 0(<span class="tw-reg">x1</span>)', c: 'x2 = mem[x1 + 0]' },
-          { asm: '<span class="tw-mnemonic">beq</span> <span class="tw-reg">x1</span>, <span class="tw-reg">x0</span>, done', c: 'if (x1 == 0) goto done' },
-          { asm: '<span class="tw-mnemonic">mul</span> <span class="tw-reg">x3</span>, <span class="tw-reg">x1</span>, <span class="tw-reg">x2</span>', c: 'x3 = x1 * x2' },
-        ];
-        let pci = 0;
-        const pasmEl    = pseudocEl.querySelector('.lp-pseudoc__asm');
-        const peffectEl = pseudocEl.querySelector('.lp-pseudoc__effect');
+      /* live pseudo-c cycling */
+      const CLIKE_PAIRS = [
+        { asm:'<span class="sim-mne">mul</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x2</span>, <span class="sim-reg">x1</span>', c:'x2 = x2 * x1' },
+        { asm:'<span class="sim-mne">addi</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x1</span>, <span class="sim-num">-1</span>', c:'x1 = x1 + (-1)' },
+        { asm:'<span class="sim-mne">bne</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x0</span>, loop', c:'if x1 ≠ 0 → pc = loop' },
+        { asm:'<span class="sim-mne">lw</span> <span class="sim-reg">x3</span>, 0(<span class="sim-reg">x2</span>)', c:'x3 = mem[x2 + 0]' },
+      ];
+      let cpIdx = 0;
+      const rmAsmEl = document.querySelector('.lp-rm__asm');
+      if (rmClike && rmAsmEl && !rm) {
         setInterval(() => {
-          pseudocEl.style.opacity = '0';
-          setTimeout(() => {
-            pci = (pci + 1) % PAIRS.length;
-            if (pasmEl) pasmEl.innerHTML = PAIRS[pci].asm;
-            if (peffectEl) peffectEl.innerHTML = '<span class="lp-pseudoc__comment">// effect:</span> ' + esc(PAIRS[pci].c);
-            pseudocEl.style.opacity = '';
-          }, 300);
-        }, 2000);
+          cpIdx = (cpIdx + 1) % CLIKE_PAIRS.length;
+          const p = CLIKE_PAIRS[cpIdx];
+          rmAsmEl.innerHTML = p.asm;
+          rmClike.style.opacity = '0';
+          setTimeout(() => { rmClike.textContent = p.c; rmClike.style.opacity = ''; }, 300);
+        }, 2400);
       }
 
-      /* ── Stack push/pop ── */
-      const stackEl = document.getElementById('lpStack');
-      if (stackEl && !reduced) {
-        const LABELS = ['arg a0','local temp','caller save','loop var','result'];
-        let pushing = true;
-        let pushed = 0;
+      /* live stack push/pop */
+      if (rmStackFrames && !rm) {
+        const PUSH_LABELS = ['arg a0','local i','temp x5','result x2'];
+        let spIdx = 0, pushing = true;
         setInterval(() => {
-          if (pushing && pushed < 3) {
-            const frame = document.createElement('div');
-            frame.className = 'lp-stack__frame lp-stack__frame--new';
-            frame.textContent = LABELS[pushed % LABELS.length];
-            stackEl.insertBefore(frame, stackEl.firstChild);
-            requestAnimationFrame(() => frame.classList.remove('lp-stack__frame--new'));
-            pushed++;
-            pushing = pushed < 3;
+          if (pushing) {
+            const fr = document.createElement('div');
+            fr.className = 'lp-rm__frame rm-frame--new';
+            fr.textContent = PUSH_LABELS[spIdx % PUSH_LABELS.length];
+            rmStackFrames.insertBefore(fr, rmStackFrames.firstChild);
+            requestAnimationFrame(() => fr.classList.remove('rm-frame--new'));
+            spIdx++;
+            if (spIdx >= 3) { spIdx = 0; pushing = false; }
           } else {
-            const first = stackEl.querySelector('.lp-stack__frame:not(.lp-stack__frame--sp)');
-            if (first) {
-              first.classList.add('lp-stack__frame--pop');
-              setTimeout(() => first.remove(), 300);
-              pushed = Math.max(0, pushed - 1);
-            }
-            pushing = pushed === 0;
+            const fr = rmStackFrames.querySelector('.lp-rm__frame:not(.rm-frame--sp):not(.rm-frame--hi)');
+            if (fr) { fr.classList.add('rm-frame--out'); setTimeout(() => fr.remove(), 350); }
+            pushing = rmStackFrames.querySelectorAll('.lp-rm__frame').length <= 2;
           }
-        }, 2000);
+        }, 2200);
       }
 
-      /* ══════════════════════════════════════
-         GLOBAL REVEAL OBSERVER
-      ══════════════════════════════════════ */
-      document.addEventListener('DOMContentLoaded', () => {
-        document.body.classList.add('loaded', 'hero-loaded');
+      /* ══════════════════════════════════════════════
+         PROGRESS BAR FILLS (FIG 03 / reveal)
+      ══════════════════════════════════════════════ */
+      document.querySelectorAll('.lp-prow__fill').forEach(f => {
+        const io = new IntersectionObserver(entries => {
+          entries.forEach(e => {
+            if (!e.isIntersecting) return;
+            const target = f.dataset.target || '0';
+            const delay  = f.style.getPropertyValue('--delay') || '0ms';
+            setTimeout(() => { f.style.width = target + '%'; }, parseInt(delay, 10));
+            io.unobserve(f);
+          });
+        }, { threshold: 0.3 });
+        io.observe(f);
+      });
 
-        const revealEls = document.querySelectorAll('.reveal');
-        const revIO = new IntersectionObserver(entries => {
+      /* ══════════════════════════════════════════════
+         GLOBAL REVEAL OBSERVER
+      ══════════════════════════════════════════════ */
+      document.addEventListener('DOMContentLoaded', () => {
+        const io = new IntersectionObserver(entries => {
           entries.forEach(e => {
             if (e.isIntersecting) {
-              e.target.classList.add('reveal--visible');
-              revIO.unobserve(e.target);
+              e.target.classList.add('lp-revealed');
+              io.unobserve(e.target);
             }
           });
-        }, { threshold: 0.15 });
-        revealEls.forEach(el => revIO.observe(el));
+        }, { threshold: 0.12 });
+        document.querySelectorAll('[data-landing-section]').forEach(el => io.observe(el));
       });
+
     })();
     </script>
 
     <script type="module">
-      import { getSession } from './src/auth.ts';
-      import { initFooter } from './src/footer.ts';
+      import { getSession }            from './src/auth.ts';
+      import { initFooter }            from './src/footer.ts';
       import { initLandingAnimations } from './src/landing-animations.ts';
       import { initLandingExperience } from './src/landing-experience.ts';
-      import { initOpcodeBand } from './src/landing-opcode-band.ts';
+      import { initOpcodeBand }        from './src/landing-opcode-band.ts';
       import { getLesson, getLessons, loadProgress } from './src/lessons.ts';
-      import { initNav } from './src/nav.ts';
+      import { initNav }               from './src/nav.ts';
 
-      function resumeDismissKey(lessonId, stepId) {
-        return `studyriscv_resume_dismissed:${lessonId}:${stepId}`;
-      }
+      function resumeDismissKey(lid, sid) { return `studyriscv_resume_dismissed:${lid}:${sid}`; }
 
       async function renderLandingResume() {
-        const resumeBar = document.getElementById('landingResumeBar');
-        if (!(resumeBar instanceof HTMLElement)) return;
-
+        const bar = document.getElementById('landingResumeBar');
+        if (!(bar instanceof HTMLElement)) return;
         const session = await getSession();
-        if (!session) { resumeBar.hidden = true; return; }
-
+        if (!session) { bar.hidden = true; return; }
         const progress = loadProgress();
         const lessons  = getLessons();
-        const inProgressLesson =
+        const lesson   =
           (progress.lastActiveLesson ? getLesson(progress.lastActiveLesson) : null) ??
-          lessons.find(lesson => {
-            const lp = progress.lessons[lesson.id];
-            return Boolean(lp && !lp.completed && lp.stepsCompleted.length > 0);
-          }) ?? null;
-
-        if (!inProgressLesson) { resumeBar.hidden = true; return; }
-
-        const lessonProgress = progress.lessons[inProgressLesson.id];
-        if (!lessonProgress || lessonProgress.completed) { resumeBar.hidden = true; return; }
-
-        const safeStepIndex = Math.min(lessonProgress.currentStepIndex, inProgressLesson.steps.length - 1);
-        const stepNumber = safeStepIndex + 1;
-        const stepId = inProgressLesson.steps[safeStepIndex]?.id ?? inProgressLesson.steps[0]?.id;
-        if (!stepId) { resumeBar.hidden = true; return; }
-
-        if (localStorage.getItem(resumeDismissKey(inProgressLesson.id, stepId)) === '1') {
-          resumeBar.hidden = true;
-          return;
-        }
-
-        resumeBar.hidden = false;
-        resumeBar.innerHTML = `
-          <div class="lp-resume__inner">
-            <div class="lp-resume__copy">▶ Continue: ${inProgressLesson.title} · Step ${stepNumber} of ${inProgressLesson.steps.length}</div>
-            <a class="lp-resume__btn" href="/simulator/?lesson=${encodeURIComponent(inProgressLesson.id)}&step=${encodeURIComponent(stepId)}">Resume →</a>
-            <button class="lp-resume__dismiss" type="button" aria-label="Dismiss">×</button>
-          </div>
-        `;
-        resumeBar.querySelector('.lp-resume__dismiss')?.addEventListener('click', () => {
-          localStorage.setItem(resumeDismissKey(inProgressLesson.id, stepId), '1');
-          resumeBar.hidden = true;
+          lessons.find(l => { const lp = progress.lessons[l.id]; return Boolean(lp && !lp.completed && lp.stepsCompleted.length > 0); }) ?? null;
+        if (!lesson) { bar.hidden = true; return; }
+        const lp = progress.lessons[lesson.id];
+        if (!lp || lp.completed) { bar.hidden = true; return; }
+        const si   = Math.min(lp.currentStepIndex, lesson.steps.length - 1);
+        const sid  = lesson.steps[si]?.id ?? lesson.steps[0]?.id;
+        if (!sid) { bar.hidden = true; return; }
+        if (localStorage.getItem(resumeDismissKey(lesson.id, sid)) === '1') { bar.hidden = true; return; }
+        bar.hidden = false;
+        bar.innerHTML = `<div class="lp-resume__inner"><div class="lp-resume__copy">▶ Continue: ${lesson.title} · Step ${si + 1} of ${lesson.steps.length}</div><a class="lp-resume__btn" href="/simulator/?lesson=${encodeURIComponent(lesson.id)}&step=${encodeURIComponent(sid)}">Resume →</a><button class="lp-resume__dismiss" type="button" aria-label="Dismiss">×</button></div>`;
+        bar.querySelector('.lp-resume__dismiss')?.addEventListener('click', () => {
+          localStorage.setItem(resumeDismissKey(lesson.id, sid), '1'); bar.hidden = true;
         });
       }
 
