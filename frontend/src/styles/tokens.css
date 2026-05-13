@@ -105,11 +105,11 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.14);
-  --nav-bg: rgba(247, 245, 242, 0.88);
-  --nav-bg-scrolled: rgba(247, 245, 242, 0.97);
-  --nav-border: var(--border);
+  --nav-bg: rgba(247, 245, 242, 0.90);
+  --nav-bg-scrolled: rgba(247, 245, 242, 0.98);
+  --nav-border: rgba(0, 0, 0, 0.10);
   --nav-link-hover-bg: rgba(0, 0, 0, 0.04);
-  --nav-dropdown-bg: #ffffff;
+  --nav-dropdown-bg: rgba(255, 255, 255, 0.97);
   --nav-mobile-bg: #f7f5f2;
 }
 

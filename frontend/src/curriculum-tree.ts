@@ -86,10 +86,10 @@ function actionClass(state: ReturnType<typeof lessonState>): string {
 
 function circleInner(index: number, state: ReturnType<typeof lessonState>): string {
   if (state === "completed") {
-    return "✓";
+    return `<svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2 6 5 9 10 3"></polyline></svg>`;
   }
   if (state === "locked") {
-    return "🔒";
+    return `<svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="2.5" y="5.5" width="7" height="5" rx="1"></rect><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5"></path></svg>`;
   }
   return String(index + 1);
 }
@@ -151,7 +151,7 @@ function rowMarkup(
         <div class="lesson-row__header">
           <span class="lesson-row__title">${escapeHtml(lesson.title)}</span>
           <div class="lesson-row__badges">
-            ${lesson.eceCourse ? '<span class="lesson-badge lesson-badge--ece">ECE</span>' : ""}
+            ${lesson.eceCourse ? '<span class="lesson-badge lesson-badge--core">Core</span>' : ""}
             <span class="lesson-badge lesson-badge--${difficulty}">${escapeHtml(difficulty)}</span>
           </div>
         </div>
@@ -168,17 +168,17 @@ function rowMarkup(
   `;
 }
 
-function checkpointIcon(state: ReturnType<typeof getCheckpointCardState>, requiredTier: string): string {
+function checkpointIcon(state: ReturnType<typeof getCheckpointCardState>, _requiredTier: string): string {
   if (state === "completed") {
-    return "✓";
+    return `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><polyline points="3 8 6 11 13 4"></polyline></svg>`;
   }
   if (state === "unlocked") {
-    return "🏁";
+    return `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><polygon points="8 2 10 6 14 6.7 11 9.5 11.6 14 8 12 4.4 14 5 9.5 2 6.7 6 6"></polygon></svg>`;
   }
   if (state === "locked-tier") {
-    return requiredTier === "Pro" ? "🐝" : "👤";
+    return `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 0 1 6 0v2"></path></svg>`;
   }
-  return "🔒";
+  return `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 0 1 6 0v2"></path></svg>`;
 }
 
 function checkpointActionMarkup(

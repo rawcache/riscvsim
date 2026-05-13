@@ -211,16 +211,16 @@ body.landing-page {
 .atm__grid {
   position: absolute;
   inset: 0;
-  /* coarse 56px grid */
+  /* coarse 56px grid — very subtle */
   background-image:
-    linear-gradient(rgba(91,108,255,0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(91,108,255,0.055) 1px, transparent 1px);
+    linear-gradient(rgba(91,108,255,0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91,108,255,0.032) 1px, transparent 1px);
   background-size: 56px 56px;
-  /* fade toward edges */
+  /* fade toward edges, only visible near hero */
   -webkit-mask-image:
-    radial-gradient(ellipse 95% 85% at 55% 12%, rgba(0,0,0,1) 10%, rgba(0,0,0,0.6) 45%, transparent 75%);
+    radial-gradient(ellipse 80% 65% at 58% 8%, rgba(0,0,0,0.9) 5%, rgba(0,0,0,0.4) 40%, transparent 70%);
   mask-image:
-    radial-gradient(ellipse 95% 85% at 55% 12%, rgba(0,0,0,1) 10%, rgba(0,0,0,0.6) 45%, transparent 75%);
+    radial-gradient(ellipse 80% 65% at 58% 8%, rgba(0,0,0,0.9) 5%, rgba(0,0,0,0.4) 40%, transparent 70%);
 }
 /* fine 14px sub-grid */
 .atm__grid::after {
@@ -228,13 +228,13 @@ body.landing-page {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(91,108,255,0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(91,108,255,0.022) 1px, transparent 1px);
+    linear-gradient(rgba(91,108,255,0.014) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91,108,255,0.014) 1px, transparent 1px);
   background-size: 14px 14px;
   -webkit-mask-image:
-    radial-gradient(ellipse 70% 60% at 60% 10%, black 5%, transparent 60%);
+    radial-gradient(ellipse 60% 50% at 62% 8%, black 3%, transparent 55%);
   mask-image:
-    radial-gradient(ellipse 70% 60% at 60% 10%, black 5%, transparent 60%);
+    radial-gradient(ellipse 60% 50% at 62% 8%, black 3%, transparent 55%);
 }
 
 /* ── L3: diagonal datapath beams ── */
@@ -619,6 +619,12 @@ body.hero-loaded .lp-in {
   background: var(--lp-border-hi);
   flex-shrink: 0;
 }
+.lp-trust__link {
+  color: var(--accent-hover);
+  text-decoration: none;
+  transition: opacity 150ms ease;
+}
+.lp-trust__link:hover { opacity: 0.75; }
 
 
 /* ═══════════════════════════════════════════════════════════════

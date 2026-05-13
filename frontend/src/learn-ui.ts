@@ -161,7 +161,7 @@ function renderHero(progress: UserProgress, loggedIn: boolean): void {
     <div class="learn-hero__copy">
       <div>
         <h1 class="learn-hero__title">Learn RISC-V Assembly</h1>
-        <p class="learn-hero__subhead">${totalLessons} lessons · 15 challenges · ECE 2035 aligned</p>
+        <p class="learn-hero__subhead">${totalLessons} lessons · 15 challenges · assembly fundamentals to advanced</p>
       </div>
       <div class="learn-hero__ctas">
         <a class="learn-hero__cta-primary" href="${startHref}">Start learning</a>

@@ -34,7 +34,7 @@ function renderLabs(): void {
       <div class="learn-hero__copy">
         <div>
           <h1 class="learn-hero__title">Labs</h1>
-          <p class="learn-hero__subhead">ECE 2035-style assignments with real specs, visible and hidden tests, and graded submissions.</p>
+          <p class="learn-hero__subhead">Full-function assembly assignments with real specs, visible and hidden tests, and graded submissions.</p>
         </div>
         <div class="learn-xp-pill">${loadScore().totalPoints.toLocaleString("en-US")} chips</div>
       </div>
