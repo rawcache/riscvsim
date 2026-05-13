@@ -1,6 +1,7 @@
 .problems-page {
   font-family: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   min-height: 100vh;
+  padding-top: var(--nav-height, 64px);
   background: var(--bg-base);
   color: var(--text-primary);
   line-height: 1.6;
@@ -36,7 +37,7 @@
 }
 
 .problems-shell {
-  min-height: calc(100vh - 56px);
+  min-height: calc(100vh - var(--nav-height, 64px));
   background: var(--bg-base);
 }
 
@@ -48,7 +49,7 @@
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr) 260px;
   grid-template-rows: 1fr;
-  min-height: calc(100vh - 56px);
+  min-height: calc(100vh - var(--nav-height, 64px));
   width: 100%;
   max-width: none;
 }
@@ -56,8 +57,8 @@
 .pl-sidebar {
   grid-column: 1;
   position: sticky;
-  top: 56px;
-  height: calc(100vh - 56px);
+  top: var(--nav-height, 64px);
+  height: calc(100vh - var(--nav-height, 64px));
   overflow-y: auto;
   border-right: 1px solid var(--border);
   background: var(--bg-base);
@@ -79,8 +80,8 @@
 .pl-right-panel {
   grid-column: 3;
   position: sticky;
-  top: 56px;
-  height: calc(100vh - 56px);
+  top: var(--nav-height, 64px);
+  height: calc(100vh - var(--nav-height, 64px));
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -906,6 +907,10 @@
   overflow: hidden;
   background: var(--pv-bg-page);
   color: var(--pv-text-primary);
+}
+
+.pv-body {
+  padding-top: 0 !important;
 }
 
 .pv-body #site-nav,

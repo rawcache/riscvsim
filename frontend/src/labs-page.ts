@@ -34,14 +34,14 @@ function renderLabs(): void {
       <div class="learn-hero__copy">
         <div>
           <h1 class="learn-hero__title">Labs</h1>
-          <p class="learn-hero__subhead">Five open-ended ECE 2035-style assignments with visible tests, hidden tests, and graded submissions.</p>
+          <p class="learn-hero__subhead">ECE 2035-style assignments with real specs, visible and hidden tests, and graded submissions.</p>
         </div>
         <div class="learn-xp-pill">${loadScore().totalPoints.toLocaleString("en-US")} chips</div>
       </div>
       <div class="learn-hero__status">
         <div class="learn-hero__signin">
           <div class="learn-hero__signin-copy">${solved}/${labs.length} labs completed</div>
-          <div class="learn-hero__signin-copy">Build full functions under real lab-style specs.</div>
+          <div class="learn-hero__signin-copy">Build full functions against a real test harness.</div>
         </div>
       </div>
     </section>
@@ -50,18 +50,26 @@ function renderLabs(): void {
         .map((lab) => {
           const best = getBestLabSubmission(lab.id);
           const status = statusForLab(lab.id);
+          const scoreText = best ? `${best.score}/${best.maxScore} pts` : "Not started";
           return `
-            <a class="challenge-card challenge-card--${status}" href="/simulator/?lab=${encodeURIComponent(lab.id)}">
-              <div class="challenge-card__header">
-                <span class="challenge-card__difficulty challenge-card__difficulty--medium">Lab ${lab.number}</span>
-                <span class="challenge-card__points">${lab.totalPoints} pts</span>
+            <a class="lab-card lab-card--${status}" href="/simulator/?lab=${escapeHtml(encodeURIComponent(lab.id))}">
+              <div class="lab-card__accent"></div>
+              <div class="lab-card__body">
+                <div class="lab-card__header">
+                  <span class="lab-card__num">LAB ${lab.number}</span>
+                  <span class="lab-card__status-badge">${status === "complete" ? "✓ Complete" : status === "in-progress" ? "In progress" : "Not started"}</span>
+                </div>
+                <h2 class="lab-card__title">${escapeHtml(lab.title)}</h2>
+                <p class="lab-card__desc">${escapeHtml(lab.description)}</p>
+                <div class="lab-card__meta">
+                  <span>${lab.estimatedMinutes} min</span>
+                  <span>${lab.testCases.length} tests</span>
+                  <span>${lab.totalPoints} pts</span>
+                </div>
               </div>
-              <h2 class="challenge-card__title">${escapeHtml(lab.title)}</h2>
-              <div class="challenge-card__lesson">${lab.estimatedMinutes} min · ${lab.testCases.length} tests</div>
-              <p class="challenge-card__body">${escapeHtml(lab.description)}</p>
-              <div class="challenge-card__footer">
-                <span class="challenge-card__best">${best ? `${best.score}/${best.maxScore}` : "Not started"}</span>
-                <span class="challenge-card__status-label">${status.replace("-", " ")}</span>
+              <div class="lab-card__footer">
+                <span class="lab-card__score">${scoreText}</span>
+                <span class="lab-card__cta">Open in Simulator →</span>
               </div>
             </a>
           `;

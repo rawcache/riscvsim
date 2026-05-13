@@ -1,9 +1,10 @@
 .checkpoints-page {
   overflow: hidden;
+  padding-top: var(--nav-height, 64px);
 }
 
 .checkpoints-page .cp-shell {
-  height: calc(100vh - 56px);
+  height: calc(100vh - var(--nav-height, 64px));
   overflow: hidden;
 }
 

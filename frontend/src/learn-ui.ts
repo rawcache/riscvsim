@@ -148,13 +148,24 @@ function renderHero(progress: UserProgress, loggedIn: boolean): void {
   const score = loadScore();
   const completed = lessonsCompleted(progress);
   const percent = progressPercent(progress);
-  const totalLessons = getLessons().length;
+  const lessons = getLessons();
+  const totalLessons = lessons.length;
+  const firstLesson = lessons[0];
+  const firstStepId = firstLesson?.steps[0]?.id ?? "";
+  const startHref =
+    firstLesson && firstStepId
+      ? `/simulator/?lesson=${encodeURIComponent(firstLesson.id)}&step=${encodeURIComponent(firstStepId)}`
+      : "/simulator/";
 
   heroShell.innerHTML = `
     <div class="learn-hero__copy">
       <div>
         <h1 class="learn-hero__title">Learn RISC-V Assembly</h1>
         <p class="learn-hero__subhead">${totalLessons} lessons · 15 challenges · ECE 2035 aligned</p>
+      </div>
+      <div class="learn-hero__ctas">
+        <a class="learn-hero__cta-primary" href="${startHref}">Start learning</a>
+        <a class="learn-hero__cta-secondary" href="/quiz/?take=diagnostic">Find your level →</a>
       </div>
       <div class="learn-xp-pill">${chipLabel(score.totalPoints)}</div>
       ${resumeMarkup(progress, loggedIn)}

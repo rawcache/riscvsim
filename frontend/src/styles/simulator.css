@@ -1,10 +1,16 @@
 body.simulator-page {
   min-height: 100vh;
+  padding-top: var(--nav-height, 64px);
+  overflow: hidden;
   font-family: var(--font-body);
   color: var(--text-primary);
   background:
     radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 9%, transparent), transparent 24%),
     var(--bg-base);
+}
+
+body.simulator-page #site-footer {
+  display: none !important;
 }
 
 .simulator-page a {
@@ -4763,7 +4769,7 @@ body.challenge-simulator-active .register-file-section {
 .simulator-layout,
 .simulator-grid {
   margin-top: 12px;
-  height: calc(100vh - 68px);
+  height: calc(100vh - var(--nav-height, 64px) - 48px);
   overflow: hidden;
 }
 

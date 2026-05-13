@@ -79,12 +79,34 @@ function renderQuizList(): void {
   }
 
   const quizzes = getQuizzes();
+  const practiceQuizzes = quizzes.filter((q) => q.type === "practice");
+  const examQuizzes = quizzes.filter((q) => q.type === "midterm" || q.type === "final");
+
+  function quizCard(quiz: Quiz): string {
+    const best = getBestQuizAttempt(quiz.id);
+    return `
+      <article class="challenge-card">
+        <div class="challenge-card__header">
+          ${quizTypeBadge(quiz)}
+          <span class="challenge-card__points">${quiz.questions.length} questions</span>
+        </div>
+        <h2 class="challenge-card__title">${escapeHtml(quiz.title)}</h2>
+        <div class="challenge-card__lesson">${Math.floor(quiz.timeLimitSeconds / 60)} min · ${quiz.totalPoints} pts</div>
+        <p class="challenge-card__body">${escapeHtml(quiz.description)}</p>
+        <div class="challenge-card__footer">
+          <span class="challenge-card__best">${best ? `${percent(best.score, best.maxScore)}% best` : "Not attempted"}</span>
+          <a class="learn-panel__link" href="/quiz/?take=${encodeURIComponent(quiz.id)}">Start →</a>
+        </div>
+      </article>
+    `;
+  }
+
   root.innerHTML = `
     <section class="learn-hero">
       <div class="learn-hero__copy">
         <div>
           <h1 class="learn-hero__title">Quizzes</h1>
-          <p class="learn-hero__subhead">Practice rounds, a midterm simulation, and a final exam covering the full StudyRISC-V curriculum.</p>
+          <p class="learn-hero__subhead">Timed assessments, exam simulations, and knowledge checks across the full RISC-V curriculum.</p>
         </div>
         <div class="learn-xp-pill">${loadScore().totalPoints.toLocaleString("en-US")} chips</div>
       </div>
@@ -95,27 +117,24 @@ function renderQuizList(): void {
         </div>
       </div>
     </section>
+
+    <a href="/quiz/?take=diagnostic" class="diagnostic-card">
+      <div class="diagnostic-card__left">
+        <span class="diagnostic-card__kicker">★ Start here</span>
+        <div class="diagnostic-card__title">Find your starting point</div>
+        <div class="diagnostic-card__sub">A quick 5-minute diagnostic that routes you to the right level — from total beginner to exam prep.</div>
+        <div class="diagnostic-card__meta">
+          <span>5 questions</span>
+          <span>~5 minutes</span>
+          <span>No account required</span>
+        </div>
+      </div>
+      <div class="diagnostic-card__cta">Take diagnostic →</div>
+    </a>
+
     <section class="challenge-grid">
-      ${quizzes
-        .map((quiz) => {
-          const best = getBestQuizAttempt(quiz.id);
-          return `
-            <article class="challenge-card">
-              <div class="challenge-card__header">
-                ${quizTypeBadge(quiz)}
-                <span class="challenge-card__points">${quiz.questions.length} questions</span>
-              </div>
-              <h2 class="challenge-card__title">${escapeHtml(quiz.title)}</h2>
-              <div class="challenge-card__lesson">${Math.floor(quiz.timeLimitSeconds / 60)} min · ${quiz.totalPoints} pts</div>
-              <p class="challenge-card__body">${escapeHtml(quiz.description)}</p>
-              <div class="challenge-card__footer">
-                <span class="challenge-card__best">${best ? `${percent(best.score, best.maxScore)}% best` : "Not attempted"}</span>
-                <a class="learn-panel__link" href="/quiz/?take=${encodeURIComponent(quiz.id)}">Start Quiz →</a>
-              </div>
-            </article>
-          `;
-        })
-        .join("")}
+      ${practiceQuizzes.length > 0 ? `<div class="quiz-group-label">Practice rounds</div>${practiceQuizzes.map(quizCard).join("")}` : ""}
+      ${examQuizzes.length > 0 ? `<div class="quiz-group-label">Exam prep</div>${examQuizzes.map(quizCard).join("")}` : ""}
     </section>
   `;
 }
