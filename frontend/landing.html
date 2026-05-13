@@ -14,6 +14,8 @@
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"StudyRISC-V","url":"https://studyriscv.com/","logo":"https://studyriscv.com/favicon-chip.svg"}</script>
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"StudyRISC-V","url":"https://studyriscv.com/","potentialAction":{"@type":"SearchAction","target":"https://studyriscv.com/docs/?q={search_term_string}","query-input":"required name=search_term_string"}}</script>
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"StudyRISC-V","applicationCategory":"DeveloperTool","operatingSystem":"Web","url":"https://studyriscv.com/","description":"Browser-based RISC-V simulator with step-by-step execution, register inspection, and visual learning tools."}</script>
+
+    <!-- Redirect shims -->
     <script>
       (() => {
         const { hash, origin, pathname } = window.location;
@@ -24,15 +26,20 @@
         if (pathname === '/landing.html') window.location.replace(new URL('/', origin).toString());
       })();
     </script>
+
+    <!-- Theme init — runs before first paint to avoid flash -->
     <script>
       (() => {
         try {
-          const s = window.localStorage.getItem('studyriscv-theme');
-          if (!s) { window.localStorage.setItem('studyriscv-theme','dark'); document.documentElement.dataset.theme='dark'; return; }
-          if (s === 'dark') document.documentElement.dataset.theme = 'dark';
-        } catch {}
+          const stored = window.localStorage.getItem('studyriscv-theme');
+          const prefer  = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          const theme   = stored || prefer;
+          document.documentElement.dataset.theme = theme;
+          if (!stored) window.localStorage.setItem('studyriscv-theme', theme);
+        } catch { document.documentElement.dataset.theme = 'dark'; }
       })();
     </script>
+
     <link rel="stylesheet" href="./src/styles/tokens.css" />
     <link rel="stylesheet" href="./src/styles/global.css" />
     <link rel="stylesheet" href="./src/styles/nav.css" />
@@ -49,32 +56,114 @@
     <section id="landingResumeBar" class="landing-resume-bar" hidden></section>
 
     <!-- ════════════════════════════════════════════════════════
-         ATMOSPHERE LAYER — fixed, sits behind everything
+         ATMOSPHERE — fixed, behind everything
     ════════════════════════════════════════════════════════ -->
-    <div class="atm" id="atmosphere" aria-hidden="true">
-      <!-- SVG grain filter -->
+    <div id="riscv-atmosphere" class="atm" aria-hidden="true">
+
+      <!-- L1: SVG grain -->
       <svg class="atm__grain-svg" xmlns="http://www.w3.org/2000/svg">
-        <filter id="grain-filter">
-          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-          <feColorMatrix type="saturate" values="0" />
+        <filter id="grain-filter" x="0%" y="0%" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" result="noise"/>
+          <feColorMatrix type="saturate" values="0" in="noise" result="gray"/>
+          <feBlend in="SourceGraphic" in2="gray" mode="overlay"/>
         </filter>
-        <rect width="100%" height="100%" filter="url(#grain-filter)" opacity="0.035" />
+        <rect width="100%" height="100%" filter="url(#grain-filter)" opacity="0.038"/>
       </svg>
 
-      <!-- Circuit grid -->
+      <!-- L2: Circuit grid (coarse + fine layers via CSS pseudo) -->
       <div class="atm__grid"></div>
 
-      <!-- Diagonal beams -->
+      <!-- L3: Diagonal datapath beams -->
       <div class="atm__beam atm__beam--1"></div>
       <div class="atm__beam atm__beam--2"></div>
       <div class="atm__beam atm__beam--3"></div>
+      <div class="atm__beam atm__beam--4"></div>
+      <div class="atm__beam atm__beam--5"></div>
 
-      <!-- Radial glows -->
-      <div class="atm__glow atm__glow--top"></div>
-      <div class="atm__glow atm__glow--mid"></div>
+      <!-- L4a: CPU tile / wafer silhouette -->
+      <div class="atm__cpu-tile" id="atmCpuTile">
+        <svg viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CPU chip silhouette">
+          <!-- outer package -->
+          <rect x="60" y="60" width="200" height="200" rx="6" stroke="rgba(91,108,255,0.18)" stroke-width="1.5"/>
+          <!-- die -->
+          <rect x="90" y="90" width="140" height="140" rx="3" stroke="rgba(91,108,255,0.12)" stroke-width="1"/>
+          <!-- internal blocks -->
+          <rect x="100" y="100" width="55" height="40" rx="2" stroke="rgba(91,108,255,0.10)" stroke-width="0.8"/>
+          <rect x="165" y="100" width="55" height="40" rx="2" stroke="rgba(91,108,255,0.10)" stroke-width="0.8"/>
+          <rect x="100" y="150" width="55" height="40" rx="2" stroke="rgba(91,108,255,0.10)" stroke-width="0.8"/>
+          <rect x="165" y="150" width="55" height="40" rx="2" stroke="rgba(91,108,255,0.10)" stroke-width="0.8"/>
+          <rect x="100" y="200" width="120" height="20" rx="2" stroke="rgba(91,108,255,0.08)" stroke-width="0.8"/>
+          <!-- internal busses -->
+          <line x1="160" y1="100" x2="160" y2="220" stroke="rgba(91,108,255,0.07)" stroke-width="0.8"/>
+          <line x1="100" y1="145" x2="220" y2="145" stroke="rgba(91,108,255,0.07)" stroke-width="0.8"/>
+          <line x1="100" y1="195" x2="220" y2="195" stroke="rgba(91,108,255,0.07)" stroke-width="0.8"/>
+          <!-- left pins -->
+          <line x1="60" y1="95"  x2="30" y2="95"  stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="60" y1="115" x2="30" y2="115" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="60" y1="135" x2="30" y2="135" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="60" y1="155" x2="30" y2="155" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="60" y1="175" x2="30" y2="175" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="60" y1="195" x2="30" y2="195" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="60" y1="215" x2="30" y2="215" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <!-- right pins -->
+          <line x1="260" y1="95"  x2="290" y2="95"  stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="260" y1="115" x2="290" y2="115" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="260" y1="135" x2="290" y2="135" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="260" y1="155" x2="290" y2="155" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="260" y1="175" x2="290" y2="175" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="260" y1="195" x2="290" y2="195" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="260" y1="215" x2="290" y2="215" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <!-- top pins -->
+          <line x1="100" y1="60" x2="100" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="120" y1="60" x2="120" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="140" y1="60" x2="140" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="160" y1="60" x2="160" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="180" y1="60" x2="180" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="200" y1="60" x2="200" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="220" y1="60" x2="220" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <!-- bottom pins -->
+          <line x1="100" y1="260" x2="100" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="120" y1="260" x2="120" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="140" y1="260" x2="140" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="160" y1="260" x2="160" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="180" y1="260" x2="180" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="200" y1="260" x2="200" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <line x1="220" y1="260" x2="220" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
+          <!-- pin dots -->
+          <circle cx="30" cy="95"  r="2.5" fill="rgba(91,108,255,0.22)"/>
+          <circle cx="30" cy="115" r="2.5" fill="rgba(91,108,255,0.22)"/>
+          <circle cx="30" cy="135" r="2.5" fill="rgba(91,108,255,0.22)"/>
+          <circle cx="290" cy="155" r="2.5" fill="rgba(56,217,255,0.22)"/>
+          <circle cx="290" cy="175" r="2.5" fill="rgba(56,217,255,0.22)"/>
+          <circle cx="160" cy="30"  r="2.5" fill="rgba(155,92,255,0.22)"/>
+          <circle cx="180" cy="30"  r="2.5" fill="rgba(155,92,255,0.22)"/>
+          <!-- RV32IM label -->
+          <text x="160" y="173" text-anchor="middle" font-family="monospace" font-size="7" fill="rgba(91,108,255,0.22)" letter-spacing="1">RV32IM</text>
+        </svg>
+      </div>
 
-      <!-- Floating code glyphs -->
+      <!-- L4b: Pipeline lanes -->
+      <div class="atm__pipeline" id="atmPipeline">
+        <div class="atm__pipe-track">
+          <span class="atm__pipe-label">IF</span>
+          <span class="atm__pipe-label">ID</span>
+          <span class="atm__pipe-label">EX</span>
+          <span class="atm__pipe-label">MEM</span>
+          <span class="atm__pipe-label">WB</span>
+        </div>
+        <div class="atm__pipe-pulse" id="atmPipePulse"></div>
+      </div>
+
+      <!-- L4c: Drifting address glyphs -->
       <div class="atm__glyphs" id="atmGlyphs"></div>
+
+      <!-- L5: Radial glows -->
+      <div class="atm__glow atm__glow--hero"></div>
+      <div class="atm__glow atm__glow--mid"></div>
+      <div class="atm__glow atm__glow--cta"></div>
+
+      <!-- L7: Vignette -->
+      <div class="atm__vignette"></div>
     </div>
 
     <main class="lp-main">
@@ -85,9 +174,10 @@
       <section class="hero lp-hero" data-landing-section id="lpHero">
         <div class="lp-hero__content">
 
+          <!-- Left copy -->
           <div class="lp-hero__left">
             <p class="lp-eyebrow lp-in lp-in--0">RISC-V Learning Platform</p>
-            <h1 class="lp-hero__h1 lp-in lp-in--1">Step through<br />the machine.</h1>
+            <h1 class="lp-hero__h1 lp-in lp-in--1">Step through<br>the machine.</h1>
             <p class="lp-hero__sub lp-in lp-in--2">
               Write assembly, step through execution, inspect registers and memory,
               and see how each instruction changes the machine state.
@@ -97,77 +187,104 @@
               <a class="lp-btn lp-btn--ghost" href="/learn/">Browse Lessons</a>
             </div>
             <div class="lp-trust lp-in lp-in--4">
-              <span class="lp-trust__item"><span class="lp-trust__num" data-count="342">342</span> regression tests</span>
-              <span class="lp-trust__dot" aria-hidden="true"></span>
-              <span class="lp-trust__item"><span class="lp-trust__num" data-count="20">20</span> lessons</span>
+              <span class="lp-trust__item">Browser-native</span>
               <span class="lp-trust__dot" aria-hidden="true"></span>
               <span class="lp-trust__item">RV32IM core</span>
+              <span class="lp-trust__dot" aria-hidden="true"></span>
+              <span class="lp-trust__item">Step-by-step execution</span>
             </div>
           </div>
 
-          <!-- ── SIMULATOR MOCKUP ────────────────────────── -->
+          <!-- Right: simulator mockup -->
           <div class="lp-hero__right lp-in lp-in--2" id="lpMockupHero">
             <div class="lp-sim" id="lpSim">
 
-              <!-- Status bar -->
-              <div class="lp-sim__status">
-                <span class="lp-sim__status-item">PC <span class="lp-sim__status-val" id="simPc">0x00000020</span></span>
-                <span class="lp-sim__status-sep" aria-hidden="true"></span>
-                <span class="lp-sim__status-item">Cycle <span class="lp-sim__status-val" id="simCycle">4</span></span>
-                <span class="lp-sim__status-sep" aria-hidden="true"></span>
-                <span class="lp-sim__status-item lp-sim__status-mode">STEP</span>
-                <span class="lp-sim__status-right">factorial.s</span>
+              <!-- macOS-style chrome bar -->
+              <div class="lp-sim__chrome">
+                <span class="lp-dot lp-dot--r" aria-hidden="true"></span>
+                <span class="lp-dot lp-dot--y" aria-hidden="true"></span>
+                <span class="lp-dot lp-dot--g" aria-hidden="true"></span>
+                <span class="lp-sim__chrome-title">factorial.s — StudyRISC-V</span>
+                <div class="lp-sim__chrome-right">
+                  <span class="lp-sim__badge">STEP</span>
+                </div>
               </div>
 
+              <!-- Status bar: PC + Cycle -->
+              <div class="lp-sim__status">
+                <span class="lp-sim__stat">
+                  <span class="lp-sim__stat-label">PC</span>
+                  <span class="lp-sim__stat-val" id="simPc">0x0000001c</span>
+                </span>
+                <span class="lp-sim__stat-sep" aria-hidden="true"></span>
+                <span class="lp-sim__stat">
+                  <span class="lp-sim__stat-label">Cycle</span>
+                  <span class="lp-sim__stat-val" id="simCycle">4</span>
+                </span>
+                <span class="lp-sim__stat-sep" aria-hidden="true"></span>
+                <span class="lp-sim__stat">
+                  <span class="lp-sim__stat-label">Mode</span>
+                  <span class="lp-sim__stat-val">STEP</span>
+                </span>
+              </div>
+
+              <!-- Body: editor + right panels -->
               <div class="lp-sim__body">
 
-                <!-- Editor panel -->
+                <!-- Editor -->
                 <div class="lp-sim__editor" id="simEditor">
                   <div class="lp-sim__panel-label">ASSEMBLY</div>
                   <div class="lp-sim__code" id="simCode">
                     <div class="lp-sim__line" data-pc="0x10">
+                      <span class="sim-gutter">1</span>
                       <span class="sim-addr">0x10</span>
                       <span class="sim-asm"><span class="sim-mne">addi</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x0</span>, <span class="sim-num">5</span></span>
                     </div>
                     <div class="lp-sim__line" data-pc="0x14">
+                      <span class="sim-gutter">2</span>
                       <span class="sim-addr">0x14</span>
                       <span class="sim-asm"><span class="sim-mne">addi</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x0</span>, <span class="sim-num">1</span></span>
                     </div>
-                    <div class="lp-sim__line lp-sim__line--label" data-pc="loop">
+                    <div class="lp-sim__line lp-sim__line--label">
+                      <span class="sim-gutter"></span>
                       <span class="sim-addr"></span>
                       <span class="sim-asm sim-label">loop:</span>
                     </div>
-                    <div class="lp-sim__line" data-pc="0x1c" id="simActiveLine">
+                    <div class="lp-sim__line lp-sim__line--active" data-pc="0x1c" id="simActiveLine">
+                      <span class="sim-gutter">4</span>
                       <span class="sim-addr">0x1c</span>
                       <span class="sim-asm"><span class="sim-mne">mul</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x2</span>, <span class="sim-reg">x1</span></span>
+                      <span class="sim-exec-arrow" aria-hidden="true">▶</span>
                     </div>
                     <div class="lp-sim__line" data-pc="0x20">
+                      <span class="sim-gutter">5</span>
                       <span class="sim-addr">0x20</span>
                       <span class="sim-asm"><span class="sim-mne">addi</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x1</span>, <span class="sim-num">-1</span></span>
                     </div>
                     <div class="lp-sim__line" data-pc="0x24">
+                      <span class="sim-gutter">6</span>
                       <span class="sim-addr">0x24</span>
                       <span class="sim-asm"><span class="sim-mne">bne</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x0</span>, loop</span>
                     </div>
-                    <div class="lp-sim__line lp-sim__line--label" data-pc="done">
+                    <div class="lp-sim__line lp-sim__line--label">
+                      <span class="sim-gutter"></span>
                       <span class="sim-addr"></span>
                       <span class="sim-asm sim-label">done:</span>
                     </div>
                   </div>
-                  <!-- pseudo-c strip -->
-                  <div class="lp-sim__pseudoc" id="simPseudoc">
+                  <!-- Pseudo-C strip -->
+                  <div class="lp-sim__pseudoc">
                     <span class="lp-sim__pseudoc-comment">// effect</span>
-                    <span class="lp-sim__pseudoc-code" id="simPseudocCode">x2 = x2 * x1</span>
+                    <span class="lp-sim__pseudoc-code" id="simPseudocCode">x2 = x2 × x1</span>
                   </div>
                 </div>
 
-                <!-- Right column: registers + memory + stack -->
+                <!-- Right: registers + memory + stack -->
                 <div class="lp-sim__right">
 
-                  <!-- Register file -->
-                  <div class="lp-sim__panel lp-sim__regs" id="simRegs">
+                  <div class="lp-sim__panel" id="simRegs">
                     <div class="lp-sim__panel-label">REGISTERS</div>
-                    <table class="lp-sim__reg-table" id="simRegTable">
+                    <table class="lp-sim__reg-table">
                       <tbody>
                         <tr><td class="sim-rn">x0</td><td class="sim-rv">0x00000000</td></tr>
                         <tr id="simR1"><td class="sim-rn">x1</td><td class="sim-rv">0x00000005</td></tr>
@@ -180,8 +297,7 @@
                     </table>
                   </div>
 
-                  <!-- Memory snippet -->
-                  <div class="lp-sim__panel lp-sim__mem" id="simMem">
+                  <div class="lp-sim__panel" id="simMem">
                     <div class="lp-sim__panel-label">MEMORY</div>
                     <table class="lp-sim__mem-table">
                       <tbody>
@@ -192,12 +308,11 @@
                     </table>
                   </div>
 
-                  <!-- Stack -->
-                  <div class="lp-sim__panel lp-sim__stack-panel" id="simStackPanel">
+                  <div class="lp-sim__panel lp-sim__panel--last" id="simStackPanel">
                     <div class="lp-sim__panel-label">STACK</div>
                     <div class="lp-sim__stack" id="simStack">
                       <div class="lp-sim__frame">saved ra</div>
-                      <div class="lp-sim__frame lp-sim__frame--active">loop var x1</div>
+                      <div class="lp-sim__frame lp-sim__frame--hi">loop var x1</div>
                       <div class="lp-sim__frame lp-sim__frame--sp">← sp</div>
                     </div>
                   </div>
@@ -211,64 +326,217 @@
       </section>
 
       <!-- ════════════════════════════════════════════════════
+           ARCHITECTURE GRID
+           "See the architecture, not just the code."
+      ════════════════════════════════════════════════════ -->
+      <section class="lp-grid-section" data-landing-section id="lpGrid">
+        <div class="lp-w">
+          <div class="lp-grid-section__intro">
+            <span class="lp-tag">Architecture</span>
+            <h2 class="lp-grid-section__h2">See the architecture,<br>not just the code.</h2>
+            <p class="lp-grid-section__lead">Follow each instruction through the parts of the machine it touches.</p>
+          </div>
+
+          <div class="lp-arch-grid">
+
+            <!-- Card 1: Pipeline -->
+            <div class="lp-arch-card lp-arch-card--pipeline">
+              <div class="lp-arch-card__visual" aria-hidden="true">
+                <div class="lp-pipeline">
+                  <div class="lp-pipe-stage lp-pipe-stage--if">
+                    <span class="lp-pipe-name">IF</span>
+                    <span class="lp-pipe-label">Fetch</span>
+                  </div>
+                  <div class="lp-pipe-arrow">→</div>
+                  <div class="lp-pipe-stage lp-pipe-stage--id">
+                    <span class="lp-pipe-name">ID</span>
+                    <span class="lp-pipe-label">Decode</span>
+                  </div>
+                  <div class="lp-pipe-arrow">→</div>
+                  <div class="lp-pipe-stage lp-pipe-stage--ex">
+                    <span class="lp-pipe-name">EX</span>
+                    <span class="lp-pipe-label">Execute</span>
+                  </div>
+                  <div class="lp-pipe-arrow">→</div>
+                  <div class="lp-pipe-stage lp-pipe-stage--mem">
+                    <span class="lp-pipe-name">MEM</span>
+                    <span class="lp-pipe-label">Memory</span>
+                  </div>
+                  <div class="lp-pipe-arrow">→</div>
+                  <div class="lp-pipe-stage lp-pipe-stage--wb">
+                    <span class="lp-pipe-name">WB</span>
+                    <span class="lp-pipe-label">Write</span>
+                  </div>
+                  <div class="lp-pipe-pulse-dot" id="gridPipePulse"></div>
+                </div>
+              </div>
+              <div class="lp-arch-card__body">
+                <span class="lp-arch-card__tag lp-tag--blue">Pipeline</span>
+                <h3 class="lp-arch-card__h3">Watch execution move<br>from fetch to writeback.</h3>
+                <p class="lp-arch-card__p">Every instruction flows through five stages. See exactly where in the machine your code is at each cycle.</p>
+              </div>
+            </div>
+
+            <!-- Card 2: Register file -->
+            <div class="lp-arch-card lp-arch-card--regs">
+              <div class="lp-arch-card__visual" aria-hidden="true">
+                <div class="lp-regmatrix" id="gridRegMatrix">
+                  <div class="lp-regmatrix__grid">
+                    <span class="rm-cell">x0</span><span class="rm-cell">x1</span><span class="rm-cell rm-cell--hi" id="rmCell2">x2</span><span class="rm-cell">x3</span>
+                    <span class="rm-cell">x4</span><span class="rm-cell">x5</span><span class="rm-cell">x6</span><span class="rm-cell">x7</span>
+                    <span class="rm-cell">x8</span><span class="rm-cell">x9</span><span class="rm-cell">x10</span><span class="rm-cell">x11</span>
+                    <span class="rm-cell">x12</span><span class="rm-cell">x13</span><span class="rm-cell">x14</span><span class="rm-cell">x15</span>
+                    <span class="rm-cell">ra</span><span class="rm-cell">sp</span><span class="rm-cell">gp</span><span class="rm-cell">tp</span>
+                    <span class="rm-cell">t0</span><span class="rm-cell">t1</span><span class="rm-cell">t2</span><span class="rm-cell">s0</span>
+                    <span class="rm-cell">a0</span><span class="rm-cell">a1</span><span class="rm-cell">a2</span><span class="rm-cell">a3</span>
+                    <span class="rm-cell">a4</span><span class="rm-cell">a5</span><span class="rm-cell">a6</span><span class="rm-cell">a7</span>
+                  </div>
+                  <div class="lp-regmatrix__val">x2 = <span id="rmCellVal">0x00000001</span></div>
+                </div>
+              </div>
+              <div class="lp-arch-card__body">
+                <span class="lp-arch-card__tag lp-tag--green">Registers</span>
+                <h3 class="lp-arch-card__h3">See exactly which register<br>changed and why.</h3>
+                <p class="lp-arch-card__p">The full 32-register file lights up on every writeback. Nothing is hidden or abstracted.</p>
+              </div>
+            </div>
+
+            <!-- Card 3: Memory + stack -->
+            <div class="lp-arch-card lp-arch-card--mem">
+              <div class="lp-arch-card__visual" aria-hidden="true">
+                <div class="lp-memvis">
+                  <div class="lp-memvis__row lp-memvis__row--hi">
+                    <span class="lp-memvis__addr">0x7FFFFFFC</span>
+                    <span class="lp-memvis__val" id="gridMemVal">0x00000001</span>
+                    <span class="lp-memvis__tag">← active</span>
+                  </div>
+                  <div class="lp-memvis__row">
+                    <span class="lp-memvis__addr">0x7FFFFFF8</span>
+                    <span class="lp-memvis__val">0x00000005</span>
+                    <span class="lp-memvis__tag">saved</span>
+                  </div>
+                  <div class="lp-memvis__row lp-memvis__row--sp">
+                    <span class="lp-memvis__addr">0x80000000</span>
+                    <span class="lp-memvis__val">—</span>
+                    <span class="lp-memvis__tag lp-memvis__tag--sp">sp ↑</span>
+                  </div>
+                  <div class="lp-memvis__stack-label">STACK</div>
+                  <div class="lp-memvis__frame-list" id="gridStackFrames">
+                    <div class="lp-memvis__frame lp-memvis__frame--hi">loop() · frame</div>
+                    <div class="lp-memvis__frame">saved ra = 0x148</div>
+                    <div class="lp-memvis__frame lp-memvis__frame--sp">← sp</div>
+                  </div>
+                </div>
+              </div>
+              <div class="lp-arch-card__body">
+                <span class="lp-arch-card__tag lp-tag--cyan">Memory</span>
+                <h3 class="lp-arch-card__h3">Make stack frames and<br>memory writes visible.</h3>
+                <p class="lp-arch-card__p">Frame boundaries, saved registers, and the stack pointer are labeled and updated in real time.</p>
+              </div>
+            </div>
+
+            <!-- Card 4: Browser-native -->
+            <div class="lp-arch-card lp-arch-card--practice">
+              <div class="lp-arch-card__visual" aria-hidden="true">
+                <div class="lp-testvis">
+                  <div class="lp-testvis__header">
+                    <span class="lp-testvis__file">factorial_test.s</span>
+                    <span class="lp-testvis__status lp-testvis__status--pass">3 passed</span>
+                  </div>
+                  <div class="lp-testvis__row lp-testvis__row--pass">
+                    <span class="lp-testvis__icon">✓</span>
+                    <span>x2 = 120 after 5!</span>
+                  </div>
+                  <div class="lp-testvis__row lp-testvis__row--pass">
+                    <span class="lp-testvis__icon">✓</span>
+                    <span>loop terminates correctly</span>
+                  </div>
+                  <div class="lp-testvis__row lp-testvis__row--pass">
+                    <span class="lp-testvis__icon">✓</span>
+                    <span>sp restored on return</span>
+                  </div>
+                  <div class="lp-testvis__row lp-testvis__row--pending" id="gridTestPending">
+                    <span class="lp-testvis__icon">·</span>
+                    <span>edge case: n = 0</span>
+                  </div>
+                </div>
+              </div>
+              <div class="lp-arch-card__body">
+                <span class="lp-arch-card__tag lp-tag--violet">Practice</span>
+                <h3 class="lp-arch-card__h3">Run practice problems without<br>installing a toolchain.</h3>
+                <p class="lp-arch-card__p">Structured problems with automated test cases run entirely in your browser via WebAssembly.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════
            SCROLL REVEAL — sticky mockup + feature blocks
       ════════════════════════════════════════════════════ -->
       <section class="lp-reveal" data-landing-section id="lpReveal">
         <div class="lp-reveal__inner">
 
-          <!-- Sticky mockup column -->
+          <!-- Sticky left: mockup changes per block -->
           <div class="lp-reveal__sticky">
             <div class="lp-reveal__mockup" id="lpRevealMockup">
-              <!-- Changes per scroll block via JS -->
-              <div class="lp-rm lp-rm--regs" id="rmRegs">
-                <div class="lp-rm__header">
-                  <span class="lp-rm__chip">REGISTER FILE</span>
-                  <span class="lp-rm__chip lp-rm__chip--dim">RV32IM</span>
-                </div>
-                <table class="lp-rm__table">
-                  <tbody id="rmRegBody">
-                    <tr><td class="rm-rn">x0</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
-                    <tr><td class="rm-rn">x1</td><td class="rm-rv">0x00000005</td><td class="rm-ra"></td></tr>
-                    <tr id="rmR2" class="rm-changed"><td class="rm-rn">x2</td><td class="rm-rv" id="rmR2Val">0x00000001</td><td class="rm-ra">← changed</td></tr>
-                    <tr><td class="rm-rn">x3</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
-                    <tr><td class="rm-rn">x4</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
-                    <tr><td class="rm-rn">ra</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
-                    <tr><td class="rm-rn">sp</td><td class="rm-rv">0x7FFFFFF8</td><td class="rm-ra"></td></tr>
-                    <tr><td class="rm-rn">a0</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
-                  </tbody>
-                </table>
-              </div>
+              <div class="lp-reveal__mockup-inner">
 
-              <div class="lp-rm lp-rm--instr lp-rm--hidden" id="rmInstr">
-                <div class="lp-rm__header">
-                  <span class="lp-rm__chip">INSTRUCTION</span>
-                  <span class="lp-rm__chip lp-rm__chip--dim">PC 0x001c</span>
+                <!-- Registers panel -->
+                <div class="lp-rm lp-rm--regs" id="rmRegs">
+                  <div class="lp-rm__header">
+                    <span class="lp-rm__chip">REGISTER FILE</span>
+                    <span class="lp-rm__chip lp-rm__chip--dim">RV32IM</span>
+                  </div>
+                  <table class="lp-rm__table">
+                    <tbody id="rmRegBody">
+                      <tr><td class="rm-rn">x0</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
+                      <tr><td class="rm-rn">x1</td><td class="rm-rv">0x00000005</td><td class="rm-ra"></td></tr>
+                      <tr id="rmR2" class="rm-changed"><td class="rm-rn">x2</td><td class="rm-rv" id="rmR2Val">0x00000001</td><td class="rm-ra">← changed</td></tr>
+                      <tr><td class="rm-rn">x3</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
+                      <tr><td class="rm-rn">x4</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
+                      <tr><td class="rm-rn">ra</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
+                      <tr><td class="rm-rn">sp</td><td class="rm-rv">0x7FFFFFF8</td><td class="rm-ra"></td></tr>
+                      <tr><td class="rm-rn">a0</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
+                    </tbody>
+                  </table>
                 </div>
-                <div class="lp-rm__instr-row" id="rmInstrCycle">
-                  <div class="lp-rm__asm"><span class="sim-mne">mul</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x2</span>, <span class="sim-reg">x1</span></div>
-                  <div class="lp-rm__arrow">↓</div>
-                  <div class="lp-rm__clike" id="rmClike">x2 = x2 * x1</div>
-                  <div class="lp-rm__note">Multiply two registers, write back to x2</div>
-                </div>
-                <div class="lp-rm__instr-grid">
-                  <div class="lp-rm__field"><span class="lp-rm__field-label">opcode</span><span class="lp-rm__field-val">MUL</span></div>
-                  <div class="lp-rm__field"><span class="lp-rm__field-label">rd</span><span class="lp-rm__field-val">x2</span></div>
-                  <div class="lp-rm__field"><span class="lp-rm__field-label">rs1</span><span class="lp-rm__field-val">x2</span></div>
-                  <div class="lp-rm__field"><span class="lp-rm__field-label">rs2</span><span class="lp-rm__field-val">x1</span></div>
-                </div>
-              </div>
 
-              <div class="lp-rm lp-rm--stack lp-rm--hidden" id="rmStack">
-                <div class="lp-rm__header">
-                  <span class="lp-rm__chip">CALL STACK</span>
-                  <span class="lp-rm__chip lp-rm__chip--dim">sp = 0x7FFFFFF0</span>
+                <!-- Instruction panel -->
+                <div class="lp-rm lp-rm--instr lp-rm--hidden" id="rmInstr">
+                  <div class="lp-rm__header">
+                    <span class="lp-rm__chip">INSTRUCTION</span>
+                    <span class="lp-rm__chip lp-rm__chip--dim">PC 0x001c</span>
+                  </div>
+                  <div class="lp-rm__instr-row" id="rmInstrCycle">
+                    <div class="lp-rm__asm"><span class="sim-mne">mul</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x2</span>, <span class="sim-reg">x1</span></div>
+                    <div class="lp-rm__arrow">↓</div>
+                    <div class="lp-rm__clike" id="rmClike">x2 = x2 * x1</div>
+                    <div class="lp-rm__note">Multiply two registers, write back to x2</div>
+                  </div>
+                  <div class="lp-rm__instr-grid">
+                    <div class="lp-rm__field"><span class="lp-rm__field-label">opcode</span><span class="lp-rm__field-val">MUL</span></div>
+                    <div class="lp-rm__field"><span class="lp-rm__field-label">rd</span><span class="lp-rm__field-val">x2</span></div>
+                    <div class="lp-rm__field"><span class="lp-rm__field-label">rs1</span><span class="lp-rm__field-val">x2</span></div>
+                    <div class="lp-rm__field"><span class="lp-rm__field-label">rs2</span><span class="lp-rm__field-val">x1</span></div>
+                  </div>
                 </div>
-                <div class="lp-rm__stack" id="rmStackFrames">
-                  <div class="lp-rm__frame rm-frame--hi">loop() · frame</div>
-                  <div class="lp-rm__frame">saved ra = 0x148</div>
-                  <div class="lp-rm__frame">saved s0 = 0x0</div>
-                  <div class="lp-rm__frame rm-frame--sp">← sp = 0x7FFFFFF0</div>
+
+                <!-- Stack panel -->
+                <div class="lp-rm lp-rm--stack lp-rm--hidden" id="rmStack">
+                  <div class="lp-rm__header">
+                    <span class="lp-rm__chip">CALL STACK</span>
+                    <span class="lp-rm__chip lp-rm__chip--dim">sp = 0x7FFFFFF0</span>
+                  </div>
+                  <div class="lp-rm__stack" id="rmStackFrames">
+                    <div class="lp-rm__frame rm-frame--hi">loop() · frame</div>
+                    <div class="lp-rm__frame">saved ra = 0x148</div>
+                    <div class="lp-rm__frame">saved s0 = 0x0</div>
+                    <div class="lp-rm__frame rm-frame--sp">← sp = 0x7FFFFFF0</div>
+                  </div>
                 </div>
+
               </div>
             </div>
           </div>
@@ -290,9 +558,9 @@
               <span class="lp-tag">02</span>
               <h2 class="lp-reveal__h2">Every instruction has a visible effect.</h2>
               <p class="lp-reveal__p">
-                RISC-V is easier when the machine state is not hidden. Below every instruction,
-                a pseudo-C translation describes the exact computation — register operands,
-                memory addressing, and control flow included.
+                Below every instruction, a pseudo-C translation describes the exact computation —
+                register operands, memory addressing, and control flow included.
+                The machine state is never hidden.
               </p>
             </div>
 
@@ -301,8 +569,7 @@
               <h2 class="lp-reveal__h2">The stack becomes visible.</h2>
               <p class="lp-reveal__p">
                 Frame boundaries, saved registers, and the stack pointer are labeled
-                and updated in real time. Push and pop, call and return — every frame
-                transition is explicit and traceable.
+                and updated in real time. Every push, pop, call, and return is explicit and traceable.
               </p>
             </div>
 
@@ -313,13 +580,14 @@
       <!-- ════════════════════════════════════════════════════
            OPCODE EXPLORER
       ════════════════════════════════════════════════════ -->
-      <section class="coverage-strip lp-opcodes" data-opcode-band data-landing-section>
+      <section class="lp-opcodes" data-opcode-band data-landing-section id="lpOpcodes">
         <div class="lp-w">
           <div class="lp-opcodes__intro">
             <span class="lp-tag">ISA</span>
             <h2 class="lp-opcodes__h2">Explore the RV32IM instruction set.</h2>
             <p class="lp-opcodes__lead">Hover any opcode to see its encoding, effect, and a concrete example.</p>
           </div>
+
           <div class="coverage-strip__panels lp-opcodes__panels">
             <div class="coverage-strip__quick" aria-live="polite">
               <div class="coverage-strip__quick-name" data-opcode-name>ADDI</div>
@@ -332,6 +600,7 @@
               <code class="coverage-strip__detail-flow" data-opcode-detail-flow>x5 ← x0 + 10</code>
             </div>
           </div>
+
           <div class="coverage-strip__band">
             <div class="coverage-strip__label">RV32IM</div>
             <div class="coverage-strip__marquee-wrap">
@@ -358,7 +627,6 @@
             <span class="lp-ci">ECE 3150 Cornell</span><span class="lp-csep" aria-hidden="true"></span>
             <span class="lp-ci">EECS 151 Berkeley</span><span class="lp-csep" aria-hidden="true"></span>
             <span class="lp-ci">CS 2200 Georgia Tech</span><span class="lp-csep" aria-hidden="true"></span>
-            <!-- duplicate for loop -->
             <span class="lp-ci" aria-hidden="true">CS 61C Berkeley</span><span class="lp-csep" aria-hidden="true"></span>
             <span class="lp-ci" aria-hidden="true">ECE 3058 Georgia Tech</span><span class="lp-csep" aria-hidden="true"></span>
             <span class="lp-ci" aria-hidden="true">CS 3410 Cornell</span><span class="lp-csep" aria-hidden="true"></span>
@@ -377,11 +645,11 @@
       <!-- ════════════════════════════════════════════════════
            BOTTOM CTA
       ════════════════════════════════════════════════════ -->
-      <section class="lp-cta" data-landing-section>
+      <section class="lp-cta" data-landing-section id="lpCta">
         <div class="lp-cta__glow" aria-hidden="true"></div>
         <div class="lp-w lp-cta__inner">
-          <h2 class="lp-cta__h2">From assembly to execution state,<br />one step at a time.</h2>
-          <p class="lp-cta__sub">No install. No account. The simulator runs entirely in your browser.</p>
+          <h2 class="lp-cta__h2">From assembly to execution state,<br>one step at a time.</h2>
+          <p class="lp-cta__sub">No install. No account required. Start stepping through instructions in your browser.</p>
           <div class="lp-cta__btns">
             <a class="lp-btn lp-btn--primary" href="/simulator/">Open Simulator</a>
             <a class="lp-btn lp-btn--ghost" href="/learn/">Browse Lessons</a>
@@ -400,8 +668,65 @@
     (() => {
       'use strict';
 
-      /* ── reduced motion guard ── */
       const rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const isMobile = window.innerWidth <= 900;
+
+      /* ══════════════════════════════════════════════
+         THEME TOGGLE — reads/writes data-theme on <html>
+         nav.ts's toggleTheme() removes data-theme for "light",
+         so we also listen for attribute removals.
+      ══════════════════════════════════════════════ */
+      function applyTheme(t) {
+        document.documentElement.dataset.theme = t;
+        document.body.classList.toggle('theme-light', t === 'light');
+        try { window.localStorage.setItem('studyriscv-theme', t); } catch {}
+      }
+
+      // Observe data-theme changes from nav.ts's toggleTheme()
+      const themeObserver = new MutationObserver(() => {
+        const cur = document.documentElement.dataset.theme;
+        if (!cur) {
+          // nav.ts removed attribute → means it set light
+          applyTheme('light');
+        }
+      });
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+      /* ══════════════════════════════════════════════
+         SCROLL SYSTEM — one passive listener, RAF-batched
+      ══════════════════════════════════════════════ */
+      const root = document.documentElement;
+      let ticking = false;
+      let lastScrollY = 0;
+
+      function onScroll() {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          lastScrollY = window.scrollY;
+          const vh = window.innerHeight;
+          const totalH = Math.max(document.body.scrollHeight - vh, 1);
+          const heroPct = Math.min(lastScrollY / (vh * 0.85), 1);
+
+          root.style.setProperty('--scroll-y', lastScrollY + 'px');
+          root.style.setProperty('--scroll-pct', (lastScrollY / totalH).toFixed(4));
+          root.style.setProperty('--hero-pct', heroPct.toFixed(4));
+
+          ticking = false;
+        });
+      }
+
+      if (!rm) {
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+      }
+
+      /* ══════════════════════════════════════════════
+         HERO ENTRANCE
+      ══════════════════════════════════════════════ */
+      document.addEventListener('DOMContentLoaded', () => {
+        document.body.classList.add('loaded', 'hero-loaded');
+      });
 
       /* ══════════════════════════════════════════════
          ATMOSPHERE GLYPHS
@@ -409,142 +734,89 @@
       const GLYPH_POOL = [
         'addi','x0','mul','0xFF','beq','lw','sw','PC','sp','ra',
         'x1','0x1c','WB','EX','ID','IF','jal','ret','bne','0x7F',
-        'x2','blt','0b1010','0x00','add','xor','andi','lui',
+        'x2','blt','0b1010','0x00','add','xor','andi','lui','slli','lui',
+        'x10','0x148','MEM','0x7F','auipc','srli',
       ];
+      const glyphCnt = isMobile ? 10 : 28;
       const glyphContainer = document.getElementById('atmGlyphs');
       if (glyphContainer && !rm) {
-        for (let i = 0; i < 22; i++) {
+        for (let i = 0; i < glyphCnt; i++) {
           const el = document.createElement('span');
           el.className = 'atm__glyph';
           el.textContent = GLYPH_POOL[i % GLYPH_POOL.length];
           el.style.cssText = [
-            `left:${Math.random() * 98}%`,
-            `top:${Math.random() * 300}%`,
-            `opacity:${(Math.random() * 0.06 + 0.02).toFixed(3)}`,
-            `font-size:${Math.floor(Math.random() * 4 + 9)}px`,
-            `animation-delay:${(Math.random() * 8).toFixed(1)}s`,
-            `animation-duration:${(Math.random() * 14 + 12).toFixed(1)}s`,
+            `left:${(Math.random() * 96 + 2).toFixed(1)}%`,
+            `top:${(Math.random() * 260 + 20).toFixed(1)}%`,
+            `opacity:${(Math.random() * 0.09 + 0.03).toFixed(3)}`,
+            `font-size:${Math.floor(Math.random() * 3 + 9)}px`,
+            `animation-delay:${(Math.random() * 10).toFixed(1)}s`,
+            `animation-duration:${(Math.random() * 16 + 18).toFixed(1)}s`,
           ].join(';');
           glyphContainer.appendChild(el);
         }
       }
 
       /* ══════════════════════════════════════════════
-         SCROLL PARALLAX — drives --scroll-pct on <html>
+         PIPELINE PULSE (atmosphere)
       ══════════════════════════════════════════════ */
-      if (!rm) {
-        let ticking = false;
-        const root = document.documentElement;
-        function onScroll() {
-          if (ticking) return;
-          ticking = true;
-          requestAnimationFrame(() => {
-            const pct = window.scrollY / Math.max(document.body.scrollHeight - window.innerHeight, 1);
-            root.style.setProperty('--scroll-pct', pct.toFixed(4));
-            root.style.setProperty('--scroll-y', window.scrollY + 'px');
-            ticking = false;
-          });
-        }
-        window.addEventListener('scroll', onScroll, { passive: true });
-        onScroll();
+      const pipePulse = document.getElementById('atmPipePulse');
+      if (pipePulse && !rm) {
+        let stage = 0;
+        const stages = 5;
+        setInterval(() => {
+          stage = (stage + 1) % stages;
+          pipePulse.style.transform = `translateX(${stage * 20}%)`;
+        }, 700);
       }
 
       /* ══════════════════════════════════════════════
-         HERO ENTRANCE — triggers after DOM ready
-      ══════════════════════════════════════════════ */
-      document.addEventListener('DOMContentLoaded', () => {
-        document.body.classList.add('loaded', 'hero-loaded');
-      });
-
-      /* ══════════════════════════════════════════════
-         STAT COUNT-UP
-      ══════════════════════════════════════════════ */
-      function countUp(el) {
-        if (rm) return;
-        const target = parseInt(el.dataset.count, 10);
-        if (!target) return;
-        const start = performance.now();
-        const dur = 1400;
-        (function step(now) {
-          const t = Math.min((now - start) / dur, 1);
-          const ease = 1 - Math.pow(1 - t, 4);
-          el.textContent = Math.round(ease * target).toString();
-          if (t < 1) requestAnimationFrame(step);
-          else el.textContent = String(target);
-        })(start);
-      }
-
-      const trustEl = document.querySelector('.lp-trust');
-      if (trustEl) {
-        const io = new IntersectionObserver(entries => {
-          entries.forEach(e => {
-            if (!e.isIntersecting) return;
-            e.currentTarget.querySelectorAll('[data-count]').forEach(countUp);
-            io.disconnect();
-          });
-        }, { threshold: 0.6 });
-        io.observe(trustEl);
-      }
-
-      /* ══════════════════════════════════════════════
-         SIMULATOR MOCKUP LIVE ANIMATION
+         SIMULATOR MOCKUP ANIMATION
       ══════════════════════════════════════════════ */
       const FACTORIAL_STEPS = [
-        { pc:'0x00000010', cycle:1, activeIdx:0, r1:5, r2:1, pseudoc:'x1 = 0 + 5' },
-        { pc:'0x00000014', cycle:2, activeIdx:1, r1:5, r2:1, pseudoc:'x2 = 0 + 1' },
-        { pc:'0x0000001c', cycle:4, activeIdx:3, r1:5, r2:5, pseudoc:'x2 = x2 * x1' },
-        { pc:'0x00000020', cycle:5, activeIdx:4, r1:4, r2:5, pseudoc:'x1 = x1 + (-1)' },
-        { pc:'0x00000024', cycle:6, activeIdx:5, r1:4, r2:5, pseudoc:'if x1 ≠ 0 → pc = loop' },
-        { pc:'0x0000001c', cycle:7, activeIdx:3, r1:4, r2:20, pseudoc:'x2 = x2 * x1' },
-        { pc:'0x00000020', cycle:8, activeIdx:4, r1:3, r2:20, pseudoc:'x1 = x1 + (-1)' },
-        { pc:'0x0000001c', cycle:10, activeIdx:3, r1:3, r2:60, pseudoc:'x2 = x2 * x1' },
+        { pc:'0x00000010', cycle:1,  activeIdx:0, r1:5,  r2:1,  pseudoc:'x1 = 0 + 5' },
+        { pc:'0x00000014', cycle:2,  activeIdx:1, r1:5,  r2:1,  pseudoc:'x2 = 0 + 1' },
+        { pc:'0x0000001c', cycle:4,  activeIdx:3, r1:5,  r2:5,  pseudoc:'x2 = x2 × x1' },
+        { pc:'0x00000020', cycle:5,  activeIdx:4, r1:4,  r2:5,  pseudoc:'x1 = x1 + (−1)' },
+        { pc:'0x00000024', cycle:6,  activeIdx:5, r1:4,  r2:5,  pseudoc:'if x1 ≠ 0 → pc = loop' },
+        { pc:'0x0000001c', cycle:7,  activeIdx:3, r1:4,  r2:20, pseudoc:'x2 = x2 × x1' },
+        { pc:'0x00000020', cycle:8,  activeIdx:4, r1:3,  r2:20, pseudoc:'x1 = x1 + (−1)' },
+        { pc:'0x0000001c', cycle:10, activeIdx:3, r1:3,  r2:60, pseudoc:'x2 = x2 × x1' },
       ];
 
-      const simLines = document.querySelectorAll('.lp-sim__line');
-      const simPcEl  = document.getElementById('simPc');
-      const simCycEl = document.getElementById('simCycle');
-      const simPcEl2 = null;
-      const simR1El  = document.getElementById('simR1');
-      const simR2El  = document.getElementById('simR2');
-      const simPCEl  = document.getElementById('simPseudocCode');
-      const simMemActiveEl = document.getElementById('simMemActive');
-
+      const simLines    = document.querySelectorAll('.lp-sim__line');
+      const simPcEl     = document.getElementById('simPc');
+      const simCycEl    = document.getElementById('simCycle');
+      const simR1El     = document.getElementById('simR1');
+      const simR2El     = document.getElementById('simR2');
+      const simPCEl     = document.getElementById('simPseudocCode');
       let stepIdx = 0;
 
-      function hexStr(n) { return '0x' + n.toString(16).toUpperCase().padStart(8,'0'); }
-
-      function applySimStep(s) {
-        if (simPcEl) simPcEl.textContent = s.pc;
-        if (simCycEl) simCycEl.textContent = String(s.cycle);
-        if (simPCEl) simPCEl.textContent = s.pseudoc;
-
-        simLines.forEach((l, i) => {
-          l.classList.toggle('lp-sim__line--active', i === s.activeIdx);
-        });
-
-        if (simR1El) {
-          const prevR1 = simR1El.querySelector('.sim-rv');
-          if (prevR1) {
-            const old = prevR1.textContent;
-            const nxt = hexStr(s.r1);
-            if (old !== nxt) { prevR1.textContent = nxt; flashRow(simR1El); }
-          }
-        }
-        if (simR2El) {
-          const prevR2 = simR2El.querySelector('.sim-rv');
-          if (prevR2) {
-            const old = prevR2.textContent;
-            const nxt = hexStr(s.r2);
-            if (old !== nxt) { prevR2.textContent = nxt; flashRow(simR2El); }
-          }
-        }
-      }
+      function hexStr(n) { return '0x' + n.toString(16).toUpperCase().padStart(8, '0'); }
 
       function flashRow(row) {
         row.classList.remove('sim-row-flash');
         void row.offsetWidth;
         row.classList.add('sim-row-flash');
-        setTimeout(() => row.classList.remove('sim-row-flash'), 800);
+        setTimeout(() => row.classList.remove('sim-row-flash'), 900);
+      }
+
+      function applySimStep(s) {
+        if (simPcEl)  simPcEl.textContent  = s.pc;
+        if (simCycEl) simCycEl.textContent = String(s.cycle);
+        if (simPCEl)  simPCEl.textContent  = s.pseudoc;
+
+        simLines.forEach((l, i) => l.classList.toggle('lp-sim__line--active', i === s.activeIdx));
+
+        const r1rv = simR1El?.querySelector('.sim-rv');
+        if (r1rv) {
+          const nxt = hexStr(s.r1);
+          if (r1rv.textContent !== nxt) { r1rv.textContent = nxt; flashRow(simR1El); }
+        }
+        const r2rv = simR2El?.querySelector('.sim-rv');
+        if (r2rv) {
+          const nxt = hexStr(s.r2);
+          if (r2rv.textContent !== nxt) { r2rv.textContent = nxt; flashRow(simR2El); }
+        }
       }
 
       if (!rm) {
@@ -552,14 +824,68 @@
         setInterval(() => {
           stepIdx = (stepIdx + 1) % FACTORIAL_STEPS.length;
           applySimStep(FACTORIAL_STEPS[stepIdx]);
-        }, 1800);
+        }, 1900);
       } else {
         applySimStep(FACTORIAL_STEPS[2]);
         simLines.forEach((l, i) => l.classList.toggle('lp-sim__line--active', i === 3));
       }
 
       /* ══════════════════════════════════════════════
-         REVEAL MOCKUP — scrollytelling state switch
+         GRID SECTION ANIMATIONS
+      ══════════════════════════════════════════════ */
+      // Pipeline pulse in arch grid card
+      const gridPipe = document.getElementById('gridPipePulse');
+      if (gridPipe && !rm) {
+        let ps = 0;
+        setInterval(() => {
+          ps = (ps + 1) % 5;
+          gridPipe.style.setProperty('--pipe-stage', String(ps));
+        }, 900);
+      }
+
+      // Register matrix pulse
+      const rmCells = document.querySelectorAll('.rm-cell');
+      const rmCellVal = document.getElementById('rmCellVal');
+      const CELL_VALS = ['0x00000001','0x00000005','0x00000014','0x0000003C','0x00000078'];
+      let rmCellIdx = 2, cellValIdx = 0;
+      if (rmCells.length && !rm) {
+        setInterval(() => {
+          rmCells[rmCellIdx]?.classList.remove('rm-cell--hi');
+          const candidates = [1, 2, 4, 5, 16, 17];
+          rmCellIdx = candidates[Math.floor(Math.random() * candidates.length)];
+          rmCells[rmCellIdx]?.classList.add('rm-cell--hi');
+          cellValIdx = (cellValIdx + 1) % CELL_VALS.length;
+          if (rmCellVal) rmCellVal.textContent = CELL_VALS[cellValIdx];
+        }, 1700);
+      }
+
+      // Memory val pulse
+      const gridMemVal = document.getElementById('gridMemVal');
+      const MEM_VALS = ['0x00000001','0x00000005','0x00000014','0x0000003C','0x00000078'];
+      let memValIdx = 0;
+      if (gridMemVal && !rm) {
+        setInterval(() => {
+          memValIdx = (memValIdx + 1) % MEM_VALS.length;
+          gridMemVal.textContent = MEM_VALS[memValIdx];
+          gridMemVal.closest('.lp-memvis__row')?.classList.add('lp-memvis__row--flash');
+          setTimeout(() => gridMemVal.closest('.lp-memvis__row')?.classList.remove('lp-memvis__row--flash'), 600);
+        }, 2100);
+      }
+
+      // Test row pending → pass cycle
+      const testPending = document.getElementById('gridTestPending');
+      if (testPending && !rm) {
+        setTimeout(() => {
+          testPending.className = 'lp-testvis__row lp-testvis__row--pass';
+          const icon = testPending.querySelector('.lp-testvis__icon');
+          if (icon) icon.textContent = '✓';
+          const status = document.querySelector('.lp-testvis__status');
+          if (status) { status.textContent = '4 passed'; status.className = 'lp-testvis__status lp-testvis__status--pass'; }
+        }, 2800);
+      }
+
+      /* ══════════════════════════════════════════════
+         REVEAL MOCKUP — scrollytelling
       ══════════════════════════════════════════════ */
       const rmRegs  = document.getElementById('rmRegs');
       const rmInstr = document.getElementById('rmInstr');
@@ -589,7 +915,6 @@
         revealBlocks.forEach(b => bio.observe(b));
       }
 
-      /* live register cycling in reveal panel */
       const REVEAL_VALS = [1, 5, 20, 60, 120];
       let rvIdx = 0;
       if (rmR2Val && !rm) {
@@ -598,13 +923,12 @@
           rmR2Val.textContent = hexStr(REVEAL_VALS[rvIdx]);
           const row = document.getElementById('rmR2');
           if (row) flashRow(row);
-        }, 1800);
+        }, 1900);
       }
 
-      /* live pseudo-c cycling */
       const CLIKE_PAIRS = [
         { asm:'<span class="sim-mne">mul</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x2</span>, <span class="sim-reg">x1</span>', c:'x2 = x2 * x1' },
-        { asm:'<span class="sim-mne">addi</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x1</span>, <span class="sim-num">-1</span>', c:'x1 = x1 + (-1)' },
+        { asm:'<span class="sim-mne">addi</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x1</span>, <span class="sim-num">-1</span>', c:'x1 = x1 + (−1)' },
         { asm:'<span class="sim-mne">bne</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x0</span>, loop', c:'if x1 ≠ 0 → pc = loop' },
         { asm:'<span class="sim-mne">lw</span> <span class="sim-reg">x3</span>, 0(<span class="sim-reg">x2</span>)', c:'x3 = mem[x2 + 0]' },
       ];
@@ -617,10 +941,9 @@
           rmAsmEl.innerHTML = p.asm;
           rmClike.style.opacity = '0';
           setTimeout(() => { rmClike.textContent = p.c; rmClike.style.opacity = ''; }, 300);
-        }, 2400);
+        }, 2500);
       }
 
-      /* live stack push/pop */
       if (rmStackFrames && !rm) {
         const PUSH_LABELS = ['arg a0','local i','temp x5','result x2'];
         let spIdx = 0, pushing = true;
@@ -635,30 +958,14 @@
             if (spIdx >= 3) { spIdx = 0; pushing = false; }
           } else {
             const fr = rmStackFrames.querySelector('.lp-rm__frame:not(.rm-frame--sp):not(.rm-frame--hi)');
-            if (fr) { fr.classList.add('rm-frame--out'); setTimeout(() => fr.remove(), 350); }
+            if (fr) { fr.classList.add('rm-frame--out'); setTimeout(() => fr.remove(), 360); }
             pushing = rmStackFrames.querySelectorAll('.lp-rm__frame').length <= 2;
           }
         }, 2200);
       }
 
       /* ══════════════════════════════════════════════
-         PROGRESS BAR FILLS (FIG 03 / reveal)
-      ══════════════════════════════════════════════ */
-      document.querySelectorAll('.lp-prow__fill').forEach(f => {
-        const io = new IntersectionObserver(entries => {
-          entries.forEach(e => {
-            if (!e.isIntersecting) return;
-            const target = f.dataset.target || '0';
-            const delay  = f.style.getPropertyValue('--delay') || '0ms';
-            setTimeout(() => { f.style.width = target + '%'; }, parseInt(delay, 10));
-            io.unobserve(f);
-          });
-        }, { threshold: 0.3 });
-        io.observe(f);
-      });
-
-      /* ══════════════════════════════════════════════
-         GLOBAL REVEAL OBSERVER
+         GLOBAL SECTION REVEAL
       ══════════════════════════════════════════════ */
       document.addEventListener('DOMContentLoaded', () => {
         const io = new IntersectionObserver(entries => {
@@ -668,7 +975,7 @@
               io.unobserve(e.target);
             }
           });
-        }, { threshold: 0.12 });
+        }, { threshold: 0.08 });
         document.querySelectorAll('[data-landing-section]').forEach(el => io.observe(el));
       });
 
@@ -699,8 +1006,8 @@
         if (!lesson) { bar.hidden = true; return; }
         const lp = progress.lessons[lesson.id];
         if (!lp || lp.completed) { bar.hidden = true; return; }
-        const si   = Math.min(lp.currentStepIndex, lesson.steps.length - 1);
-        const sid  = lesson.steps[si]?.id ?? lesson.steps[0]?.id;
+        const si  = Math.min(lp.currentStepIndex, lesson.steps.length - 1);
+        const sid = lesson.steps[si]?.id ?? lesson.steps[0]?.id;
         if (!sid) { bar.hidden = true; return; }
         if (localStorage.getItem(resumeDismissKey(lesson.id, sid)) === '1') { bar.hidden = true; return; }
         bar.hidden = false;
