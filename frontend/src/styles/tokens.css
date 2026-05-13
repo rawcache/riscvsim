@@ -73,6 +73,12 @@
 
   /* Nav */
   --nav-height: 64px;
+  --nav-bg: rgba(10, 10, 10, 0.82);
+  --nav-bg-scrolled: rgba(10, 10, 10, 0.96);
+  --nav-border: var(--border);
+  --nav-link-hover-bg: rgba(255, 255, 255, 0.05);
+  --nav-dropdown-bg: #0f0f0f;
+  --nav-mobile-bg: #0a0a0a;
 }
 
 /* Light mode overrides (if user ever toggles light) */
@@ -99,6 +105,12 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.14);
+  --nav-bg: rgba(247, 245, 242, 0.88);
+  --nav-bg-scrolled: rgba(247, 245, 242, 0.97);
+  --nav-border: var(--border);
+  --nav-link-hover-bg: rgba(0, 0, 0, 0.04);
+  --nav-dropdown-bg: #ffffff;
+  --nav-mobile-bg: #f7f5f2;
 }
 
 /* ── Global resets ───────────────────────────────────────── */

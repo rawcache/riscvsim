@@ -13,6 +13,7 @@ export interface NavConfig {
     | "labs"
     | "leaderboard"
     | "challenges"
+    | "checkpoints"
     | "simulator"
     | "about"
     | "docs"
@@ -72,7 +73,7 @@ function setThemeToggleState(themeToggle: HTMLButtonElement | null): void {
 function toggleTheme(themeToggles: Array<HTMLButtonElement | null>): void {
   const isDark = document.documentElement.dataset.theme === "dark";
   if (isDark) {
-    document.documentElement.removeAttribute("data-theme");
+    document.documentElement.dataset.theme = "light";
     window.localStorage.setItem(THEME_KEY, "light");
   } else {
     document.documentElement.dataset.theme = "dark";
@@ -91,7 +92,7 @@ function renderNav(config: NavConfig): string {
   const isLearn = config.activePage === "learn";
   const isQuiz = config.activePage === "quiz";
   const isLabs = config.activePage === "labs";
-  const isChallenges = config.activePage === "challenges";
+  const isCheckpoints = config.activePage === "checkpoints";
   const isGithub = config.activePage === "github";
   const isSimulator = config.activePage === "simulator";
   const isResources = resourcesActive(config.activePage);
@@ -113,7 +114,7 @@ function renderNav(config: NavConfig): string {
           <a href="/simulator/" class="nav-link${isSimulator ? " nav-link-active" : ""}">Simulator</a>
           <a href="/quiz/" class="nav-link${isQuiz ? " nav-link-active" : ""}">Quizzes</a>
           <a href="/labs/" class="nav-link${isLabs ? " nav-link-active" : ""}">Labs</a>
-          <a href="/checkpoints/" class="nav-link${isChallenges ? " nav-link-active" : ""}">Checkpoints</a>
+          <a href="/checkpoints/" class="nav-link${isCheckpoints ? " nav-link-active" : ""}">Checkpoints</a>
           <div class="nav-dropdown-wrapper" data-nav-dropdown="resources">
             <button class="nav-link nav-dropdown-trigger${isResources ? " nav-link-active" : ""}" type="button" aria-expanded="false" aria-controls="nav-dropdown-resources">
               Resources
@@ -177,7 +178,7 @@ function renderNav(config: NavConfig): string {
         <a href="/simulator/" class="nav-mobile-link${isSimulator ? " nav-link-active" : ""}">Simulator</a>
         <a href="/quiz/" class="nav-mobile-link">Quizzes</a>
         <a href="/labs/" class="nav-mobile-link">Labs</a>
-        <a href="/checkpoints/" class="nav-mobile-link">Checkpoints</a>
+        <a href="/checkpoints/" class="nav-mobile-link${isCheckpoints ? " nav-link-active" : ""}">Checkpoints</a>
         <a href="/learn-riscv/" class="nav-mobile-link">Learn RISC-V</a>
         <a href="/about/" class="nav-mobile-link${config.activePage === "about" ? " nav-link-active" : ""}">About</a>
         <a href="https://github.com/rawcache/riscvsim" class="nav-mobile-link" target="_blank" rel="noopener">GitHub</a>

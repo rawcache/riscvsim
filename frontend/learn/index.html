@@ -17,11 +17,9 @@
     <script>
       (() => {
         try {
-          const storedTheme = window.localStorage.getItem("studyriscv-theme");
-          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-          if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
-            document.documentElement.dataset.theme = "dark";
-          }
+          const stored = window.localStorage.getItem("studyriscv-theme");
+          const prefer = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.dataset.theme = stored || prefer;
         } catch {
           // Ignore theme bootstrap errors.
         }

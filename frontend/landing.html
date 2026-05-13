@@ -326,6 +326,172 @@
       </section>
 
       <!-- ════════════════════════════════════════════════════
+           PRODUCT MODULES
+           "Every tool you need to master RISC-V."
+      ════════════════════════════════════════════════════ -->
+      <section class="lp-modules" data-landing-section id="lpModules">
+        <div class="lp-w">
+          <div class="lp-modules__intro">
+            <span class="lp-tag">Platform</span>
+            <h2 class="lp-modules__h2">Every tool you need<br>to master RISC-V.</h2>
+            <p class="lp-modules__lead">From first instruction to full understanding — one integrated platform.</p>
+          </div>
+
+          <div class="lp-modules__grid">
+
+            <!-- Simulator -->
+            <a href="/simulator/" class="lp-mc lp-mc--sim" aria-label="Open Simulator">
+              <div class="lp-mc__header">
+                <span class="lp-mc__icon" aria-hidden="true">⌨</span>
+                <span class="lp-mc__title">Simulator</span>
+                <span class="lp-mc__arrow" aria-hidden="true">→</span>
+              </div>
+              <div class="lp-mc__vis" aria-hidden="true">
+                <div class="lp-mc-win">
+                  <div class="lp-mc-win__bar">
+                    <span class="lp-mc-dot lp-mc-dot--r"></span><span class="lp-mc-dot lp-mc-dot--y"></span><span class="lp-mc-dot lp-mc-dot--g"></span>
+                    <span class="lp-mc-win__name">factorial.s</span>
+                    <span class="lp-mc-badge-sm">STEP</span>
+                  </div>
+                  <div class="lp-mc-line lp-mc-line--active">
+                    <span>0x1c</span>
+                    <span>mul x2, x2, x1</span>
+                    <span class="lp-mc-exec-arrow">▶</span>
+                  </div>
+                  <div class="lp-mc-line">
+                    <span>0x20</span>
+                    <span>addi x1, x1, -1</span>
+                  </div>
+                  <div class="lp-mc-line">
+                    <span>0x24</span>
+                    <span>bne x1, x0, loop</span>
+                  </div>
+                </div>
+              </div>
+              <p class="lp-mc__desc">Write assembly, step through execution, and inspect every register and memory cell in real time.</p>
+            </a>
+
+            <!-- Learn -->
+            <a href="/learn/" class="lp-mc lp-mc--learn" aria-label="Open Learn">
+              <div class="lp-mc__header">
+                <span class="lp-mc__icon" aria-hidden="true">◎</span>
+                <span class="lp-mc__title">Learn</span>
+                <span class="lp-mc__arrow" aria-hidden="true">→</span>
+              </div>
+              <div class="lp-mc__vis" aria-hidden="true">
+                <div class="lp-mc-steps">
+                  <div class="lp-mc-step lp-mc-step--done">✓ Registers &amp; immediates</div>
+                  <div class="lp-mc-step lp-mc-step--active">▶ Branches &amp; loops</div>
+                  <div class="lp-mc-step">· Function calls</div>
+                  <div class="lp-mc-step">· Memory &amp; stack</div>
+                </div>
+              </div>
+              <p class="lp-mc__desc">Structured lessons that build your mental model of RISC-V from the ground up.</p>
+            </a>
+
+            <!-- Problems -->
+            <a href="/problems/" class="lp-mc lp-mc--problems" aria-label="Open Problems">
+              <div class="lp-mc__header">
+                <span class="lp-mc__icon" aria-hidden="true">◻</span>
+                <span class="lp-mc__title">Problems</span>
+                <span class="lp-mc__arrow" aria-hidden="true">→</span>
+              </div>
+              <div class="lp-mc__vis" aria-hidden="true">
+                <div class="lp-mc-tests">
+                  <div class="lp-mc-test lp-mc-test--pass">
+                    <span class="lp-mc-test__icon">✓</span>
+                    <span>fibonacci(8) = 21</span>
+                  </div>
+                  <div class="lp-mc-test lp-mc-test--pass">
+                    <span class="lp-mc-test__icon">✓</span>
+                    <span>stack restored</span>
+                  </div>
+                  <div class="lp-mc-test">
+                    <span class="lp-mc-test__icon">✗</span>
+                    <span>a0 = return value</span>
+                  </div>
+                </div>
+              </div>
+              <p class="lp-mc__desc">Curated coding challenges with automated test cases. Fix bugs, implement functions, pass the suite.</p>
+            </a>
+
+            <!-- Labs -->
+            <a href="/labs/" class="lp-mc lp-mc--labs" aria-label="Open Labs">
+              <div class="lp-mc__header">
+                <span class="lp-mc__icon" aria-hidden="true">⬡</span>
+                <span class="lp-mc__title">Labs</span>
+                <span class="lp-mc__arrow" aria-hidden="true">→</span>
+              </div>
+              <div class="lp-mc__vis" aria-hidden="true">
+                <div class="lp-mc-pipe">
+                  <div class="lp-mc-stage">IF</div>
+                  <span class="lp-mc-pipe-arrow">→</span>
+                  <div class="lp-mc-stage">ID</div>
+                  <span class="lp-mc-pipe-arrow">→</span>
+                  <div class="lp-mc-stage lp-mc-stage--active">EX</div>
+                  <span class="lp-mc-pipe-arrow">→</span>
+                  <div class="lp-mc-stage">MEM</div>
+                  <span class="lp-mc-pipe-arrow">→</span>
+                  <div class="lp-mc-stage">WB</div>
+                </div>
+              </div>
+              <p class="lp-mc__desc">Hands-on pipeline and architecture labs. Trace hazards, forwarding, and control flow at the hardware level.</p>
+            </a>
+
+            <!-- Quizzes -->
+            <a href="/quiz/" class="lp-mc lp-mc--quizzes" aria-label="Open Quizzes">
+              <div class="lp-mc__header">
+                <span class="lp-mc__icon" aria-hidden="true">◇</span>
+                <span class="lp-mc__title">Quizzes</span>
+                <span class="lp-mc__arrow" aria-hidden="true">→</span>
+              </div>
+              <div class="lp-mc__vis" aria-hidden="true">
+                <div class="lp-mc-quiz">
+                  <div class="lp-mc-quiz__q">What does <code>jalr x0, ra, 0</code> do?</div>
+                  <div class="lp-mc-quiz__opts">
+                    <div class="lp-mc-quiz__opt lp-mc-quiz__opt--correct">Returns from a function</div>
+                    <div class="lp-mc-quiz__opt">Jumps to address in ra</div>
+                    <div class="lp-mc-quiz__opt">Clears x0</div>
+                  </div>
+                </div>
+              </div>
+              <p class="lp-mc__desc">Test your knowledge with instant-feedback quizzes covering ISA, calling conventions, and architecture concepts.</p>
+            </a>
+
+            <!-- Checkpoints -->
+            <a href="/checkpoints/" class="lp-mc lp-mc--checkpoints" aria-label="Open Checkpoints">
+              <div class="lp-mc__header">
+                <span class="lp-mc__icon" aria-hidden="true">◆</span>
+                <span class="lp-mc__title">Checkpoints</span>
+                <span class="lp-mc__arrow" aria-hidden="true">→</span>
+              </div>
+              <div class="lp-mc__vis" aria-hidden="true">
+                <div class="lp-mc-progress">
+                  <div class="lp-mc-prog-row">
+                    <span>Basics</span>
+                    <div class="lp-mc-bar"><div class="lp-mc-bar__fill" style="width:67%"></div></div>
+                    <span>4/6</span>
+                  </div>
+                  <div class="lp-mc-prog-row">
+                    <span>Patterns</span>
+                    <div class="lp-mc-bar"><div class="lp-mc-bar__fill" style="width:25%"></div></div>
+                    <span>2/8</span>
+                  </div>
+                  <div class="lp-mc-prog-row">
+                    <span>Pipeline</span>
+                    <div class="lp-mc-bar"><div class="lp-mc-bar__fill" style="width:0%"></div></div>
+                    <span>0/5</span>
+                  </div>
+                </div>
+              </div>
+              <p class="lp-mc__desc">Track your learning journey with milestone-based checkpoints across all topics and difficulty levels.</p>
+            </a>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════
            ARCHITECTURE GRID
            "See the architecture, not just the code."
       ════════════════════════════════════════════════════ -->
@@ -673,24 +839,9 @@
 
       /* ══════════════════════════════════════════════
          THEME TOGGLE — reads/writes data-theme on <html>
-         nav.ts's toggleTheme() removes data-theme for "light",
-         so we also listen for attribute removals.
+         toggleTheme() in nav.ts always sets data-theme="light"
+         or data-theme="dark" explicitly, so no observer needed.
       ══════════════════════════════════════════════ */
-      function applyTheme(t) {
-        document.documentElement.dataset.theme = t;
-        document.body.classList.toggle('theme-light', t === 'light');
-        try { window.localStorage.setItem('studyriscv-theme', t); } catch {}
-      }
-
-      // Observe data-theme changes from nav.ts's toggleTheme()
-      const themeObserver = new MutationObserver(() => {
-        const cur = document.documentElement.dataset.theme;
-        if (!cur) {
-          // nav.ts removed attribute → means it set light
-          applyTheme('light');
-        }
-      });
-      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
       /* ══════════════════════════════════════════════
          SCROLL SYSTEM — one passive listener, RAF-batched

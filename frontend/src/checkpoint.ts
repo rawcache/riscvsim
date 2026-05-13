@@ -680,7 +680,7 @@ class CheckpointApp {
   private runtimePromise: Promise<WasmRuntime> | null = null;
 
   async init(): Promise<void> {
-    initNav({ activePage: "challenges" });
+    initNav({ activePage: "checkpoints" });
     this.bindStaticListeners();
     await this.refreshSessionState();
     this.problemButton.setAttribute("aria-expanded", "false");

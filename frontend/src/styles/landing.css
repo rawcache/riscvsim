@@ -11,7 +11,7 @@
 :root[data-theme="dark"]  .landing-page,
 :root:not([data-theme])   .landing-page,
 .landing-page {
-  --lp-bg:           #050608;
+  --lp-bg:           #030405;
   --lp-surface:      #0b0d14;
   --lp-surface-hi:   #131621;
   --lp-elevated:     #161a28;
@@ -1619,6 +1619,435 @@ body.hero-loaded .lp-in {
 
 
 /* ═══════════════════════════════════════════════════════════════
+   PRODUCT MODULE SECTION — Raycast-style product cards
+   ═══════════════════════════════════════════════════════════════ */
+.lp-modules {
+  padding: 100px var(--lp-gutter) 80px;
+}
+
+.lp-modules__intro {
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.lp-modules__h2 {
+  margin: 0 0 14px;
+  font-size: clamp(26px, 3.2vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.lp-modules__lead {
+  margin: 0 auto;
+  max-width: 520px;
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.72;
+}
+
+/* 3-col × 2-row grid */
+.lp-modules__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  width: min(var(--lp-max-w), 100%);
+  margin: 0 auto;
+}
+
+/* ── Base card ── */
+.lp-mc {
+  display: flex;
+  flex-direction: column;
+  background: var(--lp-surface);
+  border: 1px solid var(--lp-border);
+  border-radius: 16px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    transform  200ms cubic-bezier(.22,1,.36,1),
+    box-shadow 200ms ease,
+    border-color 200ms ease;
+  position: relative;
+}
+
+.lp-mc:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px var(--lp-mc-glow, var(--lp-border-glow));
+  border-color: var(--lp-mc-glow, var(--lp-border-glow));
+}
+
+.lp-mc:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+}
+
+/* top accent line */
+.lp-mc::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--lp-mc-color, var(--lp-accent));
+  opacity: 0.7;
+}
+
+/* ── Color variants ── */
+.lp-mc--sim         { --lp-mc-color: #5b6cff; --lp-mc-glow: rgba(91,108,255,0.45); --lp-mc-dim: rgba(91,108,255,0.10); }
+.lp-mc--learn       { --lp-mc-color: #818cf8; --lp-mc-glow: rgba(129,140,248,0.45); --lp-mc-dim: rgba(129,140,248,0.10); }
+.lp-mc--problems    { --lp-mc-color: #2ee59d; --lp-mc-glow: rgba(46,229,157,0.40); --lp-mc-dim: rgba(46,229,157,0.10); }
+.lp-mc--labs        { --lp-mc-color: #38d9ff; --lp-mc-glow: rgba(56,217,255,0.40); --lp-mc-dim: rgba(56,217,255,0.10); }
+.lp-mc--quizzes     { --lp-mc-color: #9b5cff; --lp-mc-glow: rgba(155,92,255,0.40); --lp-mc-dim: rgba(155,92,255,0.10); }
+.lp-mc--checkpoints { --lp-mc-color: #ffbf66; --lp-mc-glow: rgba(255,191,102,0.40); --lp-mc-dim: rgba(255,191,102,0.10); }
+
+/* ── Card header ── */
+.lp-mc__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 20px 0;
+}
+
+.lp-mc__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--lp-mc-dim, var(--lp-accent-dim));
+  border: 1px solid var(--lp-mc-glow, var(--lp-border-glow));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.lp-mc__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.lp-mc__arrow {
+  font-size: 14px;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  transition: opacity 160ms ease, transform 160ms ease;
+  line-height: 1;
+}
+
+.lp-mc:hover .lp-mc__arrow {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+/* ── Visual area ── */
+.lp-mc__vis {
+  margin: 14px 16px;
+  background: var(--lp-surface-hi);
+  border: 1px solid var(--lp-border);
+  border-radius: 10px;
+  overflow: hidden;
+  min-height: 140px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 14px;
+  position: relative;
+}
+
+/* subtle glow inside vis area */
+.lp-mc__vis::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%,
+    var(--lp-mc-dim, var(--lp-accent-dim)) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ── Card description ── */
+.lp-mc__desc {
+  padding: 4px 20px 20px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+/* ── Mini simulator window (Simulator card) ── */
+.lp-mc-win {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  position: relative;
+  z-index: 1;
+}
+
+.lp-mc-win__bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--lp-border);
+  margin-bottom: 8px;
+}
+
+.lp-mc-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.lp-mc-dot--r { background: #ff5f57; }
+.lp-mc-dot--y { background: #febc2e; }
+.lp-mc-dot--g { background: #28c840; }
+
+.lp-mc-win__name {
+  font-size: 10px;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  flex: 1;
+  margin-left: 4px;
+}
+
+.lp-mc-badge-sm {
+  padding: 1px 6px;
+  border: 1px solid rgba(91,108,255,0.45);
+  border-radius: 3px;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: var(--lp-accent-hi);
+  background: var(--lp-accent-dim);
+}
+
+.lp-mc-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 6px;
+  border-left: 2px solid transparent;
+  border-radius: 2px;
+  font-size: 10.5px;
+}
+
+.lp-mc-line--active {
+  background: rgba(91,108,255,0.10);
+  border-left-color: #5b6cff;
+}
+
+.lp-mc-exec-arrow {
+  margin-left: auto;
+  font-size: 7px;
+  color: #5b6cff;
+  opacity: 0.9;
+}
+
+.lp-mc-reg-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding: 5px 8px;
+  background: rgba(46,229,157,0.07);
+  border: 1px solid rgba(46,229,157,0.22);
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.lp-mc-reg-hi { color: #2ee59d; font-weight: 600; }
+
+/* ── Lesson steps (Learn card) ── */
+.lp-mc-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  position: relative;
+  z-index: 1;
+}
+
+.lp-mc-step {
+  padding: 5px 10px;
+  border: 1px solid var(--lp-border);
+  border-radius: 5px;
+  color: var(--text-secondary);
+  background: var(--lp-surface);
+}
+
+.lp-mc-step--done {
+  color: var(--text-secondary);
+  opacity: 0.55;
+  text-decoration: line-through;
+  text-decoration-color: rgba(129,140,248,0.4);
+}
+
+.lp-mc-step--active {
+  background: rgba(129,140,248,0.10);
+  border-color: rgba(129,140,248,0.40);
+  color: #818cf8;
+  font-weight: 600;
+}
+
+/* ── Test results (Problems card) ── */
+.lp-mc-tests {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  position: relative;
+  z-index: 1;
+}
+
+.lp-mc-test {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border: 1px solid var(--lp-border);
+  border-radius: 5px;
+}
+
+.lp-mc-test--pass {
+  background: rgba(46,229,157,0.06);
+  border-color: rgba(46,229,157,0.20);
+  color: #2ee59d;
+}
+
+.lp-mc-test__icon { flex-shrink: 0; }
+
+/* ── Pipeline stages (Labs card) ── */
+.lp-mc-pipe {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.lp-mc-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 8px 2px;
+  border: 1px solid var(--lp-border);
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--lp-surface);
+  text-align: center;
+}
+
+.lp-mc-stage--active {
+  background: rgba(56,217,255,0.10);
+  border-color: rgba(56,217,255,0.40);
+  color: #38d9ff;
+  box-shadow: 0 0 12px rgba(56,217,255,0.15);
+}
+
+.lp-mc-pipe-arrow {
+  font-size: 10px;
+  color: var(--text-secondary);
+  opacity: 0.35;
+  flex-shrink: 0;
+}
+
+/* ── Quiz card ── */
+.lp-mc-quiz {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.lp-mc-quiz__q {
+  font-size: 11.5px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.lp-mc-quiz__opts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.lp-mc-quiz__opt {
+  padding: 6px 10px;
+  border: 1px solid var(--lp-border);
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--lp-surface);
+  text-align: center;
+}
+
+.lp-mc-quiz__opt--correct {
+  background: rgba(155,92,255,0.10);
+  border-color: rgba(155,92,255,0.40);
+  color: #9b5cff;
+  font-weight: 600;
+}
+
+/* ── Progress bars (Checkpoints card) ── */
+.lp-mc-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.lp-mc-prog-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.lp-mc-prog-row > span:first-child {
+  width: 62px;
+  flex-shrink: 0;
+}
+
+.lp-mc-prog-row > span:last-child {
+  width: 32px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.lp-mc-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--lp-border);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.lp-mc-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffbf66, #ffd49a);
+  border-radius: 99px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
    LEGACY STUBS — initLandingExperience / initLandingAnimations
    ═══════════════════════════════════════════════════════════════ */
 .hero              { position: relative; }
@@ -1632,6 +2061,7 @@ body:not(.hero-loaded) .lp-in { opacity: 0; }
    ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 1100px) {
   .lp-hero__content { grid-template-columns: 1fr 1.1fr; gap: 48px; }
+  .lp-modules__grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 900px) {
@@ -1649,6 +2079,8 @@ body:not(.hero-loaded) .lp-in { opacity: 0; }
 
   .lp-arch-grid { grid-template-columns: 1fr; gap: 12px; }
   .lp-grid-section { padding: 80px var(--lp-gutter); }
+  .lp-modules__grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .lp-modules { padding: 80px var(--lp-gutter) 60px; }
 
   .lp-reveal__inner { grid-template-columns: 1fr; gap: 32px; }
   .lp-reveal__sticky { position: relative; top: auto; height: auto; margin-bottom: 16px; }
@@ -1673,6 +2105,9 @@ body:not(.hero-loaded) .lp-in { opacity: 0; }
   .lp-cta     { padding: 90px 20px; }
   .lp-grid-section { padding: 70px 20px; }
   .lp-cta-row .lp-btn { flex: 1; }
+  .lp-modules { padding: 60px 20px 40px; }
+  .lp-modules__grid { grid-template-columns: 1fr; gap: 10px; }
+  .lp-mc__vis { min-height: 120px; }
 
   .lp-sim__right  { display: none; }
   .lp-sim__body   { grid-template-columns: 1fr; }

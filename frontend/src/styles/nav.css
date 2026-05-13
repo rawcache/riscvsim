@@ -9,15 +9,15 @@
   z-index: 1000;
   width: 100%;
   height: var(--nav-height, 64px);
-  background: rgba(10, 10, 10, 0.82);
-  border-bottom: 1px solid var(--border);
+  background: var(--nav-bg, rgba(10, 10, 10, 0.82));
+  border-bottom: 1px solid var(--nav-border, var(--border));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   transition: background 200ms ease;
 }
 
 .site-nav.is-scrolled {
-  background: rgba(10, 10, 10, 0.96);
+  background: var(--nav-bg-scrolled, rgba(10, 10, 10, 0.96));
 }
 
 /* ── Inner row ─────────────────────────────────────────── */
@@ -103,7 +103,7 @@
 
 .nav-link:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--nav-link-hover-bg, rgba(255, 255, 255, 0.05));
 }
 
 .nav-link-active {
@@ -160,7 +160,7 @@
   top: calc(100% + 8px);
   left: 0;
   min-width: 256px;
-  background: #0f0f0f;
+  background: var(--nav-dropdown-bg, #0f0f0f);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.7);
@@ -467,7 +467,7 @@
   top: calc(100% + 8px);
   right: 0;
   min-width: 200px;
-  background: #0f0f0f;
+  background: var(--nav-dropdown-bg, #0f0f0f);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.7);
@@ -1018,7 +1018,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: #0a0a0a;
+  background: var(--nav-mobile-bg, #0a0a0a);
   border-top: 1px solid var(--border);
   display: none;
   z-index: 999;
