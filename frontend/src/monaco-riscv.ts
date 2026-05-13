@@ -307,8 +307,21 @@ export function initRiscvEditor(options: MonacoEditorOptions): void {
   console.log("Monaco: configuring require...");
   console.log("Monaco: loading editor.main...");
 
+  let settled = false;
+  const timeoutId = setTimeout(() => {
+    if (!settled) {
+      settled = true;
+      console.warn("Monaco: load timed out after 12s — falling back to textarea");
+      showFallbackTextarea(options.containerId, options.starterCode);
+      options.onError?.(new Error("Monaco load timeout"));
+    }
+  }, 12000);
+
   ensureEditorMain()
     .then((monaco) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
       console.log("Monaco: editor.main loaded");
 
       ensureRiscvLanguage(monaco);
@@ -361,6 +374,9 @@ export function initRiscvEditor(options: MonacoEditorOptions): void {
       options.onReady?.(editor);
     })
     .catch((err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
       console.error("Monaco failed to load:", err);
       options.onError?.(err);
       showFallbackTextarea(options.containerId, options.starterCode);

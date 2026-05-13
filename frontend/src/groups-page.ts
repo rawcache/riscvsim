@@ -191,7 +191,7 @@ function renderGroups(root: HTMLElement, groups: StudyGroup[], currentUserId: st
           <div class="learn-panel__meta">Up to 10 members</div>
         </div>
         <div class="groups-form-row">
-          <input id="groupCreateName" class="leaderboard-search" type="text" maxlength="32" placeholder="ECE 2035 Thursday Section" />
+          <input id="groupCreateName" class="leaderboard-search" type="text" maxlength="32" placeholder="CS 61C Study Group" />
           <button class="learn-hero__signin-button" type="submit">Create</button>
         </div>
       </form>

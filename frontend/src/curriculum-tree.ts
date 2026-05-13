@@ -143,7 +143,7 @@ function rowMarkup(
     >
       <div class="lesson-row__left">
         <div class="lesson-row__circle lr-circle--${difficulty}">
-          ${escapeHtml(circleInner(index, state))}
+          ${circleInner(index, state)}
         </div>
         <div class="lesson-row__connector"></div>
       </div>
@@ -230,7 +230,7 @@ function checkpointCardsMarkup(
           return `
             <div class="cp-gate-card" data-state="${escapeHtml(state)}" data-cp-id="${escapeHtml(problem.id)}">
               <div class="cp-gate-card__left">
-                <div class="cp-gate-card__icon-wrap">${escapeHtml(checkpointIcon(state, problem.requiredTier))}</div>
+                <div class="cp-gate-card__icon-wrap">${checkpointIcon(state, problem.requiredTier)}</div>
               </div>
               <div class="cp-gate-card__body">
                 <div class="cp-gate-card__label">Checkpoint ${problem.id.replace("cp", "")}</div>

@@ -1323,6 +1323,175 @@ body.hero-loaded .lp-in {
 
 
 /* ═══════════════════════════════════════════════════════════════
+   LEARNING PATH
+   ═══════════════════════════════════════════════════════════════ */
+.lp-path {
+  padding: 100px var(--lp-gutter);
+}
+
+.lp-path__intro {
+  text-align: center;
+  max-width: 560px;
+  margin: 0 auto 64px;
+}
+
+.lp-path__h2 {
+  margin: 0 0 12px;
+  font-size: clamp(22px, 2.8vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.lp-path__lead {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.lp-path__phases {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+.lp-path__phases::-webkit-scrollbar { display: none; }
+
+.lp-path__connector {
+  flex-shrink: 0;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--lp-accent-dim), var(--lp-border));
+  align-self: center;
+  margin-top: -60px;
+}
+
+@media (max-width: 900px) {
+  .lp-path__connector { width: 20px; }
+}
+
+.lp-path__phase {
+  flex: 1;
+  min-width: 180px;
+  max-width: 260px;
+  background: var(--lp-surface);
+  border: 1px solid var(--lp-border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.lp-path__phase:hover {
+  border-color: var(--lp-border-hi);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+}
+
+.lp-path__phase:first-child {
+  border-color: var(--lp-border-hi);
+}
+
+.lp-path__phase-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--lp-border);
+}
+
+.lp-path__phase-num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--lp-accent-hi);
+  background: var(--lp-accent-dim);
+  border: 1px solid rgba(91,108,255,0.2);
+  border-radius: 5px;
+  padding: 3px 7px;
+  flex-shrink: 0;
+}
+
+.lp-path__phase-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lp-path__phase-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.lp-path__phase-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.lp-path__lessons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lp-path__lesson {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.lp-path__lesson-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lp-border-hi);
+  flex-shrink: 0;
+  transition: background 200ms ease;
+}
+
+.lp-path__lesson--done .lp-path__lesson-dot {
+  background: var(--lp-green);
+  box-shadow: 0 0 6px rgba(46,229,157,0.4);
+}
+
+.lp-path__lesson--active .lp-path__lesson-dot {
+  background: var(--lp-accent-hi);
+  box-shadow: 0 0 8px rgba(91,108,255,0.5);
+  animation: lp-dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes lp-dot-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(91,108,255,0.4); }
+  50%       { box-shadow: 0 0 12px rgba(91,108,255,0.8); }
+}
+
+.lp-path__lesson-name {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.lp-path__lesson--done .lp-path__lesson-name { color: var(--text-muted); text-decoration: line-through; text-decoration-color: rgba(255,255,255,0.15); }
+.lp-path__lesson--active .lp-path__lesson-name { color: var(--text-primary); font-weight: 500; }
+
+.lp-path__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 48px;
+  flex-wrap: wrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    OPCODE EXPLORER — chip marquee + instruction panels
    ═══════════════════════════════════════════════════════════════ */
 .lp-opcodes {
