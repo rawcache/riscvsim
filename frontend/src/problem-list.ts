@@ -1,4 +1,3 @@
-import { initNav } from "./nav";
 import "./auth-page";
 import { getSession, type UserSession } from "./auth";
 import { show as showAuthModal } from "./auth-page";
@@ -3116,7 +3115,7 @@ function bootProblemsPage(): void {
 
 if (typeof document !== "undefined") {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => { initNav({ activePage: "problems" }); ensureProblemsChrome(); bootProblemsPage(); }, { once: true });
+    document.addEventListener("DOMContentLoaded", () => { ensureProblemsChrome(); bootProblemsPage(); }, { once: true });
   } else {
     ensureProblemsChrome();
     bootProblemsPage();

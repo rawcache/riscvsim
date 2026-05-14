@@ -1,6 +1,5 @@
 import "./auth-page";
 import { initFooter } from "./footer";
-import { initNav } from "./nav";
 
 declare global {
   interface Window {
@@ -8,13 +7,14 @@ declare global {
   }
 }
 
-export function ensureProblemsChrome(): void {
+export async function ensureProblemsChrome(): Promise<void> {
   if (typeof document === "undefined") {
     return;
   }
 
   if (!window.__studyriscvProblemsChromeReady) {
     try {
+      const { initNav } = await import("./nav");
       initNav({ activePage: "problems" });
     } catch (error) {
       console.error("Problems nav failed to initialize.", error);
