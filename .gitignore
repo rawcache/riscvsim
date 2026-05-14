@@ -26,3 +26,8 @@ Thumbs.db
 # Editor
 .vscode/settings.json
 .idea/
+# Local environment files
+.env.local
+.env.*.local
+frontend/.env.local
+frontend/.env.*.local
