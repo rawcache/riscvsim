@@ -3116,7 +3116,7 @@ function bootProblemsPage(): void {
 
 if (typeof document !== "undefined") {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => { initNav(); ensureProblemsChrome(); bootProblemsPage(); }, { once: true });
+    document.addEventListener("DOMContentLoaded", () => { initNav({ activePage: "problems" }); ensureProblemsChrome(); bootProblemsPage(); }, { once: true });
   } else {
     ensureProblemsChrome();
     bootProblemsPage();
