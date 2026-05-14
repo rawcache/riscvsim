@@ -334,6 +334,17 @@
   background: rgba(255,255,255,0.05);
 }
 
+nav[data-auth-state="signed-in"] .nav-signin-btn {
+  display: none !important;
+}
+
+nav[data-auth-state="signed-out"] .nav-profile-btn,
+nav[data-auth-state="signed-out"] .nav-user-btn,
+nav[data-auth-state="signed-out"] .auth-user-btn,
+nav[data-auth-state="signed-out"] .auth-menu {
+  display: none !important;
+}
+
 /* Theme toggle & hamburger */
 .nav-theme-toggle,
 .nav-hamburger {

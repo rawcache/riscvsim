@@ -2497,7 +2497,7 @@ class ProblemsPageApp {
           this.editor = null;
           this.editorFallback = textarea;
           this.bindFallbackAutosave(textarea);
-          this.updateLanguagePill("active", "Text editor");
+          this.updateLanguagePill("active");
           this.monacoLoading.hidden = true;
           textarea.focus();
           resolve();
@@ -2506,7 +2506,7 @@ class ProblemsPageApp {
           this.editorChangeSubscription?.dispose();
           this.editorChangeSubscription = null;
           this.editor = null;
-          this.updateLanguagePill("error", "Text editor");
+          this.updateLanguagePill("active");
           this.monacoLoading.hidden = true;
           window.setTimeout(() => {
             this.editorFallback = monacoHost().__editorFallback ?? null;

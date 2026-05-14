@@ -16,6 +16,13 @@ export async function ensureProblemsChrome(): Promise<void> {
     try {
       const { initNav } = await import("./nav");
       initNav({ activePage: "problems" });
+      await new Promise<void>((resolve) => {
+        if (typeof window.requestAnimationFrame === "function") {
+          window.requestAnimationFrame(() => resolve());
+        } else {
+          window.setTimeout(() => resolve(), 0);
+        }
+      });
     } catch (error) {
       console.error("Problems nav failed to initialize.", error);
     }

@@ -242,6 +242,7 @@ export function initNav(config: NavConfig): void {
   }
 
   root.className = "site-nav";
+  root.dataset.authState = "pending";
   root.innerHTML = renderNav(config);
 
   try {
@@ -264,6 +265,9 @@ export function initNav(config: NavConfig): void {
   const authMenu = root.querySelector<HTMLElement>(".auth-menu");
   const statusBadge = root.querySelector<HTMLElement>("#nav-status-badge");
   const closeTimers = new WeakMap<HTMLElement, number>();
+  const setRootAuthState = (session: unknown) => {
+    root.dataset.authState = session ? "signed-in" : "signed-out";
+  };
 
   if (desktopSignin) {
     desktopSignin.hidden = true;
@@ -432,12 +436,14 @@ export function initNav(config: NavConfig): void {
 
   void initAuthUi({
     onSession(session) {
+      setRootAuthState(session);
       if (!session && statusBadge) {
         statusBadge.textContent = "";
         statusBadge.classList.remove("visible");
       }
     },
-  }).then(() => {
+  }).then((session) => {
+    setRootAuthState(session);
     syncMobileSigninVisibility();
     syncAuthMenuVisibility();
 

@@ -8695,6 +8695,72 @@ body.simulator-page:not(.is-mobile) .line-numbers span.current-line {
   color: var(--accent);
 }
 
+body.simulator-page .editor-container {
+  background: #0d0d0d !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 8px !important;
+}
+
+body.simulator-page .editor-inner,
+body.simulator-page .line-numbers {
+  background: #0d0d0d !important;
+}
+
+body.simulator-page .source-textarea,
+body.simulator-page .highlight-display {
+  font-family: "Geist Mono", var(--font-mono), monospace !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.7 !important;
+}
+
+body.simulator-page .highlight-display {
+  display: block !important;
+  color: #e2e8f0 !important;
+}
+
+body.simulator-page .source-textarea {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  caret-color: #4D87F5 !important;
+  background: transparent !important;
+}
+
+body.simulator-page .source-textarea::selection {
+  background: rgba(45, 107, 228, 0.2) !important;
+}
+
+body.simulator-page .line-numbers span {
+  color: #3a3a3a !important;
+}
+
+body.simulator-page .line-numbers span.current-line {
+  color: #4D87F5 !important;
+}
+
+body.simulator-page .asm-comment {
+  color: #6b7280 !important;
+  font-style: normal !important;
+}
+
+body.simulator-page .asm-mnemonic {
+  color: #a78bfa !important;
+  font-weight: 400 !important;
+}
+
+body.simulator-page .asm-register {
+  color: #4D87F5 !important;
+}
+
+body.simulator-page .asm-immediate {
+  color: #fb923c !important;
+}
+
+body.simulator-page .asm-label,
+body.simulator-page .asm-label-ref {
+  color: #22c55e !important;
+}
+
 body.simulator-page:not(.is-mobile) .control-row--editor-primary,
 body.simulator-page:not(.is-mobile) .control-row--editor-secondary {
   gap: 8px;

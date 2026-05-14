@@ -24,7 +24,7 @@ type AuthElements = {
 
 let elements: AuthElements | null = null;
 let onSessionChange: ((session: UserSession | null) => void) | null = null;
-let listenersBound = false;
+let globalListenersBound = false;
 let currentSession: UserSession | null = null;
 let badgeModalEl: HTMLElement | null = null;
 
@@ -171,18 +171,24 @@ function openAuthModal(): void {
   });
 }
 
+function bindClickOnce(element: HTMLElement | null | undefined, listener: (event: MouseEvent) => void): void {
+  if (!element || element.dataset.authListenerBound === "true") {
+    return;
+  }
+  element.dataset.authListenerBound = "true";
+  element.addEventListener("click", listener);
+}
+
 function bindListeners(): void {
-  if (!elements || listenersBound) {
+  if (!elements) {
     return;
   }
 
-  listenersBound = true;
-
-  elements.authSignInBtn?.addEventListener("click", () => {
+  bindClickOnce(elements.authSignInBtn, () => {
     openAuthModal();
   });
 
-  elements.authUserBtn?.addEventListener("click", (event) => {
+  bindClickOnce(elements.authUserBtn, (event) => {
     event.stopPropagation();
     if (!elements?.authDropdown || !elements.authUserBtn || elements.authUserBtn.hidden) {
       return;
@@ -199,17 +205,17 @@ function bindListeners(): void {
     }
   });
 
-  elements.authDropdown?.addEventListener("click", (event) => {
+  bindClickOnce(elements.authDropdown, (event) => {
     event.stopPropagation();
   });
 
-  elements.authSignOutBtn?.addEventListener("click", (event) => {
+  bindClickOnce(elements.authSignOutBtn, (event) => {
     event.preventDefault();
     updateAuthUI(null);
     logout(AUTH_CONFIG);
   });
 
-  elements.authManageBadgesBtn?.addEventListener("click", (event) => {
+  bindClickOnce(elements.authManageBadgesBtn, (event) => {
     event.preventDefault();
     event.stopPropagation();
     if (currentSession) {
@@ -217,6 +223,11 @@ function bindListeners(): void {
       closeDropdown();
     }
   });
+
+  if (globalListenersBound) {
+    return;
+  }
+  globalListenersBound = true;
 
   document.addEventListener("click", () => {
     closeDropdown();

@@ -1347,7 +1347,9 @@
   flex: 1;
   min-height: 300px;
   overflow: hidden;
-  background: #0a0a0a;
+  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
 }
 
 .pv-editor-host,
@@ -1367,12 +1369,18 @@
   border: none;
   outline: none;
   padding: 16px;
-  background: #0a0a0a;
-  color: #e4e4e7;
-  font-family: "Geist Mono", "Fira Code", monospace;
+  background: #0d0d0d;
+  color: #e2e8f0;
+  font-family: "Geist Mono", monospace;
   font-size: 13px;
+  font-weight: 400;
   line-height: 1.7;
+  caret-color: #4D87F5;
   box-sizing: border-box;
+}
+
+.pv-editor-fallback::selection {
+  background: rgba(45, 107, 228, 0.2);
 }
 
 .pv-monaco-loading {
@@ -2460,33 +2468,33 @@
 }
 
 .pv-code-token--comment {
-  color: #6a9955;
-  font-style: italic;
+  color: #6b7280;
+  font-style: normal;
 }
 
 .pv-code-token--keyword {
-  color: #569cd6;
-  font-weight: 700;
+  color: #a78bfa;
+  font-weight: 400;
 }
 
 .pv-code-token--register {
-  color: #4fc1ff;
+  color: #4D87F5;
 }
 
 .pv-code-token--number {
-  color: #b5cea8;
+  color: #fb923c;
 }
 
 .pv-code-token--label {
-  color: #4ec9b0;
+  color: #22c55e;
 }
 
 .pv-code-token--directive {
-  color: #ce9178;
+  color: #a78bfa;
 }
 
 .pv-code-token--operator {
-  color: #d4d4d4;
+  color: #e2e8f0;
 }
 
 .pv-test-result__summary {
