@@ -346,8 +346,14 @@ export function initRiscvEditor(options: MonacoEditorOptions): void {
         folding: false,
         wordWrap: "off",
         overviewRulerLanes: 0,
+        suggestOnTriggerCharacters: false,
+        wordBasedSuggestions: "off",
+        quickSuggestions: false,
+        parameterHints: { enabled: false },
+        suggest: { showWords: false },
       });
 
+      requestAnimationFrame(() => editor.layout());
       (window as any).__editorInstance = editor;
       (window as any).__editorFallback = null;
 
