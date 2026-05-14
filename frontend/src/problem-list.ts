@@ -3083,8 +3083,6 @@ class ProblemsPageApp {
 }
 
 function bootProblemsPage(): void {
-  ensureProblemsChrome();
-
   const listLayout = document.getElementById("pl-layout");
   const problemLayout = document.getElementById("pv-layout");
   if (!listLayout || !problemLayout) {
@@ -3117,8 +3115,9 @@ function bootProblemsPage(): void {
 
 if (typeof document !== "undefined") {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bootProblemsPage, { once: true });
+    document.addEventListener("DOMContentLoaded", () => { ensureProblemsChrome(); bootProblemsPage(); }, { once: true });
   } else {
+    ensureProblemsChrome();
     bootProblemsPage();
   }
 }
