@@ -52,6 +52,19 @@ type MonacoEditorInstance = {
   onDidChangeModelContent(listener: () => void): { dispose(): void };
 };
 
+type MonacoBreakpointEditor = MonacoEditorInstance & {
+  deltaDecorations(oldDecorations: string[], newDecorations: unknown[]): string[];
+  getModel(): { getLineCount(): number } | null;
+  onMouseDown(listener: (event: {
+    event?: { preventDefault?: () => void };
+    target?: {
+      type?: number;
+      position?: { lineNumber?: number };
+      range?: { startLineNumber?: number };
+    };
+  }) => void): { dispose(): void };
+};
+
 type EditorWindow = Window &
   typeof globalThis & {
     __editorInstance?: MonacoEditorInstance | null;
@@ -1103,6 +1116,9 @@ class ProblemsPageApp {
   private readonly monacoContainer = document.getElementById("pv-monaco") as HTMLElement;
   private readonly editorHost = document.getElementById("pv-editor") as HTMLElement;
   private readonly monacoLoading = document.getElementById("pv-monaco-loading") as HTMLElement;
+  private readonly breakpointsPanel = document.getElementById("pv-breakpoints-panel") as HTMLElement | null;
+  private readonly breakpointsList = document.getElementById("pv-breakpoints-list") as HTMLElement | null;
+  private readonly breakpointsClearButton = document.getElementById("pv-breakpoints-clear") as HTMLButtonElement | null;
   private readonly langPill = document.getElementById("pv-lang-pill") as HTMLElement | null;
   private readonly resetButton = document.getElementById("pv-reset-btn") as HTMLButtonElement;
   private readonly runButton = document.getElementById("pv-run-btn") as HTMLButtonElement;
@@ -1131,6 +1147,10 @@ class ProblemsPageApp {
   private editor: MonacoEditorInstance | null = null;
   private editorFallback: HTMLTextAreaElement | null = null;
   private editorChangeSubscription: { dispose(): void } | null = null;
+  private editorGutterSubscription: { dispose(): void } | null = null;
+  private breakpointDecorations: string[] = [];
+  private breakpointLines = new Set<number>();
+  private monacoNamespace: any | null = null;
   private runtimePromise: Promise<WasmRuntime> | null = null;
   private running = false;
   private fullscreen = safeLocalStorageGet(FULLSCREEN_STORAGE_KEY) === "1";
@@ -1345,6 +1365,18 @@ class ProblemsPageApp {
       this.state.lastRunResult = null;
       this.state.latestExecution = this.state.lastSubmitResult ? "submit" : null;
       this.renderConsoleBody();
+    });
+
+    this.breakpointsClearButton?.addEventListener("click", () => {
+      this.clearProblemBreakpoints();
+    });
+
+    this.breakpointsList?.addEventListener("click", (event) => {
+      const target = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-breakpoint-line]");
+      const line = Number(target?.dataset.breakpointLine);
+      if (Number.isInteger(line)) {
+        this.toggleProblemBreakpoint(line);
+      }
     });
 
     this.leftBody.addEventListener("click", (event) => {
@@ -2456,6 +2488,87 @@ class ProblemsPageApp {
     }
   }
 
+  private renderProblemBreakpoints(): void {
+    if (!this.breakpointsList) {
+      return;
+    }
+    const lines = Array.from(this.breakpointLines).sort((a, b) => a - b);
+    this.breakpointsList.innerHTML = lines.length
+      ? lines.map((line) => `<button class="pv-breakpoint-row" type="button" data-breakpoint-line="${line}">Line ${line}</button>`).join("")
+      : '<span class="pv-breakpoints-empty">No breakpoints</span>';
+    if (this.breakpointsClearButton) {
+      this.breakpointsClearButton.hidden = lines.length === 0;
+    }
+    if (this.breakpointsPanel) {
+      this.breakpointsPanel.toggleAttribute("data-has-breakpoints", lines.length > 0);
+    }
+  }
+
+  private syncBreakpointDecorations(): void {
+    if (!this.editor || !this.monacoNamespace?.Range) {
+      this.breakpointDecorations = [];
+      return;
+    }
+    const editor = this.editor as MonacoBreakpointEditor;
+    const decorations = Array.from(this.breakpointLines)
+      .sort((a, b) => a - b)
+      .map((line) => ({
+        range: new this.monacoNamespace.Range(line, 1, line, 1),
+        options: {
+          isWholeLine: true,
+          glyphMarginClassName: "pv-breakpoint-glyph",
+          glyphMarginHoverMessage: { value: `Breakpoint on line ${line}` },
+        },
+      }));
+    this.breakpointDecorations = editor.deltaDecorations(this.breakpointDecorations, decorations);
+  }
+
+  private toggleProblemBreakpoint(line: number): void {
+    if (this.breakpointLines.has(line)) {
+      this.breakpointLines.delete(line);
+    } else {
+      this.breakpointLines.add(line);
+    }
+    this.syncBreakpointDecorations();
+    this.renderProblemBreakpoints();
+  }
+
+  private clearProblemBreakpoints(): void {
+    this.breakpointLines.clear();
+    this.syncBreakpointDecorations();
+    this.renderProblemBreakpoints();
+  }
+
+  private bindProblemBreakpoints(editor: MonacoEditorInstance, monaco: any): void {
+    this.editorGutterSubscription?.dispose();
+    this.monacoNamespace = monaco;
+    this.breakpointDecorations = [];
+    this.breakpointLines.clear();
+    this.renderProblemBreakpoints();
+
+    const breakpointEditor = editor as MonacoBreakpointEditor;
+    const targetTypes = monaco?.editor?.MouseTargetType ?? {};
+    this.editorGutterSubscription = breakpointEditor.onMouseDown((event) => {
+      const targetType = event.target?.type;
+      const isGutterClick =
+        targetType === targetTypes.GUTTER_GLYPH_MARGIN ||
+        targetType === targetTypes.GUTTER_LINE_NUMBERS ||
+        targetType === targetTypes.GUTTER_LINE_DECORATIONS;
+      if (!isGutterClick) {
+        return;
+      }
+
+      const lineNumber = event.target?.position?.lineNumber ?? event.target?.range?.startLineNumber;
+      const lineCount = breakpointEditor.getModel()?.getLineCount() ?? 0;
+      if (!Number.isInteger(lineNumber) || !lineNumber || lineNumber < 1 || lineNumber > lineCount) {
+        return;
+      }
+
+      event.event?.preventDefault?.();
+      this.toggleProblemBreakpoint(lineNumber);
+    });
+  }
+
   private async ensureRuntime(): Promise<WasmRuntime> {
     this.runtimePromise ??= WasmRuntime.create();
     return this.runtimePromise;
@@ -2477,7 +2590,8 @@ class ProblemsPageApp {
         containerId: "pv-editor",
         starterCode: code,
         problemId: this.currentProblem?.id,
-        onReady: (editor) => {
+        glyphMargin: true,
+        onReady: (editor, monaco) => {
           this.editor = editor as MonacoEditorInstance;
           this.editorFallback = null;
           this.editorChangeSubscription?.dispose();
@@ -2486,6 +2600,7 @@ class ProblemsPageApp {
               this.state.currentCode = this.editor?.getValue() ?? "";
             }
           });
+          this.bindProblemBreakpoints(this.editor, monaco);
           this.updateLanguagePill("active");
           this.monacoLoading.hidden = true;
           this.editor.focus();
@@ -2496,6 +2611,7 @@ class ProblemsPageApp {
           this.editorChangeSubscription = null;
           this.editor = null;
           this.editorFallback = textarea;
+          this.clearProblemBreakpoints();
           this.bindFallbackAutosave(textarea);
           this.updateLanguagePill("active");
           this.monacoLoading.hidden = true;
@@ -2506,6 +2622,7 @@ class ProblemsPageApp {
           this.editorChangeSubscription?.dispose();
           this.editorChangeSubscription = null;
           this.editor = null;
+          this.clearProblemBreakpoints();
           this.updateLanguagePill("active");
           this.monacoLoading.hidden = true;
           window.setTimeout(() => {
@@ -2537,9 +2654,15 @@ class ProblemsPageApp {
   private disposeEditor(): void {
     this.editorChangeSubscription?.dispose();
     this.editorChangeSubscription = null;
+    this.editorGutterSubscription?.dispose();
+    this.editorGutterSubscription = null;
     this.editor?.dispose();
     this.editor = null;
     this.editorFallback = null;
+    this.breakpointDecorations = [];
+    this.breakpointLines.clear();
+    this.monacoNamespace = null;
+    this.renderProblemBreakpoints();
     if (this.autosaveTimer) {
       window.clearTimeout(this.autosaveTimer);
       this.autosaveTimer = null;

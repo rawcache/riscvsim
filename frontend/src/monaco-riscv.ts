@@ -2,7 +2,8 @@ export interface MonacoEditorOptions {
   containerId: string;
   starterCode: string;
   problemId?: string;
-  onReady?: (editor: any) => void;
+  glyphMargin?: boolean;
+  onReady?: (editor: any, monaco?: any) => void;
   onFallback?: (textarea: HTMLTextAreaElement) => void;
   onError?: (err: any) => void;
 }
@@ -342,7 +343,7 @@ export function initRiscvEditor(options: MonacoEditorOptions): void {
         cursorBlinking: "smooth",
         smoothScrolling: true,
         padding: { top: 16, bottom: 16 },
-        glyphMargin: false,
+        glyphMargin: options.glyphMargin ?? false,
         folding: false,
         wordWrap: "off",
         overviewRulerLanes: 0,
@@ -372,7 +373,7 @@ export function initRiscvEditor(options: MonacoEditorOptions): void {
       }
 
       startThemeSync(monaco);
-      options.onReady?.(editor);
+      options.onReady?.(editor, monaco);
     })
     .catch((err) => {
       if (settled) return;

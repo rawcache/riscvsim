@@ -1383,6 +1383,84 @@
   background: rgba(45, 107, 228, 0.2);
 }
 
+.pv-breakpoints-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--pv-border);
+  border-bottom: 1px solid var(--pv-border);
+  background: var(--pv-bg-surface);
+}
+
+.pv-breakpoints-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--pv-text-muted);
+  font-family: "Geist Mono", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pv-breakpoints-clear {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--pv-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pv-text-secondary);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.pv-breakpoints-clear:hover {
+  background: var(--pv-bg-hover);
+  color: var(--pv-text-primary);
+}
+
+.pv-breakpoints-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 22px;
+}
+
+.pv-breakpoints-empty {
+  color: var(--pv-text-muted);
+  font-size: 12px;
+}
+
+.pv-breakpoint-row {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--pv-border);
+  border-radius: 6px;
+  background: var(--pv-bg-elevated);
+  color: var(--pv-text-primary);
+  font-family: "Geist Mono", monospace;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.pv-breakpoint-row:hover {
+  border-color: var(--pv-danger);
+  color: var(--pv-danger);
+}
+
+.pv-breakpoint-glyph {
+  background: #f85149;
+  border-radius: 50%;
+  width: 10px !important;
+  height: 10px !important;
+  margin-top: 5px;
+  margin-left: 3px;
+}
+
 .pv-monaco-loading {
   position: absolute;
   inset: 0;

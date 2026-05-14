@@ -407,10 +407,6 @@ body.simulator-page {
   min-width: 0;
 }
 
-.sim-column--center .sim-panel {
-  background: var(--bg-surface);
-}
-
 .sim-panel--center-tabs {
   display: flex;
   flex-direction: column;
@@ -3306,19 +3302,9 @@ body.challenge-simulator-active .register-file-section {
     grid-row: 1;
   }
 
-  .sim-column--center {
-    grid-column: 2;
-    grid-row: 2;
-  }
-
-  .simulator-layout.has-lesson-column .sim-column--center {
-    grid-column: 2;
-    grid-row: 2;
-  }
-
   .simulator-layout.has-lesson-column .sim-column--right {
     grid-column: 2;
-    grid-row: 3;
+    grid-row: 2;
   }
 
   .lesson-panel {
@@ -5008,7 +4994,6 @@ body.challenge-simulator-active .register-file-section {
   font-size: 9px !important;
 }
 
-.sim-column--center,
 .simulator-center-col {
   display: flex !important;
   flex-direction: column !important;
@@ -5323,7 +5308,6 @@ body.challenge-simulator-active .register-file-section {
 }
 
 .lesson-mode.lesson-phase-reading .sim-column--left,
-.lesson-mode.lesson-phase-reading .sim-column--center,
 .lesson-mode.lesson-phase-reading .sim-column--right {
   display: none !important;
 }
@@ -5620,15 +5604,10 @@ body.challenge-simulator-active .register-file-section {
   grid-row: 1;
 }
 
-.lesson-mode.lesson-phase-watching .sim-column--center,
-.lesson-mode.lesson-phase-trying .sim-column--center {
-  grid-column: 2;
-  grid-row: 2;
-}
-
 .lesson-mode.lesson-phase-watching .sim-column--right,
 .lesson-mode.lesson-phase-trying .sim-column--right {
-  display: none !important;
+  grid-column: 2;
+  grid-row: 2;
 }
 
 .lesson-mode.lesson-phase-watching.lesson-show-registers .simulator-layout.has-lesson-column,
@@ -5878,7 +5857,6 @@ body.challenge-simulator-active .register-file-section {
 }
 
 .lesson-mode .sim-column--left,
-.lesson-mode .sim-column--center,
 .lesson-mode .sim-column--right,
 .lesson-mode .sim-column--lesson {
   transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1), opacity 250ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -5897,7 +5875,6 @@ body.challenge-simulator-active .register-file-section {
 
 @media (prefers-reduced-motion: reduce) {
   .lesson-mode .sim-column--left,
-  .lesson-mode .sim-column--center,
   .lesson-mode .sim-column--right,
   .lesson-mode .sim-column--lesson,
   .lesson-progress-bar__fill,
@@ -5919,8 +5896,8 @@ body.challenge-simulator-active .register-file-section {
   .lesson-mode.lesson-phase-trying .sim-column--lesson,
   .lesson-mode.lesson-phase-watching .sim-column--left,
   .lesson-mode.lesson-phase-trying .sim-column--left,
-  .lesson-mode.lesson-phase-watching .sim-column--center,
-  .lesson-mode.lesson-phase-trying .sim-column--center,
+  .lesson-mode.lesson-phase-watching .sim-column--right,
+  .lesson-mode.lesson-phase-trying .sim-column--right,
   .lesson-mode.lesson-phase-watching.lesson-show-registers .sim-column--right,
   .lesson-mode.lesson-phase-trying.lesson-show-registers .sim-column--right {
     grid-column: 1;
@@ -7007,8 +6984,7 @@ body.lesson-split-mode .sim-column--right {
   display: none !important;
 }
 
-body.lesson-split-mode .sim-column--left,
-body.lesson-split-mode .sim-column--center {
+body.lesson-split-mode .sim-column--left {
   display: flex !important;
   min-height: 0;
 }
@@ -7048,8 +7024,7 @@ body.lesson-simulator-active .simulator-layout {
   grid-template-rows: auto minmax(0, 1fr) !important;
 }
 
-body.lesson-simulator-active .sim-column--left,
-body.lesson-simulator-active .sim-column--center {
+body.lesson-simulator-active .sim-column--left {
   display: flex !important;
 }
 
@@ -8294,11 +8269,6 @@ body.simulator-page {
   border-left: 1px solid var(--border) !important;
 }
 
-.sim-column--center .sim-panel {
-  border-radius: 0 !important;
-  border: 0 !important;
-}
-
 /* ── Panel headers ────────────────────────────────────────── */
 .panel-header {
   font-size: 11px !important;
@@ -8594,7 +8564,6 @@ body.simulator-page:not(.is-mobile) .sim-column--right {
 }
 
 body.simulator-page:not(.is-mobile) .sim-column--left,
-body.simulator-page:not(.is-mobile) .sim-column--center,
 body.simulator-page:not(.is-mobile) .sim-column--right {
   overflow: hidden;
 }
@@ -8612,7 +8581,6 @@ body.simulator-page:not(.is-mobile) .sim-panel {
 }
 
 body.simulator-page:not(.is-mobile) .sim-column--left .sim-panel,
-body.simulator-page:not(.is-mobile) .sim-column--center .sim-panel,
 body.simulator-page:not(.is-mobile) .sim-column--right .sim-panel {
   border-left: 1px solid var(--sim-card-border) !important;
   border-right: 1px solid var(--sim-card-border) !important;
@@ -8923,5 +8891,181 @@ body.simulator-page:not(.is-mobile) .register-cell {
   body.simulator-page:not(.is-mobile) .simulator-layout {
     grid-template-columns: minmax(280px, 0.9fr) minmax(390px, 1.25fr) minmax(220px, 0.72fr) !important;
     gap: 10px !important;
+  }
+}
+
+@media (min-width: 900px) {
+  body.simulator-page:not(.is-mobile) {
+    overflow: hidden;
+  }
+
+  body.simulator-page:not(.is-mobile) .simulator-app {
+    min-height: calc(100vh - 68px);
+    padding: 0 8px 8px;
+    overflow: hidden;
+  }
+
+  body.simulator-page:not(.is-mobile) .simulator-layout {
+    display: grid !important;
+    grid-template-columns: minmax(600px, 1fr) minmax(360px, 480px) !important;
+    gap: 8px !important;
+    width: min(100%, 1500px);
+    max-width: 1500px;
+    height: calc(100vh - 68px) !important;
+    margin: 0 auto !important;
+    overflow: hidden !important;
+    border-top: 0 !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .sim-column {
+    gap: 8px !important;
+    min-height: 0;
+  }
+
+  body.simulator-page:not(.is-mobile) .sim-column--left {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding-right: 0 !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .sim-column--right {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    border: 0 !important;
+    padding-right: 2px;
+  }
+
+  body.simulator-page:not(.is-mobile) .sim-panel {
+    border-radius: 8px !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .sim-panel--editor {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    background: #0d0d0d !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .sim-panel--editor > .panel-header {
+    min-height: 32px !important;
+    padding: 0 12px !important;
+    background: #0d0d0d !important;
+    color: var(--text-secondary) !important;
+    font-family: "Geist Mono", var(--font-mono), monospace !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .sim-panel--editor .panel-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    gap: 8px !important;
+    padding: 10px !important;
+    background: #0d0d0d !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .field-label,
+  body.simulator-page:not(.is-mobile) #sampleSelect,
+  body.simulator-page:not(.is-mobile) .control-row,
+  body.simulator-page:not(.is-mobile) .run-speed-panel,
+  body.simulator-page:not(.is-mobile) .run-stats,
+  body.simulator-page:not(.is-mobile) .shortcut-hint-bar,
+  body.simulator-page:not(.is-mobile) .breakpoints-panel,
+  body.simulator-page:not(.is-mobile) .warnings-panel {
+    flex: 0 0 auto !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .editor-container {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 320px !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .editor-inner,
+  body.simulator-page:not(.is-mobile) .highlight-display,
+  body.simulator-page:not(.is-mobile) .source-textarea {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .control-row--editor-primary {
+    display: flex !important;
+  }
+
+  body.simulator-page:not(.is-mobile) #assemble {
+    width: 100% !important;
+    height: 36px !important;
+    min-height: 36px !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .control-row--editor-secondary {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .control-row--editor-secondary .sim-button {
+    flex: 1 1 0;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 12px !important;
+    font-size: 12px !important;
+  }
+
+  body.simulator-page .status-line {
+    visibility: hidden !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .sim-panel--center-tabs {
+    flex: 0 0 45% !important;
+    min-height: 300px !important;
+    max-height: 45% !important;
+    overflow: hidden !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .register-file-section {
+    flex: 0 0 auto !important;
+    min-height: 300px !important;
+    height: auto !important;
+    overflow: hidden !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .memory-panel {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    min-height: 260px !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: hidden !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .sim-column--right .memory-section,
+  body.simulator-page:not(.is-mobile) .sim-column--right [class*="memory-section"],
+  body.simulator-page:not(.is-mobile) .sim-column--right [class*="memory-panel"] {
+    display: flex !important;
+  }
+
+  body.simulator-page:not(.is-mobile) .sim-panel--center-tabs .center-tabs__content,
+  body.simulator-page:not(.is-mobile) .sim-panel--center-tabs .center-tab-panel,
+  body.simulator-page:not(.is-mobile) .sim-panel--center-tabs .center-tab-panel__body,
+  body.simulator-page:not(.is-mobile) .register-file-section .panel-body,
+  body.simulator-page:not(.is-mobile) .memory-panel .panel-body {
+    min-height: 0 !important;
+    overflow-y: auto !important;
   }
 }
