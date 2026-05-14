@@ -485,7 +485,7 @@
 .pl-row {
   cursor: pointer;
   border-bottom: 1px solid var(--border);
-  transition: background 100ms ease;
+  transition: background 150ms ease;
 }
 
 .pl-row:last-child {
@@ -1150,7 +1150,7 @@
   align-items: center;
   justify-content: center;
   background: var(--pv-border);
-  transition: background 100ms ease;
+  transition: background 150ms ease;
 }
 
 .pv-divider-v {

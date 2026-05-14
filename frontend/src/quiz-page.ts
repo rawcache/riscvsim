@@ -9,9 +9,7 @@ import { buildReferralLink } from "./referrals";
 import { addPoints, loadScore, recordRecentActivity, syncScoreToApi } from "./scoring";
 import {
   autoSubmitQuiz,
-  getBestQuizAttempt,
   getQuiz,
-  getQuizzes,
   saveQuizAttempt,
   type Quiz,
   type QuizAnswerInput,
@@ -51,9 +49,6 @@ function difficultyBadge(question: QuizQuestion): string {
   return `<span class="challenge-card__difficulty challenge-card__difficulty--${question.difficulty}">${escapeHtml(question.difficulty)}</span>`;
 }
 
-function quizTypeBadge(quiz: Quiz): string {
-  return `<span class="challenge-card__difficulty challenge-card__difficulty--${quiz.type === "final" ? "hard" : quiz.type === "midterm" ? "medium" : "easy"}">${escapeHtml(quiz.type)}</span>`;
-}
 
 async function runAssemblyToState(code: string) {
   const runtime = await WasmRuntime.create();
@@ -72,71 +67,229 @@ async function runAssemblyToState(code: string) {
   return getLessonState(deltas);
 }
 
+type QuizCardDef = {
+  id: string;
+  topic: string;
+  difficulty: "Beginner" | "Intermediate" | "Advanced";
+  title: string;
+  desc: string;
+  questions: number;
+  minutes: number;
+  href: string;
+};
+
+const QUIZ_CARDS: QuizCardDef[] = [
+  {
+    id: "qc-1",
+    topic: "Registers",
+    difficulty: "Beginner",
+    title: "Register File Basics",
+    desc: "Learn how x0 through x31 work, why x0 is always zero, and how register aliasing works in RV32IM.",
+    questions: 10,
+    minutes: 8,
+    href: "/quiz/?take=quiz-1-basics",
+  },
+  {
+    id: "qc-2",
+    topic: "Arithmetic",
+    difficulty: "Beginner",
+    title: "I-Type Arithmetic",
+    desc: "addi, slti, andi, ori, xori — master the immediate-type arithmetic instructions.",
+    questions: 12,
+    minutes: 10,
+    href: "/quiz/?take=quiz-4-bitwise",
+  },
+  {
+    id: "qc-3",
+    topic: "Memory",
+    difficulty: "Intermediate",
+    title: "Load and Store",
+    desc: "lw, sw, lh, lb — understand byte addressing, sign extension, and memory alignment.",
+    questions: 15,
+    minutes: 12,
+    href: "/quiz/?take=quiz-1-basics",
+  },
+  {
+    id: "qc-4",
+    topic: "Branching",
+    difficulty: "Intermediate",
+    title: "Control Flow",
+    desc: "beq, bne, blt, bge — write correct branch conditions and understand PC-relative offsets.",
+    questions: 12,
+    minutes: 10,
+    href: "/quiz/?take=quiz-2-midterm",
+  },
+  {
+    id: "qc-5",
+    topic: "Arithmetic",
+    difficulty: "Intermediate",
+    title: "M Extension Multiply",
+    desc: "mul, mulh, div, rem — work with the multiplication and division extension.",
+    questions: 10,
+    minutes: 8,
+    href: "/quiz/?take=quiz-4-bitwise",
+  },
+  {
+    id: "qc-6",
+    topic: "Memory",
+    difficulty: "Advanced",
+    title: "Stack Frames and Calling Convention",
+    desc: "sp, ra, saved registers — implement correct function prologues and epilogues from scratch.",
+    questions: 15,
+    minutes: 15,
+    href: "/quiz/?take=quiz-5-calling-convention",
+  },
+  {
+    id: "qc-7",
+    topic: "Branching",
+    difficulty: "Advanced",
+    title: "Jump Instructions",
+    desc: "jal and jalr — understand link registers, indirect jumps, and return sequences.",
+    questions: 10,
+    minutes: 8,
+    href: "/quiz/?take=quiz-2-midterm",
+  },
+  {
+    id: "qc-8",
+    topic: "Registers",
+    difficulty: "Advanced",
+    title: "Register Conventions Deep Dive",
+    desc: "caller-saved vs callee-saved, a0-a7 argument passing, t0-t6 temporaries — the full ABI.",
+    questions: 12,
+    minutes: 10,
+    href: "/quiz/?take=quiz-5-calling-convention",
+  },
+];
+
+function difficultyDots(difficulty: QuizCardDef["difficulty"]): string {
+  const count = difficulty === "Beginner" ? 1 : difficulty === "Intermediate" ? 2 : 3;
+  return [1, 2, 3]
+    .map((n) => `<span class="qp-card__dot${n <= count ? " qp-card__dot--filled" : ""}"></span>`)
+    .join("");
+}
+
+function renderQuizCard(card: QuizCardDef): string {
+  return `
+    <a class="qp-card"
+      href="${card.href}"
+      data-difficulty="${escapeHtml(card.difficulty)}"
+      data-topic="${escapeHtml(card.topic)}"
+    >
+      <div class="qp-card__top">
+        <span class="qp-card__tag">${escapeHtml(card.topic)}</span>
+        <span class="qp-card__dots">${difficultyDots(card.difficulty)}</span>
+      </div>
+      <h3 class="qp-card__title">${escapeHtml(card.title)}</h3>
+      <p class="qp-card__desc">${escapeHtml(card.desc)}</p>
+      <div class="qp-card__footer">
+        <div class="qp-card__meta">
+          <span class="qp-card__meta-item">${card.questions} questions</span>
+          <span class="qp-card__meta-item">${card.minutes} min</span>
+        </div>
+        <span class="qp-card__arrow" aria-hidden="true"></span>
+      </div>
+    </a>
+  `;
+}
+
 function renderQuizList(): void {
   const root = document.getElementById("quizApp");
   if (!root) {
     return;
   }
 
-  const quizzes = getQuizzes();
-  const practiceQuizzes = quizzes.filter((q) => q.type === "practice");
-  const examQuizzes = quizzes.filter((q) => q.type === "midterm" || q.type === "final");
-
-  function quizCard(quiz: Quiz): string {
-    const best = getBestQuizAttempt(quiz.id);
-    return `
-      <article class="challenge-card">
-        <div class="challenge-card__header">
-          ${quizTypeBadge(quiz)}
-          <span class="challenge-card__points">${quiz.questions.length} questions</span>
-        </div>
-        <h2 class="challenge-card__title">${escapeHtml(quiz.title)}</h2>
-        <div class="challenge-card__lesson">${Math.floor(quiz.timeLimitSeconds / 60)} min · ${quiz.totalPoints} pts</div>
-        <p class="challenge-card__body">${escapeHtml(quiz.description)}</p>
-        <div class="challenge-card__footer">
-          <span class="challenge-card__best">${best ? `${percent(best.score, best.maxScore)}% best` : "Not attempted"}</span>
-          <a class="learn-panel__link" href="/quiz/?take=${encodeURIComponent(quiz.id)}">Start →</a>
-        </div>
-      </article>
-    `;
-  }
+  const total = QUIZ_CARDS.length;
 
   root.innerHTML = `
-    <section class="learn-hero">
-      <div class="learn-hero__copy">
-        <div>
-          <h1 class="learn-hero__title">Quizzes</h1>
-          <p class="learn-hero__subhead">Timed assessments, exam simulations, and knowledge checks across the full RISC-V curriculum.</p>
-        </div>
-        <div class="learn-xp-pill">${loadScore().totalPoints.toLocaleString("en-US")} chips</div>
-      </div>
-      <div class="learn-hero__status">
-        <div class="learn-hero__signin">
-          <div class="learn-hero__signin-copy">${quizzes.length} assessments available</div>
-          <div class="learn-hero__signin-copy">Timed, graded, and reviewable after submission.</div>
-        </div>
-      </div>
-    </section>
+    <div class="qp-wrap">
+      <header class="qp-header">
+        <div class="qp-header__overline">Quizzes</div>
+        <h1 class="qp-header__h1">Test your knowledge.</h1>
+        <p class="qp-header__sub">Timed quizzes covering every RV32IM concept. Track your score, see where you stand, and know when you're ready.</p>
+        <hr class="qp-header__rule" />
+      </header>
 
-    <a href="/quiz/?take=diagnostic" class="diagnostic-card">
-      <div class="diagnostic-card__left">
-        <span class="diagnostic-card__kicker">★ Start here</span>
-        <div class="diagnostic-card__title">Find your starting point</div>
-        <div class="diagnostic-card__sub">A quick 5-minute diagnostic that routes you to the right level — from total beginner to exam prep.</div>
-        <div class="diagnostic-card__meta">
-          <span>5 questions</span>
-          <span>~5 minutes</span>
-          <span>No account required</span>
+      <div class="qp-start">
+        <div class="qp-start__overline">Start here</div>
+        <h2 class="qp-start__heading">Find your starting point</h2>
+        <p class="qp-start__desc">A quick 5-minute diagnostic that routes you to the right level — from total beginner to exam prep. No account required.</p>
+        <a class="qp-start__btn" href="/quiz/?take=diagnostic">Take diagnostic quiz →</a>
+      </div>
+
+      <div class="qp-filter-bar">
+        <div class="qp-pills" id="qpPills">
+          <button class="qp-pill qp-pill--active" data-filter="all" type="button">All</button>
+          <button class="qp-pill" data-filter="difficulty:Beginner" type="button">Beginner</button>
+          <button class="qp-pill" data-filter="difficulty:Intermediate" type="button">Intermediate</button>
+          <button class="qp-pill" data-filter="difficulty:Advanced" type="button">Advanced</button>
+          <button class="qp-pill" data-filter="topic:Registers" type="button">Registers</button>
+          <button class="qp-pill" data-filter="topic:Memory" type="button">Memory</button>
+          <button class="qp-pill" data-filter="topic:Branching" type="button">Branching</button>
+          <button class="qp-pill" data-filter="topic:Arithmetic" type="button">Arithmetic</button>
+        </div>
+        <span class="qp-count" id="qpCount">${total} quizzes</span>
+      </div>
+
+      <div class="qp-grid-wrap">
+        <div class="qp-grid" id="qpGrid">
+          ${QUIZ_CARDS.map(renderQuizCard).join("")}
+        </div>
+        <div class="qp-empty" id="qpEmpty" hidden>
+          <div class="qp-empty__icon">?</div>
+          <p class="qp-empty__text">No quizzes match this filter.</p>
+          <button class="qp-empty__reset" id="qpEmptyReset" type="button">Clear filters</button>
         </div>
       </div>
-      <div class="diagnostic-card__cta">Take diagnostic →</div>
-    </a>
-
-    <section class="challenge-grid">
-      ${practiceQuizzes.length > 0 ? `<div class="quiz-group-label">Practice rounds</div>${practiceQuizzes.map(quizCard).join("")}` : ""}
-      ${examQuizzes.length > 0 ? `<div class="quiz-group-label">Exam prep</div>${examQuizzes.map(quizCard).join("")}` : ""}
-    </section>
+    </div>
   `;
+
+  // Filter logic
+  const pills = root.querySelectorAll<HTMLButtonElement>(".qp-pill");
+  const cards = root.querySelectorAll<HTMLElement>(".qp-card");
+  const countEl = root.querySelector("#qpCount");
+  const emptyEl = root.querySelector<HTMLElement>("#qpEmpty");
+  const emptyReset = root.querySelector<HTMLButtonElement>("#qpEmptyReset");
+
+  function applyFilter(filterValue: string): void {
+    let visible = 0;
+    cards.forEach((card) => {
+      let show = true;
+      if (filterValue !== "all") {
+        const [type, value] = filterValue.split(":");
+        if (type === "difficulty") {
+          show = card.dataset.difficulty === value;
+        } else if (type === "topic") {
+          show = card.dataset.topic === value;
+        }
+      }
+      card.hidden = !show;
+      if (show) visible++;
+    });
+
+    if (countEl) {
+      countEl.textContent = `${visible} quiz${visible === 1 ? "" : "zes"}`;
+    }
+    if (emptyEl instanceof HTMLElement) {
+      emptyEl.hidden = visible > 0;
+    }
+  }
+
+  pills.forEach((pill) => {
+    pill.addEventListener("click", () => {
+      pills.forEach((p) => p.classList.remove("qp-pill--active"));
+      pill.classList.add("qp-pill--active");
+      applyFilter(pill.dataset.filter ?? "all");
+    });
+  });
+
+  if (emptyReset instanceof HTMLButtonElement) {
+    emptyReset.addEventListener("click", () => {
+      pills.forEach((p) => p.classList.remove("qp-pill--active"));
+      const allPill = root.querySelector<HTMLButtonElement>("[data-filter='all']");
+      allPill?.classList.add("qp-pill--active");
+      applyFilter("all");
+    });
+  }
 }
 
 function currentElapsedSeconds(state: QuizRuntimeState): number {
