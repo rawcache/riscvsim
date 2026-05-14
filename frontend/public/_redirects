@@ -8,6 +8,8 @@ http://studyriscv.com/* https://studyriscv.com/:splat 301!
 /riscv-instructions /riscv-instructions/ 301!
 /learn /learn/ 301!
 /quiz /quiz/ 301!
+/quizzes /quiz/ 301!
+/quizzes/ /quiz/ 301!
 /labs /labs/ 301!
 /problems /problems/ 301!
 /problems/* /problems/index.html 200

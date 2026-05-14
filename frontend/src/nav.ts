@@ -18,7 +18,8 @@ export interface NavConfig {
     | "about"
     | "docs"
     | "profile"
-    | "groups";
+    | "groups"
+    | "github";
 }
 
 const THEME_KEY = "studyriscv-theme";
@@ -41,31 +42,19 @@ function chevronSvg(): string {
 }
 
 function iconPerson(): string {
-  return `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c1.8-3.5 4.2-5 7-5s5.2 1.5 7 5"></path></svg>`;
+  return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c1.8-3.5 4.2-5 7-5s5.2 1.5 7 5"></path></svg>`;
 }
 
 function iconBook(): string {
-  return `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2H20v20H8.5A2.5 2.5 0 0 0 6 22"></path><path d="M6 4.5V22"></path><path d="M10 7h7M10 11h7M10 15h5"></path></svg>`;
+  return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2H20v20H8.5A2.5 2.5 0 0 0 6 24"></path><path d="M6 4.5v17"></path><path d="M10 7h7M10 11h7M10 15h5"></path></svg>`;
 }
 
 function iconCpu(): string {
-  return `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect><path d="M4 10h3M4 14h3M17 10h3M17 14h3M10 4v3M14 4v3M10 17v3M14 17v3"></path></svg>`;
-}
-
-function iconFlask(): string {
-  return `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 3h6M8 3v7L4 18c-.7 1.3.2 3 1.8 3h12.4c1.6 0 2.5-1.7 1.8-3L16 10V3"></path><path d="M6 15h12"></path></svg>`;
-}
-
-function iconFlag(): string {
-  return `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" x2="4" y1="22" y2="15"></line></svg>`;
-}
-
-function iconStar(): string {
-  return `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.8 1.2 6.8L12 17.9 5.8 20.9 7 14.1 2 9.3l6.9-1L12 2Z"></path></svg>`;
+  return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect><path d="M4 10h3M4 14h3M17 10h3M17 14h3M10 4v3M14 4v3M10 17v3M14 17v3"></path></svg>`;
 }
 
 function iconGithub(): string {
-  return `<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>`;
+  return `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.38 7.86 10.9.58.1.79-.25.79-.56 0-.28-.01-1.2-.02-2.18-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.71.08-.71 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.73-1.53-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.45.11-3.02 0 0 .96-.31 3.14 1.17A10.9 10.9 0 0 1 12 6.03c.98 0 1.97.13 2.9.39 2.18-1.48 3.14-1.17 3.14-1.17.62 1.57.23 2.73.11 3.02.73.8 1.18 1.82 1.18 3.07 0 4.41-2.7 5.39-5.28 5.67.42.36.79 1.05.79 2.12 0 1.53-.01 2.76-.01 3.13 0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"></path></svg>`;
 }
 
 function sunMoonSvg(): string {
@@ -95,18 +84,18 @@ function toggleTheme(themeToggles: Array<HTMLButtonElement | null>): void {
   themeToggles.forEach((toggle) => setThemeToggleState(toggle));
 }
 
-function practiceActive(page: NavConfig["activePage"]): boolean {
-  return page === "problems" || page === "quiz" || page === "labs" || page === "checkpoints";
+function resourcesActive(config: NavConfig["activePage"]): boolean {
+  return config === "about" || config === "docs" || config === "github";
 }
 
-function resourcesActive(config: NavConfig["activePage"]): boolean {
-  return config === "about" || config === "docs";
+function practiceActive(config: NavConfig["activePage"]): boolean {
+  return config === "problems" || config === "quiz" || config === "labs" || config === "checkpoints";
 }
 
 function renderNav(config: NavConfig): string {
   const isLearn = config.activePage === "learn";
-  const isPractice = practiceActive(config.activePage);
   const isSimulator = config.activePage === "simulator";
+  const isPractice = practiceActive(config.activePage);
   const isResources = resourcesActive(config.activePage);
 
   return `
@@ -126,37 +115,23 @@ function renderNav(config: NavConfig): string {
               Practice
               ${chevronSvg()}
             </button>
-            <div class="nav-dropdown nav-dropdown--mega" id="nav-dropdown-practice">
-              <div class="nav-mega-grid">
-                <a href="/problems/" class="nav-mega-item${config.activePage === "problems" ? " nav-mega-item--active" : ""}">
-                  <span class="nav-mega-icon">${iconCpu()}</span>
-                  <span class="nav-mega-body">
-                    <span class="nav-mega-title">Problems</span>
-                    <span class="nav-mega-desc">Practice assembly challenges by topic</span>
-                  </span>
-                </a>
-                <a href="/quiz/" class="nav-mega-item${config.activePage === "quiz" ? " nav-mega-item--active" : ""}">
-                  <span class="nav-mega-icon">${iconStar()}</span>
-                  <span class="nav-mega-body">
-                    <span class="nav-mega-title">Quizzes</span>
-                    <span class="nav-mega-desc">Check understanding with short assessments</span>
-                  </span>
-                </a>
-                <a href="/labs/" class="nav-mega-item${config.activePage === "labs" ? " nav-mega-item--active" : ""}">
-                  <span class="nav-mega-icon">${iconFlask()}</span>
-                  <span class="nav-mega-body">
-                    <span class="nav-mega-title">Labs</span>
-                    <span class="nav-mega-desc">Build larger assembly routines end-to-end</span>
-                  </span>
-                </a>
-                <a href="/checkpoints/" class="nav-mega-item${config.activePage === "checkpoints" ? " nav-mega-item--active" : ""}">
-                  <span class="nav-mega-icon">${iconFlag()}</span>
-                  <span class="nav-mega-body">
-                    <span class="nav-mega-title">Checkpoints</span>
-                    <span class="nav-mega-desc">Milestone challenges that unlock as you learn</span>
-                  </span>
-                </a>
-              </div>
+            <div class="nav-dropdown nav-dropdown--practice" id="nav-dropdown-practice">
+              <a href="/problems/" class="nav-dropdown-item${config.activePage === "problems" ? " nav-dropdown-item-active" : ""}">
+                <span class="nav-dropdown-icon">${iconCpu()}</span>
+                <span class="nav-dropdown-copy"><span class="nav-dropdown-title">Problems</span><span class="nav-dropdown-desc">Assembly challenges</span></span>
+              </a>
+              <a href="/quiz/" class="nav-dropdown-item${config.activePage === "quiz" ? " nav-dropdown-item-active" : ""}">
+                <span class="nav-dropdown-icon">${iconBook()}</span>
+                <span class="nav-dropdown-copy"><span class="nav-dropdown-title">Quizzes</span><span class="nav-dropdown-desc">Quick checks</span></span>
+              </a>
+              <a href="/labs/" class="nav-dropdown-item${config.activePage === "labs" ? " nav-dropdown-item-active" : ""}">
+                <span class="nav-dropdown-icon">${iconCpu()}</span>
+                <span class="nav-dropdown-copy"><span class="nav-dropdown-title">Labs</span><span class="nav-dropdown-desc">Larger routines</span></span>
+              </a>
+              <a href="/checkpoints/" class="nav-dropdown-item${config.activePage === "checkpoints" ? " nav-dropdown-item-active" : ""}">
+                <span class="nav-dropdown-icon">${iconBook()}</span>
+                <span class="nav-dropdown-copy"><span class="nav-dropdown-title">Checkpoints</span><span class="nav-dropdown-desc">Milestone tasks</span></span>
+              </a>
             </div>
           </div>
           <a href="/simulator/" class="nav-link${isSimulator ? " nav-link-active" : ""}">Simulator</a>
@@ -165,30 +140,19 @@ function renderNav(config: NavConfig): string {
               Resources
               ${chevronSvg()}
             </button>
-            <div class="nav-dropdown nav-dropdown--mega nav-dropdown--right" id="nav-dropdown-resources">
-              <div class="nav-mega-grid nav-mega-grid--3col">
-                <a href="/docs/" class="nav-mega-item${config.activePage === "docs" ? " nav-mega-item--active" : ""}">
-                  <span class="nav-mega-icon">${iconBook()}</span>
-                  <span class="nav-mega-body">
-                    <span class="nav-mega-title">Docs</span>
-                    <span class="nav-mega-desc">Instruction reference and guides</span>
-                  </span>
-                </a>
-                <a href="/about/" class="nav-mega-item${config.activePage === "about" ? " nav-mega-item--active" : ""}">
-                  <span class="nav-mega-icon">${iconPerson()}</span>
-                  <span class="nav-mega-body">
-                    <span class="nav-mega-title">About</span>
-                    <span class="nav-mega-desc">Who built this and why</span>
-                  </span>
-                </a>
-                <a href="https://github.com/sseth30/studyriscv" class="nav-mega-item" target="_blank" rel="noopener">
-                  <span class="nav-mega-icon">${iconGithub()}</span>
-                  <span class="nav-mega-body">
-                    <span class="nav-mega-title">GitHub</span>
-                    <span class="nav-mega-desc">Source code and issues</span>
-                  </span>
-                </a>
-              </div>
+            <div class="nav-dropdown nav-dropdown--resources" id="nav-dropdown-resources">
+              <a href="/docs/" class="nav-dropdown-item${config.activePage === "docs" ? " nav-dropdown-item-active" : ""}">
+                <span class="nav-dropdown-icon">${iconBook()}</span>
+                <span class="nav-dropdown-copy"><span class="nav-dropdown-title">Docs</span><span class="nav-dropdown-desc">Reference and guides</span></span>
+              </a>
+              <a href="/about/" class="nav-dropdown-item${config.activePage === "about" ? " nav-dropdown-item-active" : ""}">
+                <span class="nav-dropdown-icon">${iconPerson()}</span>
+                <span class="nav-dropdown-copy"><span class="nav-dropdown-title">About</span><span class="nav-dropdown-desc">Who built this</span></span>
+              </a>
+              <a href="https://github.com/rawcache/riscvsim" class="nav-dropdown-item" target="_blank" rel="noopener">
+                <span class="nav-dropdown-icon">${iconGithub()}</span>
+                <span class="nav-dropdown-copy"><span class="nav-dropdown-title">GitHub</span><span class="nav-dropdown-desc">Source and issues</span></span>
+              </a>
             </div>
           </div>
         </div>
@@ -228,7 +192,7 @@ function renderNav(config: NavConfig): string {
         <a href="/simulator/" class="nav-mobile-link${isSimulator ? " nav-link-active" : ""}">Simulator</a>
         <a href="/docs/" class="nav-mobile-link${config.activePage === "docs" ? " nav-link-active" : ""}">Docs</a>
         <a href="/about/" class="nav-mobile-link${config.activePage === "about" ? " nav-link-active" : ""}">About</a>
-        <a href="https://github.com/sseth30/studyriscv" class="nav-mobile-link" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/rawcache/riscvsim" class="nav-mobile-link" target="_blank" rel="noopener">GitHub</a>
         <div class="nav-mobile-actions">
           <button id="nav-mobile-signin-btn" class="nav-signin-btn" type="button">Sign in</button>
         </div>

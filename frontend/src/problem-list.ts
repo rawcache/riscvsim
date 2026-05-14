@@ -1,10 +1,9 @@
 import "./auth-page";
 import { getSession, type UserSession } from "./auth";
 import { show as showAuthModal } from "./auth-page";
-import { initFooter } from "./footer";
 import { escapeHtml } from "./format";
 import { getEditorCode as readEditorCode, initRiscvEditor } from "./monaco-riscv";
-import { initNav } from "./nav";
+import { ensureProblemsChrome } from "./problems-chrome";
 import type {
   Difficulty,
   Problem,
@@ -269,6 +268,13 @@ export function formatTimerValue(totalSeconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+function problemSlug(problem: Pick<Problem, "title">): string {
+  return problem.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export function getCurrentProblemId(
   search = typeof window !== "undefined" ? window.location.search : "",
   pathname = typeof window !== "undefined" ? window.location.pathname : "",
@@ -279,7 +285,18 @@ export function getCurrentProblemId(
   }
 
   const match = pathname.match(/^\/problems\/([^/?#]+)\/?$/);
-  return match ? decodeURIComponent(match[1]) : null;
+  if (!match) {
+    return null;
+  }
+
+  const pathIdOrSlug = decodeURIComponent(match[1]);
+  const direct = getProblem(pathIdOrSlug);
+  if (direct) {
+    return direct.id;
+  }
+
+  const slugMatch = getProblems().find((problem) => problemSlug(problem) === pathIdOrSlug);
+  return slugMatch?.id ?? pathIdOrSlug;
 }
 
 export function getCurrentProblem(
@@ -1120,6 +1137,7 @@ class ProblemsPageApp {
 
   async init(): Promise<void> {
     console.log("Problems loaded:", this.problems.length);
+    ensureProblemsChrome();
 
     bindVerdictClose(this.verdictClose, this.verdict);
 
@@ -3053,27 +3071,8 @@ class ProblemsPageApp {
   }
 }
 
-function initProblemsChrome(): void {
-  try {
-    initNav({ activePage: "problems" });
-  } catch (error) {
-    console.error("Problems nav failed to initialize.", error);
-  }
-
-  try {
-    initFooter();
-  } catch (error) {
-    console.error("Problems footer failed to initialize.", error);
-  }
-
-  const nav = document.getElementById("site-nav") as HTMLElement | null;
-  if (nav) {
-    nav.hidden = false;
-  }
-}
-
 function bootProblemsPage(): void {
-  initProblemsChrome();
+  ensureProblemsChrome();
 
   const listLayout = document.getElementById("pl-layout");
   const problemLayout = document.getElementById("pv-layout");
