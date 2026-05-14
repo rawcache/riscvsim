@@ -2491,11 +2491,22 @@ class ProblemsPageApp {
           this.editor.focus();
           resolve();
         },
+        onFallback: (textarea) => {
+          this.editorChangeSubscription?.dispose();
+          this.editorChangeSubscription = null;
+          this.editor = null;
+          this.editorFallback = textarea;
+          this.bindFallbackAutosave(textarea);
+          this.updateLanguagePill("active", "Text editor");
+          this.monacoLoading.hidden = true;
+          textarea.focus();
+          resolve();
+        },
         onError: () => {
           this.editorChangeSubscription?.dispose();
           this.editorChangeSubscription = null;
           this.editor = null;
-          this.updateLanguagePill("error", "Editor failed");
+          this.updateLanguagePill("error", "Text editor");
           this.monacoLoading.hidden = true;
           window.setTimeout(() => {
             this.editorFallback = monacoHost().__editorFallback ?? null;

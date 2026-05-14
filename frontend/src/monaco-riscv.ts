@@ -3,6 +3,7 @@ export interface MonacoEditorOptions {
   starterCode: string;
   problemId?: string;
   onReady?: (editor: any) => void;
+  onFallback?: (textarea: HTMLTextAreaElement) => void;
   onError?: (err: any) => void;
 }
 
@@ -252,33 +253,20 @@ function startThemeSync(monaco: any): void {
   );
 }
 
-export function showFallbackTextarea(containerId: string, starterCode: string): void {
+export function showFallbackTextarea(containerId: string, starterCode: string): HTMLTextAreaElement | null {
   const el = document.getElementById(containerId);
   if (!el) {
-    return;
+    return null;
   }
   el.innerHTML = "";
   const ta = document.createElement("textarea");
+  ta.className = "pv-editor-fallback";
   ta.value = starterCode;
   ta.spellcheck = false;
-  ta.style.cssText = [
-    "width:100%",
-    "height:100%",
-    "min-height:300px",
-    "padding:16px",
-    "background:#0a0a0a",
-    "color:#e4e4e7",
-    "font-family:'Geist Mono',monospace",
-    "font-size:13px",
-    "line-height:1.7",
-    "border:none",
-    "outline:none",
-    "resize:none",
-    "box-sizing:border-box",
-  ].join(";");
   el.appendChild(ta);
   (window as any).__editorInstance = null;
   (window as any).__editorFallback = ta;
+  return ta;
 }
 
 export function getEditorCode(): string {
@@ -306,6 +294,11 @@ export function initRiscvEditor(options: MonacoEditorOptions): void {
   console.log("Monaco container dimensions:", rect.width, "x", rect.height);
   console.log("Monaco: configuring require...");
   console.log("Monaco: loading editor.main...");
+
+  const fallback = showFallbackTextarea(options.containerId, options.starterCode);
+  if (fallback) {
+    options.onFallback?.(fallback);
+  }
 
   let settled = false;
   const timeoutId = setTimeout(() => {

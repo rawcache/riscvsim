@@ -241,10 +241,14 @@ export function initNav(config: NavConfig): void {
     return;
   }
 
-  captureReferralParam();
-
   root.className = "site-nav";
   root.innerHTML = renderNav(config);
+
+  try {
+    captureReferralParam();
+  } catch (error) {
+    console.warn("Unable to capture referral parameter.", error);
+  }
 
   const wrappers = Array.from(root.querySelectorAll<HTMLElement>(".nav-dropdown-wrapper"));
   const mobileMenu = root.querySelector<HTMLElement>("#nav-mobile-menu");
