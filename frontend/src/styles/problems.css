@@ -125,7 +125,7 @@
 
 .pl-sidebar-link--active {
   background: var(--accent-subtle);
-  color: var(--accent);
+  color: var(--pv-accent);
   font-weight: 600;
 }
 
@@ -163,7 +163,7 @@
 
 .pl-ring-fill {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--pv-accent);
   stroke-width: 5;
   stroke-linecap: round;
   stroke-dasharray: 163;
@@ -248,7 +248,7 @@
 }
 
 .pl-solved-badge__num {
-  color: var(--accent);
+  color: var(--pv-accent);
   font-size: 22px;
   font-weight: 700;
 }
@@ -300,14 +300,14 @@
 }
 
 .pl-tagchip:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--pv-accent);
+  color: var(--pv-accent);
 }
 
 .pl-tagchip--active {
   background: var(--accent-subtle);
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--pv-accent);
+  color: var(--pv-accent);
   font-weight: 600;
 }
 
@@ -371,7 +371,7 @@
 .pl-search:focus,
 .pl-select:focus,
 .pl-select.is-active {
-  border-color: var(--accent);
+  border-color: var(--pv-accent);
 }
 
 .pl-search::placeholder {
@@ -410,7 +410,7 @@
   border: none;
   border-radius: 4px;
   background: none;
-  color: var(--accent);
+  color: var(--pv-accent);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
@@ -544,7 +544,7 @@
 
 .pl-title-link:hover,
 .pl-row:hover .pl-title-link {
-  color: var(--accent);
+  color: var(--pv-accent);
 }
 
 .pl-tags {
@@ -700,7 +700,7 @@
 }
 
 .pl-qs-link:hover {
-  border-color: var(--accent);
+  border-color: var(--pv-accent);
   background: var(--accent-subtle);
 }
 
@@ -759,7 +759,7 @@
   padding: 8px;
   border: 1px solid transparent;
   border-radius: 6px;
-  background: var(--accent);
+  background: var(--pv-accent);
   color: #fff;
   font: inherit;
   font-size: 13px;
@@ -899,8 +899,6 @@
   --text-primary: var(--pv-text-primary);
   --text-secondary: var(--pv-text-secondary);
   --text-muted: var(--pv-text-muted);
-  --accent: var(--pv-accent);
-  --accent-hover: var(--pv-accent-hover);
   --success: var(--pv-success);
   --warning: var(--pv-warning);
   --danger: var(--pv-danger);
