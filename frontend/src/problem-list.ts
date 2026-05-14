@@ -1,10 +1,9 @@
 import "./auth-page";
 import { getSession, type UserSession } from "./auth";
 import { show as showAuthModal } from "./auth-page";
-import { initFooter } from "./footer";
 import { escapeHtml } from "./format";
 import { getEditorCode as readEditorCode, initRiscvEditor } from "./monaco-riscv";
-import { initNav } from "./nav";
+import { ensureProblemsChrome } from "./problems-chrome";
 import type {
   Difficulty,
   Problem,
@@ -269,12 +268,42 @@ export function formatTimerValue(totalSeconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-export function getCurrentProblemId(search = typeof window !== "undefined" ? window.location.search : ""): string | null {
-  return new URLSearchParams(search).get("id");
+function problemSlug(problem: Pick<Problem, "title">): string {
+  return problem.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
-export function getCurrentProblem(search = typeof window !== "undefined" ? window.location.search : ""): Problem | null {
-  return getProblem(getCurrentProblemId(search)) ?? null;
+export function getCurrentProblemId(
+  search = typeof window !== "undefined" ? window.location.search : "",
+  pathname = typeof window !== "undefined" ? window.location.pathname : "",
+): string | null {
+  const queryId = new URLSearchParams(search).get("id");
+  if (queryId) {
+    return queryId;
+  }
+
+  const match = pathname.match(/^\/problems\/([^/?#]+)\/?$/);
+  if (!match) {
+    return null;
+  }
+
+  const pathIdOrSlug = decodeURIComponent(match[1]);
+  const direct = getProblem(pathIdOrSlug);
+  if (direct) {
+    return direct.id;
+  }
+
+  const slugMatch = getProblems().find((problem) => problemSlug(problem) === pathIdOrSlug);
+  return slugMatch?.id ?? pathIdOrSlug;
+}
+
+export function getCurrentProblem(
+  search = typeof window !== "undefined" ? window.location.search : "",
+  pathname = typeof window !== "undefined" ? window.location.pathname : "",
+): Problem | null {
+  return getProblem(getCurrentProblemId(search, pathname)) ?? null;
 }
 
 function getCurrentTagFilter(search = typeof window !== "undefined" ? window.location.search : ""): ProblemTag | "" {
@@ -1108,18 +1137,7 @@ class ProblemsPageApp {
 
   async init(): Promise<void> {
     console.log("Problems loaded:", this.problems.length);
-
-    try {
-      initNav({ activePage: "problems" });
-    } catch (error) {
-      console.error("Problems nav failed to initialize.", error);
-    }
-
-    try {
-      initFooter();
-    } catch (error) {
-      console.error("Problems footer failed to initialize.", error);
-    }
+    ensureProblemsChrome();
 
     bindVerdictClose(this.verdictClose, this.verdict);
 
@@ -1786,7 +1804,7 @@ class ProblemsPageApp {
     this.problemLayout.hidden = false;
     (document.getElementById("problems-list-view") as HTMLElement | null)?.setAttribute("hidden", "");
     (document.getElementById("problem-workspace-view") as HTMLElement | null)?.removeAttribute("hidden");
-    this.nav.hidden = true;
+    this.nav.hidden = false;
     this.footer.hidden = true;
     this.body.classList.add("pv-body");
     this.verdict.hidden = true;
@@ -3054,6 +3072,8 @@ class ProblemsPageApp {
 }
 
 function bootProblemsPage(): void {
+  ensureProblemsChrome();
+
   const listLayout = document.getElementById("pl-layout");
   const problemLayout = document.getElementById("pv-layout");
   if (!listLayout || !problemLayout) {

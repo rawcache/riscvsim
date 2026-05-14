@@ -872,6 +872,7 @@
 }
 
 .pv-body {
+  padding-top: var(--nav-height, 64px) !important;
   --pv-bg-page: #0d0d0d;
   --pv-bg-panel: #121212;
   --pv-bg-editor: #0a0a0a;
@@ -908,21 +909,20 @@
   color: var(--pv-text-primary);
 }
 
-.pv-body #site-nav,
 .pv-body #site-footer {
   display: none !important;
 }
 
 .pv-body .problems-shell {
-  min-height: 100vh;
-  height: 100vh;
+  min-height: calc(100vh - var(--nav-height, 64px));
+  height: calc(100vh - var(--nav-height, 64px));
   background: var(--pv-bg-page);
 }
 
 .pv-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: calc(100vh - var(--nav-height, 64px));
   background: var(--pv-bg-page);
   overflow: hidden;
 }

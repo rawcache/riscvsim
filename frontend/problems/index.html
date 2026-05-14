@@ -53,26 +53,8 @@
     </script>
   </head>
   <body class="problems-page">
-    <nav id="site-nav" class="site-nav">
-      <div class="nav-mobile-shell">
-        <div class="nav-inner">
-          <a href="/" class="nav-logo">StudyRISC-V</a>
-          <div class="nav-links">
-            <a href="/problems/" class="nav-link nav-link-active">Problems</a>
-            <a href="/learn/" class="nav-link">Learn</a>
-            <a href="/simulator/" class="nav-link">Simulator</a>
-            <a href="/quiz/" class="nav-link">Quizzes</a>
-            <a href="/labs/" class="nav-link">Labs</a>
-            <a href="/checkpoints/" class="nav-link">Checkpoints</a>
-            <a href="/docs/" class="nav-link">Docs</a>
-            <a href="https://github.com/rawcache/riscvsim" class="nav-link" target="_blank" rel="noopener">GitHub</a>
-          </div>
-          <div class="nav-actions">
-            <button class="nav-signin-btn" type="button">Sign in</button>
-          </div>
-        </div>
-      </div>
-    </nav>
+    <nav id="site-nav"></nav>
+    <script type="module" src="../src/problems-chrome.ts"></script>
 
     <main class="problems-shell" id="problems-shell">
       <section class="pl-layout" id="pl-layout">
@@ -128,7 +110,7 @@
                   </a>
                   <a class="pl-sidebar-link" href="/learn/">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-13h-7l0-7Z"></path></svg>
-                    ECE 2035 Prep
+                    Assembly Fundamentals
                   </a>
                   <a class="pl-sidebar-link" href="/learn/">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.8 1.2 6.8L12 17.9 5.8 20.9 7 14.1 2 9.3l6.9-1L12 2Z"></path></svg>
@@ -302,7 +284,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect><path d="M9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4"></path></svg>
                     Open Simulator
                   </a>
-                  <a class="pl-resource-link" href="https://github.com/sseth30/studyriscv" target="_blank" rel="noopener">
+                  <a class="pl-resource-link" href="https://github.com/rawcache/riscvsim" target="_blank" rel="noopener">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 19c-4.5 1.4-4.5-2.5-6-3m12 6v-3.5a3.04 3.04 0 0 0-.59-2.09c1.97-.22 4.04-.97 4.04-4.4a3.44 3.44 0 0 0-.92-2.38A3.18 3.18 0 0 0 17.5 6s-1.01-.32-3.3 1.1a11.41 11.41 0 0 0-6 0C5.91 5.68 4.9 6 4.9 6a3.18 3.18 0 0 0-.03 2.58 3.44 3.44 0 0 0-.92 2.38c0 3.42 2.06 4.18 4.03 4.4A3.04 3.04 0 0 0 7.4 18.5V22"></path></svg>
                     GitHub
                   </a>
