@@ -1,113 +1,250 @@
-# StudyRISC-V — Codex Agent Rules
+# StudyRISC-V — Agent Rules
 
-## Project overview
-StudyRISC-V is a browser-based RV32IM simulator. The Rust core
-compiles to WebAssembly. The frontend is plain HTML/CSS/TypeScript
-with no framework. Auth and backend run on AWS via CDK.
+## Project Overview
 
-## File structure
-frontend/simulator/index.html     simulator app
-frontend/landing.html             marketing landing page
-frontend/about/index.html         about page
-frontend/docs/index.html          docs/guide page
-frontend/terms/index.html         terms of service
-frontend/privacy/index.html       privacy policy
-frontend/src/                     TypeScript source files
-frontend/src/styles/              CSS files (tokens.css, simulator.css, landing.css)
-frontend/src/pkg/                 pre-built wasm-pack output (committed, do not rebuild)
-frontend/tests/regression/        Vitest regression suite
-rust-core/src/lib.rs              Rust CPU interpreter (compiled to WASM)
-infra/lib/stack.ts                AWS CDK stack (Cognito, DynamoDB, API Gateway)
-infra/lambda/                     Lambda handlers
+StudyRISC-V is a browser-based RV32IM simulator and interactive learning platform.
 
-## NEVER modify these files
-asm.ts
-wasm-runtime.ts
-types.ts
+The core simulator is written in Rust and compiled to WebAssembly. The frontend is plain HTML, CSS, and TypeScript with no framework. Auth and backend services run on AWS through CDK, Cognito, API Gateway, Lambda, and DynamoDB.
+
+The product includes:
+- Marketing landing page
+- RISC-V simulator
+- Curriculum/learn pages
+- Practice/problems pages
+- Checkpoints
+- Docs/about/legal pages
+- Auth modal and gated progress features
+
+## Required Reading Before UI Work
+
+Before making any visual, layout, navigation, CSS, or component changes, read:
+
+1. `DESIGN.md`
+2. `frontend/src/styles/tokens.css`
+3. The relevant page stylesheet
+4. The relevant page TypeScript file
+5. `frontend/src/nav.ts` if the shared navbar is involved
+
+`DESIGN.md` is the source of truth for the visual system. Do not invent a new design direction unless explicitly asked.
+
+## File Structure
+
+```text
+frontend/landing.html                  marketing landing page
+frontend/simulator/index.html          simulator app
+frontend/problems/index.html           practice/problems app
+frontend/learn/index.html              curriculum/learning page
+frontend/checkpoints/index.html        checkpoints page
+frontend/about/index.html              about page
+frontend/docs/index.html               docs/guide page
+frontend/terms/index.html              terms of service
+frontend/privacy/index.html            privacy policy
+
+frontend/src/                          TypeScript source files
+frontend/src/nav.ts                    shared navbar implementation
+frontend/src/styles/                   CSS files
+frontend/src/styles/tokens.css         global design tokens
+frontend/src/pkg/                      committed wasm-pack output, do not rebuild casually
+frontend/tests/regression/             Vitest regression suite
+
+rust-core/src/lib.rs                   Rust CPU interpreter compiled to WASM
+infra/lib/stack.ts                     AWS CDK stack
+infra/lambda/                          Lambda handlers
+```
+
+## Protected Files
+
+Do not modify these unless the user explicitly asks:
+
+```text
+frontend/src/asm.ts
+frontend/src/wasm-runtime.ts
+frontend/src/types.ts
 rust-core/src/lib.rs
-vitest.config.ts
-setup.ts
-helpers.ts
-Any file under frontend/tests/regression/ unless explicitly told to add tests
+frontend/vitest.config.ts
+frontend/tests/regression/setup.ts
+frontend/tests/regression/helpers.ts
+frontend/tests/regression/*
+frontend/src/pkg/*
+```
 
-## Always verify after every task
-npm run build passes (run from frontend/)
-npm test passes (run from frontend/)
-All existing tests still pass -- count must not decrease
+Do not rebuild or regenerate `frontend/src/pkg/` unless the Rust core is intentionally changed.
+
+## Build and Verification
+
+Run commands from `frontend/`.
+
+```bash
+npm run build
+npm test
+```
+
+Expected behavior:
+- `npm run build` must pass.
+- `npm test` should pass.
+- If a test fails due to an unrelated pre-existing issue, report the exact test name and failure.
+- Test count must not decrease.
+- Do not silently change test expectations.
 
 ## Stack
-Language:     TypeScript + plain HTML/CSS (no React, no Vue, no Tailwind)
-Build:        Vite (rolldown-vite)
+
+```text
+Frontend:     TypeScript + plain HTML/CSS
+Frameworks:   None
+CSS:          Plain CSS only
+Build:        Vite / rolldown-vite
 Tests:        Vitest
-Rust/WASM:    wasm-pack, wasm-bindgen -- pkg is pre-built, never rebuild in CI
-Auth:         AWS Cognito via custom PKCE-free modal (USER_PASSWORD_AUTH)
-Backend:      AWS CDK -- Cognito, DynamoDB, API Gateway, Lambda
-Deploy:       AWS Amplify (frontend only, CDK manages backend separately)
+Rust/WASM:    wasm-pack + wasm-bindgen, pkg committed
+Auth:         AWS Cognito, custom modal
+Backend:      AWS CDK, API Gateway, Lambda, DynamoDB
+Deploy:       AWS Amplify for frontend
+```
 
-## Design system
-tokens.css owns ALL CSS custom properties
-Never use hardcoded color values -- always use CSS custom properties
-Dark mode: data-theme="dark" on html element
-Light/dark toggle persists to localStorage
+## Hard Constraints
 
-Simulator UI font:    DM Mono (monospace throughout)
-Landing/marketing:    Geist (body), Geist Mono (code/labels only)
-About/Docs pages:     Geist (body), Geist Mono (code)
+- No React.
+- No Vue.
+- No Tailwind.
+- No Bootstrap.
+- No external CSS framework.
+- No large new dependency unless explicitly requested.
+- Preserve existing element IDs and class names that TypeScript references.
+- New CSS belongs in the relevant stylesheet.
+- Shared design values belong in `tokens.css`.
+- The simulator must remain usable while logged out.
+- Light and dark mode must both work.
+- Mobile responsive behavior is required at 768px and 480px.
+- Do not create one-off navbars. Use the shared nav system.
+- Do not hide content behind low contrast styling.
+- Do not introduce layout shifts between pages.
 
-## CSS custom properties (key ones)
---bg-base, --bg-surface, --bg-elevated   backgrounds
---border                                  border color
---text-primary, --text-secondary, --text-muted   text
---accent, --accent-hover, --accent-subtle         blue accent (simulator)
---success, --warning, --danger                    semantic colors
---highlight-new, --highlight-prev                 register/memory flash colors
+## CSS Rules
 
-## Constraints -- always apply
-- No React, no Vue, no Tailwind, no Bootstrap, no external CSS frameworks
-- No hardcoded colors anywhere -- CSS custom properties only
-- Preserve ALL existing element IDs and class names that TypeScript references
-- New CSS classes go in the appropriate stylesheet (simulator.css, landing.css, etc)
-- The simulator (index.html) is always fully usable when logged out -- no login wall
-- All new pages share tokens.css for the base design system
-- Both light and dark mode must work correctly on every page
-- Mobile responsive at 768px and 480px breakpoints on all pages
-- Scrollbars: 6px wide, --border thumb, transparent track, 3px border-radius
+`tokens.css` owns the design system.
 
-## Memory map (fixed, never change)
+Use CSS custom properties for colors, shadows, borders, radii, spacing, and major layout constants.
+
+Allowed:
+- Defining raw color values inside `tokens.css`.
+- Using CSS variables everywhere else.
+
+Not allowed:
+- Hardcoding colors in page CSS.
+- Duplicating token values across files.
+- Creating page-specific palettes that fight the global design.
+
+## Typography
+
+Marketing and content pages:
+- Use Geist or the existing sans-serif stack for body text.
+- Use Geist Mono or the existing monospace stack only for code, labels, tabs, metadata, and simulator content.
+
+Simulator:
+- Code/editor/instruction areas should use a clear monospace font.
+- UI chrome can use the sans-serif stack unless the existing page intentionally uses monospace.
+
+## Routes
+
+Primary production routes:
+
+```text
+Landing:      https://studyriscv.com/
+Simulator:    https://studyriscv.com/simulator/
+Problems:     https://studyriscv.com/problems/
+Learn:        https://studyriscv.com/learn/
+Checkpoints:  https://studyriscv.com/checkpoints/
+About:        https://studyriscv.com/about/
+Docs:         https://studyriscv.com/docs/
+Terms:        https://studyriscv.com/terms/
+Privacy:      https://studyriscv.com/privacy/
+```
+
+The GitHub link should point to:
+
+```text
+https://github.com/rawcache/riscvsim
+```
+
+## Shared Navbar Requirements
+
+The shared navbar must:
+- Appear on all major public pages.
+- Keep the logo and brand link pointed to `/`.
+- Keep Simulator pointed to `/simulator/`.
+- Keep Practice/Problems pointed to `/problems/`.
+- Keep Learn pointed to `/learn/`.
+- Use the same dropdown implementation across pages.
+- Avoid page-to-page horizontal shifting.
+- Avoid oversized dropdown menus.
+- Work in dark and light mode.
+- Be usable on mobile.
+
+## Memory Map
+
+Do not change this unless explicitly requested:
+
+```text
 Text segment:   0x00000000
 Data segment:   0x10000000
-Stack pointer:  0x7FFFFFFC (sp = x2, register index 2)
+Stack pointer:  0x7FFFFFFC
 Stack region:   addresses >= 0x70000000
+```
 
-## Auth architecture
+## Auth Architecture
+
+The simulator must remain usable without auth.
+
+Auth is for:
+- progress
+- saved work
+- gated features
+- Pro/Free tier logic
+
+Current known backend configuration:
+
+```text
 Cognito User Pool ID:  us-east-1_l7sOznZYZ
 Client ID:             5rpv8jp09pq566dajslno6c9rr
 Hosted UI domain:      studyriscv.auth.us-east-1.amazoncognito.com
 API endpoint:          https://hsyyxozom8.execute-api.us-east-1.amazonaws.com
-Tier logic:            email ending in @gatech.edu = Pro, everything else = Free
+Tier logic:            @gatech.edu = Pro, everything else = Free
+```
 
-## WASM pkg
-frontend/src/pkg/ is committed to git and must NOT be rebuilt during
-Amplify builds. The prebuild script in package.json has been removed.
-Only rebuild locally when rust-core/src/lib.rs changes:
-  cd rust-core && wasm-pack build --target web --out-dir ../frontend/src/pkg
+Do not expose secrets. Do not add private keys.
 
-## Amplify build
-amplify.yml runs only: npm ci then npm run build
-No Rust install, no wasm-pack, no backend environment
-Environment variables are exported inline in the build phase
+## Amplify Build
 
-## Site URLs
-Landing:    https://studyriscv.com/
-Simulator:  https://studyriscv.com/simulator/
-About:      https://studyriscv.com/about/
-Docs:       https://studyriscv.com/docs/
-Terms:      https://studyriscv.com/terms/
-Privacy:    https://studyriscv.com/privacy/
+Amplify frontend build should not rebuild Rust/WASM.
 
-## When adding new pages
-1. Create frontend/pagename/index.html
-2. Add as entry point in frontend/vite.config.ts
-3. Add rewrite rules to README.md Amplify section
-4. Add nav link to landing.html, simulator nav, and any other pages
-5. Add to Amplify Console rewrites manually after deploy
+Expected flow:
+- `npm ci`
+- `npm run build`
+
+Backend is managed separately through CDK.
+
+## When Adding a New Page
+
+1. Create `frontend/<page>/index.html`.
+2. Add it to `frontend/vite.config.ts`.
+3. Add route/rewrite support where required.
+4. Add the shared navbar correctly.
+5. Add or update CSS using tokens.
+6. Verify build and tests.
+7. Report changed files and verification results.
+
+## Agent Reporting Format
+
+At the end of every task, report:
+
+```text
+Changed files:
+- ...
+
+Verification:
+- npm run build: pass/fail
+- npm test: pass/fail
+- Any known unrelated failures
+
+Notes:
+- ...
+```
