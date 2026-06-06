@@ -56,836 +56,365 @@
     <nav id="site-nav"></nav>
     <section id="landingResumeBar" class="landing-resume-bar" hidden></section>
 
-    <!-- ════════════════════════════════════════════════════════
-         ATMOSPHERE — fixed, behind everything
-    ════════════════════════════════════════════════════════ -->
-    <div id="riscv-atmosphere" class="atm" aria-hidden="true">
-
-      <!-- L1: SVG grain -->
-      <svg class="atm__grain-svg" xmlns="http://www.w3.org/2000/svg">
-        <filter id="grain-filter" x="0%" y="0%" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" result="noise"/>
-          <feColorMatrix type="saturate" values="0" in="noise" result="gray"/>
-          <feBlend in="SourceGraphic" in2="gray" mode="overlay"/>
-        </filter>
-        <rect width="100%" height="100%" filter="url(#grain-filter)" opacity="0.038"/>
-      </svg>
-
-      <!-- L2: Circuit grid (coarse + fine layers via CSS pseudo) -->
-      <div class="atm__grid"></div>
-
-      <!-- L3: Diagonal datapath beams -->
-      <div class="atm__beam atm__beam--1"></div>
-      <div class="atm__beam atm__beam--2"></div>
-      <div class="atm__beam atm__beam--3"></div>
-      <div class="atm__beam atm__beam--4"></div>
-      <div class="atm__beam atm__beam--5"></div>
-
-      <!-- L4a: CPU tile / wafer silhouette -->
-      <div class="atm__cpu-tile" id="atmCpuTile">
-        <svg viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CPU chip silhouette">
-          <!-- outer package -->
-          <rect x="60" y="60" width="200" height="200" rx="6" stroke="rgba(91,108,255,0.18)" stroke-width="1.5"/>
-          <!-- die -->
-          <rect x="90" y="90" width="140" height="140" rx="3" stroke="rgba(91,108,255,0.12)" stroke-width="1"/>
-          <!-- internal blocks -->
-          <rect x="100" y="100" width="55" height="40" rx="2" stroke="rgba(91,108,255,0.10)" stroke-width="0.8"/>
-          <rect x="165" y="100" width="55" height="40" rx="2" stroke="rgba(91,108,255,0.10)" stroke-width="0.8"/>
-          <rect x="100" y="150" width="55" height="40" rx="2" stroke="rgba(91,108,255,0.10)" stroke-width="0.8"/>
-          <rect x="165" y="150" width="55" height="40" rx="2" stroke="rgba(91,108,255,0.10)" stroke-width="0.8"/>
-          <rect x="100" y="200" width="120" height="20" rx="2" stroke="rgba(91,108,255,0.08)" stroke-width="0.8"/>
-          <!-- internal busses -->
-          <line x1="160" y1="100" x2="160" y2="220" stroke="rgba(91,108,255,0.07)" stroke-width="0.8"/>
-          <line x1="100" y1="145" x2="220" y2="145" stroke="rgba(91,108,255,0.07)" stroke-width="0.8"/>
-          <line x1="100" y1="195" x2="220" y2="195" stroke="rgba(91,108,255,0.07)" stroke-width="0.8"/>
-          <!-- left pins -->
-          <line x1="60" y1="95"  x2="30" y2="95"  stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="60" y1="115" x2="30" y2="115" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="60" y1="135" x2="30" y2="135" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="60" y1="155" x2="30" y2="155" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="60" y1="175" x2="30" y2="175" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="60" y1="195" x2="30" y2="195" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="60" y1="215" x2="30" y2="215" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <!-- right pins -->
-          <line x1="260" y1="95"  x2="290" y2="95"  stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="260" y1="115" x2="290" y2="115" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="260" y1="135" x2="290" y2="135" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="260" y1="155" x2="290" y2="155" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="260" y1="175" x2="290" y2="175" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="260" y1="195" x2="290" y2="195" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="260" y1="215" x2="290" y2="215" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <!-- top pins -->
-          <line x1="100" y1="60" x2="100" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="120" y1="60" x2="120" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="140" y1="60" x2="140" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="160" y1="60" x2="160" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="180" y1="60" x2="180" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="200" y1="60" x2="200" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="220" y1="60" x2="220" y2="30" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <!-- bottom pins -->
-          <line x1="100" y1="260" x2="100" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="120" y1="260" x2="120" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="140" y1="260" x2="140" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="160" y1="260" x2="160" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="180" y1="260" x2="180" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="200" y1="260" x2="200" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <line x1="220" y1="260" x2="220" y2="290" stroke="rgba(91,108,255,0.14)" stroke-width="1"/>
-          <!-- pin dots -->
-          <circle cx="30" cy="95"  r="2.5" fill="rgba(91,108,255,0.22)"/>
-          <circle cx="30" cy="115" r="2.5" fill="rgba(91,108,255,0.22)"/>
-          <circle cx="30" cy="135" r="2.5" fill="rgba(91,108,255,0.22)"/>
-          <circle cx="290" cy="155" r="2.5" fill="rgba(56,217,255,0.22)"/>
-          <circle cx="290" cy="175" r="2.5" fill="rgba(56,217,255,0.22)"/>
-          <circle cx="160" cy="30"  r="2.5" fill="rgba(155,92,255,0.22)"/>
-          <circle cx="180" cy="30"  r="2.5" fill="rgba(155,92,255,0.22)"/>
-          <!-- RV32IM label -->
-          <text x="160" y="173" text-anchor="middle" font-family="monospace" font-size="7" fill="rgba(91,108,255,0.22)" letter-spacing="1">RV32IM</text>
-        </svg>
-      </div>
-
-      <!-- L4b: Pipeline lanes -->
-      <div class="atm__pipeline" id="atmPipeline">
-        <div class="atm__pipe-track">
-          <span class="atm__pipe-label">IF</span>
-          <span class="atm__pipe-label">ID</span>
-          <span class="atm__pipe-label">EX</span>
-          <span class="atm__pipe-label">MEM</span>
-          <span class="atm__pipe-label">WB</span>
-        </div>
-        <div class="atm__pipe-pulse" id="atmPipePulse"></div>
-      </div>
-
-      <!-- L4c: Drifting address glyphs -->
-      <div class="atm__glyphs" id="atmGlyphs"></div>
-
-      <!-- L5: Radial glows -->
-      <div class="atm__glow atm__glow--hero"></div>
-      <div class="atm__glow atm__glow--mid"></div>
-      <div class="atm__glow atm__glow--cta"></div>
-
-      <!-- L7: Vignette -->
-      <div class="atm__vignette"></div>
-    </div>
-
     <main class="lp-main">
 
-      <!-- ════════════════════════════════════════════════════
-           HERO
-      ════════════════════════════════════════════════════ -->
-      <section class="hero lp-hero" data-landing-section id="lpHero">
-        <div class="lp-hero__content">
+      <!-- ════════════════════════════════════════════════════════
+           SECTION 1 — HERO (aurora, copy only)
+      ════════════════════════════════════════════════════════ -->
+      <section class="lp-hero" data-landing-section id="lpHero">
 
-          <!-- Left copy -->
-          <div class="lp-hero__left">
-            <p class="lp-eyebrow lp-in lp-in--0">RISC-V Assembly · From beginner to advanced</p>
-            <h1 class="lp-hero__h1 lp-in lp-in--1">Learn assembly<br>by running it.</h1>
-            <p class="lp-hero__sub lp-in lp-in--2">
-              Write assembly, step through execution, inspect registers and memory,
-              and see exactly how each instruction changes the machine.
-            </p>
-            <div class="lp-cta-row lp-in lp-in--3">
-              <a class="lp-btn lp-btn--primary" href="/learn/">Start learning</a>
-              <a class="lp-btn lp-btn--ghost" href="/simulator/">Open Simulator</a>
-            </div>
-            <div class="lp-trust lp-in lp-in--4">
-              <span class="lp-trust__item">Browser-native · no install</span>
-              <span class="lp-trust__dot" aria-hidden="true"></span>
-              <a class="lp-trust__item lp-trust__link" href="/quiz/?take=diagnostic">Find your level →</a>
-            </div>
-          </div>
-
-          <!-- Right: simulator mockup -->
-          <div class="lp-hero__right lp-in lp-in--2" id="lpMockupHero">
-            <div class="lp-sim" id="lpSim">
-
-              <!-- macOS-style chrome bar -->
-              <div class="lp-sim__chrome">
-                <span class="lp-dot lp-dot--r" aria-hidden="true"></span>
-                <span class="lp-dot lp-dot--y" aria-hidden="true"></span>
-                <span class="lp-dot lp-dot--g" aria-hidden="true"></span>
-                <span class="lp-sim__chrome-title">factorial.s — StudyRISC-V</span>
-                <div class="lp-sim__chrome-right">
-                  <span class="lp-sim__badge">STEP</span>
-                </div>
-              </div>
-
-              <!-- Status bar: PC + Cycle -->
-              <div class="lp-sim__status">
-                <span class="lp-sim__stat">
-                  <span class="lp-sim__stat-label">PC</span>
-                  <span class="lp-sim__stat-val" id="simPc">0x0000001c</span>
-                </span>
-                <span class="lp-sim__stat-sep" aria-hidden="true"></span>
-                <span class="lp-sim__stat">
-                  <span class="lp-sim__stat-label">Cycle</span>
-                  <span class="lp-sim__stat-val" id="simCycle">4</span>
-                </span>
-                <span class="lp-sim__stat-sep" aria-hidden="true"></span>
-                <span class="lp-sim__stat">
-                  <span class="lp-sim__stat-label">Mode</span>
-                  <span class="lp-sim__stat-val">STEP</span>
-                </span>
-              </div>
-
-              <!-- Body: editor + right panels -->
-              <div class="lp-sim__body">
-
-                <!-- Editor -->
-                <div class="lp-sim__editor" id="simEditor">
-                  <div class="lp-sim__panel-label">ASSEMBLY</div>
-                  <div class="lp-sim__code" id="simCode">
-                    <div class="lp-sim__line" data-pc="0x10">
-                      <span class="sim-gutter">1</span>
-                      <span class="sim-addr">0x10</span>
-                      <span class="sim-asm"><span class="sim-mne">addi</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x0</span>, <span class="sim-num">5</span></span>
-                    </div>
-                    <div class="lp-sim__line" data-pc="0x14">
-                      <span class="sim-gutter">2</span>
-                      <span class="sim-addr">0x14</span>
-                      <span class="sim-asm"><span class="sim-mne">addi</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x0</span>, <span class="sim-num">1</span></span>
-                    </div>
-                    <div class="lp-sim__line lp-sim__line--label">
-                      <span class="sim-gutter"></span>
-                      <span class="sim-addr"></span>
-                      <span class="sim-asm sim-label">loop:</span>
-                    </div>
-                    <div class="lp-sim__line lp-sim__line--active" data-pc="0x1c" id="simActiveLine">
-                      <span class="sim-gutter">4</span>
-                      <span class="sim-addr">0x1c</span>
-                      <span class="sim-asm"><span class="sim-mne">mul</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x2</span>, <span class="sim-reg">x1</span></span>
-                      <span class="sim-exec-arrow" aria-hidden="true">▶</span>
-                    </div>
-                    <div class="lp-sim__line" data-pc="0x20">
-                      <span class="sim-gutter">5</span>
-                      <span class="sim-addr">0x20</span>
-                      <span class="sim-asm"><span class="sim-mne">addi</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x1</span>, <span class="sim-num">-1</span></span>
-                    </div>
-                    <div class="lp-sim__line" data-pc="0x24">
-                      <span class="sim-gutter">6</span>
-                      <span class="sim-addr">0x24</span>
-                      <span class="sim-asm"><span class="sim-mne">bne</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x0</span>, loop</span>
-                    </div>
-                    <div class="lp-sim__line lp-sim__line--label">
-                      <span class="sim-gutter"></span>
-                      <span class="sim-addr"></span>
-                      <span class="sim-asm sim-label">done:</span>
-                    </div>
-                  </div>
-                  <!-- Pseudo-C strip -->
-                  <div class="lp-sim__pseudoc">
-                    <span class="lp-sim__pseudoc-comment">// effect</span>
-                    <span class="lp-sim__pseudoc-code" id="simPseudocCode">x2 = x2 × x1</span>
-                  </div>
-                </div>
-
-                <!-- Right: registers + memory + stack -->
-                <div class="lp-sim__right">
-
-                  <div class="lp-sim__panel" id="simRegs">
-                    <div class="lp-sim__panel-label">REGISTERS</div>
-                    <table class="lp-sim__reg-table">
-                      <tbody>
-                        <tr><td class="sim-rn">x0</td><td class="sim-rv">0x00000000</td></tr>
-                        <tr id="simR1"><td class="sim-rn">x1</td><td class="sim-rv">0x00000005</td></tr>
-                        <tr id="simR2"><td class="sim-rn">x2</td><td class="sim-rv">0x00000001</td></tr>
-                        <tr><td class="sim-rn">x3</td><td class="sim-rv">0x00000000</td></tr>
-                        <tr><td class="sim-rn">x4</td><td class="sim-rv">0x00000000</td></tr>
-                        <tr><td class="sim-rn">ra</td><td class="sim-rv">0x00000000</td></tr>
-                        <tr><td class="sim-rn">sp</td><td class="sim-rv">0x7FFFFFF8</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div class="lp-sim__panel" id="simMem">
-                    <div class="lp-sim__panel-label">MEMORY</div>
-                    <table class="lp-sim__mem-table">
-                      <tbody>
-                        <tr><td class="sim-ma">0x7FFFFFF8</td><td class="sim-mv">0x00000005</td></tr>
-                        <tr id="simMemActive"><td class="sim-ma">0x7FFFFFFC</td><td class="sim-mv">0x00000001</td></tr>
-                        <tr><td class="sim-ma">0x80000000</td><td class="sim-mv">0x00000000</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div class="lp-sim__panel lp-sim__panel--last" id="simStackPanel">
-                    <div class="lp-sim__panel-label">STACK</div>
-                    <div class="lp-sim__stack" id="simStack">
-                      <div class="lp-sim__frame">saved ra</div>
-                      <div class="lp-sim__frame lp-sim__frame--hi">loop var x1</div>
-                      <div class="lp-sim__frame lp-sim__frame--sp">← sp</div>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-          </div>
-
+        <!-- Aurora atmosphere — bounded by hero overflow: hidden -->
+        <div class="lp-aurora" aria-hidden="true">
+          <!-- Noise grain -->
+          <svg class="lp-aurora__noise" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+            <filter id="aurora-grain" x="0%" y="0%" width="100%" height="100%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" stitchTiles="stitch" result="n"/>
+              <feColorMatrix type="saturate" values="0" in="n" result="g"/>
+              <feBlend in="SourceGraphic" in2="g" mode="overlay"/>
+            </filter>
+            <rect width="100%" height="100%" filter="url(#aurora-grain)" opacity="0.04"/>
+          </svg>
+          <!-- Emerald aurora (top-left) -->
+          <div class="lp-aurora__orb lp-aurora__orb--emerald"></div>
+          <!-- Amber aurora (top-right edges) -->
+          <div class="lp-aurora__orb lp-aurora__orb--amber"></div>
+          <!-- Violet depth (mid-canvas) -->
+          <div class="lp-aurora__orb lp-aurora__orb--violet"></div>
+          <!-- Vignette -->
+          <div class="lp-aurora__vignette"></div>
         </div>
+
+        <!-- Hero content: centered, above aurora -->
+        <div class="lp-hero__inner">
+          <p class="lp-eyebrow lp-in lp-in--0">RISC-V LEARNING PLATFORM</p>
+          <h1 class="lp-hero__h1 lp-in lp-in--1">Learn RISC-V.<br>Write real assembly.</h1>
+          <p class="lp-hero__sub lp-in lp-in--2">
+            A browser-based RV32IM simulator with LeetCode-style problems,
+            step-through debugging, and AI-assisted feedback.
+          </p>
+          <div class="lp-cta-row lp-in lp-in--3">
+            <a class="lp-btn lp-btn--primary" href="/learn/">Start Learning →</a>
+            <a class="lp-btn lp-btn--ghost" href="https://github.com/rawcache/riscvsim" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+          </div>
+          <div class="lp-hero__stats lp-in lp-in--4">
+            <span class="lp-hero__stat">RV32IM Complete</span>
+            <span class="lp-hero__stat-sep" aria-hidden="true">·</span>
+            <span class="lp-hero__stat">40+ Problems</span>
+            <span class="lp-hero__stat-sep" aria-hidden="true">·</span>
+            <span class="lp-hero__stat">Open Source</span>
+          </div>
+        </div>
+
+        <!-- Hard separator — aurora stops here -->
+        <div class="lp-hero__separator" aria-hidden="true"></div>
       </section>
 
-      <!-- ════════════════════════════════════════════════════
-           PRODUCT MODULES
-           "Every tool you need to master RISC-V."
-      ════════════════════════════════════════════════════ -->
-      <section class="lp-modules" data-landing-section id="lpModules">
+      <!-- ════════════════════════════════════════════════════════
+           SECTION 2 — INTERACTIVE SIMULATOR PREVIEW
+      ════════════════════════════════════════════════════════ -->
+      <section class="lp-sim-preview" data-landing-section id="lpSimPreview">
         <div class="lp-w">
-          <div class="lp-modules__intro">
-            <span class="lp-tag">Platform</span>
-            <h2 class="lp-modules__h2">Every tool you need<br>to master RISC-V.</h2>
-            <p class="lp-modules__lead">From first instruction to full understanding — one integrated platform.</p>
+          <div class="lp-sim-preview__header">
+            <span class="lp-eyebrow-mono">SEE IT RUNNING</span>
           </div>
 
-          <div class="lp-modules__grid">
+          <div class="lp-sim-preview__grid">
 
-            <!-- Simulator -->
-            <a href="/simulator/" class="lp-mc lp-mc--sim" aria-label="Open Simulator">
-              <div class="lp-mc__header">
-                <span class="lp-mc__icon" aria-hidden="true">⌨</span>
-                <span class="lp-mc__title">Simulator</span>
-                <span class="lp-mc__arrow" aria-hidden="true">→</span>
-              </div>
-              <div class="lp-mc__vis" aria-hidden="true">
-                <div class="lp-mc-win">
-                  <div class="lp-mc-win__bar">
-                    <span class="lp-mc-dot lp-mc-dot--r"></span><span class="lp-mc-dot lp-mc-dot--y"></span><span class="lp-mc-dot lp-mc-dot--g"></span>
-                    <span class="lp-mc-win__name">factorial.s</span>
-                    <span class="lp-mc-badge-sm">STEP</span>
+            <!-- Left 55%: animated simulator -->
+            <div class="lp-sim-preview__left" id="lpMockupHero">
+              <div class="lp-sim" id="lpSim">
+
+                <!-- macOS-style chrome bar -->
+                <div class="lp-sim__chrome">
+                  <span class="lp-dot lp-dot--r" aria-hidden="true"></span>
+                  <span class="lp-dot lp-dot--y" aria-hidden="true"></span>
+                  <span class="lp-dot lp-dot--g" aria-hidden="true"></span>
+                  <span class="lp-sim__chrome-title">factorial.s — StudyRISC-V</span>
+                  <div class="lp-sim__chrome-right">
+                    <span class="lp-sim__badge">STEP</span>
                   </div>
-                  <div class="lp-mc-line lp-mc-line--active">
-                    <span>0x1c</span>
-                    <span>mul x2, x2, x1</span>
-                    <span class="lp-mc-exec-arrow">▶</span>
+                </div>
+
+                <!-- Status bar: PC + Cycle -->
+                <div class="lp-sim__status">
+                  <span class="lp-sim__stat">
+                    <span class="lp-sim__stat-label">PC</span>
+                    <span class="lp-sim__stat-val" id="simPc">0x0000001c</span>
+                  </span>
+                  <span class="lp-sim__stat-sep" aria-hidden="true"></span>
+                  <span class="lp-sim__stat">
+                    <span class="lp-sim__stat-label">Cycle</span>
+                    <span class="lp-sim__stat-val" id="simCycle">4</span>
+                  </span>
+                  <span class="lp-sim__stat-sep" aria-hidden="true"></span>
+                  <span class="lp-sim__stat">
+                    <span class="lp-sim__stat-label">Mode</span>
+                    <span class="lp-sim__stat-val">STEP</span>
+                  </span>
+                </div>
+
+                <!-- Body: editor + right panels -->
+                <div class="lp-sim__body">
+
+                  <!-- Editor -->
+                  <div class="lp-sim__editor" id="simEditor">
+                    <div class="lp-sim__panel-label">ASSEMBLY</div>
+                    <div class="lp-sim__code" id="simCode">
+                      <div class="lp-sim__line" data-pc="0x10">
+                        <span class="sim-gutter">1</span>
+                        <span class="sim-addr">0x10</span>
+                        <span class="sim-asm"><span class="sim-mne">addi</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x0</span>, <span class="sim-num">5</span></span>
+                      </div>
+                      <div class="lp-sim__line" data-pc="0x14">
+                        <span class="sim-gutter">2</span>
+                        <span class="sim-addr">0x14</span>
+                        <span class="sim-asm"><span class="sim-mne">addi</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x0</span>, <span class="sim-num">1</span></span>
+                      </div>
+                      <div class="lp-sim__line lp-sim__line--label">
+                        <span class="sim-gutter"></span>
+                        <span class="sim-addr"></span>
+                        <span class="sim-asm sim-label">loop:</span>
+                      </div>
+                      <div class="lp-sim__line lp-sim__line--active" data-pc="0x1c" id="simActiveLine">
+                        <span class="sim-gutter">4</span>
+                        <span class="sim-addr">0x1c</span>
+                        <span class="sim-asm"><span class="sim-mne">mul</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x2</span>, <span class="sim-reg">x1</span></span>
+                        <span class="sim-exec-arrow" aria-hidden="true">▶</span>
+                      </div>
+                      <div class="lp-sim__line" data-pc="0x20">
+                        <span class="sim-gutter">5</span>
+                        <span class="sim-addr">0x20</span>
+                        <span class="sim-asm"><span class="sim-mne">addi</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x1</span>, <span class="sim-num">-1</span></span>
+                      </div>
+                      <div class="lp-sim__line" data-pc="0x24">
+                        <span class="sim-gutter">6</span>
+                        <span class="sim-addr">0x24</span>
+                        <span class="sim-asm"><span class="sim-mne">bne</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x0</span>, loop</span>
+                      </div>
+                      <div class="lp-sim__line lp-sim__line--label">
+                        <span class="sim-gutter"></span>
+                        <span class="sim-addr"></span>
+                        <span class="sim-asm sim-label">done:</span>
+                      </div>
+                    </div>
+                    <!-- Pseudo-C strip -->
+                    <div class="lp-sim__pseudoc">
+                      <span class="lp-sim__pseudoc-comment">// effect</span>
+                      <span class="lp-sim__pseudoc-code" id="simPseudocCode">x2 = x2 × x1</span>
+                    </div>
                   </div>
-                  <div class="lp-mc-line">
-                    <span>0x20</span>
-                    <span>addi x1, x1, -1</span>
-                  </div>
-                  <div class="lp-mc-line">
-                    <span>0x24</span>
-                    <span>bne x1, x0, loop</span>
+
+                  <!-- Right: registers + memory + stack -->
+                  <div class="lp-sim__right">
+
+                    <div class="lp-sim__panel" id="simRegs">
+                      <div class="lp-sim__panel-label">REGISTERS</div>
+                      <table class="lp-sim__reg-table">
+                        <tbody>
+                          <tr><td class="sim-rn">x0</td><td class="sim-rv">0x00000000</td></tr>
+                          <tr id="simR1"><td class="sim-rn">x1</td><td class="sim-rv">0x00000005</td></tr>
+                          <tr id="simR2"><td class="sim-rn">x2</td><td class="sim-rv">0x00000001</td></tr>
+                          <tr><td class="sim-rn">x3</td><td class="sim-rv">0x00000000</td></tr>
+                          <tr><td class="sim-rn">x4</td><td class="sim-rv">0x00000000</td></tr>
+                          <tr><td class="sim-rn">ra</td><td class="sim-rv">0x00000000</td></tr>
+                          <tr><td class="sim-rn">sp</td><td class="sim-rv">0x7FFFFFF8</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div class="lp-sim__panel" id="simMem">
+                      <div class="lp-sim__panel-label">MEMORY</div>
+                      <table class="lp-sim__mem-table">
+                        <tbody>
+                          <tr><td class="sim-ma">0x7FFFFFF8</td><td class="sim-mv">0x00000005</td></tr>
+                          <tr id="simMemActive"><td class="sim-ma">0x7FFFFFFC</td><td class="sim-mv">0x00000001</td></tr>
+                          <tr><td class="sim-ma">0x80000000</td><td class="sim-mv">0x00000000</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div class="lp-sim__panel lp-sim__panel--last" id="simStackPanel">
+                      <div class="lp-sim__panel-label">STACK</div>
+                      <div class="lp-sim__stack" id="simStack">
+                        <div class="lp-sim__frame">saved ra</div>
+                        <div class="lp-sim__frame lp-sim__frame--hi">loop var x1</div>
+                        <div class="lp-sim__frame lp-sim__frame--sp">← sp</div>
+                      </div>
+                    </div>
+
                   </div>
                 </div>
               </div>
-              <p class="lp-mc__desc">Write assembly, step through execution, and inspect every register and memory cell in real time.</p>
-            </a>
+            </div>
 
-            <!-- Learn -->
-            <a href="/learn/" class="lp-mc lp-mc--learn" aria-label="Open Learn">
-              <div class="lp-mc__header">
-                <span class="lp-mc__icon" aria-hidden="true">◎</span>
-                <span class="lp-mc__title">Learn</span>
-                <span class="lp-mc__arrow" aria-hidden="true">→</span>
-              </div>
-              <div class="lp-mc__vis" aria-hidden="true">
-                <div class="lp-mc-steps">
-                  <div class="lp-mc-step lp-mc-step--done">✓ Registers &amp; immediates</div>
-                  <div class="lp-mc-step lp-mc-step--active">▶ Branches &amp; loops</div>
-                  <div class="lp-mc-step">· Function calls</div>
-                  <div class="lp-mc-step">· Memory &amp; stack</div>
-                </div>
-              </div>
-              <p class="lp-mc__desc">Structured lessons that build your mental model of RISC-V from the ground up.</p>
-            </a>
-
-            <!-- Problems -->
-            <a href="/problems/" class="lp-mc lp-mc--problems" aria-label="Open Problems">
-              <div class="lp-mc__header">
-                <span class="lp-mc__icon" aria-hidden="true">◻</span>
-                <span class="lp-mc__title">Problems</span>
-                <span class="lp-mc__arrow" aria-hidden="true">→</span>
-              </div>
-              <div class="lp-mc__vis" aria-hidden="true">
-                <div class="lp-mc-tests">
-                  <div class="lp-mc-test lp-mc-test--pass">
-                    <span class="lp-mc-test__icon">✓</span>
-                    <span>fibonacci(8) = 21</span>
-                  </div>
-                  <div class="lp-mc-test lp-mc-test--pass">
-                    <span class="lp-mc-test__icon">✓</span>
-                    <span>stack restored</span>
-                  </div>
-                  <div class="lp-mc-test">
-                    <span class="lp-mc-test__icon">✗</span>
-                    <span>a0 = return value</span>
-                  </div>
-                </div>
-              </div>
-              <p class="lp-mc__desc">Curated coding challenges with automated test cases. Fix bugs, implement functions, pass the suite.</p>
-            </a>
-
-            <!-- Labs -->
-            <a href="/labs/" class="lp-mc lp-mc--labs" aria-label="Open Labs">
-              <div class="lp-mc__header">
-                <span class="lp-mc__icon" aria-hidden="true">⬡</span>
-                <span class="lp-mc__title">Labs</span>
-                <span class="lp-mc__arrow" aria-hidden="true">→</span>
-              </div>
-              <div class="lp-mc__vis" aria-hidden="true">
-                <div class="lp-mc-pipe">
-                  <div class="lp-mc-stage">IF</div>
-                  <span class="lp-mc-pipe-arrow">→</span>
-                  <div class="lp-mc-stage">ID</div>
-                  <span class="lp-mc-pipe-arrow">→</span>
-                  <div class="lp-mc-stage lp-mc-stage--active">EX</div>
-                  <span class="lp-mc-pipe-arrow">→</span>
-                  <div class="lp-mc-stage">MEM</div>
-                  <span class="lp-mc-pipe-arrow">→</span>
-                  <div class="lp-mc-stage">WB</div>
-                </div>
-              </div>
-              <p class="lp-mc__desc">Hands-on pipeline and architecture labs. Trace hazards, forwarding, and control flow at the hardware level.</p>
-            </a>
-
-            <!-- Quizzes -->
-            <a href="/quiz/" class="lp-mc lp-mc--quizzes" aria-label="Open Quizzes">
-              <div class="lp-mc__header">
-                <span class="lp-mc__icon" aria-hidden="true">◇</span>
-                <span class="lp-mc__title">Quizzes</span>
-                <span class="lp-mc__arrow" aria-hidden="true">→</span>
-              </div>
-              <div class="lp-mc__vis" aria-hidden="true">
-                <div class="lp-mc-quiz">
-                  <div class="lp-mc-quiz__q">What does <code>jalr x0, ra, 0</code> do?</div>
-                  <div class="lp-mc-quiz__opts">
-                    <div class="lp-mc-quiz__opt lp-mc-quiz__opt--correct">Returns from a function</div>
-                    <div class="lp-mc-quiz__opt">Jumps to address in ra</div>
-                    <div class="lp-mc-quiz__opt">Clears x0</div>
-                  </div>
-                </div>
-              </div>
-              <p class="lp-mc__desc">Test your knowledge with instant-feedback quizzes covering ISA, calling conventions, and architecture concepts.</p>
-            </a>
-
-            <!-- Checkpoints -->
-            <a href="/checkpoints/" class="lp-mc lp-mc--checkpoints" aria-label="Open Checkpoints">
-              <div class="lp-mc__header">
-                <span class="lp-mc__icon" aria-hidden="true">◆</span>
-                <span class="lp-mc__title">Checkpoints</span>
-                <span class="lp-mc__arrow" aria-hidden="true">→</span>
-              </div>
-              <div class="lp-mc__vis" aria-hidden="true">
-                <div class="lp-mc-progress">
-                  <div class="lp-mc-prog-row">
-                    <span>Basics</span>
-                    <div class="lp-mc-bar"><div class="lp-mc-bar__fill" style="width:67%"></div></div>
-                    <span>4/6</span>
-                  </div>
-                  <div class="lp-mc-prog-row">
-                    <span>Patterns</span>
-                    <div class="lp-mc-bar"><div class="lp-mc-bar__fill" style="width:25%"></div></div>
-                    <span>2/8</span>
-                  </div>
-                  <div class="lp-mc-prog-row">
-                    <span>Pipeline</span>
-                    <div class="lp-mc-bar"><div class="lp-mc-bar__fill" style="width:0%"></div></div>
-                    <span>0/5</span>
-                  </div>
-                </div>
-              </div>
-              <p class="lp-mc__desc">Track your learning journey with milestone-based checkpoints across all topics and difficulty levels.</p>
-            </a>
-
+            <!-- Right 45%: description + features -->
+            <div class="lp-sim-preview__right">
+              <p class="lp-sim-preview__blurb">
+                Write RISC-V assembly in your browser. Step through every instruction,
+                watch registers update, and trace memory exactly as the hardware would.
+              </p>
+              <ul class="lp-sim-preview__features">
+                <li class="lp-sim-preview__feature">
+                  <span class="lp-sim-preview__feature-icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="#10b981" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </span>
+                  Step through any instruction one cycle at a time
+                </li>
+                <li class="lp-sim-preview__feature">
+                  <span class="lp-sim-preview__feature-icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="#10b981" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </span>
+                  Diff-highlighted register writes after every clock
+                </li>
+                <li class="lp-sim-preview__feature">
+                  <span class="lp-sim-preview__feature-icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 5h10M3 8h7M3 11h5" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </span>
+                  Inline pseudo-C translation per instruction
+                </li>
+                <li class="lp-sim-preview__feature">
+                  <span class="lp-sim-preview__feature-icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="6" width="3" height="8" rx="1" stroke="#10b981" stroke-width="1.5"/><rect x="6.5" y="3" width="3" height="11" rx="1" stroke="#10b981" stroke-width="1.5"/><rect x="11" y="8" width="3" height="6" rx="1" stroke="#10b981" stroke-width="1.5"/></svg>
+                  </span>
+                  Full 32-register file and live stack frames visible
+                </li>
+              </ul>
+              <a class="lp-btn lp-btn--primary lp-sim-preview__cta" href="/simulator/" aria-label="Open RISC-V simulator">Open Simulator →</a>
+            </div>
           </div>
+
+          <p class="lp-sim-preview__foot">No install. No config. Runs in your browser.</p>
         </div>
       </section>
 
-      <!-- ════════════════════════════════════════════════════
-           ARCHITECTURE GRID
-           "See the architecture, not just the code."
-      ════════════════════════════════════════════════════ -->
-      <section class="lp-grid-section" data-landing-section id="lpGrid">
+      <!-- ════════════════════════════════════════════════════════
+           SECTION 3 — FEATURE CARDS
+      ════════════════════════════════════════════════════════ -->
+      <section class="lp-features" data-landing-section id="lpFeatures">
         <div class="lp-w">
-          <div class="lp-grid-section__intro">
-            <span class="lp-tag">Architecture</span>
-            <h2 class="lp-grid-section__h2">See the architecture,<br>not just the code.</h2>
-            <p class="lp-grid-section__lead">Follow each instruction through the parts of the machine it touches.</p>
+          <div class="lp-features__intro">
+            <span class="lp-eyebrow-mono">PLATFORM</span>
+            <h2 class="lp-features__h2">Everything you need to master RISC-V.</h2>
+            <p class="lp-features__lead">From first instruction to full understanding — one integrated platform.</p>
           </div>
 
-          <div class="lp-arch-grid">
+          <div class="lp-features__grid">
 
-            <!-- Card 1: Pipeline -->
-            <div class="lp-arch-card lp-arch-card--pipeline">
-              <div class="lp-arch-card__visual" aria-hidden="true">
-                <div class="lp-pipeline">
-                  <div class="lp-pipe-stage lp-pipe-stage--if">
-                    <span class="lp-pipe-name">IF</span>
-                    <span class="lp-pipe-label">Fetch</span>
-                  </div>
-                  <div class="lp-pipe-arrow">→</div>
-                  <div class="lp-pipe-stage lp-pipe-stage--id">
-                    <span class="lp-pipe-name">ID</span>
-                    <span class="lp-pipe-label">Decode</span>
-                  </div>
-                  <div class="lp-pipe-arrow">→</div>
-                  <div class="lp-pipe-stage lp-pipe-stage--ex">
-                    <span class="lp-pipe-name">EX</span>
-                    <span class="lp-pipe-label">Execute</span>
-                  </div>
-                  <div class="lp-pipe-arrow">→</div>
-                  <div class="lp-pipe-stage lp-pipe-stage--mem">
-                    <span class="lp-pipe-name">MEM</span>
-                    <span class="lp-pipe-label">Memory</span>
-                  </div>
-                  <div class="lp-pipe-arrow">→</div>
-                  <div class="lp-pipe-stage lp-pipe-stage--wb">
-                    <span class="lp-pipe-name">WB</span>
-                    <span class="lp-pipe-label">Write</span>
-                  </div>
-                  <div class="lp-pipe-pulse-dot" id="gridPipePulse"></div>
-                </div>
+            <div class="lp-fc">
+              <div class="lp-fc__icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2.5" stroke="#f59e0b" stroke-width="1.5"/><rect x="6" y="6" width="8" height="8" rx="1.5" stroke="#f59e0b" stroke-width="1.2"/><line x1="3" y1="8" x2="1" y2="8" stroke="#f59e0b" stroke-width="1.2" stroke-linecap="round"/><line x1="3" y1="12" x2="1" y2="12" stroke="#f59e0b" stroke-width="1.2" stroke-linecap="round"/><line x1="17" y1="8" x2="19" y2="8" stroke="#f59e0b" stroke-width="1.2" stroke-linecap="round"/><line x1="17" y1="12" x2="19" y2="12" stroke="#f59e0b" stroke-width="1.2" stroke-linecap="round"/></svg>
               </div>
-              <div class="lp-arch-card__body">
-                <span class="lp-arch-card__tag lp-tag--blue">Pipeline</span>
-                <h3 class="lp-arch-card__h3">Watch execution move<br>from fetch to writeback.</h3>
-                <p class="lp-arch-card__p">Every instruction flows through five stages. See exactly where in the machine your code is at each cycle.</p>
-              </div>
+              <h3 class="lp-fc__title">RV32IM Simulator</h3>
+              <p class="lp-fc__body">Full integer + multiply/divide ISA in-browser. No install, no toolchain — assembly runs at the speed of WebAssembly.</p>
             </div>
 
-            <!-- Card 2: Register file -->
-            <div class="lp-arch-card lp-arch-card--regs">
-              <div class="lp-arch-card__visual" aria-hidden="true">
-                <div class="lp-regmatrix" id="gridRegMatrix">
-                  <div class="lp-regmatrix__grid">
-                    <span class="rm-cell">x0</span><span class="rm-cell">x1</span><span class="rm-cell rm-cell--hi" id="rmCell2">x2</span><span class="rm-cell">x3</span>
-                    <span class="rm-cell">x4</span><span class="rm-cell">x5</span><span class="rm-cell">x6</span><span class="rm-cell">x7</span>
-                    <span class="rm-cell">x8</span><span class="rm-cell">x9</span><span class="rm-cell">x10</span><span class="rm-cell">x11</span>
-                    <span class="rm-cell">x12</span><span class="rm-cell">x13</span><span class="rm-cell">x14</span><span class="rm-cell">x15</span>
-                    <span class="rm-cell">ra</span><span class="rm-cell">sp</span><span class="rm-cell">gp</span><span class="rm-cell">tp</span>
-                    <span class="rm-cell">t0</span><span class="rm-cell">t1</span><span class="rm-cell">t2</span><span class="rm-cell">s0</span>
-                    <span class="rm-cell">a0</span><span class="rm-cell">a1</span><span class="rm-cell">a2</span><span class="rm-cell">a3</span>
-                    <span class="rm-cell">a4</span><span class="rm-cell">a5</span><span class="rm-cell">a6</span><span class="rm-cell">a7</span>
-                  </div>
-                  <div class="lp-regmatrix__val">x2 = <span id="rmCellVal">0x00000001</span></div>
-                </div>
+            <div class="lp-fc">
+              <div class="lp-fc__icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#10b981" stroke-width="1.5"/><path d="M10 6v4l2.5 2.5" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/></svg>
               </div>
-              <div class="lp-arch-card__body">
-                <span class="lp-arch-card__tag lp-tag--green">Registers</span>
-                <h3 class="lp-arch-card__h3">See exactly which register<br>changed and why.</h3>
-                <p class="lp-arch-card__p">The full 32-register file lights up on every writeback. Nothing is hidden or abstracted.</p>
-              </div>
+              <h3 class="lp-fc__title">Step Debugger</h3>
+              <p class="lp-fc__body">Clock cycle by cycle with register diff highlighting. Watch x2 change from 0x01 to 0x05 the moment the write-back fires.</p>
             </div>
 
-            <!-- Card 3: Memory + stack -->
-            <div class="lp-arch-card lp-arch-card--mem">
-              <div class="lp-arch-card__visual" aria-hidden="true">
-                <div class="lp-memvis">
-                  <div class="lp-memvis__row lp-memvis__row--hi">
-                    <span class="lp-memvis__addr">0x7FFFFFFC</span>
-                    <span class="lp-memvis__val" id="gridMemVal">0x00000001</span>
-                    <span class="lp-memvis__tag">← active</span>
-                  </div>
-                  <div class="lp-memvis__row">
-                    <span class="lp-memvis__addr">0x7FFFFFF8</span>
-                    <span class="lp-memvis__val">0x00000005</span>
-                    <span class="lp-memvis__tag">saved</span>
-                  </div>
-                  <div class="lp-memvis__row lp-memvis__row--sp">
-                    <span class="lp-memvis__addr">0x80000000</span>
-                    <span class="lp-memvis__val">—</span>
-                    <span class="lp-memvis__tag lp-memvis__tag--sp">sp ↑</span>
-                  </div>
-                  <div class="lp-memvis__stack-label">STACK</div>
-                  <div class="lp-memvis__frame-list" id="gridStackFrames">
-                    <div class="lp-memvis__frame lp-memvis__frame--hi">loop() · frame</div>
-                    <div class="lp-memvis__frame">saved ra = 0x148</div>
-                    <div class="lp-memvis__frame lp-memvis__frame--sp">← sp</div>
-                  </div>
-                </div>
+            <div class="lp-fc">
+              <div class="lp-fc__icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="12" rx="2" stroke="#f59e0b" stroke-width="1.5"/><path d="M6 9l2 2-2 2M10 13h4" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </div>
-              <div class="lp-arch-card__body">
-                <span class="lp-arch-card__tag lp-tag--cyan">Memory</span>
-                <h3 class="lp-arch-card__h3">Make stack frames and<br>memory writes visible.</h3>
-                <p class="lp-arch-card__p">Frame boundaries, saved registers, and the stack pointer are labeled and updated in real time.</p>
-              </div>
+              <h3 class="lp-fc__title">LeetCode-style Problems</h3>
+              <p class="lp-fc__body">Curated assembly challenges with a full test harness. Fix bugs, implement functions, and pass the test suite to unlock the next level.</p>
             </div>
 
-            <!-- Card 4: Browser-native -->
-            <div class="lp-arch-card lp-arch-card--practice">
-              <div class="lp-arch-card__visual" aria-hidden="true">
-                <div class="lp-testvis">
-                  <div class="lp-testvis__header">
-                    <span class="lp-testvis__file">factorial_test.s</span>
-                    <span class="lp-testvis__status lp-testvis__status--pass">3 passed</span>
-                  </div>
-                  <div class="lp-testvis__row lp-testvis__row--pass">
-                    <span class="lp-testvis__icon">✓</span>
-                    <span>x2 = 120 after 5!</span>
-                  </div>
-                  <div class="lp-testvis__row lp-testvis__row--pass">
-                    <span class="lp-testvis__icon">✓</span>
-                    <span>loop terminates correctly</span>
-                  </div>
-                  <div class="lp-testvis__row lp-testvis__row--pass">
-                    <span class="lp-testvis__icon">✓</span>
-                    <span>sp restored on return</span>
-                  </div>
-                  <div class="lp-testvis__row lp-testvis__row--pending" id="gridTestPending">
-                    <span class="lp-testvis__icon">·</span>
-                    <span>edge case: n = 0</span>
-                  </div>
-                </div>
+            <div class="lp-fc">
+              <div class="lp-fc__icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="4" y="2" width="12" height="16" rx="2" stroke="#10b981" stroke-width="1.5"/><path d="M7 7h6M7 10h6M7 13h3" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/><circle cx="14" cy="14" r="3.5" fill="#0a0a0a" stroke="#10b981" stroke-width="1.2"/><path d="M13 14l.8.8 1.5-1.5" stroke="#10b981" stroke-width="1.1" stroke-linecap="round"/></svg>
               </div>
-              <div class="lp-arch-card__body">
-                <span class="lp-arch-card__tag lp-tag--violet">Practice</span>
-                <h3 class="lp-arch-card__h3">Run practice problems without<br>installing a toolchain.</h3>
-                <p class="lp-arch-card__p">Structured problems with automated test cases run entirely in your browser via WebAssembly.</p>
+              <h3 class="lp-fc__title">AI Feedback</h3>
+              <p class="lp-fc__body">Inline hints without giving away the answer. The assistant surfaces the right concept at the right moment — no hand-holding.</p>
+            </div>
+
+            <div class="lp-fc">
+              <div class="lp-fc__icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="1" y="7" width="4" height="6" rx="1" stroke="#f59e0b" stroke-width="1.5"/><rect x="6" y="5" width="4" height="10" rx="1" stroke="#f59e0b" stroke-width="1.5"/><rect x="11" y="3" width="4" height="14" rx="1" stroke="#f59e0b" stroke-width="1.5"/><rect x="16" y="7" width="3" height="6" rx="1" stroke="#f59e0b" stroke-width="1.5"/><path d="M5 10h1M10 10h1M15 10h1" stroke="#f59e0b" stroke-width="1.2" stroke-linecap="round"/></svg>
               </div>
+              <h3 class="lp-fc__title">Pipeline Visualization</h3>
+              <p class="lp-fc__body">See fetch/decode/execute in real time. Trace hazards, forwarding paths, and stalls at the hardware level — not just the software abstraction.</p>
+            </div>
+
+            <div class="lp-fc">
+              <div class="lp-fc__icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2C5.58 2 2 5.58 2 10c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0018 10c0-4.42-3.58-8-8-8z" fill="#10b981"/></svg>
+              </div>
+              <h3 class="lp-fc__title">Open Source</h3>
+              <p class="lp-fc__body">Fork it, extend it, run it locally. The entire simulator — assembler, WASM runtime, and UI — is publicly available on GitHub under MIT.</p>
             </div>
 
           </div>
         </div>
       </section>
 
-      <!-- ════════════════════════════════════════════════════
-           SCROLL REVEAL — sticky mockup + feature blocks
-      ════════════════════════════════════════════════════ -->
-      <section class="lp-reveal" data-landing-section id="lpReveal">
-        <div class="lp-reveal__inner">
-
-          <!-- Sticky left: mockup changes per block -->
-          <div class="lp-reveal__sticky">
-            <div class="lp-reveal__mockup" id="lpRevealMockup">
-              <div class="lp-reveal__mockup-inner">
-
-                <!-- Registers panel -->
-                <div class="lp-rm lp-rm--regs" id="rmRegs">
-                  <div class="lp-rm__header">
-                    <span class="lp-rm__chip">REGISTER FILE</span>
-                    <span class="lp-rm__chip lp-rm__chip--dim">RV32IM</span>
-                  </div>
-                  <table class="lp-rm__table">
-                    <tbody id="rmRegBody">
-                      <tr><td class="rm-rn">x0</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
-                      <tr><td class="rm-rn">x1</td><td class="rm-rv">0x00000005</td><td class="rm-ra"></td></tr>
-                      <tr id="rmR2" class="rm-changed"><td class="rm-rn">x2</td><td class="rm-rv" id="rmR2Val">0x00000001</td><td class="rm-ra">← changed</td></tr>
-                      <tr><td class="rm-rn">x3</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
-                      <tr><td class="rm-rn">x4</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
-                      <tr><td class="rm-rn">ra</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
-                      <tr><td class="rm-rn">sp</td><td class="rm-rv">0x7FFFFFF8</td><td class="rm-ra"></td></tr>
-                      <tr><td class="rm-rn">a0</td><td class="rm-rv">0x00000000</td><td class="rm-ra"></td></tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- Instruction panel -->
-                <div class="lp-rm lp-rm--instr lp-rm--hidden" id="rmInstr">
-                  <div class="lp-rm__header">
-                    <span class="lp-rm__chip">INSTRUCTION</span>
-                    <span class="lp-rm__chip lp-rm__chip--dim">PC 0x001c</span>
-                  </div>
-                  <div class="lp-rm__instr-row" id="rmInstrCycle">
-                    <div class="lp-rm__asm"><span class="sim-mne">mul</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x2</span>, <span class="sim-reg">x1</span></div>
-                    <div class="lp-rm__arrow">↓</div>
-                    <div class="lp-rm__clike" id="rmClike">x2 = x2 * x1</div>
-                    <div class="lp-rm__note">Multiply two registers, write back to x2</div>
-                  </div>
-                  <div class="lp-rm__instr-grid">
-                    <div class="lp-rm__field"><span class="lp-rm__field-label">opcode</span><span class="lp-rm__field-val">MUL</span></div>
-                    <div class="lp-rm__field"><span class="lp-rm__field-label">rd</span><span class="lp-rm__field-val">x2</span></div>
-                    <div class="lp-rm__field"><span class="lp-rm__field-label">rs1</span><span class="lp-rm__field-val">x2</span></div>
-                    <div class="lp-rm__field"><span class="lp-rm__field-label">rs2</span><span class="lp-rm__field-val">x1</span></div>
-                  </div>
-                </div>
-
-                <!-- Stack panel -->
-                <div class="lp-rm lp-rm--stack lp-rm--hidden" id="rmStack">
-                  <div class="lp-rm__header">
-                    <span class="lp-rm__chip">CALL STACK</span>
-                    <span class="lp-rm__chip lp-rm__chip--dim">sp = 0x7FFFFFF0</span>
-                  </div>
-                  <div class="lp-rm__stack" id="rmStackFrames">
-                    <div class="lp-rm__frame rm-frame--hi">loop() · frame</div>
-                    <div class="lp-rm__frame">saved ra = 0x148</div>
-                    <div class="lp-rm__frame">saved s0 = 0x0</div>
-                    <div class="lp-rm__frame rm-frame--sp">← sp = 0x7FFFFFF0</div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          </div>
-
-          <!-- Scrolling feature blocks -->
-          <div class="lp-reveal__blocks">
-
-            <div class="lp-reveal__block" data-rm="regs">
-              <span class="lp-tag">01</span>
-              <h2 class="lp-reveal__h2">Registers update as you step.</h2>
-              <p class="lp-reveal__p">
-                Every instruction writes a result. The register file shows you exactly which register changed,
-                what it changed to, and how many cycles the operation took.
-                Nothing is hidden behind an abstraction layer.
-              </p>
-            </div>
-
-            <div class="lp-reveal__block" data-rm="instr">
-              <span class="lp-tag">02</span>
-              <h2 class="lp-reveal__h2">Every instruction has a visible effect.</h2>
-              <p class="lp-reveal__p">
-                Below every instruction, a pseudo-C translation describes the exact computation —
-                register operands, memory addressing, and control flow included.
-                The machine state is never hidden.
-              </p>
-            </div>
-
-            <div class="lp-reveal__block" data-rm="stack">
-              <span class="lp-tag">03</span>
-              <h2 class="lp-reveal__h2">The stack becomes visible.</h2>
-              <p class="lp-reveal__p">
-                Frame boundaries, saved registers, and the stack pointer are labeled
-                and updated in real time. Every push, pop, call, and return is explicit and traceable.
-              </p>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      <!-- ════════════════════════════════════════════════════
-           LEARNING PATH
-      ════════════════════════════════════════════════════ -->
+      <!-- ════════════════════════════════════════════════════════
+           SECTION 4 — LEARNING PATH
+      ════════════════════════════════════════════════════════ -->
       <section class="lp-path" data-landing-section id="lpPath">
         <div class="lp-w">
           <div class="lp-path__intro">
-            <span class="lp-tag">Curriculum</span>
-            <h2 class="lp-path__h2">Structured from zero<br>to systems-level.</h2>
-            <p class="lp-path__lead">20 lessons across four phases, each building on the last.</p>
+            <span class="lp-eyebrow-mono">CURRICULUM</span>
+            <h2 class="lp-path__h2">Structured from zero to systems-level.</h2>
+            <p class="lp-path__lead">Five stages of mastery, each building on the last.</p>
           </div>
 
-          <div class="lp-path__phases">
+          <div class="lp-path__timeline" role="list">
 
-            <div class="lp-path__phase">
-              <div class="lp-path__phase-header">
-                <span class="lp-path__phase-num">01</span>
-                <div class="lp-path__phase-meta">
-                  <span class="lp-path__phase-name">Foundation</span>
-                  <span class="lp-path__phase-count">Lessons 1–5</span>
-                </div>
-              </div>
-              <div class="lp-path__lessons">
-                <div class="lp-path__lesson lp-path__lesson--done">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Registers &amp; immediates</span>
-                </div>
-                <div class="lp-path__lesson lp-path__lesson--done">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Load &amp; store</span>
-                </div>
-                <div class="lp-path__lesson lp-path__lesson--active">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Branches &amp; loops</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Function calls &amp; stack</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Sorting algorithms</span>
-                </div>
+            <div class="lp-path__step" role="listitem">
+              <div class="lp-path__step-num" aria-hidden="true">01</div>
+              <div class="lp-path__step-body">
+                <h3 class="lp-path__step-title">Basics</h3>
+                <p class="lp-path__step-desc">Registers, load/store, arithmetic</p>
+                <span class="lp-path__step-badge">5 lessons</span>
               </div>
             </div>
 
             <div class="lp-path__connector" aria-hidden="true"></div>
 
-            <div class="lp-path__phase">
-              <div class="lp-path__phase-header">
-                <span class="lp-path__phase-num">02</span>
-                <div class="lp-path__phase-meta">
-                  <span class="lp-path__phase-name">Core Concepts</span>
-                  <span class="lp-path__phase-count">Lessons 6–10</span>
-                </div>
-              </div>
-              <div class="lp-path__lessons">
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Bitwise operations</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Shifts &amp; multiply</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Comparisons &amp; set</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Stack frames deep dive</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">M-extension: mul/div/rem</span>
-                </div>
+            <div class="lp-path__step" role="listitem">
+              <div class="lp-path__step-num" aria-hidden="true">02</div>
+              <div class="lp-path__step-body">
+                <h3 class="lp-path__step-title">Control Flow</h3>
+                <p class="lp-path__step-desc">Branches, jumps, call conventions</p>
+                <span class="lp-path__step-badge">5 lessons</span>
               </div>
             </div>
 
             <div class="lp-path__connector" aria-hidden="true"></div>
 
-            <div class="lp-path__phase">
-              <div class="lp-path__phase-header">
-                <span class="lp-path__phase-num">03</span>
-                <div class="lp-path__phase-meta">
-                  <span class="lp-path__phase-name">Intermediate</span>
-                  <span class="lp-path__phase-count">Lessons 11–15</span>
-                </div>
-              </div>
-              <div class="lp-path__lessons">
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Strings &amp; ASCII</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Recursion</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Pointers &amp; arrays</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">System calls (ecall)</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Capstone: linked list</span>
-                </div>
+            <div class="lp-path__step" role="listitem">
+              <div class="lp-path__step-num" aria-hidden="true">03</div>
+              <div class="lp-path__step-body">
+                <h3 class="lp-path__step-title">Memory</h3>
+                <p class="lp-path__step-desc">Stack discipline, arrays, structs</p>
+                <span class="lp-path__step-badge">5 lessons</span>
               </div>
             </div>
 
             <div class="lp-path__connector" aria-hidden="true"></div>
 
-            <div class="lp-path__phase">
-              <div class="lp-path__phase-header">
-                <span class="lp-path__phase-num">04</span>
-                <div class="lp-path__phase-meta">
-                  <span class="lp-path__phase-name">Advanced</span>
-                  <span class="lp-path__phase-count">Lessons 16–20</span>
-                </div>
+            <div class="lp-path__step" role="listitem">
+              <div class="lp-path__step-num" aria-hidden="true">04</div>
+              <div class="lp-path__step-body">
+                <h3 class="lp-path__step-title">Optimization</h3>
+                <p class="lp-path__step-desc">Instruction count, pipeline awareness</p>
+                <span class="lp-path__step-badge">3 lessons</span>
               </div>
-              <div class="lp-path__lessons">
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Pipeline hazards</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Cache &amp; memory hierarchy</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Interrupts &amp; exceptions</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Virtual memory</span>
-                </div>
-                <div class="lp-path__lesson">
-                  <span class="lp-path__lesson-dot"></span>
-                  <span class="lp-path__lesson-name">Mini-kernel capstone</span>
-                </div>
+            </div>
+
+            <div class="lp-path__connector" aria-hidden="true"></div>
+
+            <div class="lp-path__step" role="listitem">
+              <div class="lp-path__step-num" aria-hidden="true">05</div>
+              <div class="lp-path__step-body">
+                <h3 class="lp-path__step-title">Challenges</h3>
+                <p class="lp-path__step-desc">Timed problems, AI review, leaderboard</p>
+                <span class="lp-path__step-badge">40+ problems</span>
               </div>
             </div>
 
@@ -898,13 +427,13 @@
         </div>
       </section>
 
-      <!-- ════════════════════════════════════════════════════
+      <!-- ════════════════════════════════════════════════════════
            OPCODE EXPLORER
-      ════════════════════════════════════════════════════ -->
+      ════════════════════════════════════════════════════════ -->
       <section class="lp-opcodes" data-opcode-band data-landing-section id="lpOpcodes">
         <div class="lp-w">
           <div class="lp-opcodes__intro">
-            <span class="lp-tag">ISA</span>
+            <span class="lp-eyebrow-mono">ISA</span>
             <h2 class="lp-opcodes__h2">Explore the RV32IM instruction set.</h2>
             <p class="lp-opcodes__lead">Hover any opcode to see its encoding, effect, and a concrete example.</p>
           </div>
@@ -931,9 +460,9 @@
         </div>
       </section>
 
-      <!-- ════════════════════════════════════════════════════
+      <!-- ════════════════════════════════════════════════════════
            COURSE STRIP
-      ════════════════════════════════════════════════════ -->
+      ════════════════════════════════════════════════════════ -->
       <section class="lp-courses" data-landing-section aria-label="Courses using StudyRISC-V">
         <div class="lp-courses__wrap">
           <div class="lp-courses__track">
@@ -963,18 +492,14 @@
         </div>
       </section>
 
-      <!-- ════════════════════════════════════════════════════
-           BOTTOM CTA
-      ════════════════════════════════════════════════════ -->
-      <section class="lp-cta" data-landing-section id="lpCta">
-        <div class="lp-cta__glow" aria-hidden="true"></div>
-        <div class="lp-w lp-cta__inner">
-          <h2 class="lp-cta__h2">From assembly to execution state,<br>one step at a time.</h2>
-          <p class="lp-cta__sub">No install. No account required. Start stepping through instructions in your browser.</p>
-          <div class="lp-cta__btns">
-            <a class="lp-btn lp-btn--primary" href="/simulator/">Open Simulator</a>
-            <a class="lp-btn lp-btn--ghost" href="/learn/">Browse Lessons</a>
-          </div>
+      <!-- ════════════════════════════════════════════════════════
+           SECTION 5 — CTA BAND
+      ════════════════════════════════════════════════════════ -->
+      <section class="lp-cta-band" data-landing-section id="lpCtaBand">
+        <div class="lp-w lp-cta-band__inner">
+          <h2 class="lp-cta-band__h2">Ready to write real assembly?</h2>
+          <p class="lp-cta-band__sub">No install. No account required. Start stepping through instructions in your browser.</p>
+          <a class="lp-btn lp-btn--primary lp-cta-band__btn" href="/simulator/">Open the Simulator →</a>
         </div>
       </section>
 
@@ -990,13 +515,6 @@
       'use strict';
 
       const rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const isMobile = window.innerWidth <= 900;
-
-      /* ══════════════════════════════════════════════
-         THEME TOGGLE — reads/writes data-theme on <html>
-         toggleTheme() in nav.ts always sets data-theme="light"
-         or data-theme="dark" explicitly, so no observer needed.
-      ══════════════════════════════════════════════ */
 
       /* ══════════════════════════════════════════════
          SCROLL SYSTEM — one passive listener, RAF-batched
@@ -1033,47 +551,6 @@
       document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('loaded', 'hero-loaded');
       });
-
-      /* ══════════════════════════════════════════════
-         ATMOSPHERE GLYPHS
-      ══════════════════════════════════════════════ */
-      const GLYPH_POOL = [
-        'addi','x0','mul','0xFF','beq','lw','sw','PC','sp','ra',
-        'x1','0x1c','WB','EX','ID','IF','jal','ret','bne','0x7F',
-        'x2','blt','0b1010','0x00','add','xor','andi','lui','slli','lui',
-        'x10','0x148','MEM','0x7F','auipc','srli',
-      ];
-      const glyphCnt = isMobile ? 10 : 28;
-      const glyphContainer = document.getElementById('atmGlyphs');
-      if (glyphContainer && !rm) {
-        for (let i = 0; i < glyphCnt; i++) {
-          const el = document.createElement('span');
-          el.className = 'atm__glyph';
-          el.textContent = GLYPH_POOL[i % GLYPH_POOL.length];
-          el.style.cssText = [
-            `left:${(Math.random() * 96 + 2).toFixed(1)}%`,
-            `top:${(Math.random() * 260 + 20).toFixed(1)}%`,
-            `opacity:${(Math.random() * 0.09 + 0.03).toFixed(3)}`,
-            `font-size:${Math.floor(Math.random() * 3 + 9)}px`,
-            `animation-delay:${(Math.random() * 10).toFixed(1)}s`,
-            `animation-duration:${(Math.random() * 16 + 18).toFixed(1)}s`,
-          ].join(';');
-          glyphContainer.appendChild(el);
-        }
-      }
-
-      /* ══════════════════════════════════════════════
-         PIPELINE PULSE (atmosphere)
-      ══════════════════════════════════════════════ */
-      const pipePulse = document.getElementById('atmPipePulse');
-      if (pipePulse && !rm) {
-        let stage = 0;
-        const stages = 5;
-        setInterval(() => {
-          stage = (stage + 1) % stages;
-          pipePulse.style.transform = `translateX(${stage * 20}%)`;
-        }, 700);
-      }
 
       /* ══════════════════════════════════════════════
          SIMULATOR MOCKUP ANIMATION
@@ -1137,140 +614,6 @@
       }
 
       /* ══════════════════════════════════════════════
-         GRID SECTION ANIMATIONS
-      ══════════════════════════════════════════════ */
-      // Pipeline pulse in arch grid card
-      const gridPipe = document.getElementById('gridPipePulse');
-      if (gridPipe && !rm) {
-        let ps = 0;
-        setInterval(() => {
-          ps = (ps + 1) % 5;
-          gridPipe.style.setProperty('--pipe-stage', String(ps));
-        }, 900);
-      }
-
-      // Register matrix pulse
-      const rmCells = document.querySelectorAll('.rm-cell');
-      const rmCellVal = document.getElementById('rmCellVal');
-      const CELL_VALS = ['0x00000001','0x00000005','0x00000014','0x0000003C','0x00000078'];
-      let rmCellIdx = 2, cellValIdx = 0;
-      if (rmCells.length && !rm) {
-        setInterval(() => {
-          rmCells[rmCellIdx]?.classList.remove('rm-cell--hi');
-          const candidates = [1, 2, 4, 5, 16, 17];
-          rmCellIdx = candidates[Math.floor(Math.random() * candidates.length)];
-          rmCells[rmCellIdx]?.classList.add('rm-cell--hi');
-          cellValIdx = (cellValIdx + 1) % CELL_VALS.length;
-          if (rmCellVal) rmCellVal.textContent = CELL_VALS[cellValIdx];
-        }, 1700);
-      }
-
-      // Memory val pulse
-      const gridMemVal = document.getElementById('gridMemVal');
-      const MEM_VALS = ['0x00000001','0x00000005','0x00000014','0x0000003C','0x00000078'];
-      let memValIdx = 0;
-      if (gridMemVal && !rm) {
-        setInterval(() => {
-          memValIdx = (memValIdx + 1) % MEM_VALS.length;
-          gridMemVal.textContent = MEM_VALS[memValIdx];
-          gridMemVal.closest('.lp-memvis__row')?.classList.add('lp-memvis__row--flash');
-          setTimeout(() => gridMemVal.closest('.lp-memvis__row')?.classList.remove('lp-memvis__row--flash'), 600);
-        }, 2100);
-      }
-
-      // Test row pending → pass cycle
-      const testPending = document.getElementById('gridTestPending');
-      if (testPending && !rm) {
-        setTimeout(() => {
-          testPending.className = 'lp-testvis__row lp-testvis__row--pass';
-          const icon = testPending.querySelector('.lp-testvis__icon');
-          if (icon) icon.textContent = '✓';
-          const status = document.querySelector('.lp-testvis__status');
-          if (status) { status.textContent = '4 passed'; status.className = 'lp-testvis__status lp-testvis__status--pass'; }
-        }, 2800);
-      }
-
-      /* ══════════════════════════════════════════════
-         REVEAL MOCKUP — scrollytelling
-      ══════════════════════════════════════════════ */
-      const rmRegs  = document.getElementById('rmRegs');
-      const rmInstr = document.getElementById('rmInstr');
-      const rmStack = document.getElementById('rmStack');
-      const rmR2Val = document.getElementById('rmR2Val');
-      const rmClike = document.getElementById('rmClike');
-      const rmStackFrames = document.getElementById('rmStackFrames');
-
-      const RM_PANELS = { regs: rmRegs, instr: rmInstr, stack: rmStack };
-
-      function showRM(name) {
-        Object.entries(RM_PANELS).forEach(([k, el]) => {
-          if (!el) return;
-          el.classList.toggle('lp-rm--hidden', k !== name);
-        });
-      }
-
-      const revealBlocks = document.querySelectorAll('.lp-reveal__block');
-      if (revealBlocks.length) {
-        const bio = new IntersectionObserver(entries => {
-          entries.forEach(e => {
-            if (e.isIntersecting && e.target instanceof HTMLElement) {
-              showRM(e.target.dataset.rm || 'regs');
-            }
-          });
-        }, { threshold: 0.5 });
-        revealBlocks.forEach(b => bio.observe(b));
-      }
-
-      const REVEAL_VALS = [1, 5, 20, 60, 120];
-      let rvIdx = 0;
-      if (rmR2Val && !rm) {
-        setInterval(() => {
-          rvIdx = (rvIdx + 1) % REVEAL_VALS.length;
-          rmR2Val.textContent = hexStr(REVEAL_VALS[rvIdx]);
-          const row = document.getElementById('rmR2');
-          if (row) flashRow(row);
-        }, 1900);
-      }
-
-      const CLIKE_PAIRS = [
-        { asm:'<span class="sim-mne">mul</span> <span class="sim-reg">x2</span>, <span class="sim-reg">x2</span>, <span class="sim-reg">x1</span>', c:'x2 = x2 * x1' },
-        { asm:'<span class="sim-mne">addi</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x1</span>, <span class="sim-num">-1</span>', c:'x1 = x1 + (−1)' },
-        { asm:'<span class="sim-mne">bne</span> <span class="sim-reg">x1</span>, <span class="sim-reg">x0</span>, loop', c:'if x1 ≠ 0 → pc = loop' },
-        { asm:'<span class="sim-mne">lw</span> <span class="sim-reg">x3</span>, 0(<span class="sim-reg">x2</span>)', c:'x3 = mem[x2 + 0]' },
-      ];
-      let cpIdx = 0;
-      const rmAsmEl = document.querySelector('.lp-rm__asm');
-      if (rmClike && rmAsmEl && !rm) {
-        setInterval(() => {
-          cpIdx = (cpIdx + 1) % CLIKE_PAIRS.length;
-          const p = CLIKE_PAIRS[cpIdx];
-          rmAsmEl.innerHTML = p.asm;
-          rmClike.style.opacity = '0';
-          setTimeout(() => { rmClike.textContent = p.c; rmClike.style.opacity = ''; }, 300);
-        }, 2500);
-      }
-
-      if (rmStackFrames && !rm) {
-        const PUSH_LABELS = ['arg a0','local i','temp x5','result x2'];
-        let spIdx = 0, pushing = true;
-        setInterval(() => {
-          if (pushing) {
-            const fr = document.createElement('div');
-            fr.className = 'lp-rm__frame rm-frame--new';
-            fr.textContent = PUSH_LABELS[spIdx % PUSH_LABELS.length];
-            rmStackFrames.insertBefore(fr, rmStackFrames.firstChild);
-            requestAnimationFrame(() => fr.classList.remove('rm-frame--new'));
-            spIdx++;
-            if (spIdx >= 3) { spIdx = 0; pushing = false; }
-          } else {
-            const fr = rmStackFrames.querySelector('.lp-rm__frame:not(.rm-frame--sp):not(.rm-frame--hi)');
-            if (fr) { fr.classList.add('rm-frame--out'); setTimeout(() => fr.remove(), 360); }
-            pushing = rmStackFrames.querySelectorAll('.lp-rm__frame').length <= 2;
-          }
-        }, 2200);
-      }
-
-      /* ══════════════════════════════════════════════
          GLOBAL SECTION REVEAL
       ══════════════════════════════════════════════ */
       document.addEventListener('DOMContentLoaded', () => {
@@ -1281,7 +624,7 @@
               io.unobserve(e.target);
             }
           });
-        }, { threshold: 0.08 });
+        }, { threshold: 0.06 });
         document.querySelectorAll('[data-landing-section]').forEach(el => io.observe(el));
       });
 
