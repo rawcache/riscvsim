@@ -38,3 +38,7 @@ linear.app/
 mintlify/
 supabase/
 infra/
+
+# Rust build output (CLI + engine)
+sim-engine/target/
+cli/target/

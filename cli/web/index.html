@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RISC-V Pipeline Simulator — StudyRISC-V</title>
+<meta
+  name="description"
+  content="Watch RISC-V assembly run through a real 5-stage pipeline, cycle by cycle: forwarding paths, load-use stalls, and branch prediction, visualized in the browser."
+/>
+<meta property="og:title" content="RISC-V Pipeline Simulator — StudyRISC-V" />
+<meta property="og:description" content="Watch RISC-V assembly run through a real 5-stage pipeline: forwarding, stalls, and branch mispredictions, cycle by cycle." />
+<meta property="og:image" content="https://studyriscv.com/og-image.png" />
+<meta property="og:url" content="https://studyriscv.com/simulator/" />
+<meta name="twitter:card" content="summary_large_image" />
+<script>
+  (() => {
+    const { hash, origin, pathname, search } = window.location;
+    if (pathname === "/simulator") {
+      const target = new URL("/simulator/", origin);
+      target.search = search;
+      target.hash = hash;
+      window.location.replace(target.toString());
+    }
+  })();
+</script>
+<script>
+  (() => {
+    try {
+      const param = new URLSearchParams(window.location.search).get("theme");
+      const stored = window.localStorage.getItem("studyriscv-theme");
+      const prefer = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.dataset.theme =
+        (param === "light" || param === "dark" ? param : null) || stored || prefer;
+    } catch {
+      /* fall back to default theme */
+    }
+  })();
+</script>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<style>
+  :root {
+    --canvas: #ffffff;
+    --surface-soft: #f5f5f5;
+    --surface-dark: #171717;
+    --hairline: #e5e5e5;
+    --hairline-strong: #d4d4d4;
+    --ink: #000000;
+    --ink-deep: #090909;
+    --charcoal: #525252;
+    --body: #737373;
+    --mute: #767676;
+    --term-red: #ff5f56;
+    --term-yellow: #ffbd2e;
+    --term-green: #106b1f;
+    --selection-bg: rgba(99, 179, 237, 0.35);
+
+    /* accent used for forwarding arrows / active-line marks; #106b1f is
+       illegible on the dark canvas, so dark mode lightens it */
+    --accent-green: var(--term-green);
+
+    --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  html[data-theme="dark"] {
+    --canvas: rgb(17, 17, 17);
+    --surface-soft: #1d1d1d;
+    --surface-dark: #f0f0f0;
+    --hairline: #2c2c2c;
+    --hairline-strong: #3a3a3a;
+    --ink: #eeeeee;
+    --ink-deep: #ffffff;
+    --charcoal: #aaaaaa;
+    --body: #888888;
+    --mute: #8a8a8a;
+    --accent-green: #58c76b;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+  }
+
+  ::selection { background: var(--selection-bg); }
+
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ---------------- nav (landing.html vocabulary) ---------------- */
+
+  header {
+    background: var(--canvas);
+    z-index: 60;
+    border-bottom: 1px solid var(--hairline);
+    flex-shrink: 0;
+  }
+
+  header .container { padding: 0 24px; }
+
+  nav.primary {
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-shrink: 0;
+  }
+
+  .nav-links a {
+    text-decoration: none;
+    color: var(--ink);
+    font-weight: 500;
+    font-size: 18px;
+    text-underline-offset: 4px;
+  }
+
+  .nav-links a:hover,
+  .nav-links a:focus {
+    text-decoration: underline;
+  }
+
+  .nav-spacer { flex: 1; }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .signin-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 4px 12px;
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--ink);
+    font-size: 18px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.12s ease;
+  }
+
+  .signin-pill:hover { background: rgba(0, 0, 0, 0.1); }
+
+  .theme-toggle {
+    width: 38px;
+    height: 38px;
+    border-radius: 9999px;
+    border: 1px solid var(--hairline-strong);
+    background: var(--canvas);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .theme-toggle:hover { background: var(--surface-soft); }
+  .theme-toggle .icon-sun { display: none; }
+  html[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+  html[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+
+  html[data-theme="dark"] .signin-pill {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  html[data-theme="dark"] .signin-pill:hover { background: rgba(255, 255, 255, 0.12); }
+  html[data-theme="dark"] .theme-toggle:hover { background: rgba(255, 255, 255, 0.08); }
+
+  .remote-badge {
+    display: none;
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    border: 1px solid var(--accent-green);
+    color: var(--accent-green);
+  }
+
+  body.is-remote .remote-badge { display: inline-block; }
+
+  /* ---------------- buttons (landing pill language) ---------------- */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 36px;
+    padding: 4px 14px;
+    border-radius: 9999px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    transition: background 0.12s ease, color 0.12s ease, opacity 0.12s ease, transform 0.08s ease;
+  }
+
+  .btn:active:not(:disabled) { transform: scale(0.96); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+  .btn-primary { background: #262626; color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #000; }
+  html[data-theme="dark"] .btn-primary { background: #ffffff; color: rgb(17, 17, 17); }
+  html[data-theme="dark"] .btn-primary:hover:not(:disabled) { background: #f5f5f5; }
+
+  .btn-secondary { background: rgba(0, 0, 0, 0.05); color: var(--ink); }
+  .btn-secondary:hover:not(:disabled) { background: rgba(0, 0, 0, 0.1); }
+  html[data-theme="dark"] .btn-secondary { background: rgba(255, 255, 255, 0.08); }
+  html[data-theme="dark"] .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+
+  .btn-ghost-danger { background: transparent; color: var(--term-red); border-color: rgba(255, 95, 86, 0.5); }
+  .btn-ghost-danger:hover:not(:disabled) { background: rgba(255, 95, 86, 0.08); }
+
+  /* Landing nav's Learn button */
+  .nav-right .btn-primary { font-size: 18px; min-height: 36px; padding: 4px 12px; }
+
+  /* ---------------- layout ---------------- */
+
+  .sim-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 370px minmax(0, 1fr) 390px;
+    gap: 14px;
+    padding: 14px 16px 16px;
+    min-height: 0;
+  }
+
+  .sim-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .panel {
+    background: var(--canvas);
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 11px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--body);
+    border-bottom: 1px solid var(--hairline);
+    flex-shrink: 0;
+  }
+
+  .panel__body {
+    padding: 14px 16px;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  /* ---------------- program panel ---------------- */
+
+  .select-wrap { position: relative; flex: 1; min-width: 0; }
+
+  .select-wrap::after {
+    content: "";
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-right: 1.6px solid var(--body);
+    border-bottom: 1.6px solid var(--body);
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+  }
+
+  .sim-select {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 30px 8px 14px;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 0.12s ease;
+  }
+
+  .sim-select:hover { background: rgba(0, 0, 0, 0.1); }
+  html[data-theme="dark"] .sim-select { background: rgba(255, 255, 255, 0.08); }
+  html[data-theme="dark"] .sim-select:hover { background: rgba(255, 255, 255, 0.12); }
+
+  .sample-row { display: flex; gap: 8px; margin-bottom: 12px; }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .speed-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--body);
+  }
+
+  .speed-row input[type="range"] { flex: 1; accent-color: var(--charcoal); }
+
+  .speed-row .speed-value {
+    font-family: var(--mono);
+    min-width: 72px;
+    text-align: right;
+    color: var(--charcoal);
+  }
+
+  .editor-wrap {
+    position: relative;
+    display: flex;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--canvas);
+    flex: 1;
+    min-height: 220px;
+    transition: border-color 0.15s ease;
+  }
+
+  .editor-wrap:focus-within { border-color: var(--charcoal); }
+
+  .editor-lines {
+    padding: 10px 0;
+    width: 40px;
+    flex-shrink: 0;
+    text-align: right;
+    background: var(--surface-soft);
+    color: var(--mute);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 20px;
+    user-select: none;
+    overflow: hidden;
+  }
+
+  .editor-lines span { display: block; padding-right: 8px; }
+
+  .editor-lines span.is-active {
+    color: var(--accent-green);
+    font-weight: 700;
+  }
+
+  .editor-inner { position: relative; flex: 1; min-width: 0; }
+
+  .editor-highlight,
+  .editor-input {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 20px;
+    padding: 10px 12px;
+    margin: 0;
+    border: 0;
+    white-space: pre;
+    overflow-wrap: normal;
+    tab-size: 8;
+  }
+
+  .editor-highlight {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    color: var(--ink);
+  }
+
+  .editor-input {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--ink);
+    resize: none;
+    outline: none;
+    overflow: auto;
+  }
+
+  .editor-input::placeholder { color: var(--mute); font-family: var(--mono); }
+
+  /* syntax palette: project tokens only */
+  .tok-mn { color: var(--ink); font-weight: 700; }
+  .tok-reg { color: var(--charcoal); }
+  .tok-num { color: var(--body); }
+  .tok-lbl { color: var(--accent-green); font-weight: 600; }
+  .tok-dir { color: var(--mute); }
+  .tok-com { color: var(--mute); font-style: italic; }
+  .tok-str { color: var(--body); }
+
+  .status-line {
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--body);
+    min-height: 18px;
+    white-space: pre-wrap;
+  }
+
+  .status-line.is-ok { color: var(--accent-green); }
+  .status-line.is-err { color: var(--term-red); }
+
+  .shortcut-hint {
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--mute);
+  }
+
+  .shortcut-hint kbd {
+    font-family: var(--mono);
+    border: 1px solid var(--hairline-strong);
+    border-radius: 5px;
+    padding: 0 5px;
+    font-size: 10px;
+  }
+
+  /* ---------------- pipeline panel ---------------- */
+
+  .pc-pill {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--charcoal);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .pipeline-scroll { overflow-x: auto; padding: 6px 2px 2px; }
+
+  .pipeline-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(106px, 1fr));
+    gap: 24px;
+    min-width: 626px;
+    padding: 4px 2px 48px;
+  }
+
+  .stage {
+    position: relative;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 12px;
+    padding: 9px 11px;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: var(--canvas);
+    transition: border-color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+  }
+
+  .stage::after {
+    content: "→";
+    position: absolute;
+    right: -21px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--mute);
+    font-size: 14px;
+  }
+
+  .stage:last-child::after { content: none; }
+
+  .stage__name {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--mute);
+  }
+
+  .stage__name em {
+    font-style: normal;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--mute);
+  }
+
+  .stage__text {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink);
+    word-break: break-all;
+  }
+
+  .stage__meta {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--mute);
+    margin-top: auto;
+  }
+
+  .stage--empty { border-style: dashed; border-color: var(--hairline); }
+  .stage--empty .stage__text { color: var(--mute); }
+
+  /* a bubble: the pipeline pausing — quiet yellow, clearly not an error */
+  .stage--stall {
+    border-style: dashed;
+    border-color: var(--term-yellow);
+    background: rgba(255, 189, 46, 0.06);
+  }
+
+  .stage--stall .stage__text { color: var(--body); font-style: italic; }
+
+  /* a squashed instruction: crossed out, fading away */
+  .stage--flush { border-color: rgba(255, 95, 86, 0.55); opacity: 0.72; }
+  .stage--flush .stage__text { text-decoration: line-through; color: var(--body); }
+
+  .stage__tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 9999px;
+    width: fit-content;
+    cursor: default;
+  }
+
+  .stage__tag--flush { color: var(--term-red); border: 1px solid rgba(255, 95, 86, 0.55); }
+  .stage__tag--stall { color: #9a7413; border: 1px solid rgba(255, 189, 46, 0.7); }
+  html[data-theme="dark"] .stage__tag--stall { color: var(--term-yellow); }
+
+  .fwd-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .fwd-svg path { stroke: var(--accent-green); fill: none; stroke-width: 1.6; }
+  .fwd-svg text {
+    fill: var(--accent-green);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+  }
+  .fwd-svg polygon { fill: var(--accent-green); }
+
+  .hazard-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 2px 10px;
+    min-height: 26px;
+    align-items: center;
+  }
+
+  .hazard-chip {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    border: 1px solid var(--hairline-strong);
+    color: var(--body);
+    cursor: default;
+  }
+
+  .hazard-chip--fwd { color: var(--accent-green); border-color: var(--accent-green); }
+  .hazard-chip--stall { color: #9a7413; border-color: rgba(255, 189, 46, 0.7); border-style: dashed; }
+  html[data-theme="dark"] .hazard-chip--stall { color: var(--term-yellow); }
+  .hazard-chip--flush { color: var(--term-red); border-color: rgba(255, 95, 86, 0.55); }
+  .hazard-chip--pred { color: var(--charcoal); }
+  .hazard-chip--pred.is-hit { color: var(--accent-green); border-color: var(--accent-green); }
+  .hazard-chip--pred.is-miss { color: var(--term-red); border-color: rgba(255, 95, 86, 0.55); }
+
+  .pipeline-hint {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--mute);
+    padding: 0 2px 10px;
+  }
+
+  .stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 10px 2px 0;
+    border-top: 1px solid var(--hairline);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--body);
+  }
+
+  .stats-row b { color: var(--ink); font-weight: 600; }
+
+  .listing {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 22px;
+  }
+
+  .listing__row {
+    display: flex;
+    gap: 10px;
+    padding: 0 6px;
+    border-radius: 6px;
+    align-items: baseline;
+    transition: background 0.15s ease;
+  }
+
+  .listing__row.in-flight { background: var(--surface-soft); }
+
+  .listing__addr { color: var(--mute); flex-shrink: 0; }
+  .listing__text { flex: 1; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+
+  .listing__stagebadge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--accent-green);
+    flex-shrink: 0;
+    min-width: 32px;
+    text-align: right;
+  }
+
+  /* ---------------- dark inspector card (Reference 2) ---------------- */
+
+  .inspector-card {
+    background: #1e1e24;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    color: #f8f8f2;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .inspector-card ::selection { background: var(--selection-bg); color: #f8f8f2; }
+
+  .browser-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+  }
+
+  .browser-bar .dots { display: flex; gap: 8px; }
+
+  .browser-bar .dots span {
+    width: 11px;
+    height: 11px;
+    border-radius: 9999px;
+    display: block;
+  }
+
+  .browser-bar .dots .r { background: var(--term-red); }
+  .browser-bar .dots .y { background: var(--term-yellow); }
+  .browser-bar .dots .g { background: #27c93f; }
+
+  .url-pill {
+    flex: 1;
+    min-width: 0;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 9999px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.28);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .inspector-body {
+    padding: 14px 18px 12px;
+    overflow: auto;
+    min-height: 0;
+  }
+
+  .sim-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #f8f8f2;
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .inspector-divider {
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 12px -18px;
+  }
+
+  .regs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 18px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.9;
+  }
+
+  .reg {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 0 6px;
+    border-radius: 6px;
+    transition: background 0.5s ease;
+  }
+
+  .reg__name { color: #f8f8f2; min-width: 34px; }
+  .reg__x { color: rgba(255, 255, 255, 0.28); font-size: 10px; min-width: 24px; }
+  .reg__val { margin-left: auto; color: #9feda0; }
+
+  .reg.is-changed { background: rgba(159, 237, 160, 0.12); }
+  .reg.is-changed .reg__val { font-weight: 600; }
+
+  /* dark pill-toggles inside the inspector */
+  .toggle-group { display: flex; gap: 4px; }
+
+  .toggle-group button {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: background 0.12s ease, color 0.12s ease, transform 0.08s ease;
+  }
+
+  .toggle-group button:active { transform: scale(0.94); }
+
+  .toggle-group button.is-active {
+    background: #f8f8f2;
+    color: #1e1e24;
+    border-color: #f8f8f2;
+  }
+
+  .mem-controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; align-items: center; }
+
+  .mem-input {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: #f8f8f2;
+    width: 112px;
+    outline: none;
+  }
+
+  .mem-input:focus { border-color: rgba(255, 255, 255, 0.35); }
+
+  .mem-table {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.9;
+  }
+
+  .mem-table .row { display: flex; gap: 12px; padding: 0 4px; }
+  .mem-table .addr { color: rgba(255, 255, 255, 0.28); flex-shrink: 0; }
+  .mem-table .val { color: #9feda0; white-space: pre; }
+  .mem-table .empty-note { color: rgba(255, 255, 255, 0.28); }
+
+  .pc-strip {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 11px 18px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.35);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .pc-strip .arrow { color: #f8f8f2; }
+  .pc-strip .pc-value { color: #f8f8f2; }
+  .pc-strip .stage-note { margin-left: auto; }
+
+  /* ---------------- terminal log card (Reference 1) ---------------- */
+
+  .terminal-card {
+    background: #1e1e24;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 150px;
+    flex: 1;
+    overflow: hidden;
+    color: #f8f8f2;
+  }
+
+  .terminal-card ::selection { background: var(--selection-bg); color: #f8f8f2; }
+
+  .terminal-dots { display: flex; gap: 8px; padding: 14px 18px 4px; flex-shrink: 0; }
+
+  .terminal-dots span { width: 11px; height: 11px; border-radius: 9999px; display: block; }
+  .terminal-dots .r { background: var(--term-red); }
+  .terminal-dots .y { background: var(--term-yellow); }
+  .terminal-dots .g { background: #27c93f; }
+
+  .terminal-body {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: #f8f8f2;
+    padding: 8px 18px 16px;
+    margin: 0;
+    overflow: auto;
+    flex: 1;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .terminal-body .term-gray { color: rgba(255, 255, 255, 0.42); }
+  .terminal-body .term-blue { color: #9fcbED; }
+  .terminal-body .term-success { color: #9feda0; }
+  .terminal-body .term-red { color: #ff8a84; }
+  .terminal-body .term-bold { font-weight: 700; }
+
+  /* ---------------- responsive ---------------- */
+
+  @media (max-width: 1200px) {
+    .sim-main { grid-template-columns: 330px minmax(0, 1fr); }
+    .sim-col--state { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
+    .sim-col--state > .inspector-card,
+    .sim-col--state > .terminal-card { flex: 1 1 340px; max-height: 440px; }
+  }
+
+  @media (max-width: 1023px) {
+    body { overflow: auto; }
+    .sim-main { display: flex; flex-direction: column; }
+    .sim-col--center { order: 1; }
+    .sim-col--editor { order: 2; }
+    .sim-col--state { order: 3; flex-direction: column; }
+    .sim-col--state > .inspector-card,
+    .sim-col--state > .terminal-card { max-height: 440px; }
+    .panel { max-height: 70vh; }
+    .editor-wrap { min-height: 260px; }
+    .nav-links a { font-size: 16px; }
+    .signin-pill, .nav-right .btn-primary { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <nav class="primary" aria-label="Site">
+        <div class="nav-links">
+          <a href="https://studyriscv.com/">Home</a>
+          <a href="/docs/">Docs</a>
+          <a href="https://github.com/rawcache/riscvsim">GitHub</a>
+        </div>
+        <span class="nav-spacer"></span>
+        <div class="nav-right">
+          <span id="remoteBadge" class="remote-badge">local session</span>
+          <a class="signin-pill" href="/signin/">Sign in</a>
+          <a class="btn btn-primary" href="https://studyriscv.com/learn/">Learn</a>
+          <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
+            <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg class="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.9" y1="4.9" x2="7" y2="7"/><line x1="17" y1="17" x2="19.1" y2="19.1"/><line x1="4.9" y1="19.1" x2="7" y2="17"/><line x1="17" y1="7" x2="19.1" y2="4.9"/></svg>
+          </button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="sim-main">
+    <h1 class="sr-only">RISC-V 5-stage pipeline simulator with forwarding, hazard, and branch-prediction visualization</h1>
+
+    <!-- left: source + controls -->
+    <div class="sim-col sim-col--editor">
+      <section class="panel" style="flex:1" aria-label="Program editor and controls">
+        <div class="panel__header"><span>Program</span></div>
+        <div class="panel__body" style="display:flex;flex-direction:column;">
+          <div class="sample-row">
+            <div class="select-wrap">
+              <select id="sampleSelect" class="sim-select" aria-label="Sample program"></select>
+            </div>
+          </div>
+          <div class="controls">
+            <button id="btnRun" class="btn btn-primary" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
+              Run
+            </button>
+            <button id="btnStep" class="btn btn-secondary" type="button" disabled>
+              Step
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m13 6 6 6-6 6"/></svg>
+            </button>
+            <button id="btnStepBack" class="btn btn-secondary" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H6"/><path d="m11 6-6 6 6 6"/></svg>
+              Back
+            </button>
+            <button id="btnAssemble" class="btn btn-secondary" type="button">Assemble</button>
+            <button id="btnReset" class="btn btn-ghost-danger" type="button" disabled>Reset</button>
+          </div>
+          <div class="speed-row">
+            <span>Speed</span>
+            <input id="speedSlider" type="range" min="0" max="6" step="1" value="3" aria-label="Run speed" />
+            <span id="speedValue" class="speed-value">10 cyc/s</span>
+          </div>
+          <div class="editor-wrap">
+            <div id="editorLines" class="editor-lines" aria-hidden="true"></div>
+            <div class="editor-inner">
+              <pre id="editorHighlight" class="editor-highlight" aria-hidden="true"></pre>
+              <textarea
+                id="editorInput"
+                class="editor-input"
+                spellcheck="false"
+                autocorrect="off"
+                autocapitalize="off"
+                autocomplete="off"
+                wrap="off"
+                aria-label="RISC-V assembly source"
+                placeholder="# write RV32 assembly here..."
+              ></textarea>
+            </div>
+          </div>
+          <div id="statusLine" class="status-line" aria-live="polite">Ready</div>
+          <div class="shortcut-hint"><kbd>→</kbd> step · <kbd>←</kbd> back · <kbd>space</kbd> run / pause · <kbd>esc</kbd> reset</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- center: pipeline visualization -->
+    <div class="sim-col sim-col--center">
+      <section class="panel" style="flex:1" aria-label="Pipeline visualization">
+        <div class="panel__header">
+          <span>Pipeline — cycle <span id="cycleCount" style="color:var(--ink)">0</span></span>
+          <span class="pc-pill">pc <span id="pcValue">0x00000000</span></span>
+        </div>
+        <div class="panel__body">
+          <div class="pipeline-scroll">
+            <div id="pipelineRow" class="pipeline-row">
+              <svg id="fwdSvg" class="fwd-svg" aria-hidden="true"></svg>
+            </div>
+          </div>
+          <div id="pipelineHint" class="pipeline-hint" hidden></div>
+          <div id="hazardBar" class="hazard-bar"></div>
+          <div class="stats-row" id="statsRow"></div>
+          <div class="panel__header" style="border-top:1px solid var(--hairline);border-bottom:0;padding-left:2px;margin-top:8px;"><span>Assembled program</span></div>
+          <div id="listing" class="listing"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- right: dark inspector + terminal log -->
+    <div class="sim-col sim-col--state">
+      <section class="inspector-card" aria-label="Registers and memory">
+        <div class="browser-bar">
+          <div class="dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+          <span id="urlPill" class="url-pill">studyriscv / simulator</span>
+        </div>
+        <div class="inspector-body">
+          <p class="sim-label">Registers
+            <span class="toggle-group" id="regFormat">
+              <button type="button" data-fmt="dec" class="is-active">DEC</button>
+              <button type="button" data-fmt="hex">HEX</button>
+            </span>
+          </p>
+          <div id="regsGrid" class="regs-grid"></div>
+          <hr class="inspector-divider" />
+          <p class="sim-label">Memory
+            <span class="toggle-group" id="memFormat">
+              <button type="button" data-fmt="hex" class="is-active">HEX</button>
+              <button type="button" data-fmt="dec">DEC</button>
+              <button type="button" data-fmt="ascii">ASCII</button>
+            </span>
+          </p>
+          <div class="mem-controls">
+            <input id="memAddr" class="mem-input" type="text" value="0x10000000" aria-label="Memory address" />
+            <span class="toggle-group">
+              <button id="memGoData" type="button">data</button>
+              <button id="memGoStack" type="button">stack</button>
+            </span>
+          </div>
+          <div id="memTable" class="mem-table"></div>
+        </div>
+        <div class="pc-strip">
+          <span>pc</span><span class="arrow">→</span><span id="pcStripValue" class="pc-value">0x00000000</span>
+          <span id="pcStripStage" class="stage-note"></span>
+        </div>
+      </section>
+
+      <section class="terminal-card" aria-label="Execution log">
+        <div class="terminal-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+        <pre id="termBody" class="terminal-body"></pre>
+      </section>
+    </div>
+  </main>
+
+  <script>window.__RISCVSIM_REMOTE__ = true;</script>
+<script type="module">var F=null;async function ye(){return F||(F=(async()=>{let e=await import("./pkg/riscvsim_core.js");return await e.default(),e})()),F}var U=class{remote=!1;sim=null;async assemble(s){let t=await ye();try{return this.sim=t.assemble_pipeline(s),{ok:!0,listing:this.sim.listing()}}catch(n){return Array.isArray(n)?{ok:!1,errors:n}:{ok:!1,errors:[{line:1,message:n instanceof Error?n.message:String(n)}]}}}handle(){if(!this.sim)throw new Error("no program assembled");return this.sim}async step(s){let t=this.handle();return s===1?t.step_cycle():t.step_cycles(s),t.snapshot()}async stepBack(){let s=this.handle();return s.step_back(),s.snapshot()}async reset(){let s=this.handle();return s.reset(),s.snapshot()}async snapshot(){return this.handle().snapshot()}async readMemory(s,t){return this.handle().read_memory(s>>>0,t)}async initialSession(){return null}},X=class{remote=!0;async request(s,t){let n=await fetch(s,{method:t===void 0?"GET":"POST",headers:t===void 0?void 0:{"Content-Type":"application/json"},body:t===void 0?void 0:JSON.stringify(t)});if(!n.ok)throw new Error(`local session error: ${n.status} ${n.statusText}`);return await n.json()}async assemble(s){return this.request("/api/assemble",{source:s})}async step(s){return this.request("/api/step",{cycles:s})}async stepBack(){return this.request("/api/step_back",{})}async reset(){return this.request("/api/reset",{})}async snapshot(){return this.request("/api/snapshot")}async readMemory(s,t){let n=await this.request(`/api/memory?addr=${s>>>0}&len=${t}`);return Uint8Array.from(n.bytes)}async initialSession(){return this.request("/api/session")}},y=[{name:"Forwarding (back-to-back deps)",file:"forwarding.s",source:`# Every instruction depends on the one before it.
+# With EX/MEM and MEM/WB forwarding this runs with ZERO stalls \u2014
+# watch the green forwarding arrows light up each cycle.
+
+addi x1, x0, 5      # x1 = 5
+addi x2, x1, 3      # x2 = x1 + 3   (forwarded from EX/MEM)
+add  x3, x2, x1     # x3 = x2 + x1  (both operands forwarded)
+`},{name:"Load-use hazard (1 stall)",file:"load-use.s",source:`# A load's value isn't ready until MEM, so forwarding can't help
+# the instruction immediately after it: the pipeline must insert
+# exactly ONE bubble. Step through and watch the stall appear.
+
+.data
+value:  .word 41
+
+.text
+addi x4, x0, 1
+la   x2, value
+lw   x1, 0(x2)      # load x1 from memory
+add  x3, x1, x4     # needs x1 NOW -> 1-cycle stall, then MEM/WB forward
+`},{name:"Branch prediction (loop)",file:"branch-predict.s",source:`# A 3-iteration loop. The 2-bit predictor starts cold: the first
+# backward branch mispredicts (flushed instructions), then it
+# learns "taken". The final exit mispredicts once more.
+
+addi x1, x0, 3      # loop counter
+addi x2, x0, 0      # accumulator
+loop:
+addi x2, x2, 1
+addi x1, x1, -1
+bne  x1, x0, loop   # taken, taken, then falls through
+addi x3, x0, 99     # only reached after the loop exits
+`},{name:"Array sum (data segment)",file:"array-sum.s",source:`# Sum four sensor readings from the data segment.
+
+.data
+readings: .word 12, 7, 31, 4
+count:    .word 4
+
+.text
+la   t0, readings   # pointer
+la   t1, count
+lw   t1, 0(t1)      # t1 = 4
+addi t2, x0, 0      # sum = 0
+loop:
+lw   t3, 0(t0)
+add  t2, t2, t3     # note the load-use stall here!
+addi t0, t0, 4
+addi t1, t1, -1
+bne  t1, x0, loop
+mv   a0, t2         # result in a0 = 54
+ecall               # done
+`}];function i(e){let s=document.getElementById(e);if(!s)throw new Error(`missing #${e}`);return s}function o(e){return e.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}var xe="zero|ra|sp|gp|tp|fp|t[0-6]|s1[01]|s[0-9]|a[0-7]|x3[01]|x[12][0-9]|x[0-9]",Ee=[[/^(#|\/\/).*/,"tok-com"],[/^"(?:\\.|[^"\\])*"/,"tok-str"],[/^\.[a-zA-Z_.]+/,"tok-dir"],[/^[A-Za-z_$.][\w$.]*:/,"tok-lbl"],[new RegExp(`^(?:${xe})\\b`),"tok-reg"],[/^-?(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\d+)\b/,"tok-num"],[/^%(?:hi|lo)\b/,"tok-dir"]];function Se(e){let s="",t=e,n=!0;for(;t.length>0;){let r=!1;for(let[u,c]of Ee){let l=u.exec(t);if(l&&l[0].length>0){s+=`<span class="${c}">${o(l[0])}</span>`,t=t.slice(l[0].length),r=!0;break}}if(r)continue;let a=/^[A-Za-z_.][\w.]*/.exec(t);if(a&&n){s+=`<span class="tok-mn">${o(a[0])}</span>`,t=t.slice(a[0].length),n=!1;continue}if(a){s+=o(a[0]),t=t.slice(a[0].length);continue}s+=o(t[0]),t=t.slice(1)}return s}var G=window.__RISCVSIM_REMOTE__===!0,p=G?new X:new U,d=!1,P=null,g=[],w=null,b=!1,H=null,ae="dec",O="hex",N=268435456,S="program.s",x=[],ke=[1,2,5,10,30,60,"max"],m=i("editorInput"),W=i("editorHighlight"),oe=i("editorLines"),te=i("statusLine"),Le=i("btnAssemble"),Z=i("btnStep"),J=i("btnStepBack"),R=i("btnRun"),K=i("btnReset"),le=i("speedSlider"),$e=i("speedValue"),B=i("sampleSelect"),C=i("pipelineRow"),_=document.getElementById("fwdSvg"),Me=i("hazardBar"),D=i("pipelineHint"),Te=i("statsRow"),se=i("listing"),ne=i("regsGrid"),V=i("memTable"),I=i("memAddr"),q=i("termBody"),_e=i("cycleCount"),He=i("pcValue"),Ae=i("urlPill"),Pe=i("pcStripValue"),re=i("pcStripStage"),Re=["zero","ra","sp","gp","tp","t0","t1","t2","s0","s1","a0","a1","a2","a3","a4","a5","a6","a7","s2","s3","s4","s5","s6","s7","s8","s9","s10","s11","t3","t4","t5","t6"],Be={IF:"Fetch",ID:"Decode",EX:"Execute",MEM:"Memory",WB:"Writeback"},f={stall(e){return`The pipeline paused for one cycle: the next instruction needs a value that is still on its way back from memory, so nothing useful can happen here yet. (${e})`},bubble:"An empty slot moving through the pipeline \u2014 the pause from a stall travels along with the instructions.",flush:"This instruction was started based on a wrong guess about a branch, so it is thrown away before it can change anything. Two cycles of work are lost.",forward:"A result is wired directly from one instruction to the next, skipping the register file \u2014 this is 'forwarding', and it avoids a pause.",predictor:"Before a branch is decided, the processor guesses which way it will go and keeps working. A wrong guess costs two cycles."};function M(){let e=m.value.split(`
+`);W.innerHTML=e.map(t=>Se(t)||" ").join(`
+`);let s=d&&w?w.stages[2]?.line??null:null;oe.innerHTML=e.map((t,n)=>`<span${s===n+1?' class="is-active"':""}>${n+1}</span>`).join("")}function Ce(){return P!==null&&m.value!==P}m.addEventListener("input",()=>{d&&pe("source changed \u2014 press Assemble to run the new version"),M()});m.addEventListener("scroll",()=>{W.scrollTop=m.scrollTop,W.scrollLeft=m.scrollLeft,oe.scrollTop=m.scrollTop});function Ie(e){return ae==="hex"?`0x${(e>>>0).toString(16).padStart(8,"0")}`:String(e|0)}function k(e){return`0x${(e>>>0).toString(16).padStart(8,"0")}`}function Ne(e){C.querySelectorAll(".stage").forEach(t=>t.remove());let s=document.createDocumentFragment();for(let t of e.stages){let n=document.createElement("div");n.className="stage",n.dataset.stage=t.name;let r="",a=t.pc!=null?k(t.pc):"";switch(t.state){case"empty":n.classList.add("stage--empty"),r='<div class="stage__text">\u2014</div>';break;case"stall":n.classList.add("stage--stall"),n.title=t.detail?f.stall(t.detail):f.bubble,r='<div class="stage__text">bubble</div><span class="stage__tag stage__tag--stall">stall</span>';break;case"flush":n.classList.add("stage--flush"),n.title=f.flush,r=`<div class="stage__text">${o(t.text??"bubble")}</div><span class="stage__tag stage__tag--flush">\u2717 flushed</span>`;break;default:{let c="";if(t.detail){let l=t.detail.length>26?"hazard":t.detail;n.title=t.detail.startsWith("load-use")?f.stall(t.detail):t.detail,c=`<span class="stage__tag stage__tag--stall">${o(l)}</span>`}r=`<div class="stage__text">${o(t.text??"")}</div>${c}`;break}}let u=Be[t.name]??"";n.innerHTML=`<span class="stage__name">${t.name} <em>\xB7 ${u}</em></span>${r}<span class="stage__meta">${a}</span>`,s.appendChild(n)}C.appendChild(s),ce(e)}function ce(e){_.innerHTML="";let s=e.view?.forwards??[];if(s.length===0)return;let t=Array.from(C.querySelectorAll(".stage"));if(t.length!==5)return;let n=C.getBoundingClientRect(),r=u=>{let c=t[u].getBoundingClientRect();return{x:c.left-n.left+c.width/2,y:c.bottom-n.top}},a=r(2);s.forEach((u,c)=>{let l=u.from==="exmem"?r(3):r(4),E=16+c*15,ve=(l.x+a.x)/2,Q=document.createElementNS("http://www.w3.org/2000/svg","path");Q.setAttribute("d",`M ${l.x} ${l.y+2} C ${l.x} ${l.y+E}, ${a.x} ${a.y+E}, ${a.x} ${a.y+6}`),_.appendChild(Q);let ee=document.createElementNS("http://www.w3.org/2000/svg","polygon");ee.setAttribute("points",`${a.x-4},${a.y+8} ${a.x+4},${a.y+8} ${a.x},${a.y+1}`),_.appendChild(ee);let $=document.createElementNS("http://www.w3.org/2000/svg","text");$.setAttribute("x",String(ve)),$.setAttribute("y",String(l.y+E-3)),$.setAttribute("text-anchor","middle"),$.textContent=`${u.reg} (${u.from==="exmem"?"EX/MEM":"MEM/WB"})`,_.appendChild($)})}function ze(e){let s=[];for(let n of e.view?.forwards??[])s.push(`<span class="hazard-chip hazard-chip--fwd" title="${o(f.forward)}">forward ${o(n.reg)} \xB7 ${n.from==="exmem"?"EX/MEM":"MEM/WB"} \u2192 EX (${n.operand})</span>`);e.view?.stall&&s.push(`<span class="hazard-chip hazard-chip--stall" title="${o(f.stall(e.view.stall))}">stall \xB7 ${o(e.view.stall)}</span>`);for(let n of e.view?.flushed??[])s.push(`<span class="hazard-chip hazard-chip--flush" title="${o(f.flush)}">\u2717 flushed (${o(n.stage)}) \xB7 ${o(n.text)}</span>`);let t=e.view?.predictor;if(t){let n=t.predicted_taken?"taken":"not-taken";if(t.actual_taken==null)s.push(`<span class="hazard-chip hazard-chip--pred" title="${o(f.predictor)}">predictor: ${n} (counter ${t.counter}) \xB7 ${o(t.text)}</span>`);else{let r=t.mispredicted!==!0;s.push(`<span class="hazard-chip hazard-chip--pred ${r?"is-hit":"is-miss"}" title="${o(f.predictor)}">predicted ${n} \u2192 actually ${t.actual_taken?"taken":"not-taken"} \xB7 ${r?"\u2713 correct":"\u2717 mispredicted"}</span>`)}}Me.innerHTML=s.join("")}function de(e){d&&e&&e.cycle===0&&!e.halted?(D.textContent="press Step \u2014 instructions enter at IF (fetch) and move one stage right each cycle",D.hidden=!1):D.hidden=!0}function Fe(e){let s=e.stats,t=s.instructions>0?(s.cycles/s.instructions).toFixed(2):"\u2014";Te.innerHTML=[`cycles <b>${s.cycles}</b>`,`instructions <b>${s.instructions}</b>`,`CPI <b>${t}</b>`,`stalls <b>${s.stalls}</b>`,`flushed <b>${s.flushes}</b>`,`mispredictions <b>${s.mispredictions}</b>`].join(" \xB7 ")}function De(e){if(g.length===0){se.innerHTML='<div style="color:var(--mute);font-family:var(--mono);font-size:12px;padding:4px 6px;">assemble to see the program listing</div>';return}let s=new Map;if(e)for(let t of e.stages)t.pc!=null&&t.state==="normal"&&s.set(t.pc,t.name);se.innerHTML=g.map(t=>{let n=s.get(t.addr);return`<div class="listing__row${n?" in-flight":""}"><span class="listing__addr">${k(t.addr)}</span><span class="listing__text">${o(t.text)}</span><span class="listing__stagebadge">${n??""}</span></div>`}).join("")}var j=null;function ue(e){let s=e?.registers??new Array(32).fill(0),t=new Set((e?.view?.reg_writes??[]).map(n=>n.reg));ne.innerHTML=s.map((n,r)=>`<div class="${t.has(r)?"reg is-changed":"reg"}"><span class="reg__name">${Re[r]}</span><span class="reg__x">x${r}</span><span class="reg__val">${Ie(n)}</span></div>`).join(""),j!==null&&window.clearTimeout(j),t.size>0&&(j=window.setTimeout(()=>{ne.querySelectorAll(".reg.is-changed").forEach(n=>n.classList.remove("is-changed"))},500))}async function T(){if(!d){V.innerHTML='<div class="empty-note">assemble to inspect memory</div>';return}let e=N>>>0,s;try{s=await p.readMemory(e,128)}catch{V.innerHTML='<div class="empty-note">memory unavailable</div>';return}let t=[];for(let n=0;n<8;n++){let r=e+n*16,a="";if(O==="ascii"){let u="";for(let c=0;c<16;c++){let l=s[n*16+c];u+=l>=32&&l<127?String.fromCharCode(l):"\xB7"}a=u}else{let u=[];for(let c=0;c<4;c++){let l=n*16+c*4,E=(s[l]|s[l+1]<<8|s[l+2]<<16|s[l+3]<<24)>>>0;u.push(O==="hex"?E.toString(16).padStart(8,"0"):String(E|0).padStart(11," "))}a=u.join("  ")}t.push(`<div class="row"><span class="addr">${k(r)}</span><span class="val">${o(a)}</span></div>`)}V.innerHTML=t.join("")}function me(e){let s=[];for(let t of x)s.push(ie(t.kind,t.text));for(let t of e?.log??[])s.push(ie(t.kind,t.text));q.innerHTML=s.join(`
+`),q.scrollTop=q.scrollHeight}function ie(e,s){let t=o(s);switch(e){case"cmd":return`<span class="term-gray">$</span> ${t}`;case"status":return`<span class="term-blue">${t}</span>`;case"success":return`<span class="term-success">${t}</span>`;case"error":return`<span class="term-red">${t}</span>`;default:{let n=/^(.*?)  (\S+): (-?\d+) -> (-?\d+)$/.exec(s);if(n)return`${o(n[1])}  ${o(n[2])}: <span class="term-gray">${o(n[3])} -&gt;</span> <span class="term-bold">${o(n[4])}</span>`;let r=/^(.*?)(  mem\[.*)$/.exec(s);return r?`${o(r[1])}<span class="term-gray">${o(r[2])}</span>`:t}}}function v(e,s="plain"){te.textContent=e,te.className=`status-line${s==="ok"?" is-ok":s==="err"?" is-err":""}`}var Ve='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>',qe='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';function z(){let e=w?.halted===!0;Z.disabled=!d||e||b,R.disabled=!d||e,J.disabled=!d||b||w?.can_step_back!==!0,K.disabled=!d,R.innerHTML=b?`${qe} Pause`:`${Ve} Run`}function je(e){if(Pe.textContent=k(e?.pc??0),e?.halted&&e.halt)re.textContent=e.halt.kind==="complete"?"\u2713 complete":"\u2717 halted";else{let s=e?.stages?.[2];re.textContent=s&&s.state==="normal"&&s.text?`EX \xB7 ${s.text}`:`cycle ${e?.cycle??0}`}}function h(e){w=e,e&&(_e.textContent=String(e.cycle),He.textContent=k(e.pc),Ne(e),ze(e),Fe(e),e.halted&&e.halt?v(e.halt.kind==="complete"?`\u2713 ${e.halt.message}`:`\u2717 ${e.halt.message}`,e.halt.kind==="complete"?"ok":"err"):e.cycle>0&&v(`cycle ${e.cycle} \xB7 pc ${k(e.pc)}`)),de(e),De(e),ue(e),je(e),me(e),M(),z(),T()}function A(){Ae.textContent=G?`${window.location.host} / live session`:`studyriscv / ${S}`}function pe(e){L(),d=!1,g=[],w=null,v(e),de(null),z()}async function Y(){L();let e=m.value;x=[{kind:"cmd",text:`riscvsim run ${S}`},{kind:"status",text:`Loading ${S}...`},{kind:"status",text:"Assembling program..."}],me(null);let s=await p.assemble(e);if(!s.ok){d=!1,g=[];for(let r of s.errors.slice(0,8))x.push({kind:"error",text:`\u2717 line ${r.line}: ${r.message}`});x.push({kind:"status",text:"fix the line above and press Assemble again"});let n=s.errors[0];v(`\u2717 line ${n.line}: ${n.message}`,"err"),h(null);return}d=!0,P=e,g=s.listing,x.push({kind:"success",text:`\u2713 assembled ${g.length} instructions`}),x.push({kind:"status",text:"Running simulator..."});let t=await p.reset();v(`\u2713 assembled ${g.length} instructions \u2014 press Run or Step`,"ok"),h(t)}async function ge(e){if(!d)return;let s=await p.step(e);h(s)}async function he(){if(!d)return;let e=await p.stepBack();h(e)}async function fe(){if(L(),!d)return;let e=await p.reset();v("reset \u2014 ready"),h(e)}function be(){return ke[Number(le.value)]??10}function L(){b=!1,H!==null&&(window.clearTimeout(H),H=null),z()}function we(){if(!d||b)return;b=!0,z();let e=async()=>{if(!b)return;let s=be(),t=s==="max"?5e3:1,n=await p.step(t);if(h(n),n.halted){L();return}let r=s==="max"?0:Math.max(8,Math.round(1e3/s));H=window.setTimeout(()=>void e(),r)};e()}Le.addEventListener("click",()=>void Y());Z.addEventListener("click",()=>void ge(1));J.addEventListener("click",()=>void he());K.addEventListener("click",()=>void fe());R.addEventListener("click",()=>{b?L():we()});le.addEventListener("input",()=>{let e=be();$e.textContent=e==="max"?"MAX":`${e} cyc/s`});function Ue(e){return e instanceof HTMLTextAreaElement||e instanceof HTMLInputElement||e instanceof HTMLSelectElement}document.addEventListener("keydown",e=>{if(!Ue(e.target))switch(e.key){case"ArrowRight":Z.disabled||(e.preventDefault(),ge(1));break;case"ArrowLeft":J.disabled||(e.preventDefault(),he());break;case" ":case"Enter":R.disabled||(e.preventDefault(),b?L():we());break;case"Escape":if(!K.disabled){if(e.preventDefault(),Ce()&&!window.confirm("Reset the simulation? Your source edits stay in the editor."))return;fe()}break;default:break}});for(let[e,s]of[["regFormat",t=>{ae=t,ue(w)}],["memFormat",t=>{O=t,T()}]]){let t=i(e);t.addEventListener("click",n=>{let r=n.target.closest("button");r&&(t.querySelectorAll("button").forEach(a=>a.classList.toggle("is-active",a===r)),s(r.dataset.fmt??""))})}I.addEventListener("change",()=>{let e=Number.parseInt(I.value,16);Number.isNaN(e)||(N=e>>>0,T())});i("memGoData").addEventListener("click",()=>{N=268435456,I.value="0x10000000",T()});i("memGoStack").addEventListener("click",()=>{N=2147483520,I.value="0x7fffff80",T()});var Xe=i("themeToggle");Xe.addEventListener("click",()=>{let e=document.documentElement.dataset.theme==="dark"?"light":"dark";document.documentElement.dataset.theme=e;try{window.localStorage.setItem("studyriscv-theme",e)}catch{}});for(let[e,s]of y.entries()){let t=document.createElement("option");t.value=String(e),t.textContent=s.name,B.appendChild(t)}B.addEventListener("change",()=>{let e=y[Number(B.value)];e&&(m.value=e.source,S=e.file,A(),pe("sample loaded"),M(),Y())});window.addEventListener("resize",()=>{w&&ce(w)});async function Oe(){if(G){document.body.classList.add("is-remote"),A();try{let n=await p.initialSession();if(n){m.value=n.source,P=n.source,g=n.listing,d=!0,x=[{kind:"cmd",text:"riscvsim serve"},{kind:"success",text:`\u2713 assembled ${g.length} instructions`},{kind:"status",text:"Connected to local session..."}];let r=await p.snapshot();v(`\u2713 connected \u2014 ${g.length} instructions loaded`,"ok"),h(r);return}}catch{v("\u2717 could not reach the local riscvsim server","err")}}m.value=y[0].source,S=y[0].file,A(),M(),h(null);let e=new URLSearchParams(window.location.search),s=Number(e.get("sample"));Number.isInteger(s)&&y[s]&&(B.value=String(s),m.value=y[s].source,S=y[s].file,A(),M()),await Y();let t=Number(e.get("steps"));if(Number.isInteger(t)&&t>0&&d){let n=await p.step(t);h(n)}else if(e.has("autorun")&&d){let n=await p.step(2e3);h(n)}}Oe();
+</script>
+</body>
+</html>

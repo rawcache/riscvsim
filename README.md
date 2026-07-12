@@ -1,261 +1,108 @@
 # StudyRISC-V
 
-A browser-based RV32IM simulator with step execution, pseudo-C translation, and a full two-pass assembler. Runs entirely in the browser via Rust + WebAssembly.
+RISC-V (RV32IM) 5-stage pipeline simulator — in the browser at
+[studyriscv.com/simulator](https://studyriscv.com/simulator/), and in your
+terminal as the `riscvsim` CLI.
 
-[studyriscv.com](https://studyriscv.com)
+Watch real assembly move through Fetch → Decode → Execute → Memory →
+Writeback cycle by cycle: forwarding paths light up as they trigger,
+load-use hazards insert visible stall bubbles, and a 2-bit branch predictor
+learns your loops (and gets flushed when it guesses wrong).
 
-## Features
+## Install the CLI
 
-StudyRISC-V is built for interactive debugging rather t4han batch execution. You can assemble source, step forward, step backward through recorded states, or run to completion while inspecting register changes, memory writes, and PC flow. The register file highlights what changed, the memory panel can follow key registers or jump to an explicit address, and the pseudo-C explainer translates the current instruction into a compact C-like expression as you move through the program.
+**macOS / Linux**
 
-The assembler supports both instruction and data authoring in one source file. `.data`, `.word`, `.half`, `.byte`, `.ascii`, `.asciz`, `.string`, `.space`, `.align`, and the `la` pseudo are all supported, so array and string examples can be written naturally instead of being hand-built with stores. The effect log can be filtered by register, memory, or PC updates, permalink sharing restores a full program from the URL hash, light and dark mode are built in, and the whole simulator is local-first with no server round-trips or account requirements.
+```sh
+curl -fsSL https://studyriscv.com/install.sh | sh
+```
 
-## Supported ISA
+**Windows (PowerShell)**
 
-| Group | Instructions |
+```powershell
+irm https://studyriscv.com/install.ps1 | iex
+```
+
+**Homebrew**
+
+```sh
+brew tap rawcache/riscvsim
+brew install riscvsim
+```
+
+If no prebuilt binary is published for your platform yet, the scripts fall
+back to building from this repo with `cargo` (requires
+[Rust](https://rustup.rs)).
+
+## Use it
+
+```sh
+riscvsim run program.s        # assemble + run, print final registers and stats
+riscvsim run program.s -v     # full instruction-by-instruction trace
+riscvsim serve program.s      # step through it in the browser UI, cycle by cycle
+riscvsim --help               # usage, examples, exit codes
+```
+
+`riscvsim serve` starts a local server (default `http://localhost:4200`)
+hosting the same simulator UI as studyriscv.com, pointed at the live
+in-memory session — step, rewind, and inspect registers and memory. The
+session ends when the process exits.
+
+A minimal first program:
+
+```asm
+addi x1, x0, 5      # x1 = 5
+addi x2, x1, 3      # x2 = 8   (forwarded from EX/MEM)
+add  x3, x2, x1     # x3 = 13  (both operands forwarded)
+```
+
+```
+$ riscvsim run add.s
+Loading add.s...
+Assembling program...
+✓ assembled 3 instructions
+Running simulator...
+
+x1: 0 -> 5
+x2: 0 -> 8
+x3: 0 -> 13
+
+3 instructions, 7 cycles, 0 stalls, 0 mispredictions
+✓ program complete
+```
+
+## What's in this repo
+
+| Directory | What it is |
 |---|---|
-| Arithmetic | add, sub, addi, lui, auipc |
-| Comparison | slt, sltu, slti, sltiu |
-| Bitwise | and, or, xor, andi, ori, xori |
-| Shifts | sll, srl, sra, slli, srli, srai |
-| M Extension | mul, mulh, mulhu, mulhsu, div, divu, rem, remu |
-| Control flow | jal, jalr, beq, bne, blt, bge, bltu, bgeu |
-| Memory | lw, lh, lb, lhu, lbu, sw, sh, sb |
-| Pseudos | li, mv, nop, j, ret, call, la |
-| System | ecall, ebreak |
+| `sim-engine/` | The simulator core: RV32IM two-pass assembler + classic 5-stage pipeline (explicit pipeline registers, EX/MEM & MEM/WB forwarding with correct priority, precisely-scoped load-use stalls, 2-bit predictor with BTB, branches resolved in EX with a 2-cycle mispredict penalty). Pure Rust, no platform deps. |
+| `cli/` | The `riscvsim` binary: `run` and `serve`, plus the embedded browser UI (`cli/web/`, generated from the frontend sources by `cli/build-web.mjs`). |
+| `rust-core/` | WASM bindings that compile the same engine for the browser. |
+| `frontend/` | The browser simulator. |
+| `Formula/` | Homebrew formula for the tap `rawcache/homebrew-riscvsim`. |
 
-## Memory Map
+One engine, two surfaces: the browser consumes `sim-engine` through WASM,
+the CLI links it directly — identical results, cycle for cycle.
 
-| Region | Base address | Notes |
-|---|---|---|
-| Text | 0x00000000 | Instruction memory |
-| Data | 0x10000000 | `.data` segment |
-| Stack | 0x7FFFFFFC | `sp` initialized here |
+The hosted product's backend (accounts, saved programs, hosting config) is
+not in this repo; the simulator engine and CLI here are the complete,
+buildable open-source surface, in the same way most products split an open
+CLI from a closed platform.
 
-## Call Stack Visualizer
+## Build from source
 
-The call stack panel shows live stack frame state as programs execute. Each function call pushes a new frame showing saved registers, local slots, and the return address. Frames animate in and out as calls are made and returned from.
-
-Load the "Function call (calling convention)" or "Recursive factorial" sample programs to see the visualizer in action.
-
-The visualizer derives all state from the step delta stream -- no changes to the Rust core were required.
-
-## Guided Learning
-
-Twenty structured lessons live at `/learn/`, covering the full ECE 2035 path from registers and memory to pipelines, interrupts, and a mini-kernel capstone.
-
-Each lesson has:
-- Explanatory content with tips and warnings
-- Pre-loaded assembly programs
-- Specific goals with pass/fail checking
-- Hints after multiple failed attempts
-- Progress saved to account or localStorage for guests
-
-Lessons: Registers · Memory · Branches · Functions · Sorting · Bitwise · Shifts · Comparison · Stack · M Extension · Strings · Linked Lists · Recursion · Syscalls · Capstone · Pipeline · Cache · Floating Point Concepts · Interrupts · Mini Kernel
-
-## Challenges
-
-Fifteen graded challenges live at `/challenges/`, with one challenge attached to each lesson.
-
-Each challenge includes:
-- A standalone problem statement
-- Starter assembly code
-- Multiple hidden test cases
-- Point scoring, retries, and best-score tracking
-- Hint and answer reveal controls inside the simulator
-
-The `/learn/` page also includes a public leaderboard powered by the backend API.
-
-## Problems
-
-Fifteen standalone RISC-V problems live at `/problems/`, with a LeetCode-style list view and a full two-panel IDE for each problem.
-
-## Checkpoints
-
-Eight LeetCode-style checkpoints live at `/checkpoints/`, each with a two-panel IDE, visible and hidden register-state tests, and local/account-backed progress.
-
-## Labs
-
-Five lab-style assignments live at `/labs/`, designed to feel like real ECE 2035 programming labs.
-
-Each lab includes:
-- A full assignment spec and function signature
-- Visible and hidden grader test cases
-- Hints that unlock over time
-- Best-score tracking and repeat submissions
-- Lab-mode execution directly inside the simulator
-
-## Quizzes
-
-Five timed quizzes live at `/quiz/`, ranging from quick checks to a full-curriculum final.
-
-Each quiz includes:
-- Mixed MCQ, trace, fill-in, and assembly questions
-- Per-quiz timers with auto-submit
-- Review mode with explanations
-- XP awards for passing attempts
-
-## Leaderboard
-
-The public leaderboard lives at `/leaderboard/` and supports both all-time and weekly XP views.
-
-It tracks:
-- Total XP
-- Weekly XP
-- Lessons completed
-- Challenges passed
-- Badge count and streaks
-
-## Frontend Rewrites
-
-If you deploy on Amplify or another static host, add rewrites for the multi-page routes:
-
-| Source | Target | Status |
-|---|---|---|
-| `http://www.studyriscv.com/<*>` | `https://studyriscv.com/<*>` | `301` |
-| `http://studyriscv.com/<*>` | `https://studyriscv.com/<*>` | `301` |
-| `https://www.studyriscv.com/<*>` | `https://studyriscv.com/<*>` | `301` |
-| `/landing.html` | `/` | `301` |
-| `/terms-of-use/` | `/terms/` | `301` |
-| `/terms-of-use` | `/terms/` | `301` |
-| `/privacy-policy/` | `/privacy/` | `301` |
-| `/privacy-policy` | `/privacy/` | `301` |
-| `/do-not-sell/` | `/privacy/#do-not-sell` | `301` |
-| `/do-not-sell` | `/privacy/#do-not-sell` | `301` |
-| `/riscv-simulator/` | `/riscv-simulator/index.html` | `200` |
-| `/riscv-simulator` | `/riscv-simulator/` | `301` |
-| `/learn-riscv/` | `/learn-riscv/index.html` | `200` |
-| `/learn-riscv` | `/learn-riscv/` | `301` |
-| `/riscv-assembly-tutorial/` | `/riscv-assembly-tutorial/index.html` | `200` |
-| `/riscv-assembly-tutorial` | `/riscv-assembly-tutorial/` | `301` |
-| `/riscv-instructions/` | `/riscv-instructions/index.html` | `200` |
-| `/riscv-instructions` | `/riscv-instructions/` | `301` |
-| `/learn/` | `/learn/index.html` | `200` |
-| `/learn` | `/learn/` | `301` |
-| `/quiz/` | `/quiz/index.html` | `200` |
-| `/quiz` | `/quiz/` | `301` |
-| `/labs/` | `/labs/index.html` | `200` |
-| `/labs` | `/labs/` | `301` |
-| `/problems/` | `/problems/index.html` | `200` |
-| `/problems` | `/problems/` | `301` |
-| `/problems/<*>` | `/problems/index.html` | `200` |
-| `/checkpoints/` | `/checkpoints/index.html` | `200` |
-| `/checkpoints` | `/checkpoints/` | `301` |
-| `/challenges/` | `/challenges/index.html` | `200` |
-| `/challenges` | `/challenges/` | `301` |
-| `/leaderboard/` | `/leaderboard/index.html` | `200` |
-| `/leaderboard` | `/leaderboard/` | `301` |
-| `/profile/` | `/profile/index.html` | `200` |
-| `/profile` | `/profile/` | `301` |
-| `/groups/` | `/groups/index.html` | `200` |
-| `/groups` | `/groups/` | `301` |
-| `/about/` | `/about/index.html` | `200` |
-| `/about` | `/about/` | `301` |
-| `/docs/` | `/docs/index.html` | `200` |
-| `/docs` | `/docs/` | `301` |
-| `/terms/` | `/terms/index.html` | `200` |
-| `/terms` | `/terms/` | `301` |
-| `/privacy/` | `/privacy/index.html` | `200` |
-| `/privacy` | `/privacy/` | `301` |
-
-Weekly digest data is already structured on the client. To turn the digest preview into real weekly email delivery later, add an SES-backed Lambda that reads the same summary fields now rendered on `/leaderboard/`.
-
-Open Graph workflow:
-- `frontend/public/og-image.svg` is the editable source asset.
-- Generate `frontend/public/og-image.png` once with:
-  `npx sharp-cli -i public/og-image.svg -o public/og-image.png --width 1200 --height 630`
-
-Future enhancement:
-- Permalink-specific Open Graph cards for `/simulator/#p=...` still need an edge worker or Lambda@Edge because crawlers do not execute the client-side hash renderer.
-
-## Development Setup
-
-Prerequisites: Rust + `wasm-pack`, Node 18+
-
-```bash
-# Install wasm-pack
-cargo install wasm-pack
-
-# Run dev server (builds WASM automatically via predev script)
-cd frontend && npm install && npm run dev
-
-# Run tests
-cd frontend && npm test
-
-# Production build
-cd frontend && npm run build
+```sh
+cd cli && cargo build --release     # -> cli/target/release/riscvsim
+cd sim-engine && cargo test         # engine test suite
 ```
 
-## Authentication
+## ISA coverage
 
-StudyRISC-V uses AWS Cognito for auth. The simulator is fully usable without an account. Signing in with a `@gatech.edu` email unlocks saved programs (coming soon).
+RV32I base + M extension (`mul`/`div`/`rem` families, spec-correct
+non-trapping division by zero), and the common pseudo-instructions
+(`li`, `la`, `mv`, `nop`, `j`, `jr`, `ret`, `call`, `beqz`/`bnez`/…,
+`not`, `neg`, `seqz`/`snez`). Sections and data directives: `.text`,
+`.data`, `.word`, `.half`, `.byte`, `.asciz`, `.space`, `.align`.
 
-### Deploying the auth infrastructure
-
-Prerequisites: AWS CLI configured, CDK bootstrapped in `us-east-1`
-
-```bash
-cd infra
-npm install
-npx cdk deploy
-```
-
-After deploy, copy the stack outputs into `frontend/.env`:
-
-```bash
-VITE_COGNITO_USER_POOL_ID=<UserPoolId output>
-VITE_COGNITO_CLIENT_ID=<UserPoolClientId output>
-VITE_COGNITO_DOMAIN=<CognitoHostedUiDomain output>
-```
-
-### Local dev without auth
-
-Leave `frontend/.env` absent or use placeholder values. The auth UI will still render on localhost, and Cognito sign-out will return to the landing page. The simulator works fully without completing auth.
-
-## Project Structure
-
-```text
-riscvsim/
-├── frontend/
-│   ├── index.html          # Marketing landing page at /
-│   ├── landing.html        # Legacy redirect to /
-│   ├── simulator/
-│   │   └── index.html      # Simulator app at /simulator/
-│   └── src/
-│       ├── asm.ts          # Two-pass assembler with pseudo expansion
-│       ├── auth.ts         # Cognito session handling + PKCE helpers
-│       ├── auth-config.ts  # Vite auth environment wiring
-│       ├── auth-ui.ts      # Shared auth nav state for landing + simulator
-│       ├── wasm-runtime.ts # Machine code encoder + WASM bridge
-│       ├── main.ts         # UI orchestration
-│       ├── disasm.ts       # Disassembly view
-│       ├── memory.ts       # Memory panel
-│       ├── format.ts       # Pseudo-C and effect formatting
-│       ├── animator.ts     # Step animations
-│       ├── stack-tracker.ts # Call stack state derived from step deltas
-│       ├── stack-ui.ts     # Call stack visualizer rendering
-│       ├── permalink.ts    # URL state sharing
-│       └── types.ts        # Shared types (StepDelta)
-├── infra/
-│   ├── bin/app.ts          # CDK entry point
-│   ├── lib/stack.ts        # Cognito, API Gateway, Lambda, DynamoDB
-│   └── lambda/             # Inline-authored Lambda handlers
-├── rust-core/
-│   └── src/lib.rs          # RV32IM CPU interpreter (Rust/WASM)
-└── frontend/tests/
-    └── regression/         # 90+ fixture and end-to-end tests
-```
-
-## Testing
-
-The regression suite covers pseudo expansion, label resolution, immediates, branches, loads/stores, ALU behavior, M extension instructions, traps, data directives, permalink encoding, auth helpers, and end-to-end programs.
-
-Run with:
-
-```bash
-cd frontend && npm test
-```
-
-## License
-
-MIT
+Memory map: text at `0x00000000`, data at `0x10000000`, stack pointer
+initialized to `0x7FFFFFFC`.
