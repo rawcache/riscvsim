@@ -1,0 +1,12 @@
+[package]
+name = "sim-engine"
+version = "0.1.0"
+edition = "2021"
+description = "Shared RV32IM assembler + 5-stage pipeline simulator core for StudyRISC-V (browser WASM and riscvsim CLI)"
+
+[lib]
+name = "sim_engine"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }

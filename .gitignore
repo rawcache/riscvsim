@@ -1,0 +1,44 @@
+# Rust build output
+rust-core/target/
+
+# Frontend build output
+frontend/dist/
+
+# Node modules
+frontend/node_modules/
+infra/node_modules/
+
+# CDK build output
+infra/dist/
+infra/cdk.out/
+
+# Environment variables (contains real credentials)
+frontend/.env
+
+# AI agent config (local only)
+AGENTS.md
+CLAUDE.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
+# Local environment files
+.env.local
+.env.*.local
+frontend/.env.local
+frontend/.env.*.local
+# Internal -- not for public repo
+AGENTS.md
+DESIGN.md
+linear.app/
+mintlify/
+supabase/
+infra/
+
+# Rust build output (CLI + engine)
+sim-engine/target/
+cli/target/

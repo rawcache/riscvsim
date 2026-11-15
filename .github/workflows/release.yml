@@ -1,0 +1,64 @@
+# Builds riscvsim for macOS/Linux x arm64/x86_64 and publishes the tarballs
+# as GitHub release assets with the exact names install.sh, install.ps1 and
+# Formula/riscvsim.rb expect. Trigger: push a tag like v0.1.0.
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+            asset: riscvsim-macos-arm64.tar.gz
+          - os: macos-14
+            target: x86_64-apple-darwin
+            asset: riscvsim-macos-x86_64.tar.gz
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset: riscvsim-linux-x86_64.tar.gz
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            asset: riscvsim-linux-arm64.tar.gz
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Install aarch64 cross linker
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+
+      - name: Build
+        working-directory: cli
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Smoke test (native targets only)
+        if: matrix.target != 'aarch64-unknown-linux-gnu' && matrix.target != 'x86_64-apple-darwin'
+        working-directory: cli
+        run: |
+          ./target/${{ matrix.target }}/release/riscvsim --version
+          printf 'addi x1, x0, 5\naddi x2, x1, 3\nadd  x3, x2, x1\n' > /tmp/add.s
+          ./target/${{ matrix.target }}/release/riscvsim run /tmp/add.s | grep -q "program complete"
+
+      - name: Package
+        run: tar -czf ${{ matrix.asset }} -C cli/target/${{ matrix.target }}/release riscvsim
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset }}
