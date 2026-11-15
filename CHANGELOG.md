@@ -1,34 +1,32 @@
 # StudyRISC-V Changelog
 
-## Session 4 — March 2026
-### Infrastructure
-- Deployed AWS CDK stack (Cognito, DynamoDB, API Gateway, Lambda)
-- Configured AWS Amplify hosting connected to GitHub main branch
-- Removed Rust compile from Amplify build -- pkg committed to repo
-- Build time reduced from 2:48 to ~1:30
+This changelog covers the open-source simulator engine (`sim-engine/`), the
+WASM bindings (`rust-core/`) and the `riscvsim` CLI (`cli/`).
 
-### Auth
-- Custom auth modal (no Cognito hosted UI redirect)
-- USER_PASSWORD_AUTH flow via direct Cognito API calls
-- GT students (@gatech.edu) auto-verified, others auto-confirmed
-- Pro badge for GT students, no badge for free tier
-- JWT token storage in localStorage, refresh token in sessionStorage
+## Unreleased
+### Simulator core
+- RV64IM assembler and 5-stage pipeline (`assembler64`, `pipeline64`)
+- RV32IM to RV64IM and RV64IM to RV32IM source conversion (`xlen_convert`)
+- Translation between C, C++, Rust and RISC-V assembly for documented
+  language subsets, with explicit rejection of unsupported constructs
 
-### Features
-- Saved programs (DynamoDB, JWT-authenticated API)
-- Free tier: 3 saved programs max
-- Pro tier: unlimited saved programs + local session history
-- Permalink sharing via URL hash (deflate compressed, base64url encoded)
+### CLI
+- `riscvsim run <file> --xlen=64` runs RV64IM programs
+- Interactive terminal session (`riscvsim` with no arguments, or `riscvsim tui`)
+  with slash commands: /help, /doctor, /run, /demo, /serve, /reset, /version,
+  /examples, /exit, /quit
+- `riscvsim doctor` reports the active binary, every PATH-visible copy, its
+  install method (Homebrew, curl quick start, source build) and PATH shadowing
+- Background update check: 300 ms timeout, one-hour cache, silent on failure,
+  disabled with `RISCVSIM_NO_UPDATE_CHECK`
 
-### Pages
-- Landing page at / (marketing)
-- Simulator at /simulator/
-- About page at /about/
-- Docs/Guide page at /docs/
-- Terms of service at /terms/
-- Privacy policy at /privacy/
+### WASM bindings
+- Pipeline and translation bindings (`pipeline_api`, `translate_api`)
 
-## Session 3 — March 2026
+## Session 4 - March 2026
+- No engine or CLI changes in this session.
+
+## Session 3 - March 2026
 ### Simulator core
 - Rust/WASM contract fix: step delta now emits typed reg/mem/pc/trap effects
 - Data directives: .data, .text, .word, .byte, .half, .ascii, .asciz, .space, .align
@@ -38,40 +36,17 @@
 - imm12 validation across all I-type and S-type paths
 
 ### Regression suite
-- 101 passing tests
 - Covers: pseudos, labels, immediates, branches, memory, ALU, M-ext,
-  traps, data directives, permalinks, saved programs API, stack tracker
+  traps, data directives
 
-### UI
-- Three-column simulator layout (program input, center, register/memory)
-- Assembly syntax highlighting (overlay approach, caret-color accent)
-- Line numbers with current line highlight
-- Effect log with REG/MEM/PC filters
-- Memory panel with address input and follow-register dropdown
-- Register file with calling convention group labels
-- Center column tab system: Disassembly / Call Stack / Effects / Pseudo-C
-- Call stack visualizer with animated frame push/pop
-- Animator module for step animations
-- Landing page redesign (Geist font, near-black, green accent)
-- CPU chip pet on landing page
-
-## Session 2 — March 2026
+## Session 2 - March 2026
 ### Assembler
 - Two-pass assembler with label resolution
 - Pseudo-instruction expansion (li, mv, nop, j, ret, call)
 - Symbol directives (#sym)
 - ABI register name support
 
-### UI foundation
-- Design system (tokens.css)
-- Simulator layout (simulator.css)
-- Landing page (landing.css)
-- Dark/light mode toggle with localStorage persistence
-
-## Session 1 — March 2026
+## Session 1 - March 2026
 ### Core
 - Rust CPU interpreter for RV32IM subset
 - wasm-bindgen exports
-- TypeScript encoder for all instruction formats
-- Initial frontend with textarea editor and disassembly view
-

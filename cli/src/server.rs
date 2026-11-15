@@ -10,8 +10,8 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 
-/// The simulator UI, generated from the same sources as the hosted
-/// studyriscv.com/simulator/ page by cli/build-web.mjs.
+/// The simulator UI. cli/web/index.html is a generated asset (the hosted
+/// studyriscv.com/simulator/ page in remote mode); do not edit it by hand.
 const INDEX_HTML: &str = include_str!("../web/index.html");
 
 struct State {

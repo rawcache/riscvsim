@@ -2,7 +2,7 @@
 name = "riscvsim"
 version = "0.1.0"
 edition = "2021"
-description = "StudyRISC-V terminal simulator: assemble and run RV32IM programs with a full 5-stage pipeline, or serve a live session to the browser UI"
+description = "StudyRISC-V terminal simulator: run RV32IM and RV64IM programs with a full 5-stage pipeline, or serve an RV32IM session to the browser UI"
 
 [[bin]]
 name = "riscvsim"
@@ -12,6 +12,7 @@ path = "src/main.rs"
 sim-engine = { path = "../sim-engine" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+ratatui = "0.29"
 
 [profile.release]
 lto = true

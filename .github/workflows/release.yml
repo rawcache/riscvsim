@@ -11,8 +11,25 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject an already-published tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists. Published assets are immutable." >&2
+            exit 1
+          fi
+
   build:
+    needs: preflight
     strategy:
       fail-fast: false
       matrix:
@@ -62,3 +79,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ matrix.asset }}
+          # Published release assets are immutable. A rerun for the same tag
+          # must fail instead of replacing archives and invalidating checksums.
+          overwrite_files: false

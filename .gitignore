@@ -42,3 +42,9 @@ infra/
 # Rust build output (CLI + engine)
 sim-engine/target/
 cli/target/
+
+# Hard block: these must never exist in the public repo
+amplify.yml
+customHttp.yml
+amplify/
+frontend/

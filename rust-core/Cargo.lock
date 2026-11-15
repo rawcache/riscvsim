@@ -54,6 +54,7 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde-wasm-bindgen",
+ "sim-engine",
  "wasm-bindgen",
 ]
 
@@ -102,6 +103,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "sim-engine"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

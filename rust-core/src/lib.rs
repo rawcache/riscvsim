@@ -2,6 +2,21 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
 
+// Pipeline simulator bindings (additive; see pipeline_api.rs).
+mod pipeline_api;
+pub use pipeline_api::{assemble_pipeline, PipelineSim};
+
+// C/C++/Rust <-> RISC-V translation bindings (additive; see translate_api.rs).
+mod translate_api;
+pub use translate_api::{
+    c_subset_supported, c_subset_unsupported, cpp_subset_supported, cpp_subset_unsupported,
+    rust_subset_supported, rust_subset_unsupported, translate_asm64_to_c, translate_asm_to_c,
+    translate_c_to_asm, translate_c_to_asm64, translate_c_to_cpp, translate_c_to_rust,
+    translate_cpp_to_asm, translate_cpp_to_asm64, translate_cpp_to_c, translate_cpp_to_rust,
+    translate_rust_to_asm, translate_rust_to_asm64, translate_rust_to_c, translate_rust_to_cpp,
+    translate_rv32_to_rv64, translate_rv64_to_rv32,
+};
+
 const TEXT_BASE: u32 = 0x0000_0000;
 const TEXT_END: u32 = 0x0fff_ffff;
 const DATA_BASE: u32 = 0x1000_0000;
