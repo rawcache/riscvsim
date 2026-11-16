@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   preflight:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Reject an already-published tag
         env:
@@ -40,15 +40,15 @@ jobs:
           - os: macos-15
             target: x86_64-apple-darwin
             asset: riscvsim-macos-x86_64.tar.gz
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             asset: riscvsim-linux-x86_64.tar.gz
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
             asset: riscvsim-linux-arm64.tar.gz
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install target
         run: rustup target add ${{ matrix.target }}
@@ -76,7 +76,7 @@ jobs:
         run: tar -czf ${{ matrix.asset }} -C cli/target/${{ matrix.target }}/release riscvsim
 
       - name: Upload release asset
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: ${{ matrix.asset }}
           # Published release assets are immutable. A rerun for the same tag
