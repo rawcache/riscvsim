@@ -556,6 +556,7 @@ impl Simulator {
         })
     }
 
+    #[allow(clippy::absurd_extreme_comparisons)] // TEXT_BASE is 0; keep the check in case it changes
     fn range_is_valid(addr: u32, size: usize) -> bool {
         if size == 0 {
             return true;

@@ -1,6 +1,6 @@
 [package]
 name = "riscvsim"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "StudyRISC-V terminal simulator: run RV32IM and RV64IM programs with a full 5-stage pipeline, or serve an RV32IM session to the browser UI"
 

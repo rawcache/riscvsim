@@ -167,6 +167,7 @@ impl Program {
         TEXT_BASE + (self.instrs.len() as u32) * 4
     }
 
+    #[allow(clippy::absurd_extreme_comparisons)] // TEXT_BASE is 0; keep the check in case it changes
     pub fn instr_at(&self, pc: u32) -> Option<&AsmInstr> {
         if pc < TEXT_BASE || pc % 4 != 0 {
             return None;
