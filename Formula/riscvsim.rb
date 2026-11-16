@@ -8,32 +8,32 @@
 #   brew install riscvsim
 #
 # The stable URLs point at the SAME GitHub release tarballs install.sh uses
-# — one source of truth for release artifacts. The sha256 values are for the v0.1.0
+# — one source of truth for release artifacts. The sha256 values are for the v0.2.0
 # release assets; update url/sha256 together on each release.
 # `brew install --HEAD riscvsim` builds from source (requires Rust).
 class Riscvsim < Formula
-  desc "RISC-V (RV32IM) 5-stage pipeline simulator for the terminal and browser"
+  desc "RISC-V (RV32IM/RV64IM) 5-stage pipeline simulator for the terminal and browser"
   homepage "https://studyriscv.com"
-  version "0.1.0"
+  version "0.2.0"
   license "MIT"
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/rawcache/riscvsim/releases/download/v0.1.0/riscvsim-macos-arm64.tar.gz"
-      sha256 "ac0898f5250ed00f1f00beb1ff833e3b689f7ed103742f06f2d4f1b19c0ddef3"
+      url "https://github.com/rawcache/riscvsim/releases/download/v0.2.0/riscvsim-macos-arm64.tar.gz"
+      sha256 "08e940ad8389897ea05611e9d369da0d1e873e797d15412cda5c9f001f2d784b"
     else
-      url "https://github.com/rawcache/riscvsim/releases/download/v0.1.0/riscvsim-macos-x86_64.tar.gz"
-      sha256 "d2ab2a6a043421c241bf2a50abb6c49465fcb4317347fbf0f73814fbd8f7404a"
+      url "https://github.com/rawcache/riscvsim/releases/download/v0.2.0/riscvsim-macos-x86_64.tar.gz"
+      sha256 "fe966ac07bf55b78c90e7066e1bd2d5b1428600937aa2e3c866952171f359ca7"
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url "https://github.com/rawcache/riscvsim/releases/download/v0.1.0/riscvsim-linux-arm64.tar.gz"
-      sha256 "c38ecf6d37f1d4a5849e2653e211ebc7644acd8e83d152d639dd7ab46f863a45"
+      url "https://github.com/rawcache/riscvsim/releases/download/v0.2.0/riscvsim-linux-arm64.tar.gz"
+      sha256 "1ed5ef875d69696f79e78a201c2417a6983241dd1cdb3ec8d252c3f3cd20fffd"
     else
-      url "https://github.com/rawcache/riscvsim/releases/download/v0.1.0/riscvsim-linux-x86_64.tar.gz"
-      sha256 "e680f4ff68df3afc547bede013611f3573193222efb523c5de35c48eb82a9a6e"
+      url "https://github.com/rawcache/riscvsim/releases/download/v0.2.0/riscvsim-linux-x86_64.tar.gz"
+      sha256 "c13ea3e74594baadc4980ada8a09e1345f3942617413405b5d4a36fc2ef51314"
     end
   end
 
