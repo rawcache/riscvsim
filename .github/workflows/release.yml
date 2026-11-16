@@ -34,10 +34,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
+          - os: macos-15
             target: aarch64-apple-darwin
             asset: riscvsim-macos-arm64.tar.gz
-          - os: macos-14
+          - os: macos-15
             target: x86_64-apple-darwin
             asset: riscvsim-macos-x86_64.tar.gz
           - os: ubuntu-latest
