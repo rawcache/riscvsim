@@ -181,6 +181,7 @@ fn usage_error(message: &str) -> ExitCode {
     ExitCode::from(EXIT_USAGE)
 }
 
+/// Parses CLI arguments, validates `--xlen`, dispatches to the subcommand (TUI by default), and reports available updates.
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let Some(command) = args.first() else {
