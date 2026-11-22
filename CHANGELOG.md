@@ -3,17 +3,24 @@
 This changelog covers the open-source simulator engine (`sim-engine/`), the
 WASM bindings (`rust-core/`) and the `riscvsim` CLI (`cli/`).
 
+## Unreleased
+
 ## 0.2.0 - 2026-11-15
 ### Simulator core
 - RV64IM support alongside RV32IM; RV32IM remains the default
 - `riscvsim run <file.s> --xlen=64` runs RV64IM programs
 - RV64 is run-only: `--xlen=64` with `tui`, `serve` or `run --interactive` is
   a usage error
+- RV64IM assembler and 5-stage pipeline (`assembler64`, `pipeline64`)
+- RV32IM to RV64IM and RV64IM to RV32IM source conversion (`xlen_convert`)
 
 ### Translation
 - C, C++ and Rust subset translation to RV32IM/RV64IM assembly and between
   subsets, plus assembly to C pseudocode
 - Exposed through the WASM API only; the CLI has no translate subcommand
+
+### WASM bindings
+- Pipeline and translation bindings (`pipeline_api`, `translate_api`)
 
 ### CLI
 - `riscvsim doctor` reports the active executable and version, install method,
@@ -35,26 +42,6 @@ WASM bindings (`rust-core/`) and the `riscvsim` CLI (`cli/`).
   `gh release view` for the pushed tag and fails if a release already exists,
   and every build job depends on it; asset upload also sets
   `overwrite_files: false` so a rerun cannot replace published archives
-
-## Unreleased
-### Simulator core
-- RV64IM assembler and 5-stage pipeline (`assembler64`, `pipeline64`)
-- RV32IM to RV64IM and RV64IM to RV32IM source conversion (`xlen_convert`)
-- Translation between C, C++, Rust and RISC-V assembly for documented
-  language subsets, with explicit rejection of unsupported constructs
-
-### CLI
-- `riscvsim run <file> --xlen=64` runs RV64IM programs
-- Interactive terminal session (`riscvsim` with no arguments, or `riscvsim tui`)
-  with slash commands: /help, /doctor, /run, /demo, /serve, /reset, /version,
-  /examples, /exit, /quit
-- `riscvsim doctor` reports the active binary, every PATH-visible copy, its
-  install method (Homebrew, curl quick start, source build) and PATH shadowing
-- Background update check: 300 ms timeout, one-hour cache, silent on failure,
-  disabled with `RISCVSIM_NO_UPDATE_CHECK`
-
-### WASM bindings
-- Pipeline and translation bindings (`pipeline_api`, `translate_api`)
 
 ## Session 4 - March 2026
 - No engine or CLI changes in this session.
