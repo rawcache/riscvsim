@@ -1257,11 +1257,84 @@ impl<'a> Assembler64<'a> {
                 let imm = self.jump_offset(line, addr, target)?;
                 Ok(vec![mk(Op64::Jal, 0, 0, 0, imm, text, addr)])
             }
-            other => Err(AsmError64::new(
-                line,
-                format!("unknown instruction '{other}'"),
-            )),
+            other => Err(AsmError64::new(line, unsupported_message(other))),
         }
+    }
+}
+
+/// Names the extension a non-RV64IM mnemonic belongs to, so the error says
+/// *why* it is rejected instead of only that it is unknown.
+fn extension_of(mnemonic: &str) -> Option<&'static str> {
+    let m = mnemonic;
+    if m.starts_with("c.") {
+        return Some("C (compressed)");
+    }
+    if m.starts_with("lr.") || m.starts_with("sc.") || m.starts_with("amo") {
+        return Some("A (atomics)");
+    }
+    if m.starts_with("csr") || matches!(m, "rdcycle" | "rdtime" | "rdinstret" | "frcsr" | "fscsr") {
+        return Some("Zicsr (CSR access)");
+    }
+    if matches!(m, "fence.i") {
+        return Some("Zifencei");
+    }
+    if matches!(m, "mret" | "sret" | "uret" | "wfi" | "sfence.vma") {
+        return Some("privileged");
+    }
+    if matches!(m, "flw" | "fsw" | "fld" | "fsd" | "flh" | "fsh")
+        || (m.starts_with('f') && m.contains('.'))
+    {
+        return Some("F/D (floating point)");
+    }
+    if m.starts_with('v') && m.contains('.') || matches!(m, "vsetvli" | "vsetivli" | "vsetvl") {
+        return Some("V (vector)");
+    }
+    if matches!(
+        m,
+        "sh1add"
+            | "sh2add"
+            | "sh3add"
+            | "add.uw"
+            | "andn"
+            | "orn"
+            | "xnor"
+            | "clz"
+            | "ctz"
+            | "cpop"
+            | "clzw"
+            | "ctzw"
+            | "cpopw"
+            | "max"
+            | "maxu"
+            | "min"
+            | "minu"
+            | "rol"
+            | "ror"
+            | "rori"
+            | "rolw"
+            | "rorw"
+            | "roriw"
+            | "rev8"
+            | "orc.b"
+            | "sext.b"
+            | "sext.h"
+            | "zext.h"
+            | "bset"
+            | "bclr"
+            | "binv"
+            | "bext"
+    ) {
+        return Some("B (bit manipulation)");
+    }
+    None
+}
+
+fn unsupported_message(mnemonic: &str) -> String {
+    match extension_of(mnemonic) {
+        Some(ext) => format!(
+            "unsupported instruction '{mnemonic}': {ext} is not part of RV64IM, the only RV64 subset this simulator runs"
+        ),
+        None => format!("unknown instruction '{mnemonic}' (this simulator runs RV64IM only)"),
     }
 }
 
@@ -1410,6 +1483,36 @@ msg:    .asciz \"hi\"\n\
                 .unwrap();
         assert_eq!(&p.data[0..8], &0x1234_5678_9abc_def0u64.to_le_bytes());
         assert_eq!(&p.data[8..16], &u64::MAX.to_le_bytes());
+    }
+
+    #[test]
+    fn non_rv64im_instructions_name_their_extension_and_line() {
+        for (mnemonic, ext) in [
+            ("fadd.s f1, f2, f3", "F/D (floating point)"),
+            ("amoadd.w x1, x2, (x3)", "A (atomics)"),
+            ("csrrw x1, mstatus, x2", "Zicsr"),
+            ("c.addi x1, 1", "C (compressed)"),
+            ("andn x1, x2, x3", "B (bit manipulation)"),
+            ("mret", "privileged"),
+        ] {
+            let err = assemble64(&format!("addi x1, x0, 1\n{mnemonic}\n")).unwrap_err();
+            assert_eq!(err[0].line, 2, "{mnemonic}");
+            assert!(
+                err[0].message.starts_with("unsupported instruction"),
+                "{mnemonic}: {}",
+                err[0].message
+            );
+            assert!(
+                err[0].message.contains(ext),
+                "{mnemonic}: {}",
+                err[0].message
+            );
+            assert!(
+                err[0].message.contains("RV64IM"),
+                "{mnemonic}: {}",
+                err[0].message
+            );
+        }
     }
 
     #[test]
