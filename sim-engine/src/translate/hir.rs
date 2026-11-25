@@ -5,7 +5,8 @@ use super::{
 };
 #[cfg(test)]
 use super::{AssignmentProvenance, BodyForm, ElseForm, ExprStmtProvenance, IfOrigin};
-use std::collections::{HashMap, HashSet};
+// Ordered maps: output never depends on hash iteration order.
+use std::collections::{BTreeMap as HashMap, BTreeSet as HashSet};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum HirLanguage {
@@ -27,6 +28,9 @@ impl From<ScalarType> for HirType {
             ScalarType::I32 => Self::I32,
             ScalarType::Bool => Self::Bool,
             ScalarType::Unit => Self::Unit,
+            // Source-to-source directions reject wider integer types before
+            // building HIR (see `reject_extended_types`); pointers likewise.
+            ScalarType::Int(_) | ScalarType::Ptr(..) => Self::I32,
         }
     }
 }
@@ -106,8 +110,11 @@ pub(super) struct TypedHir {
 
 pub(super) fn typed_hir_from_c(source: &str) -> Result<TypedHir, TranslateError> {
     let tokens = lex(source)?;
-    let mut parser = Parser::new(tokens);
-    Ok(build_hir(HirLanguage::C, parser.parse_unit()?))
+    let mut parser = Parser::new_c(tokens);
+    let unit = parser.parse_unit()?;
+    super::reject_memory_features(&unit, "C", "Rust")?;
+    super::reject_extended_types(&unit, "C", "Rust")?;
+    Ok(build_hir(HirLanguage::C, unit))
 }
 
 pub(super) fn typed_hir_from_rust(source: &str) -> Result<TypedHir, TranslateError> {
@@ -115,7 +122,9 @@ pub(super) fn typed_hir_from_rust(source: &str) -> Result<TypedHir, TranslateErr
 }
 
 pub(super) fn typed_hir_from_cpp(source: &str) -> Result<TypedHir, TranslateError> {
-    Ok(build_hir(HirLanguage::Cpp, parse_cpp_unit(source)?))
+    let unit = parse_cpp_unit(source)?;
+    super::reject_extended_types(&unit, "C++", "Rust")?;
+    Ok(build_hir(HirLanguage::Cpp, unit))
 }
 
 fn infers_mutability(language: HirLanguage) -> bool {
@@ -340,6 +349,12 @@ fn analyze_expression(expression: &Expr, analysis: &mut AstAnalysis) {
                     analyze_expression(index, analysis);
                     name
                 }
+                LValue::Deref(inner, _) => {
+                    // never reached: C programs with pointers stop before HIR
+                    analyze_expression(inner, analysis);
+                    analyze_expression(value, analysis);
+                    return;
+                }
             };
             analysis.mutations.insert(name.clone());
             analyze_expression(value, analysis);
@@ -394,6 +409,7 @@ fn infer_type(
             LValue::Var(name, _) | LValue::Index(name, _, _) => {
                 bindings.get(name).copied().unwrap_or(HirType::I32)
             }
+            LValue::Deref(..) => HirType::I32,
         },
         Expr::Assign(_, _, _, _) => HirType::Unit,
         Expr::Call(name, _, _) => return_types.get(name).copied().unwrap_or(HirType::I32),

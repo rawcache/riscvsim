@@ -1,4 +1,5 @@
-use std::collections::{HashMap, HashSet};
+// Ordered maps: output never depends on hash iteration order.
+use std::collections::{BTreeMap as HashMap, BTreeSet as HashSet};
 
 #[derive(Clone, Copy)]
 pub(super) enum IdentifierTarget {

@@ -85,7 +85,7 @@ fn print_help() {
 
 usage:
   riscvsim                         start the interactive session
-  riscvsim run <file.s> [--xlen=32|64] [--verbose|-v] [--max-cycles N]
+  riscvsim run <file.s> [--xlen=32|64] [--verbose|-v] [--limit N] [--json]
   riscvsim tui [file.s] [--tour]
   riscvsim serve <file.s> [--port N]
   riscvsim doctor
@@ -119,6 +119,8 @@ flags:
 examples:
   riscvsim                       start the session, then try /demo or /help
   riscvsim run add.s             final RV32 register state + pipeline stats
+  riscvsim translate --from c --to rv64 prog.c   compile C to RV64 assembly
+  riscvsim run add.s --json      machine-readable result (same as the browser)
   riscvsim run wide.s --xlen=64  execute RV64IM with 64-bit registers/memory
   riscvsim run add.s -v          watch each instruction retire
   riscvsim tui add.s             step through it without leaving the terminal
@@ -134,7 +136,7 @@ fn print_run_help() {
         "riscvsim run — assemble and execute a RISC-V program
 
 usage:
-  riscvsim run <file.s> [--xlen=32|64] [--verbose|-v] [--max-cycles N]
+  riscvsim run <file.s> [--xlen=32|64] [--verbose|-v] [--limit N] [--json]
 
 Runs the program on a 5-stage pipeline (forwarding, load-use stalls,
 2-bit branch prediction) and prints every register that changed, then a
@@ -143,8 +145,10 @@ stats line: instructions, cycles, stalls, mispredictions.
 flags:
   -v, --verbose      also print each instruction as it retires
       --xlen=32|64   execution width (default 32)
-      --max-cycles   halt after N cycles (default 1000000) — protects
-                     against infinite loops
+      --limit N      stop after N cycles with \"step limit reached\"
+                     (default 1000000; --max-cycles N is the same)
+      --json         print one JSON result {{ok, output, line, message,
+                     registers, pc, cycles}}, as the browser engine does
 
 examples:
   riscvsim run add.s
@@ -216,7 +220,13 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         "run" if args.iter().any(|a| a == "--interactive" || a == "-i") => cmd_tui(&args[1..]),
+        "run" if args.iter().any(|a| a == "--json") => cmd_run_json(&args[1..]),
         "run" => cmd_run(&args[1..]),
+        "translate" if wants_help => {
+            print_translate_help();
+            ExitCode::SUCCESS
+        }
+        "translate" => cmd_translate(&args[1..]),
         "tui" => cmd_tui(&args[1..]),
         "serve" => cmd_serve(&args[1..]),
         "doctor" => doctor::run(VERSION),
@@ -240,6 +250,143 @@ fn main() -> ExitCode {
         }
     }
     exit
+}
+
+/// `--limit N` / `--limit=N` / `--max-cycles N`: the per-run step limit.
+fn step_limit(args: &[String]) -> Result<u64, ExitCode> {
+    let raw = parse_flag_value(args, "--limit")
+        .or_else(|| args.iter().find_map(|a| a.strip_prefix("--limit=").map(str::to_string)))
+        .or_else(|| parse_flag_value(args, "--max-cycles"));
+    match raw {
+        None => Ok(DEFAULT_MAX_CYCLES),
+        Some(v) => match v.parse::<u64>() {
+            Ok(n) if n > 0 => Ok(n),
+            _ => Err(usage_error(&format!(
+                "the step limit must be a positive whole number, but found '{v}'"
+            ))),
+        },
+    }
+}
+
+/// The input file: the first argument that is neither a flag nor a flag's value.
+fn positional(args: &[String], flags_with_values: &[&str]) -> Option<String> {
+    let mut skip = false;
+    for a in args {
+        if skip {
+            skip = false;
+            continue;
+        }
+        if flags_with_values.contains(&a.as_str()) {
+            skip = true;
+            continue;
+        }
+        if !a.starts_with('-') {
+            return Some(a.clone());
+        }
+    }
+    None
+}
+
+/// `riscvsim run <file> [--xlen=64] [--limit N] --json`: one JSON object with
+/// the same shape the browser engine's `run_rv64` returns.
+fn cmd_run_json(args: &[String]) -> ExitCode {
+    let Some(path) = positional(args, &["--limit", "--max-cycles"]) else {
+        return usage_error("run needs a file: riscvsim run <file.s> --json");
+    };
+    let limit = match step_limit(args) {
+        Ok(limit) => limit,
+        Err(code) => return code,
+    };
+    let source = match std::fs::read_to_string(&path) {
+        Ok(source) => source,
+        Err(error) => {
+            eprintln!("✗ could not read {path}: {error}");
+            return ExitCode::from(EXIT_RUNTIME);
+        }
+    };
+    let report = if args.iter().any(|a| a == "--xlen=64") {
+        sim_engine::report::run64(&source, limit)
+    } else {
+        sim_engine::report::run32(&source, limit)
+    };
+    match serde_json::to_string_pretty(&report) {
+        Ok(json) => println!("{json}"),
+        Err(error) => {
+            eprintln!("✗ could not format the result: {error}");
+            return ExitCode::from(EXIT_RUNTIME);
+        }
+    }
+    if report.ok {
+        ExitCode::SUCCESS
+    } else if report.cycles == 0 && report.registers.is_empty() {
+        ExitCode::from(EXIT_ASSEMBLY)
+    } else {
+        ExitCode::from(EXIT_RUNTIME)
+    }
+}
+
+fn print_translate_help() {
+    println!(
+        "riscvsim translate — translate between assembly, C, C++ and Rust
+
+usage:
+  riscvsim translate --from LANG --to LANG <file> [-o output]
+
+languages: rv32 (or asm), rv64, c, cpp, rust
+  c, cpp and rust compile to rv32 or rv64 assembly and translate to each
+  other; rv32/rv64 lift to C pseudocode and convert between each other.
+
+The result goes to stdout, or to the file given with -o. Errors name the
+line and say what to change; the exit code is 3 for a translation error.
+
+examples:
+  riscvsim translate --from c --to rv64 prog.c
+  riscvsim translate --from rust --to c lib.rs -o lib.c"
+    );
+}
+
+fn cmd_translate(args: &[String]) -> ExitCode {
+    let from = parse_flag_value(args, "--from");
+    let to = parse_flag_value(args, "--to");
+    let (Some(from), Some(to)) = (from, to) else {
+        return usage_error("translate needs --from and --to: riscvsim translate --from c --to rv64 <file>");
+    };
+    let Some(path) = positional(args, &["--from", "--to", "-o", "--output"]) else {
+        return usage_error("translate needs an input file: riscvsim translate --from c --to rv64 <file>");
+    };
+    let source = match std::fs::read_to_string(&path) {
+        Ok(source) => source,
+        Err(error) => {
+            eprintln!("✗ could not read {path}: {error}");
+            return ExitCode::from(EXIT_RUNTIME);
+        }
+    };
+    match sim_engine::report::translate(&from, &to, &source) {
+        Ok(output) => {
+            match parse_flag_value(args, "-o").or_else(|| parse_flag_value(args, "--output")) {
+                Some(out_path) => {
+                    if let Err(error) = std::fs::write(&out_path, output) {
+                        eprintln!("✗ could not write {out_path}: {error}");
+                        return ExitCode::from(EXIT_RUNTIME);
+                    }
+                }
+                None => print!("{output}"),
+            }
+            ExitCode::SUCCESS
+        }
+        Err((line, message)) => {
+            if line > 0 {
+                eprintln!("✗ {path}:{line}: {message}");
+            } else {
+                eprintln!("✗ {path}: {message}");
+            }
+            if message.starts_with("unknown language") {
+                ExitCode::from(EXIT_USAGE)
+            } else {
+                ExitCode::from(EXIT_ASSEMBLY)
+            }
+        }
+    }
 }
 
 fn parse_flag_value(args: &[String], flag: &str) -> Option<String> {
@@ -330,9 +477,10 @@ fn cmd_run(args: &[String]) -> ExitCode {
         return usage_error("run needs a file: riscvsim run <file.s>");
     };
     let verbose = args.iter().any(|a| a == "--verbose" || a == "-v");
-    let max_cycles = parse_flag_value(args, "--max-cycles")
-        .and_then(|v| v.parse::<u64>().ok())
-        .unwrap_or(DEFAULT_MAX_CYCLES);
+    let max_cycles = match step_limit(args) {
+        Ok(limit) => limit,
+        Err(code) => return code,
+    };
 
     let (_, mut pipeline) = match load_and_assemble(path, &paint) {
         Ok(v) => v,
@@ -364,7 +512,7 @@ fn cmd_run(args: &[String]) -> ExitCode {
                 println!(
                     "{}",
                     paint.error(&format!(
-                        "✗ execution halted: exceeded {max_cycles} cycles (possible infinite loop)"
+                        "✗ step limit reached: execution stopped after {max_cycles} cycles (possible infinite loop)"
                     ))
                 );
                 return ExitCode::from(EXIT_RUNTIME);
@@ -430,7 +578,7 @@ fn cmd_run(args: &[String]) -> ExitCode {
             println!(
                 "{}",
                 paint.error(&format!(
-                    "✗ execution halted: exceeded {max_cycles} cycles (possible infinite loop)"
+                    "✗ step limit reached: execution stopped after {max_cycles} cycles (possible infinite loop)"
                 ))
             );
             ExitCode::from(EXIT_RUNTIME)
@@ -444,9 +592,10 @@ fn cmd_run64(args: &[String]) -> ExitCode {
         return usage_error("run needs a file: riscvsim run <file.s> --xlen=64");
     };
     let verbose = args.iter().any(|a| a == "--verbose" || a == "-v");
-    let max_cycles = parse_flag_value(args, "--max-cycles")
-        .and_then(|v| v.parse::<u64>().ok())
-        .unwrap_or(DEFAULT_MAX_CYCLES);
+    let max_cycles = match step_limit(args) {
+        Ok(limit) => limit,
+        Err(code) => return code,
+    };
     let file_name = std::path::Path::new(path)
         .file_name()
         .map(|name| name.to_string_lossy().to_string())
@@ -504,7 +653,7 @@ fn cmd_run64(args: &[String]) -> ExitCode {
                 println!(
                     "{}",
                     paint.error(&format!(
-                        "✗ execution halted: exceeded {max_cycles} cycles (possible infinite loop)"
+                        "✗ step limit reached: execution stopped after {max_cycles} cycles (possible infinite loop)"
                     ))
                 );
                 return ExitCode::from(EXIT_RUNTIME);
@@ -567,7 +716,7 @@ fn cmd_run64(args: &[String]) -> ExitCode {
             println!(
                 "{}",
                 paint.error(&format!(
-                    "✗ execution halted: exceeded {max_cycles} cycles (possible infinite loop)"
+                    "✗ step limit reached: execution stopped after {max_cycles} cycles (possible infinite loop)"
                 ))
             );
             ExitCode::from(EXIT_RUNTIME)

@@ -358,7 +358,7 @@ impl Pipeline {
     }
 
     pub fn read_memory(&self, addr: u32, len: usize) -> Vec<u8> {
-        (0..len)
+        (0..len.min(crate::limits::MAX_MEMORY_READ_BYTES))
             .map(|i| {
                 self.mem
                     .get(&addr.wrapping_add(i as u32))
@@ -1211,7 +1211,7 @@ impl Pipeline {
             if self.stats.cycles >= max_cycles {
                 let mut log_added = 0usize;
                 let msg = format!(
-                    "execution halted: exceeded {max_cycles} cycles (possible infinite loop)"
+                    "step limit reached: execution stopped after {max_cycles} cycles (possible infinite loop)"
                 );
                 self.push_log("error", format!("✗ {msg}"), &mut log_added);
                 self.halted = true;

@@ -7,7 +7,7 @@
 
 use crate::{DATA_BASE, TEXT_BASE};
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::BTreeMap as HashMap;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct AsmError {
@@ -204,21 +204,7 @@ fn parse_reg(token: &str) -> Option<u8> {
 }
 
 fn parse_int(token: &str) -> Option<i64> {
-    let t = token.trim();
-    let (neg, body) = match t.strip_prefix('-') {
-        Some(rest) => (true, rest),
-        None => (false, t.strip_prefix('+').unwrap_or(t)),
-    };
-    let value = if let Some(hex) = body.strip_prefix("0x").or_else(|| body.strip_prefix("0X")) {
-        i64::from_str_radix(hex, 16).ok()?
-    } else if let Some(bin) = body.strip_prefix("0b").or_else(|| body.strip_prefix("0B")) {
-        i64::from_str_radix(bin, 2).ok()?
-    } else if body.chars().all(|c| c.is_ascii_digit()) && !body.is_empty() {
-        body.parse::<i64>().ok()?
-    } else {
-        return None;
-    };
-    Some(if neg { -value } else { value })
+    crate::asm_source::parse_int_literal(token).and_then(|v| i64::try_from(v).ok())
 }
 
 /// `%hi(sym)` / `%lo(sym)` pair such that `lui rd,%hi` + `addi rd,rd,%lo`
@@ -341,6 +327,26 @@ struct Assembler<'a> {
 }
 
 pub fn assemble(source: &str) -> Result<Program, Vec<AsmError>> {
+    if let Err((line, message)) = crate::limits::check_source(source) {
+        return Err(vec![AsmError::new(line, message)]);
+    }
+    let prepared = crate::asm_source::prepare(source);
+    if !prepared.errors.is_empty() {
+        return Err(prepared
+            .errors
+            .iter()
+            .map(|(line, message)| AsmError::new(*line, message.clone()))
+            .collect());
+    }
+    let mut program = assemble_prepared(&prepared.text)?;
+    crate::asm_source::restore_display(
+        &prepared,
+        program.instrs.iter_mut().map(|i| (i.line, &mut i.text)),
+    );
+    Ok(program)
+}
+
+fn assemble_prepared(source: &str) -> Result<Program, Vec<AsmError>> {
     let mut errors: Vec<AsmError> = Vec::new();
     let mut labels: HashMap<String, u32> = HashMap::new();
     let mut section = Section::Text;
@@ -352,6 +358,10 @@ pub fn assemble(source: &str) -> Result<Program, Vec<AsmError>> {
     for (idx, raw_line) in source.lines().enumerate() {
         let line_no = idx + 1;
         let mut rest = strip_comment(raw_line).trim();
+        if data.len() > crate::limits::MAX_DATA_BYTES {
+            errors.push(AsmError::new(line_no, data_limit_message(data.len() as u64)));
+            return Err(errors);
+        }
 
         // Labels (possibly several, possibly followed by an instruction).
         while let Some(colon) = rest.find(':') {
@@ -368,6 +378,16 @@ pub fn assemble(source: &str) -> Result<Program, Vec<AsmError>> {
                 Section::Text => text_cursor,
                 Section::Data => DATA_BASE + data.len() as u32,
             };
+            if labels.len() >= crate::limits::MAX_LABELS && !labels.contains_key(candidate) {
+                errors.push(AsmError::new(
+                    line_no,
+                    format!(
+                        "too many labels: the limit is {} labels per program",
+                        crate::limits::MAX_LABELS
+                    ),
+                ));
+                return Err(errors);
+            }
             if labels.insert(candidate.to_string(), addr).is_some() {
                 errors.push(AsmError::new(line_no, format!("duplicate label '{candidate}'")));
             }
@@ -401,7 +421,8 @@ pub fn assemble(source: &str) -> Result<Program, Vec<AsmError>> {
                         }
                     }
                 }
-                "word" | "half" | "byte" | "asciz" | "ascii" | "string" | "space" | "zero" => {
+                "dword" | "quad" | "word" | "half" | "byte" | "asciz" | "ascii" | "string" | "space"
+                | "zero" => {
                     if section != Section::Data {
                         errors.push(AsmError::new(
                             line_no,
@@ -410,8 +431,9 @@ pub fn assemble(source: &str) -> Result<Program, Vec<AsmError>> {
                         continue;
                     }
                     match directive {
-                        "word" | "half" | "byte" => {
+                        "dword" | "quad" | "word" | "half" | "byte" => {
                             let size = match directive {
+                                "dword" | "quad" => 8,
                                 "word" => 4,
                                 "half" => 2,
                                 _ => 1,
@@ -425,7 +447,7 @@ pub fn assemble(source: &str) -> Result<Program, Vec<AsmError>> {
                                 // reserve space now, patch later via a second sweep.
                                 // To keep this simple we only allow numeric values or
                                 // labels for .word.
-                                let is_label = parse_int(&value_str).is_none();
+                                let is_label = crate::asm_source::parse_int_literal(&value_str).is_none();
                                 if is_label && directive != "word" {
                                     errors.push(AsmError::new(
                                         line_no,
@@ -438,6 +460,16 @@ pub fn assemble(source: &str) -> Result<Program, Vec<AsmError>> {
                             }
                         }
                         "asciz" | "ascii" | "string" => match parse_string_literal(tail, line_no) {
+                            Ok(bytes) if bytes.len() > crate::limits::MAX_STRING_LITERAL_BYTES => {
+                                errors.push(AsmError::new(
+                                    line_no,
+                                    format!(
+                                        "string literal is too long: found {} bytes, but the limit is {} bytes",
+                                        bytes.len(),
+                                        crate::limits::MAX_STRING_LITERAL_BYTES
+                                    ),
+                                ));
+                            }
                             Ok(mut bytes) => {
                                 if directive != "ascii" {
                                     bytes.push(0);
@@ -447,7 +479,17 @@ pub fn assemble(source: &str) -> Result<Program, Vec<AsmError>> {
                             Err(e) => errors.push(e),
                         },
                         "space" | "zero" => match parse_int(tail) {
-                            Some(n) if n >= 0 => data.extend(std::iter::repeat(0).take(n as usize)),
+                            Some(n)
+                                if n >= 0
+                                    && (n as u64)
+                                        <= (crate::limits::MAX_DATA_BYTES.saturating_sub(data.len())) as u64 =>
+                            {
+                                data.extend(std::iter::repeat(0).take(n as usize))
+                            }
+                            Some(n) if n >= 0 => {
+                                errors.push(AsmError::new(line_no, data_limit_message(data.len() as u64 + n as u64)));
+                                return Err(errors);
+                            }
                             _ => errors.push(AsmError::new(
                                 line_no,
                                 format!("invalid .{directive} size '{tail}'"),
@@ -473,6 +515,16 @@ pub fn assemble(source: &str) -> Result<Program, Vec<AsmError>> {
 
         let operands = split_operands(tail);
         text_cursor += 4 * expansion_size(&mnemonic, &operands) as u32;
+        if (text_cursor / 4) as usize > crate::limits::MAX_INSTRUCTIONS {
+            errors.push(AsmError::new(
+                line_no,
+                format!(
+                    "program is too long: the limit is {} machine instructions",
+                    crate::limits::MAX_INSTRUCTIONS
+                ),
+            ));
+            return Err(errors);
+        }
         items.push(Line::Instr {
             line: line_no,
             mnemonic,
@@ -520,8 +572,9 @@ pub fn assemble(source: &str) -> Result<Program, Vec<AsmError>> {
                         }
                     }
                 }
-                ".word" | ".half" | ".byte" if section == Section::Data => {
+                ".dword" | ".quad" | ".word" | ".half" | ".byte" if section == Section::Data => {
                     let size = match mnemonic.as_str() {
+                        ".dword" | ".quad" => 8,
                         ".word" => 4,
                         ".half" => 2,
                         _ => 1,
@@ -530,10 +583,10 @@ pub fn assemble(source: &str) -> Result<Program, Vec<AsmError>> {
                         cursor += 1;
                     }
                     for value_str in split_operands(tail) {
-                        let value: i64 = match parse_int(&value_str) {
+                        let value: i128 = match crate::asm_source::parse_int_literal(&value_str) {
                             Some(v) => v,
                             None => match labels.get(value_str.trim()) {
-                                Some(&addr) => addr as i64,
+                                Some(&addr) => addr as i128,
                                 None => {
                                     errors.push(AsmError::new(
                                         line_no,
@@ -543,6 +596,17 @@ pub fn assemble(source: &str) -> Result<Program, Vec<AsmError>> {
                                 }
                             },
                         };
+                        if !data_value_fits(value as i128, size) {
+                            errors.push(AsmError::new(
+                                line_no,
+                                format!(
+                                    "value {} does not fit in {mnemonic} ({size} bytes): use a value from {} to {}",
+                                    value_str.trim(),
+                                    -(1i128 << (8 * size - 1)),
+                                    (1i128 << (8 * size)) - 1
+                                ),
+                            ));
+                        }
                         let bytes = (value as u64).to_le_bytes();
                         for b in 0..size {
                             if cursor < data.len() {
@@ -700,10 +764,16 @@ impl<'a> Assembler<'a> {
         let token =
             token.ok_or_else(|| AsmError::new(line, "missing memory operand".to_string()))?;
         let t = token.trim();
-        if let Some(open) = t.find('(') {
+        if let Some(open) = t.rfind('(') {
             let close = t
                 .rfind(')')
-                .ok_or_else(|| AsmError::new(line, format!("missing ')' in '{t}'")))?;
+                .filter(|&close| close > open)
+                .ok_or_else(|| {
+                    AsmError::new(
+                        line,
+                        format!("expected a memory operand like 8(sp), but found '{t}' (missing ')')"),
+                    )
+                })?;
             let reg = parse_reg(&t[open + 1..close])
                 .ok_or_else(|| AsmError::new(line, format!("invalid register in '{t}'")))?;
             let off_str = t[..open].trim();
@@ -735,8 +805,14 @@ impl<'a> Assembler<'a> {
 
     fn branch_offset(&self, line: usize, addr: u32, target: u32) -> Result<i32, AsmError> {
         let offset = target.wrapping_sub(addr) as i32;
-        if offset % 2 != 0 {
-            return Err(AsmError::new(line, "branch target is misaligned"));
+        if offset % 4 != 0 {
+            return Err(AsmError::new(
+                line,
+                format!(
+                    "branch target 0x{target:x} is misaligned: instructions are 4 bytes long, \
+                     so targets must be multiples of 4"
+                ),
+            ));
         }
         if !(-4096..=4094).contains(&offset) {
             return Err(AsmError::new(
@@ -749,8 +825,14 @@ impl<'a> Assembler<'a> {
 
     fn jump_offset(&self, line: usize, addr: u32, target: u32) -> Result<i32, AsmError> {
         let offset = target.wrapping_sub(addr) as i32;
-        if offset % 2 != 0 {
-            return Err(AsmError::new(line, "jump target is misaligned"));
+        if offset % 4 != 0 {
+            return Err(AsmError::new(
+                line,
+                format!(
+                    "jump target 0x{target:x} is misaligned: instructions are 4 bytes long, \
+                     so targets must be multiples of 4"
+                ),
+            ));
         }
         if !(-(1 << 20)..(1 << 20)).contains(&offset) {
             return Err(AsmError::new(
@@ -1181,7 +1263,10 @@ impl<'a> Assembler<'a> {
                 let imm = self.jump_offset(line, addr, target)?;
                 Ok(vec![mk(Op::Jal, 0, 0, 0, imm, text, addr)])
             }
-            other => Err(AsmError::new(line, format!("unknown instruction '{other}'"))),
+            other => Err(AsmError::new(
+                line,
+                crate::asm_source::unknown_mnemonic_message(other, 32),
+            )),
         }
     }
 }
@@ -1293,4 +1378,18 @@ msg:    .asciz \"hi\"\n\
         assert_eq!(p.instrs[3].op, Op::Blt);
         assert_eq!(p.instrs[3].rs1, 0);
     }
+}
+
+fn data_limit_message(found: u64) -> String {
+    format!(
+        "static data is too large: found {found} bytes, but the data segment holds {} bytes",
+        crate::limits::MAX_DATA_BYTES
+    )
+}
+
+/// A data value fits a `size`-byte slot when it is representable as either a
+/// signed or an unsigned integer of that width (GNU `as` behaviour).
+fn data_value_fits(value: i128, size: usize) -> bool {
+    let bits = 8 * size as u32;
+    value >= -(1i128 << (bits - 1)) && value < (1i128 << bits)
 }

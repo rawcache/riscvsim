@@ -383,89 +383,12 @@ impl Rv64AssembleError {
     }
 }
 
-#[derive(serde::Serialize)]
-struct Rv64RunResult {
-    ok: bool,
-    /// Changed registers, one `xN (abi) = 0x... (signed)` line each, when ok.
-    output: Option<String>,
-    /// 1-based source line of the error (0 = no anchor).
-    line: usize,
-    /// Halt message ("program complete (ecall)") or the error.
-    message: String,
-    registers: Vec<String>,
-    pc: String,
-    cycles: u64,
-}
+type Rv64RunResult = sim_engine::report::RunReport;
 
-/// Engine trap messages are written as `line N: ...`; lift N into `line`.
-fn split_line_prefix(message: &str) -> (usize, String) {
-    if let Some(rest) = message.strip_prefix("line ") {
-        if let Some((num, tail)) = rest.split_once(": ") {
-            if let Ok(line) = num.parse::<usize>() {
-                return (line, tail.to_string());
-            }
-        }
-    }
-    (0, message.to_string())
-}
 
 fn run_rv64_result(source: &str, max_cycles: u64) -> Rv64RunResult {
-    let program = match assemble64(source) {
-        Ok(program) => program,
-        Err(errors) => {
-            let err = Rv64AssembleError::from_errors(errors);
-            return Rv64RunResult {
-                ok: false,
-                output: None,
-                line: err.line,
-                message: err.message,
-                registers: Vec::new(),
-                pc: hex64(0),
-                cycles: 0,
-            };
-        }
-    };
-    let mut pipeline = Pipeline64::new(program);
-    let initial = pipeline.registers();
-    pipeline.run(max_cycles);
-    let snap = pipeline.snapshot();
-    let registers = pipeline.registers();
-    let regs_hex: Vec<String> = registers.iter().copied().map(hex64).collect();
-    let (ok, line, message) = match &snap.halt {
-        Some(h) if h.kind == "complete" => (true, 0, h.message.clone()),
-        Some(h) => {
-            let (line, message) = split_line_prefix(&h.message);
-            (false, line, message)
-        }
-        None => (
-            false,
-            snap.stages.get(2).and_then(|s| s.line).unwrap_or(0),
-            format!("exceeded {max_cycles} cycles (possible infinite loop)"),
-        ),
-    };
-    let output = ok.then(|| {
-        (0..32)
-            .filter(|&i| initial[i] != registers[i])
-            .map(|i| {
-                format!(
-                    "x{i} ({}) = {} ({})",
-                    sim_engine::assembler64::abi_name(i as u8),
-                    hex64(registers[i]),
-                    registers[i] as i64
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    });
-    Rv64RunResult {
-        ok,
-        output,
-        line,
-        message,
-        registers: regs_hex,
-        pc: hex64(snap.pc),
-        cycles: snap.stats.cycles,
-    }
+    // One source of truth with the CLI (`riscvsim run --xlen=64 --json`).
+    sim_engine::report::run64(source, max_cycles)
 }
 
 #[cfg(test)]

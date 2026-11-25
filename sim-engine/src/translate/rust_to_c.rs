@@ -6,7 +6,8 @@ use super::{
     ArrayInitProvenance, AssignmentProvenance, Expr, Func, IfOrigin, LValue, LoopKind, Stmt,
     TranslateError,
 };
-use std::collections::{HashMap, HashSet};
+// Ordered maps: output never depends on hash iteration order.
+use std::collections::{BTreeMap as HashMap, BTreeSet as HashSet};
 use std::fmt::Write as _;
 
 pub(super) fn translate(source: &str) -> Result<String, TranslateError> {
@@ -461,6 +462,7 @@ impl<'a> Emitter<'a> {
 
     fn lvalue(&self, function: &Func, target: &LValue) -> Result<String, TranslateError> {
         Ok(match target {
+            LValue::Deref(_, line) => return Err(super::memory_feature_error(*line, "Rust", "C")),
             LValue::Var(name, _) => self.target_name(name),
             LValue::Index(name, index, _) => {
                 format!(
@@ -561,6 +563,7 @@ impl<'a> Emitter<'a> {
     fn lvalue_type(&self, function: &Func, target: &LValue) -> Result<HirType, TranslateError> {
         match target {
             LValue::Var(name, line) => self.lookup_type(function, name, *line),
+            LValue::Deref(_, line) => Err(super::memory_feature_error(*line, "Rust", "C")),
             LValue::Index(name, index, line) => {
                 self.lookup_array(function, name, *line)?;
                 let index_type = match index {

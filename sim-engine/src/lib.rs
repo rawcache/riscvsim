@@ -5,9 +5,13 @@
 //! simulator (via `rust-core`'s WASM bindings) and the `riscvsim` CLI.
 
 pub mod assembler;
+mod asm_source;
 pub mod assembler64;
+pub mod encoding;
+pub mod limits;
 pub mod pipeline;
 pub mod pipeline64;
+pub mod report;
 pub mod translate;
 pub mod xlen_convert;
 

@@ -6,7 +6,7 @@
 //! decoded instructions ready for the pipeline.
 
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::BTreeMap as HashMap;
 
 pub const TEXT_BASE64: u64 = crate::TEXT_BASE as u64;
 pub const DATA_BASE64: u64 = crate::DATA_BASE as u64;
@@ -237,21 +237,7 @@ fn parse_reg(token: &str) -> Option<u8> {
 }
 
 fn parse_int(token: &str) -> Option<i128> {
-    let t = token.trim();
-    let (neg, body) = match t.strip_prefix('-') {
-        Some(rest) => (true, rest),
-        None => (false, t.strip_prefix('+').unwrap_or(t)),
-    };
-    let value = if let Some(hex) = body.strip_prefix("0x").or_else(|| body.strip_prefix("0X")) {
-        i128::from_str_radix(hex, 16).ok()?
-    } else if let Some(bin) = body.strip_prefix("0b").or_else(|| body.strip_prefix("0B")) {
-        i128::from_str_radix(bin, 2).ok()?
-    } else if body.chars().all(|c| c.is_ascii_digit()) && !body.is_empty() {
-        body.parse::<i128>().ok()?
-    } else {
-        return None;
-    };
-    Some(if neg { -value } else { value })
+    crate::asm_source::parse_int_literal(token)
 }
 
 fn canonical_i64(value: i128) -> Option<i64> {
@@ -262,18 +248,31 @@ fn canonical_i64(value: i128) -> Option<i64> {
     }
 }
 
+/// Minimal `li` materialization (the algorithm LLVM's RISCVMatInt uses):
+/// 32-bit constants take `lui` (+ `addiw`) or a single `addi`; wider ones
+/// recursively build the upper part, shift it left past its trailing zeros
+/// and add the sign-extended low 12 bits. Returns `(op, imm)` steps where
+/// every step after the first reads `rd` (`lui`/first `addi` read zero).
 fn li_steps(value: i64) -> Vec<(Op64, i64)> {
     fn append(value: i64, out: &mut Vec<(Op64, i64)>) {
-        if (-2048..=2047).contains(&value) {
-            out.push((Op64::Addi, value));
+        if (i32::MIN as i64..=i32::MAX as i64).contains(&value) {
+            let hi20 = ((value + 0x800) >> 12) & 0xfffff;
+            let lo12 = (value << 52) >> 52;
+            if hi20 != 0 {
+                out.push((Op64::Lui, hi20));
+            }
+            if lo12 != 0 || hi20 == 0 {
+                out.push((if hi20 != 0 { Op64::Addiw } else { Op64::Addi }, lo12));
+            }
             return;
         }
-        let lo = (value << 52) >> 52;
-        let upper = ((value as i128 - lo as i128) >> 12) as i64;
-        append(upper, out);
-        out.push((Op64::Slli, 12));
-        if lo != 0 {
-            out.push((Op64::Addi, lo));
+        let lo12 = (value << 52) >> 52;
+        let upper = value.wrapping_sub(lo12);
+        let shift = upper.trailing_zeros();
+        append(upper >> shift, out);
+        out.push((Op64::Slli, shift as i64));
+        if lo12 != 0 {
+            out.push((Op64::Addi, lo12));
         }
     }
 
@@ -290,7 +289,7 @@ fn hi20(value: u64) -> u64 {
 }
 
 fn lo12(value: u64) -> i64 {
-    ((value & 0xfff) as i64) << 20 >> 20
+    ((value & 0xfff) as i64) << 52 >> 52
 }
 
 #[derive(Debug, Clone)]
@@ -402,6 +401,26 @@ struct Assembler64<'a> {
 }
 
 pub fn assemble64(source: &str) -> Result<Program64, Vec<AsmError64>> {
+    if let Err((line, message)) = crate::limits::check_source(source) {
+        return Err(vec![AsmError64::new(line, message)]);
+    }
+    let prepared = crate::asm_source::prepare(source);
+    if !prepared.errors.is_empty() {
+        return Err(prepared
+            .errors
+            .iter()
+            .map(|(line, message)| AsmError64::new(*line, message.clone()))
+            .collect());
+    }
+    let mut program = assemble64_prepared(&prepared.text)?;
+    crate::asm_source::restore_display(
+        &prepared,
+        program.instrs.iter_mut().map(|i| (i.line, &mut i.text)),
+    );
+    Ok(program)
+}
+
+fn assemble64_prepared(source: &str) -> Result<Program64, Vec<AsmError64>> {
     let mut errors: Vec<AsmError64> = Vec::new();
     let mut labels: HashMap<String, u64> = HashMap::new();
     let mut section = Section::Text;
@@ -413,6 +432,10 @@ pub fn assemble64(source: &str) -> Result<Program64, Vec<AsmError64>> {
     for (idx, raw_line) in source.lines().enumerate() {
         let line_no = idx + 1;
         let mut rest = strip_comment(raw_line).trim();
+        if data.len() > crate::limits::MAX_DATA_BYTES {
+            errors.push(AsmError64::new(line_no, data_limit_message(data.len() as u64)));
+            return Err(errors);
+        }
 
         // Labels (possibly several, possibly followed by an instruction).
         while let Some(colon) = rest.find(':') {
@@ -429,6 +452,16 @@ pub fn assemble64(source: &str) -> Result<Program64, Vec<AsmError64>> {
                 Section::Text => text_cursor,
                 Section::Data => DATA_BASE64 + data.len() as u64,
             };
+            if labels.len() >= crate::limits::MAX_LABELS && !labels.contains_key(candidate) {
+                errors.push(AsmError64::new(
+                    line_no,
+                    format!(
+                        "too many labels: the limit is {} labels per program",
+                        crate::limits::MAX_LABELS
+                    ),
+                ));
+                return Err(errors);
+            }
             if labels.insert(candidate.to_string(), addr).is_some() {
                 errors.push(AsmError64::new(
                     line_no,
@@ -504,6 +537,16 @@ pub fn assemble64(source: &str) -> Result<Program64, Vec<AsmError64>> {
                             }
                         }
                         "asciz" | "ascii" | "string" => match parse_string_literal(tail, line_no) {
+                            Ok(bytes) if bytes.len() > crate::limits::MAX_STRING_LITERAL_BYTES => {
+                                errors.push(AsmError64::new(
+                                    line_no,
+                                    format!(
+                                        "string literal is too long: found {} bytes, but the limit is {} bytes",
+                                        bytes.len(),
+                                        crate::limits::MAX_STRING_LITERAL_BYTES
+                                    ),
+                                ));
+                            }
                             Ok(mut bytes) => {
                                 if directive != "ascii" {
                                     bytes.push(0);
@@ -513,7 +556,17 @@ pub fn assemble64(source: &str) -> Result<Program64, Vec<AsmError64>> {
                             Err(e) => errors.push(e),
                         },
                         "space" | "zero" => match parse_int(tail) {
-                            Some(n) if n >= 0 => data.extend(std::iter::repeat(0).take(n as usize)),
+                            Some(n)
+                                if n >= 0
+                                    && (n as u64)
+                                        <= (crate::limits::MAX_DATA_BYTES.saturating_sub(data.len())) as u64 =>
+                            {
+                                data.extend(std::iter::repeat(0).take(n as usize))
+                            }
+                            Some(n) if n >= 0 => {
+                                errors.push(AsmError64::new(line_no, data_limit_message(data.len() as u64 + n as u64)));
+                                return Err(errors);
+                            }
                             _ => errors.push(AsmError64::new(
                                 line_no,
                                 format!("invalid .{directive} size '{tail}'"),
@@ -542,6 +595,16 @@ pub fn assemble64(source: &str) -> Result<Program64, Vec<AsmError64>> {
 
         let operands = split_operands(tail);
         text_cursor += 4 * expansion_size(&mnemonic, &operands) as u64;
+        if (text_cursor / 4) as usize > crate::limits::MAX_INSTRUCTIONS {
+            errors.push(AsmError64::new(
+                line_no,
+                format!(
+                    "program is too long: the limit is {} machine instructions",
+                    crate::limits::MAX_INSTRUCTIONS
+                ),
+            ));
+            return Err(errors);
+        }
         items.push(Line::Instr {
             line: line_no,
             mnemonic,
@@ -613,6 +676,17 @@ pub fn assemble64(source: &str) -> Result<Program64, Vec<AsmError64>> {
                                 }
                             },
                         };
+                        if !data_value_fits(value as i128, size) {
+                            errors.push(AsmError64::new(
+                                line_no,
+                                format!(
+                                    "value {} does not fit in {mnemonic} ({size} bytes): use a value from {} to {}",
+                                    value_str.trim(),
+                                    -(1i128 << (8 * size - 1)),
+                                    (1i128 << (8 * size)) - 1
+                                ),
+                            ));
+                        }
                         let bytes = (value as u64).to_le_bytes();
                         for b in 0..size {
                             if cursor < data.len() {
@@ -765,10 +839,16 @@ impl<'a> Assembler64<'a> {
         let token =
             token.ok_or_else(|| AsmError64::new(line, "missing memory operand".to_string()))?;
         let t = token.trim();
-        if let Some(open) = t.find('(') {
+        if let Some(open) = t.rfind('(') {
             let close = t
                 .rfind(')')
-                .ok_or_else(|| AsmError64::new(line, format!("missing ')' in '{t}'")))?;
+                .filter(|&close| close > open)
+                .ok_or_else(|| {
+                    AsmError64::new(
+                        line,
+                        format!("expected a memory operand like 8(sp), but found '{t}' (missing ')')"),
+                    )
+                })?;
             let reg = parse_reg(&t[open + 1..close])
                 .ok_or_else(|| AsmError64::new(line, format!("invalid register in '{t}'")))?;
             let off_str = t[..open].trim();
@@ -800,8 +880,14 @@ impl<'a> Assembler64<'a> {
 
     fn branch_offset(&self, line: usize, addr: u64, target: u64) -> Result<i64, AsmError64> {
         let offset = target.wrapping_sub(addr) as i64;
-        if offset % 2 != 0 {
-            return Err(AsmError64::new(line, "branch target is misaligned"));
+        if offset % 4 != 0 {
+            return Err(AsmError64::new(
+                line,
+                format!(
+                    "branch target 0x{target:x} is misaligned: instructions are 4 bytes long, \
+                     so targets must be multiples of 4"
+                ),
+            ));
         }
         if !(-4096..=4094).contains(&offset) {
             return Err(AsmError64::new(
@@ -814,8 +900,14 @@ impl<'a> Assembler64<'a> {
 
     fn jump_offset(&self, line: usize, addr: u64, target: u64) -> Result<i64, AsmError64> {
         let offset = target.wrapping_sub(addr) as i64;
-        if offset % 2 != 0 {
-            return Err(AsmError64::new(line, "jump target is misaligned"));
+        if offset % 4 != 0 {
+            return Err(AsmError64::new(
+                line,
+                format!(
+                    "jump target 0x{target:x} is misaligned: instructions are 4 bytes long, \
+                     so targets must be multiples of 4"
+                ),
+            ));
         }
         if !(-(1 << 20)..(1 << 20)).contains(&offset) {
             return Err(AsmError64::new(
@@ -1106,12 +1198,13 @@ impl<'a> Assembler64<'a> {
                     .into_iter()
                     .enumerate()
                     .map(|(index, (op, imm))| {
-                        let (rs1, rendered) = if op == Op64::Slli {
-                            (rd, format!("slli {0}, {0}, {imm}", abi_name(rd)))
-                        } else if index == 0 {
-                            (0, format!("addi {}, zero, {imm}", abi_name(rd)))
-                        } else {
-                            (rd, format!("addi {0}, {0}, {imm}", abi_name(rd)))
+                        let name = abi_name(rd);
+                        let (rs1, rendered) = match op {
+                            Op64::Lui => (0, format!("lui {name}, {imm:#x}")),
+                            Op64::Slli => (rd, format!("slli {name}, {name}, {imm}")),
+                            Op64::Addiw => (rd, format!("addiw {name}, {name}, {imm}")),
+                            _ if index == 0 => (0, format!("addi {name}, zero, {imm}")),
+                            _ => (rd, format!("addi {name}, {name}, {imm}")),
                         };
                         mk(op, rd, rs1, 0, imm, rendered, addr + index as u64 * 4)
                     })
@@ -1164,6 +1257,30 @@ impl<'a> Assembler64<'a> {
                     self.reg(line, ops.first(), "destination")?,
                     0,
                     self.reg(line, ops.get(1), "source")?,
+                    0,
+                    text,
+                    addr,
+                )])
+            }
+            "negw" => {
+                expect(2)?;
+                Ok(vec![mk(
+                    Op64::Subw,
+                    self.reg(line, ops.first(), "destination")?,
+                    0,
+                    self.reg(line, ops.get(1), "source")?,
+                    0,
+                    text,
+                    addr,
+                )])
+            }
+            "sext.w" => {
+                expect(2)?;
+                Ok(vec![mk(
+                    Op64::Addiw,
+                    self.reg(line, ops.first(), "destination")?,
+                    self.reg(line, ops.get(1), "source")?,
+                    0,
                     0,
                     text,
                     addr,
@@ -1334,7 +1451,10 @@ fn unsupported_message(mnemonic: &str) -> String {
         Some(ext) => format!(
             "unsupported instruction '{mnemonic}': {ext} is not part of RV64IM, the only RV64 subset this simulator runs"
         ),
-        None => format!("unknown instruction '{mnemonic}' (this simulator runs RV64IM only)"),
+        None => format!(
+            "{} (this simulator runs RV64IM only)",
+            crate::asm_source::unknown_mnemonic_message(mnemonic, 64)
+        ),
     }
 }
 
@@ -1540,4 +1660,18 @@ msg:    .asciz \"hi\"\n\
         assert_eq!(p.instrs[3].op, Op64::Blt);
         assert_eq!(p.instrs[3].rs1, 0);
     }
+}
+
+fn data_limit_message(found: u64) -> String {
+    format!(
+        "static data is too large: found {found} bytes, but the data segment holds {} bytes",
+        crate::limits::MAX_DATA_BYTES
+    )
+}
+
+/// A data value fits a `size`-byte slot when it is representable as either a
+/// signed or an unsigned integer of that width (GNU `as` behaviour).
+fn data_value_fits(value: i128, size: usize) -> bool {
+    let bits = 8 * size as u32;
+    value >= -(1i128 << (bits - 1)) && value < (1i128 << bits)
 }

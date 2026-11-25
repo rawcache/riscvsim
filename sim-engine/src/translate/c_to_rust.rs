@@ -4,7 +4,8 @@ use super::{
     ArrayInitProvenance, AssignmentProvenance, Expr, ExprStmtProvenance, Func, FunctionOrigin,
     IfOrigin, LValue, LoopKind, Stmt, TranslateError,
 };
-use std::collections::{HashMap, HashSet};
+// Ordered maps: output never depends on hash iteration order.
+use std::collections::{BTreeMap as HashMap, BTreeSet as HashSet};
 use std::fmt::Write as _;
 
 pub(super) fn translate(source: &str) -> Result<String, TranslateError> {
@@ -449,6 +450,7 @@ impl<'a> Emitter<'a> {
                 self.reject_escaped_iterator(name, *line)?;
                 Ok(self.binding_name(name))
             }
+            LValue::Deref(_, line) => Err(super::memory_feature_error(*line, "C", "Rust")),
             LValue::Index(name, index, line) => {
                 let binding = self.array_binding(function, name, *line)?;
                 if !binding.mutable {
@@ -720,6 +722,7 @@ fn collect_variables(expression: &Expr, output: &mut HashSet<String>) {
                     output.insert(name.clone());
                     collect_variables(index, output);
                 }
+                LValue::Deref(inner, _) => collect_variables(inner, output),
             }
             collect_variables(value, output);
         }

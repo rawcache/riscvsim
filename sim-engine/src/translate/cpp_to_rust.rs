@@ -4,7 +4,8 @@ use super::{
     ArrayInitProvenance, AssignmentProvenance, Expr, ExprStmtProvenance, Func, IfOrigin, LValue,
     LoopKind, ScalarType, Stmt, TranslateError,
 };
-use std::collections::{HashMap, HashSet};
+// Ordered maps: output never depends on hash iteration order.
+use std::collections::{BTreeMap as HashMap, BTreeSet as HashSet};
 use std::fmt::Write as _;
 
 pub(super) fn translate(source: &str) -> Result<String, TranslateError> {
@@ -574,6 +575,7 @@ impl<'a> Emitter<'a> {
                     value_type: binding.value_type,
                 })
             }
+            LValue::Deref(_, line) => Err(super::memory_feature_error(*line, "C++", "Rust")),
             LValue::Index(name, index, line) => {
                 self.array_binding(function, name, *line)?;
                 let index = self.lower_expression(function, index, depth)?;
@@ -595,6 +597,7 @@ impl<'a> Emitter<'a> {
                 self.array_binding(function, name, *line)?;
                 Ok(HirType::I32)
             }
+            LValue::Deref(_, line) => Err(super::memory_feature_error(*line, "C++", "Rust")),
         }
     }
 

@@ -709,6 +709,9 @@ fn imm_j(instruction: u32) -> i32 {
 }
 
 #[cfg(test)]
+mod encoding_crosscheck;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
