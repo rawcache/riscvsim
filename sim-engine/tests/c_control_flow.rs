@@ -44,7 +44,6 @@ fn switch_errors_are_clear() {
         ("int main() { switch (1) { return 1; } return 0; }", "must follow a 'case' or 'default'"),
         ("int main() { int x = 1; switch (1) { case x: return 1; } return 0; }", "integer constants"),
         ("int main() { case 1: return 1; }", "only allowed inside a switch"),
-        ("int main() { for (int i = 0; i < 2; i++) { switch (i) { case 0: continue; } } return 0; }", "'continue' inside a switch"),
         ("int main() { int i = 0; do i++; return i; }", "expected 'while"),
         ("int main() { goto end; end: return 0; }", "goto is not supported"),
     ];

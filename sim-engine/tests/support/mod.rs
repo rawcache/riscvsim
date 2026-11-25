@@ -282,3 +282,76 @@ pub fn host_tool(name: &str) -> bool {
         .map(|s| s.success())
         .unwrap_or(false)
 }
+
+/// Run every `(source, RV32 result, RV64 result)` program through
+/// `c_to_asm` and `c_to_asm64` and report all mismatches at once.
+#[allow(dead_code)]
+pub fn check_c_programs(suite: &str, programs: &[(&str, i64, i64)]) {
+    let mut failures = Vec::new();
+    for (src, want32, want64) in programs {
+        for (target, got, want) in [("RV32", run_c32(src), *want32), ("RV64", run_c64(src), *want64)] {
+            if got.as_ref() != Ok(&want) {
+                failures.push(format!("{target}: {src}\n    expected {want}, got {got:?}"));
+            }
+        }
+    }
+    assert!(failures.is_empty(), "{suite}: {} failures\n{}", failures.len(), failures.join("\n"));
+}
+
+/// Compile each program with the host C compiler (LP64, like RV64) and
+/// compare `main`'s result with the expected RV64 value. Skips quietly
+/// when there is no `cc`.
+#[allow(dead_code)]
+pub fn host_cc_differential(suite: &str, programs: &[(&str, i64, i64)]) {
+    if !host_tool("cc") {
+        eprintln!("SKIP {suite} host differential: no host cc");
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("riscvsim-{suite}-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut failures = Vec::new();
+    for (i, (src, _, want64)) in programs.iter().enumerate() {
+        let native = format!(
+            "#include <stdio.h>\n#define main prog_main\n{src}\n#undef main\nint main(void) {{ printf(\"%d\\n\", prog_main()); return 0; }}\n"
+        );
+        let c_path = dir.join(format!("p{i}.c"));
+        let exe = dir.join(format!("p{i}"));
+        std::fs::write(&c_path, native).unwrap();
+        let built = std::process::Command::new("cc")
+            .args(["-O0", "-funsigned-char", "-fwrapv", "-w", "-o"])
+            .arg(&exe)
+            .arg(&c_path)
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if !built {
+            failures.push(format!("host cc rejected: {src}"));
+            continue;
+        }
+        let output = std::process::Command::new(&exe).output().expect("run native program");
+        let got: Option<i64> = String::from_utf8_lossy(&output.stdout).trim().parse().ok();
+        if got != Some(*want64) {
+            failures.push(format!("host cc gives {got:?}, expected {want64}: {src}"));
+        }
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+    assert!(failures.is_empty(), "{suite}: {} host differences\n{}", failures.len(), failures.join("\n"));
+    eprintln!("{suite}: {} programs match the host cc", programs.len());
+}
+
+/// Every source must be rejected on RV32 and RV64 with a message that
+/// contains the needle.
+#[allow(dead_code)]
+pub fn check_c_errors(suite: &str, cases: &[(&str, &str)]) {
+    let mut failures = Vec::new();
+    for (src, needle) in cases {
+        for (target, result) in [("RV32", sim_engine::c_to_asm(src)), ("RV64", sim_engine::c_to_asm64(src))] {
+            match result {
+                Err(e) if e.message.contains(needle) => {}
+                Err(e) => failures.push(format!("{target}: {src}\n    wanted '{needle}', got: {}", e.message)),
+                Ok(_) => failures.push(format!("{target}: {src}\n    compiled, but should fail with '{needle}'")),
+            }
+        }
+    }
+    assert!(failures.is_empty(), "{suite}: {} failures\n{}", failures.len(), failures.join("\n"));
+}

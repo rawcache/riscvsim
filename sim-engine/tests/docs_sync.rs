@@ -82,7 +82,10 @@ fn every_listed_c_construct_compiles() {
         ("if/else", "int main() { if (1) { return 1; } else { return 2; } }"),
         ("while/for/do-while", "int main() { int i = 0; while (i < 2) i++; for (; i < 4; i++) {} do { i++; } while (i < 6); return i; }"),
         ("switch with fallthrough", "int main() { int r = 0; switch (1) { case 1: r++; case 2: r++; break; default: r = 9; } return r; }"),
-        ("break/continue", "int main() { int s = 0; for (int i = 0; i < 9; i++) { if (i == 5) break; if (i % 2) continue; s += i; } return s; }"),
+        ("break/continue (also continue inside switch)", "int main() { int s = 0; for (int i = 0; i < 9; i++) { if (i == 5) break; if (i % 2) continue; switch (i) { case 2: continue; } s += i; } return s; }"),
+        ("block scopes & shadowing", "int i = 9; int main() { int s = 0; for (int i = 0; i < 2; i++) s += i; for (int i = 0; i < 3; i++) { int s2 = i; s += s2; } { int i = 4; s += i; } return s + i; }"),
+        ("void functions & (void) parameter lists", "int g = 0; void set(int v) { if (v < 0) return; g = v; } int get(void) { return g; } int main() { set(3); return get(); }"),
+        ("pointer casts, void * & pointer-width integer casts", "int main() { int x = 7; void *v = &x; long a = (long)v; char *c = (char *)a; return *(int *)c + *c; }"),
         ("functions (up to 7 integer args)", "int f(int a, int b, int c, int d, int e, int g, int h) { return a + h; } int main() { return f(1, 2, 3, 4, 5, 6, 7); }"),
         ("prototypes without a body call hand-written assembly (psABI)", "int ext(int x);\nint main() { return ext(1); }"),
         ("recursion", "int f(int n) { return n < 2 ? n : f(n - 1) + f(n - 2); } int main() { return 0; }"),
@@ -105,14 +108,10 @@ fn every_listed_c_construct_compiles() {
 #[test]
 fn every_listed_unsupported_c_construct_is_rejected_clearly() {
     let constructs = [
-        ("pointer casts & void pointers", "int main() { int x = 1; int *p = (int *)x; return *p; }", "casts to pointer types"),
-        ("pointer casts & void pointers", "int main() { void *p = 0; return 0; }", "void pointers"),
         ("function pointers & pointers to arrays", "int main() { int (*f)(int); return 0; }", "function pointers"),
         ("structs & unions", "struct P { int x; }; int main() { return 0; }", "struct"),
-        ("void functions", "void f() { } int main() { return 0; }", "void functions"),
         ("floats", "int main() { float f = 1; return 0; }", "floating point"),
         ("goto", "int main() { goto end; end: return 0; }", "goto"),
-        ("continue inside switch", "int main() { for (int i = 0; i < 2; i++) { switch (i) { case 0: continue; } } return 0; }", "continue"),
         ("#include & standard library calls", "#include <stdio.h>\nint main() { return 0; }", "#include"),
     ];
     for (name, src, needle) in constructs {

@@ -159,3 +159,30 @@ fn memory_reads_are_capped() {
     let p = Pipeline64::new(assemble64("nop\n").unwrap());
     assert_eq!(p.read_memory(0x1000_0000, 16).len(), 16);
 }
+
+/// Shapes that brackets do not show are bounded too, each with a plain
+/// message instead of a stack overflow.
+#[test]
+fn chains_ladders_and_macro_nesting_are_bounded() {
+    let sum = |terms: usize| format!("int main() {{ return {}; }}", vec!["1"; terms].join(" + "));
+    assert_eq!(support::run_c32(&sum(40)), Ok(40));
+    let err = c_to_asm(&sum(2_000)).unwrap_err();
+    assert!(err.message.contains("too long or nested too deeply"), "{}", err.message);
+    assert!(err.message.contains("split it into smaller pieces"), "{}", err.message);
+
+    let ladder = |arms: usize| {
+        format!("int main() {{ int x = 3; {} x = 9; return x; }}", "if (x == 1) x = 1; else ".repeat(arms))
+    };
+    assert!(c_to_asm(&ladder(40)).is_ok());
+    assert!(c_to_asm(&ladder(500)).unwrap_err().message.contains("nested too deeply"));
+    let rust_ladder = format!(
+        "fn main() -> i32 {{ let mut x = 0; {} {{ x = 2; }} x }}",
+        "if x == 1 { x = 1; } else ".repeat(500)
+    );
+    assert!(rust_to_asm(&rust_ladder).unwrap_err().message.contains("nested too deeply"));
+
+    let macro_args = format!("#define G(a) a\nint main() {{ return {}1{}; }}", "G(".repeat(500), ")".repeat(500));
+    assert!(c_to_asm(&macro_args).unwrap_err().message.contains("macro expansion is nested too deeply"));
+    let pp_unary = format!("#if {}1\nint main() {{ return 1; }}\n#endif\n", "- ".repeat(5_000));
+    assert!(c_to_asm(&pp_unary).is_ok(), "an even count of '-' is 1, so the #if is true");
+}

@@ -174,7 +174,7 @@ impl<'a> Emitter<'a> {
         depth: usize,
     ) -> Result<(), TranslateError> {
         match statement {
-            Stmt::Decl(name, initial, _, line) => {
+            Stmt::Decl(name, initial, _, line) => (|| -> Result<(), TranslateError> {
                 let binding = self.binding(function, name, *line)?;
                 let value_type = binding.value_type;
                 let mutable = binding.mutable;
@@ -193,8 +193,9 @@ impl<'a> Emitter<'a> {
                         type_name(value_type)
                     ),
                 );
-            }
-            Stmt::DeclArray(name, size, initial, source, initializer, line) => {
+                Ok(())
+            })()?,
+            Stmt::DeclArray(name, size, initial, source, initializer, line) => (|| -> Result<(), TranslateError> {
                 let binding = self.binding(function, name, *line)?;
                 let mutable = binding.mutable;
                 let mut values = Vec::new();
@@ -219,18 +220,21 @@ impl<'a> Emitter<'a> {
                         self.target_name(name)
                     ),
                 );
-            }
+                Ok(())
+            })()?,
             Stmt::Expr(_, ExprStmtProvenance::Empty) => {}
-            Stmt::Expr(expression, ExprStmtProvenance::Expression) => {
+            Stmt::Expr(expression, ExprStmtProvenance::Expression) => (|| -> Result<(), TranslateError> {
                 let value = self.lower_expression(function, expression, depth)?;
                 self.line(depth, &format!("{};", value.code));
-            }
-            Stmt::If(_, body, _, source) if source.origin == IfOrigin::PlainBlock => {
+                Ok(())
+            })()?,
+            Stmt::If(_, body, _, source) if source.origin == IfOrigin::PlainBlock => (|| -> Result<(), TranslateError> {
                 self.line(depth, "{");
                 self.emit_statements(function, body, depth + 1)?;
                 self.line(depth, "}");
-            }
-            Stmt::If(condition, body, otherwise, _) => {
+                Ok(())
+            })()?,
+            Stmt::If(condition, body, otherwise, _) => (|| -> Result<(), TranslateError> {
                 let condition = self.condition(function, condition, depth)?;
                 self.line(depth, &format!("if {} {{", condition.code));
                 self.emit_statements(function, body, depth + 1)?;
@@ -241,8 +245,9 @@ impl<'a> Emitter<'a> {
                     self.emit_statements(function, otherwise, depth + 1)?;
                     self.line(depth, "}");
                 }
-            }
-            Stmt::While(condition, body, source) => {
+                Ok(())
+            })()?,
+            Stmt::While(condition, body, source) => (|| -> Result<(), TranslateError> {
                 if source.kind != LoopKind::While {
                     return Err(TranslateError::new(
                         source.line,
@@ -259,8 +264,9 @@ impl<'a> Emitter<'a> {
                 self.loops.pop();
                 result?;
                 self.line(depth, "}");
-            }
-            Stmt::For(initial, condition, post, body, source) => {
+                Ok(())
+            })()?,
+            Stmt::For(initial, condition, post, body, source) => (|| -> Result<(), TranslateError> {
                 if source.kind != LoopKind::CFor {
                     return Err(TranslateError::new(
                         source.line,
@@ -291,8 +297,9 @@ impl<'a> Emitter<'a> {
                 }
                 self.line(depth + 1, "}");
                 self.line(depth, "}");
-            }
-            Stmt::Return(value, _, line) => {
+                Ok(())
+            })()?,
+            Stmt::Return(value, _, line) => (|| -> Result<(), TranslateError> {
                 let expected = self.function_hir(&function.name).return_type;
                 let value = match (expected, value) {
                     (HirType::Unit, None) => {
@@ -312,25 +319,28 @@ impl<'a> Emitter<'a> {
                     (_, None) => default_value(expected, *line)?.to_string(),
                 };
                 self.line(depth, &format!("return {value};"));
-            }
-            Stmt::Break(line) => {
+                Ok(())
+            })()?,
+            Stmt::Break(line) => (|| -> Result<(), TranslateError> {
                 if self.loops.is_empty() {
-                    return Err(TranslateError::new(*line, "break outside a loop"));
+                    return Err(TranslateError::new(*line, "break outside a loop: 'break' only works inside a loop or a switch"));
                 }
                 self.line(depth, "break;");
-            }
-            Stmt::Continue(line) => {
+                Ok(())
+            })()?,
+            Stmt::Continue(line) => (|| -> Result<(), TranslateError> {
                 let context = self
                     .loops
                     .last()
                     .cloned()
-                    .ok_or_else(|| TranslateError::new(*line, "continue outside a loop"))?;
+                    .ok_or_else(|| TranslateError::new(*line, "continue outside a loop: 'continue' only works inside a for, while or do-while loop"))?;
                 if let LoopContext::CFor(post) = context {
                     let value = self.lower_expression(function, &post, depth)?;
                     self.line(depth, &format!("{};", value.code));
                 }
                 self.line(depth, "continue;");
-            }
+                Ok(())
+            })()?,
         }
         Ok(())
     }
@@ -349,14 +359,14 @@ impl<'a> Emitter<'a> {
                 },
                 value_type: (*value_type).into(),
             }),
-            Expr::Var(name, line) => {
+            Expr::Var(name, line) => (|| -> Result<Value, TranslateError> {
                 let binding = self.scalar_binding(function, name, *line)?;
                 Ok(Value {
                     code: self.target_name(name),
                     value_type: binding.value_type,
                 })
-            }
-            Expr::Index(name, index, line) => {
+            })(),
+            Expr::Index(name, index, line) => (|| -> Result<Value, TranslateError> {
                 self.array_binding(function, name, *line)?;
                 let index = self.lower_expression(function, index, depth)?;
                 let index = self.coerce(index, HirType::I32, depth, *line)?;
@@ -364,15 +374,15 @@ impl<'a> Emitter<'a> {
                     code: format!("{}[({} as usize)]", self.target_name(name), index.code),
                     value_type: HirType::I32,
                 })
-            }
-            Expr::Unary("!", value, _) => {
+            })(),
+            Expr::Unary("!", value, _) => (|| -> Result<Value, TranslateError> {
                 let value = self.condition(function, value, depth)?;
                 Ok(Value {
                     code: format!("(!{})", value.code),
                     value_type: HirType::Bool,
                 })
-            }
-            Expr::Unary(operator @ ("~" | "-"), value, line) => {
+            })(),
+            Expr::Unary(operator @ ("~" | "-"), value, line) => (|| -> Result<Value, TranslateError> {
                 let value = self.lower_expression(function, value, depth)?;
                 let value = self.coerce(value, HirType::I32, depth, *line)?;
                 let rust_operator = if *operator == "~" { "!" } else { "-" };
@@ -380,18 +390,18 @@ impl<'a> Emitter<'a> {
                     code: format!("({rust_operator}{})", value.code),
                     value_type: HirType::I32,
                 })
-            }
+            })(),
             Expr::Unary(_, _, line) => Err(TranslateError::new(
                 *line,
                 "unsupported unary expression in C++-to-Rust translation",
             )),
-            Expr::Binary("&&", left, right, line) => {
+            Expr::Binary("&&", left, right, line) => (|| -> Result<Value, TranslateError> {
                 self.lower_short_circuit(function, left, right, true, depth, *line)
-            }
-            Expr::Binary("||", left, right, line) => {
+            })(),
+            Expr::Binary("||", left, right, line) => (|| -> Result<Value, TranslateError> {
                 self.lower_short_circuit(function, left, right, false, depth, *line)
-            }
-            Expr::Binary(operator @ ("==" | "!="), left, right, line) => {
+            })(),
+            Expr::Binary(operator @ ("==" | "!="), left, right, line) => (|| -> Result<Value, TranslateError> {
                 let left = self.lower_expression(function, left, depth)?;
                 let left_type = left.value_type;
                 let right = self.lower_expression(function, right, depth)?;
@@ -408,8 +418,8 @@ impl<'a> Emitter<'a> {
                     code: format!("({} {operator} {})", left.code, right.code),
                     value_type: HirType::Bool,
                 })
-            }
-            Expr::Binary(operator @ ("<" | "<=" | ">" | ">="), left, right, line) => {
+            })(),
+            Expr::Binary(operator @ ("<" | "<=" | ">" | ">="), left, right, line) => (|| -> Result<Value, TranslateError> {
                 let left = self.lower_expression(function, left, depth)?;
                 let left = self.coerce(left, HirType::I32, depth, *line)?;
                 let right = self.lower_expression(function, right, depth)?;
@@ -418,8 +428,8 @@ impl<'a> Emitter<'a> {
                     code: format!("({} {operator} {})", left.code, right.code),
                     value_type: HirType::Bool,
                 })
-            }
-            Expr::Binary(operator, left, right, line) => {
+            })(),
+            Expr::Binary(operator, left, right, line) => (|| -> Result<Value, TranslateError> {
                 let left = self.lower_expression(function, left, depth)?;
                 let left = self.coerce(left, HirType::I32, depth, *line)?;
                 let right = self.lower_expression(function, right, depth)?;
@@ -428,11 +438,11 @@ impl<'a> Emitter<'a> {
                     code: format!("({} {operator} {})", left.code, right.code),
                     value_type: HirType::I32,
                 })
-            }
-            Expr::Assign(target, value, source, line) => {
+            })(),
+            Expr::Assign(target, value, source, line) => (|| -> Result<Value, TranslateError> {
                 self.lower_assignment(function, target, value, *source, depth, *line)
-            }
-            Expr::Call(name, arguments, line) => {
+            })(),
+            Expr::Call(name, arguments, line) => (|| -> Result<Value, TranslateError> {
                 let signature = self.signatures.get(name).cloned().ok_or_else(|| {
                     TranslateError::new(*line, format!("call to undefined function '{name}'"))
                 })?;
@@ -455,7 +465,7 @@ impl<'a> Emitter<'a> {
                     code: format!("{}({})", self.target_name(name), emitted.join(", ")),
                     value_type: signature.result,
                 })
-            }
+            })(),
         }
     }
 
@@ -1092,8 +1102,11 @@ mod tests {
     }
 
     #[test]
-    fn cpp_to_rust_bare_bool_return_uses_false() {
-        assert_equivalent("bool ready() { return; } int main() { return ready(); }", 0);
+    /// `return;` in a bool function is ill-formed C++ (and C99 forbids it in
+    /// an int function); it used to compile to `false`, now it is a clear error.
+    fn cpp_bare_return_in_a_value_function_is_rejected() {
+        let err = crate::translate::cpp_to_rust("bool ready() { return; } int main() { return ready(); }").unwrap_err();
+        assert!(err.message.contains("'ready' must return a value"), "{}", err.message);
     }
 
     #[test]

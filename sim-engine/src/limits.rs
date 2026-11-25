@@ -8,10 +8,11 @@
 pub const MAX_SOURCE_BYTES: usize = 1024 * 1024;
 /// Longest single source line.
 pub const MAX_LINE_LENGTH: usize = 16 * 1024;
-/// Deepest nesting of parentheses, brackets, blocks and expressions the
-/// recursive-descent front ends accept (keeps recursion far from the
-/// stack limit of a browser WASM module).
-pub const MAX_NESTING_DEPTH: usize = 128;
+/// Deepest nesting the front ends accept: parentheses, brackets, blocks,
+/// statements and operators (`a + b + c` is three levels; each `else if`
+/// is one more). The worst case at this depth fits in half of a 1 MiB
+/// browser WASM stack even in a debug build (`tests/stack_budget.rs`).
+pub const MAX_NESTING_DEPTH: usize = 64;
 /// Most labels one assembly program may define.
 pub const MAX_LABELS: usize = 65_536;
 /// Longest string literal (assembler `.string`/`.ascii`, or source language).

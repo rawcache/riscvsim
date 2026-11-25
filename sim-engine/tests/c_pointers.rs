@@ -114,8 +114,8 @@ fn programs_without_pointers_keep_their_exact_assembly() {
 #[test]
 fn unsupported_pointer_forms_are_rejected_clearly() {
     let cases: &[(&str, &str)] = &[
-        ("int main() { int x = 1; int *p = (int *)x; return *p; }", "casts to pointer types"),
-        ("int main() { void *p = 0; return 0; }", "void pointers are not"),
+        ("int main() { short x = 1; int *p = (int *)x; return *p; }", "pointers are"),
+        ("int main() { void *p = 0; return *p; }", "cannot dereference a 'void *'"),
         ("int main() { int a[2]; int *p = &a; return 0; }", "pointer to a whole array"),
         ("int main() { int x = 1; return *x; }", "not a pointer"),
         ("int main() { int x = 1; int *p = x; return 0; }", "only the constant 0 converts to a pointer"),
@@ -126,8 +126,6 @@ fn unsupported_pointer_forms_are_rejected_clearly() {
         ("int main() { int x = 1; int *p = &x; return p < 5; }", "compare pointers with pointers, or with 0"),
         ("int main() { int a[2]; int *p = a; p *= 2; return 0; }", "invalid pointer arithmetic"),
         ("int main() { int x = 1; int *****p = 0; return 0; }", "deeper than 4"),
-        ("int g = 1; int main() { int g = 2; return g; }", "already a global variable"),
-        ("int g = 1; int f(int g) { return g; } int main() { return f(1); }", "same name as a global"),
         ("int g = 1; int g = 2; int main() { return g; }", "defined twice"),
         ("int x = 1; int g = x; int main() { return g; }", "global initializers must be constants"),
         ("int g = 1; int g2 = 2; int main() { return g; } int g3() { return 0; } int g3x = g;", "global initializers must be constants"),

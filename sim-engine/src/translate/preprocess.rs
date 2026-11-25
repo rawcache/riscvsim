@@ -123,15 +123,25 @@ fn strip_comments(lines: &mut [String]) -> Result<(), TranslateError> {
 struct Pre {
     macros: BTreeMap<String, Macro>,
     output_bytes: usize,
+    /// Active `expand` calls: nested macro bodies and nested arguments
+    /// such as `F(F(F(1)))` both count.
+    depth: usize,
 }
 
 impl Pre {
     /// Expand macros in `text`. `hidden` holds macros currently being
     /// expanded (they are not re-expanded, as in C).
     fn expand(&mut self, text: &str, line: usize, hidden: &mut Vec<String>) -> Result<String, TranslateError> {
-        if hidden.len() > MAX_NESTING_DEPTH {
+        if hidden.len() > MAX_NESTING_DEPTH || self.depth >= MAX_NESTING_DEPTH {
             return Err(err(line, crate::limits::nesting_message("macro expansion")));
         }
+        self.depth += 1;
+        let result = self.expand_text(text, line, hidden);
+        self.depth -= 1;
+        result
+    }
+
+    fn expand_text(&mut self, text: &str, line: usize, hidden: &mut Vec<String>) -> Result<String, TranslateError> {
         let chars: Vec<char> = text.chars().collect();
         let mut out = String::with_capacity(text.len());
         let mut i = 0;
@@ -418,13 +428,28 @@ impl Eval<'_> {
         self.depth -= 1;
         Ok(left)
     }
+    /// Prefix operators are collected in a loop (not by recursion), so a
+    /// long chain such as `- - - - 1` cannot exhaust the stack.
     fn unary(&mut self) -> Result<i64, TranslateError> {
+        let mut prefixes = Vec::new();
+        while matches!(self.peek(), "-" | "+" | "!" | "~") {
+            prefixes.push(self.next());
+        }
+        let mut value = self.operand()?;
+        for op in prefixes.iter().rev() {
+            value = match op.as_str() {
+                "-" => value.wrapping_neg(),
+                "!" => i64::from(value == 0),
+                "~" => !value,
+                _ => value,
+            };
+        }
+        Ok(value)
+    }
+
+    fn operand(&mut self) -> Result<i64, TranslateError> {
         let t = self.next();
         match t.as_str() {
-            "-" => Ok(self.unary()?.wrapping_neg()),
-            "+" => self.unary(),
-            "!" => Ok(i64::from(self.unary()? == 0)),
-            "~" => Ok(!self.unary()?),
             "(" => {
                 let v = self.expr(0)?;
                 if self.next() != ")" {
@@ -496,7 +521,7 @@ impl Pre {
 pub(super) fn preprocess(source: &str) -> Result<String, TranslateError> {
     let mut lines = join_continuations(source);
     strip_comments(&mut lines)?;
-    let mut pre = Pre { macros: BTreeMap::new(), output_bytes: 0 };
+    let mut pre = Pre { macros: BTreeMap::new(), output_bytes: 0, depth: 0 };
     // (active, any branch taken, saw #else, opening line)
     let mut stack: Vec<(bool, bool, bool, usize)> = Vec::new();
     let mut out = String::with_capacity(source.len());

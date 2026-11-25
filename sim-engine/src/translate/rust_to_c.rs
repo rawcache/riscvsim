@@ -195,7 +195,7 @@ impl<'a> Emitter<'a> {
     ) -> Result<(), TranslateError> {
         let indent = "    ".repeat(depth);
         match statement {
-            Stmt::Decl(name, initial, source, line) => {
+            Stmt::Decl(name, initial, source, line) => (|| -> Result<(), TranslateError> {
                 let initial = initial.as_ref().ok_or_else(|| {
                     TranslateError::new(*line, "Rust bindings require an initializer")
                 })?;
@@ -222,8 +222,9 @@ impl<'a> Emitter<'a> {
                     self.target_type(expected)
                 };
                 let _ = writeln!(self.out, "{indent}{keyword} {name} = {value};");
-            }
-            Stmt::DeclArray(name, size, initial, _, initializer, line) => {
+                Ok(())
+            })()?,
+            Stmt::DeclArray(name, size, initial, _, initializer, line) => (|| -> Result<(), TranslateError> {
                 let mut values = Vec::with_capacity(initial.len());
                 for value in initial {
                     let actual = self.expression_type(function, value)?;
@@ -256,18 +257,21 @@ impl<'a> Emitter<'a> {
                         ));
                     }
                 }
-            }
-            Stmt::Expr(expression, _) => {
+                Ok(())
+            })()?,
+            Stmt::Expr(expression, _) => (|| -> Result<(), TranslateError> {
                 self.expression_type(function, expression)?;
                 let expression = self.expression(function, expression)?;
                 let _ = writeln!(self.out, "{indent}{expression};");
-            }
-            Stmt::If(_, body, _, source) if source.origin == IfOrigin::PlainBlock => {
+                Ok(())
+            })()?,
+            Stmt::If(_, body, _, source) if source.origin == IfOrigin::PlainBlock => (|| -> Result<(), TranslateError> {
                 let _ = writeln!(self.out, "{indent}{{");
                 self.emit_statements(function, body, depth + 1)?;
                 let _ = writeln!(self.out, "{indent}}}");
-            }
-            Stmt::If(condition, body, otherwise, _) => {
+                Ok(())
+            })()?,
+            Stmt::If(condition, body, otherwise, _) => (|| -> Result<(), TranslateError> {
                 self.require_condition(function, condition)?;
                 let condition = self.expression(function, condition)?;
                 let _ = writeln!(self.out, "{indent}if ({condition}) {{");
@@ -279,8 +283,9 @@ impl<'a> Emitter<'a> {
                     self.emit_statements(function, otherwise, depth + 1)?;
                     let _ = writeln!(self.out, "{indent}}}");
                 }
-            }
-            Stmt::While(condition, body, source) => {
+                Ok(())
+            })()?,
+            Stmt::While(condition, body, source) => (|| -> Result<(), TranslateError> {
                 if source.kind != LoopKind::RustLoop {
                     self.require_condition(function, condition)?;
                 }
@@ -299,7 +304,8 @@ impl<'a> Emitter<'a> {
                 self.loop_depth -= 1;
                 body_result?;
                 let _ = writeln!(self.out, "{indent}}}");
-            }
+                Ok(())
+            })()?,
             Stmt::For(initial, condition, _, body, source)
                 if source.kind == LoopKind::RustRange =>
             {
@@ -340,7 +346,7 @@ impl<'a> Emitter<'a> {
                     "internal: Rust AST contains a non-range for loop",
                 ));
             }
-            Stmt::Return(value, _, line) => {
+            Stmt::Return(value, _, line) => (|| -> Result<(), TranslateError> {
                 let expected = function.return_type.into();
                 match value {
                     Some(value) => {
@@ -364,19 +370,22 @@ impl<'a> Emitter<'a> {
                         ));
                     }
                 }
-            }
-            Stmt::Break(line) => {
+                Ok(())
+            })()?,
+            Stmt::Break(line) => (|| -> Result<(), TranslateError> {
                 if self.loop_depth == 0 {
-                    return Err(TranslateError::new(*line, "break outside a loop"));
+                    return Err(TranslateError::new(*line, "break outside a loop: 'break' only works inside a loop, while or for"));
                 }
                 let _ = writeln!(self.out, "{indent}break;");
-            }
-            Stmt::Continue(line) => {
+                Ok(())
+            })()?,
+            Stmt::Continue(line) => (|| -> Result<(), TranslateError> {
                 if self.loop_depth == 0 {
-                    return Err(TranslateError::new(*line, "continue outside a loop"));
+                    return Err(TranslateError::new(*line, "continue outside a loop: 'continue' only works inside a loop, while or for"));
                 }
                 let _ = writeln!(self.out, "{indent}continue;");
-            }
+                Ok(())
+            })()?,
         }
         Ok(())
     }
@@ -483,7 +492,7 @@ impl<'a> Emitter<'a> {
         match expression {
             Expr::Num(_, value_type, _) => Ok((*value_type).into()),
             Expr::Var(name, line) => self.lookup_type(function, name, *line),
-            Expr::Index(name, index, line) => {
+            Expr::Index(name, index, line) => (|| -> Result<HirType, TranslateError> {
                 self.lookup_array(function, name, *line)?;
                 let index_type = match &**index {
                     Expr::Unary("as usize", value, _) => self.expression_type(function, value)?,
@@ -491,8 +500,8 @@ impl<'a> Emitter<'a> {
                 };
                 self.require_type(*line, HirType::I32, index_type, "array index")?;
                 Ok(HirType::I32)
-            }
-            Expr::Unary(operator, value, _) => {
+            })(),
+            Expr::Unary(operator, value, _) => (|| -> Result<HirType, TranslateError> {
                 let value_type = self.expression_type(function, value)?;
                 match *operator {
                     "as usize" => Err(type_error(
@@ -506,8 +515,8 @@ impl<'a> Emitter<'a> {
                     "!" if matches!(value_type, HirType::I32 | HirType::Bool) => Ok(value_type),
                     _ => Err(type_error(line, "unsupported unary operand type")),
                 }
-            }
-            Expr::Binary(operator, left, right, _) => {
+            })(),
+            Expr::Binary(operator, left, right, _) => (|| -> Result<HirType, TranslateError> {
                 let left_type = self.expression_type(function, left)?;
                 let right_type = self.expression_type(function, right)?;
                 match *operator {
@@ -530,14 +539,14 @@ impl<'a> Emitter<'a> {
                     }
                     _ => Err(type_error(line, "unsupported binary operand types")),
                 }
-            }
-            Expr::Assign(target, value, _, _) => {
+            })(),
+            Expr::Assign(target, value, _, _) => (|| -> Result<HirType, TranslateError> {
                 let target_type = self.lvalue_type(function, target)?;
                 let value_type = self.expression_type(function, value)?;
                 self.require_type(line, target_type, value_type, "assignment")?;
                 Ok(HirType::Unit)
-            }
-            Expr::Call(name, arguments, line) => {
+            })(),
+            Expr::Call(name, arguments, line) => (|| -> Result<HirType, TranslateError> {
                 let signature = self.signatures.get(name).ok_or_else(|| {
                     TranslateError::new(*line, format!("call to undefined function '{name}'"))
                 })?;
@@ -556,7 +565,7 @@ impl<'a> Emitter<'a> {
                     self.require_type(*line, *expected, actual, "function argument")?;
                 }
                 Ok(signature.result)
-            }
+            })(),
         }
     }
 

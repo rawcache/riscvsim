@@ -32,8 +32,8 @@ mod identifiers;
 mod preprocess;
 mod rust_to_c;
 
-pub const C_SUBSET_SUPPORTED: &str = "char, short, int, long, long long, signed and unsigned (char is unsigned; ILP32 on RV32, LP64 on RV64) · casts & sizeof · character literals · local variables & fixed arrays · pointers: & and *, arithmetic scaled by element size, arrays decay to pointers, pointer parameters & results · globals with constant initializers · string literals (read-only data) · arithmetic, comparisons, bitwise & compound assignment, && || ! · if/else · while/for/do-while · switch with fallthrough · break/continue · functions (up to 7 integer args) · recursion · prototypes without a body call hand-written assembly (psABI) · #define/#undef/#if/#ifdef";
-pub const C_SUBSET_UNSUPPORTED: &str = "pointer casts & void pointers · function pointers & pointers to arrays · structs & unions · floats · goto · continue inside switch · void functions · 64-bit integers on RV32 · #include & standard library calls";
+pub const C_SUBSET_SUPPORTED: &str = "char, short, int, long, long long, signed and unsigned (char is unsigned; ILP32 on RV32, LP64 on RV64) · casts & sizeof · character literals · local variables & fixed arrays · block scopes & shadowing · pointers: & and *, arithmetic scaled by element size, arrays decay to pointers, pointer parameters & results · pointer casts, void * & pointer-width integer casts · globals with constant initializers · string literals (read-only data) · arithmetic, comparisons, bitwise & compound assignment, && || ! · if/else · while/for/do-while · switch with fallthrough · break/continue (also continue inside switch) · functions (up to 7 integer args) · void functions & (void) parameter lists · recursion · prototypes without a body call hand-written assembly (psABI) · #define/#undef/#if/#ifdef";
+pub const C_SUBSET_UNSUPPORTED: &str = "function pointers & pointers to arrays · structs & unions · floats · goto · 64-bit integers on RV32 · #include & standard library calls";
 pub const CPP_SUBSET_SUPPORTED: &str = "int/bool variables · C integer types, casts & sizeof · fixed arrays · local auto with initializer · true/false · and/or/not · arithmetic & control flow incl. do-while & switch · functions (up to 7 int/bool args, including void helpers) · recursion · #define/#if preprocessor";
 pub const CPP_SUBSET_UNSUPPORTED: &str = "classes & inheritance · templates · polymorphism · \
 overloading · pointers & references · globals · strings · floats · standard library";
@@ -504,9 +504,12 @@ impl<'a> Decompiler<'a> {
 
     fn emit_range(&mut self, lo: usize, hi: usize, depth: usize) {
         let mut i = lo;
+        // Past the nesting limit, control flow stays flat (`if (...) goto`)
+        // so deeply nested branches cannot exhaust the stack.
+        let structured = depth <= crate::limits::MAX_NESTING_DEPTH;
         while i <= hi {
             // loop head?
-            if let Some(end) = self.loop_ending(i, hi) {
+            if let Some(end) = self.loop_ending(i, hi).filter(|_| structured) {
                 if end > i || (end == i && self.instrs[i].op.is_branch()) {
                     let head = self
                         .text_label
@@ -530,7 +533,7 @@ impl<'a> Decompiler<'a> {
             // forward conditional branch -> if / if-else
             if ins.op.is_branch() {
                 let target = ((ins.addr as i64 + ins.imm as i64) / 4) as usize;
-                if target > i + 1 && target <= hi + 1 && self.clean_block(i, target) {
+                if structured && target > i + 1 && target <= hi + 1 && self.clean_block(i, target) {
                     let cond = self.cond(ins, true); // block runs when branch NOT taken
                     self.points_at.clear();
                     // if the block ends with `j past-else`, it's if/else
@@ -1016,7 +1019,7 @@ pub fn cpp_to_rust(source: &str) -> Result<String, TranslateError> {
 fn pointer_cast_error(line: usize) -> TranslateError {
     TranslateError::new(
         line,
-        "unsupported: casts to pointer types; declare a variable of the pointer type instead",
+        "unsupported: this cast; casts to pointer types look like (int *)p or (void *)p, and function pointer types are not supported",
     )
 }
 
@@ -1063,11 +1066,10 @@ const KEYWORDS: [&str; 12] = [
     "int", "if", "else", "while", "for", "return", "break", "continue", "do", "switch", "case",
     "default",
 ];
-const BANNED: [(&str, &str); 5] = [
+const BANNED: [(&str, &str); 4] = [
     ("struct", "structs are not yet translatable"),
     ("float", "floating point is not yet translatable"),
     ("double", "floating point is not yet translatable"),
-    ("void", "only 'int' functions are supported (void functions and void pointers are not)"),
     ("goto", "goto is not supported"),
 ];
 
@@ -1132,6 +1134,34 @@ fn cast_target(op: &str) -> Option<ScalarType> {
         .iter()
         .find(|(_, o)| *o == op)
         .and_then(|(k, _)| c_int_type(k))
+        .or_else(|| pointer_casts().iter().find(|(_, o)| *o == op).map(|(t, _)| *t))
+}
+
+/// Every pointer cast spelling, `(void *)` .. `(unsigned long long ****)`,
+/// built once so cast operators stay `&'static str` like the integer casts.
+fn pointer_casts() -> &'static [(ScalarType, &'static str)] {
+    static TABLE: std::sync::OnceLock<Vec<(ScalarType, &'static str)>> = std::sync::OnceLock::new();
+    TABLE.get_or_init(|| {
+        let bases = std::iter::once(ScalarType::Unit)
+            .chain(C_CAST_OPS.iter().filter_map(|(k, _)| c_int_type(k)));
+        let mut table = Vec::new();
+        for base in bases {
+            let mut t = base;
+            while let Some(p) = t.pointer_to() {
+                let name: &'static str = Box::leak(format!("({})", c_type_name(p)).into_boxed_str());
+                if !table.iter().any(|(_, n)| *n == name) {
+                    table.push((p, name));
+                }
+                t = p;
+            }
+        }
+        table
+    })
+}
+
+/// The cast operator for pointer type `t`.
+fn pointer_cast_op(t: ScalarType) -> Option<&'static str> {
+    pointer_casts().iter().find(|(p, _)| *p == t).map(|(_, op)| *op)
 }
 
 fn is_c_int_kw(token: &Tok) -> bool {
@@ -1156,6 +1186,8 @@ fn c_type_name(value_type: ScalarType) -> String {
         ScalarType::Ptr(base, depth) => {
             let base = if base == (IntTy { bits: 32, signed: true }) {
                 "int"
+            } else if base == IntTy::VOID {
+                "void"
             } else {
                 C_INT_TYPES
                     .iter()
@@ -1845,6 +1877,10 @@ there is no standard library here",
                     return Err(TranslateError::new(line, format!("unsupported: {why}")));
                 }
             }
+            if dialect == LexDialect::C && ident == "void" {
+                toks.push(SpTok { tok: Tok::Kw("void"), line });
+                continue;
+            }
             if let Some((_, why)) = BANNED.iter().find(|(k, _)| *k == ident) {
                 return Err(TranslateError::new(line, format!("unsupported: {why}")));
             }
@@ -2013,12 +2049,18 @@ impl ScalarType {
         matches!(self, ScalarType::Ptr(..))
     }
 
+    /// `void *` (exactly one level: `void **` points at a `void *` object).
+    fn is_void_ptr(self) -> bool {
+        self == ScalarType::Ptr(IntTy::VOID, 1)
+    }
+
     /// `T *` for a value type `T` (None for bool/void).
     fn pointer_to(self) -> Option<ScalarType> {
         match self {
             ScalarType::I32 => Some(ScalarType::Ptr(IntTy { bits: 32, signed: true }, 1)),
             ScalarType::Int(base) => Some(ScalarType::Ptr(base, 1)),
             ScalarType::Ptr(base, depth) if depth < MAX_POINTER_DEPTH => Some(ScalarType::Ptr(base, depth + 1)),
+            ScalarType::Unit => Some(ScalarType::Ptr(IntTy::VOID, 1)),
             _ => None,
         }
     }
@@ -2026,6 +2068,7 @@ impl ScalarType {
     /// The type a pointer points to (None for non-pointers).
     fn pointee(self) -> Option<ScalarType> {
         match self {
+            ScalarType::Ptr(IntTy::VOID, 1) => None,
             ScalarType::Ptr(base, depth) if depth > 1 => Some(ScalarType::Ptr(base, depth - 1)),
             ScalarType::Ptr(IntTy { bits: 32, signed: true }, _) => Some(ScalarType::I32),
             ScalarType::Ptr(base, _) => Some(ScalarType::Int(base)),
@@ -2044,6 +2087,8 @@ struct IntTy {
 
 impl IntTy {
     const LONG: u8 = 0;
+    /// Marks the base of `void *`: an opaque pointer with no element type.
+    const VOID: IntTy = IntTy { bits: 1, signed: false };
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -2571,22 +2616,22 @@ impl SourceEmitter {
             Expr::Num(value, _, _) if *value > u32::MAX as i64 => format!("{value}ll"),
             Expr::Num(value, _, _) => value.to_string(),
             Expr::Var(name, _) => self.target_name(name),
-            Expr::Index(name, index, _) => {
+            Expr::Index(name, index, _) => (|| -> String {
                 format!("{}[{}]", self.target_name(name), self.expression(index))
-            }
+            })(),
             Expr::Unary(operator, _, _) if operator.starts_with("sizeof(") => format!("{operator}"),
-            Expr::Unary(operator, value, _) if *operator == "sizeof" => {
+            Expr::Unary(operator, value, _) if *operator == "sizeof" => (|| -> String {
                 format!("sizeof({})", self.expression(value))
-            }
-            Expr::Unary(operator, value, _) => {
+            })(),
+            Expr::Unary(operator, value, _) => (|| -> String {
                 let operator = if self.dialect == SourceDialect::Cpp && *operator == "!" {
                     "not "
                 } else {
                     operator
                 };
                 format!("({operator}{})", self.expression(value))
-            }
-            Expr::Binary(operator, left, right, _) => {
+            })(),
+            Expr::Binary(operator, left, right, _) => (|| -> String {
                 let operator = match (self.dialect, *operator) {
                     (SourceDialect::Cpp, "&&") => "and",
                     (SourceDialect::Cpp, "||") => "or",
@@ -2597,7 +2642,7 @@ impl SourceEmitter {
                     self.expression(left),
                     self.expression(right)
                 )
-            }
+            })(),
             Expr::Assign(target, value, source, _) => match source {
                 AssignmentProvenance::Simple => {
                     let target_text = self.lvalue(target);
@@ -2622,14 +2667,14 @@ impl SourceEmitter {
                 AssignmentProvenance::PostfixIncrement => format!("({}++)", self.lvalue(target)),
                 AssignmentProvenance::PostfixDecrement => format!("({}--)", self.lvalue(target)),
             },
-            Expr::Call(name, arguments, _) => {
+            Expr::Call(name, arguments, _) => (|| -> String {
                 let arguments = arguments
                     .iter()
                     .map(|argument| self.expression(argument))
                     .collect::<Vec<_>>()
                     .join(", ");
                 format!("{}({arguments})", self.target_name(name))
-            }
+            })(),
         }
     }
 
@@ -2750,7 +2795,6 @@ fn validate_cpp_semantics(unit: &Unit) -> Result<(), TranslateError> {
             .collect::<HashMap<_, _>>();
         collect_cpp_binding_types(&function.body, &mut bindings, &return_types);
         validate_cpp_statements(&function.body, &bindings, &parameter_types)?;
-        validate_cpp_void_statements(&function.body, function.return_type, &return_types)?;
     }
     Ok(())
 }
@@ -2871,8 +2915,24 @@ fn validate_cpp_expression(
     }
 }
 
+/// C and C++: a void function's call is a statement, never a value; a void
+/// function's `return` has no value; every other function's does.
+fn validate_void_usage(unit: &Unit) -> Result<(), TranslateError> {
+    let return_types = unit
+        .prototypes
+        .iter()
+        .map(|p| (p.name.clone(), p.return_type))
+        .chain(unit.funcs.iter().map(|f| (f.name.clone(), f.return_type)))
+        .collect::<HashMap<_, _>>();
+    for function in &unit.funcs {
+        validate_cpp_void_statements(&function.body, &function.name, function.return_type, &return_types)?;
+    }
+    Ok(())
+}
+
 fn validate_cpp_void_statements(
     statements: &[Stmt],
+    function_name: &str,
     function_return: ScalarType,
     return_types: &HashMap<String, ScalarType>,
 ) -> Result<(), TranslateError> {
@@ -2893,17 +2953,18 @@ fn validate_cpp_void_statements(
             }
             Stmt::If(condition, body, otherwise, _) => {
                 validate_cpp_void_expression(condition, false, return_types)?;
-                validate_cpp_void_statements(body, function_return, return_types)?;
-                validate_cpp_void_statements(otherwise, function_return, return_types)?;
+                validate_cpp_void_statements(body, function_name, function_return, return_types)?;
+                validate_cpp_void_statements(otherwise, function_name, function_return, return_types)?;
             }
             Stmt::While(condition, body, _) => {
                 validate_cpp_void_expression(condition, false, return_types)?;
-                validate_cpp_void_statements(body, function_return, return_types)?;
+                validate_cpp_void_statements(body, function_name, function_return, return_types)?;
             }
             Stmt::For(initial, condition, post, body, _) => {
                 if let Some(initial) = initial {
                     validate_cpp_void_statements(
                         std::slice::from_ref(&**initial),
+                        function_name,
                         function_return,
                         return_types,
                     )?;
@@ -2914,18 +2975,32 @@ fn validate_cpp_void_statements(
                 if let Some(post) = post {
                     validate_cpp_void_expression(post, false, return_types)?;
                 }
-                validate_cpp_void_statements(body, function_return, return_types)?;
+                validate_cpp_void_statements(body, function_name, function_return, return_types)?;
             }
             Stmt::Return(Some(value), _, line) => {
                 if function_return == ScalarType::Unit {
                     return Err(TranslateError::new(
                         *line,
-                        "void functions cannot return a value",
+                        format!(
+                            "void functions cannot return a value: '{function_name}' is declared void, \
+                             so write 'return;' or give it a return type such as int"
+                        ),
                     ));
                 }
                 validate_cpp_void_expression(value, false, return_types)?;
             }
-            Stmt::Return(None, _, _) | Stmt::Break(_) | Stmt::Continue(_) => {}
+            Stmt::Return(None, _, line) => {
+                if function_return != ScalarType::Unit {
+                    return Err(TranslateError::new(
+                        *line,
+                        format!(
+                            "'{function_name}' must return a value: write 'return <value>;', \
+                             or declare it void if it has nothing to return"
+                        ),
+                    ));
+                }
+            }
+            Stmt::Break(_) | Stmt::Continue(_) => {}
         }
     }
     Ok(())
@@ -2946,7 +3021,7 @@ fn validate_cpp_void_expression(
             validate_cpp_void_expression(right, false, return_types)
         }
         Expr::Assign(target, value, _, _) => {
-            if let LValue::Index(_, index, _) = &**target {
+            if let LValue::Index(_, index, _) | LValue::Deref(index, _) = &**target {
                 validate_cpp_void_expression(index, false, return_types)?;
             }
             validate_cpp_void_expression(value, false, return_types)
@@ -2955,7 +3030,10 @@ fn validate_cpp_void_expression(
             if return_types.get(name) == Some(&ScalarType::Unit) && !allow_unit_call {
                 return Err(TranslateError::new(
                     *line,
-                    format!("void function '{name}' can only be called as a statement"),
+                    format!(
+                        "void function '{name}' can only be called as a statement: it returns no \
+                         value, so it cannot be used inside an expression"
+                    ),
                 ));
             }
             for argument in arguments {
@@ -3160,7 +3238,13 @@ impl RustParser {
         }
     }
 
-    fn parse_unit(mut self) -> Result<Unit, TranslateError> {
+    fn parse_unit(self) -> Result<Unit, TranslateError> {
+        let unit = self.parse_unit_tree()?;
+        check_tree_depth(&unit)?;
+        Ok(unit)
+    }
+
+    fn parse_unit_tree(mut self) -> Result<Unit, TranslateError> {
         let mut funcs = Vec::new();
         while !matches!(self.parser.peek(), Tok::Eof) {
             if !matches!(self.parser.peek(), Tok::Kw("fn")) {
@@ -3292,93 +3376,97 @@ impl RustParser {
             if matches!(self.parser.peek(), Tok::Eof) {
                 return Err(TranslateError::new(self.parser.line(), "missing '}'"));
             }
-            match self.parser.peek().clone() {
-                Tok::Kw("let") => statements.push(self.parse_decl()?),
-                Tok::Kw("if") => statements.push(self.parse_if()?),
-                Tok::Kw("while") => statements.push(self.parse_while()?),
-                Tok::Kw("loop") => statements.push(self.parse_loop()?),
-                Tok::Kw("for") => statements.push(self.parse_for()?),
-                Tok::Kw("return") => statements.push(self.parse_return()?),
-                Tok::Kw("break") => {
-                    let line = self.parser.line();
-                    self.parser.next();
-                    self.expect_sym(";")?;
-                    statements.push(Stmt::Break(line));
-                }
-                Tok::Kw("continue") => {
-                    let line = self.parser.line();
-                    self.parser.next();
-                    self.expect_sym(";")?;
-                    statements.push(Stmt::Continue(line));
-                }
-                Tok::Sym("{") => {
-                    let line = self.parser.line();
-                    self.parser.next();
-                    let body = self.parse_block(false)?;
-                    statements.push(Stmt::If(
-                        Expr::Num(1, ScalarType::I32, line),
-                        body,
-                        Vec::new(),
-                        IfProvenance {
-                            origin: IfOrigin::PlainBlock,
-                            then_body: BodyForm::Braced,
-                            else_body: None,
-                            line,
-                        },
-                    ));
-                }
-                Tok::Kw("fn") => {
-                    return Err(TranslateError::new(
-                        self.parser.line(),
-                        "unsupported: nested functions are not supported",
-                    ))
-                }
-                _ => {
-                    let line = self.parser.line();
-                    if matches!(self.parser.peek(), Tok::Sym("|") | Tok::Sym("||")) {
-                        return Err(TranslateError::new(
-                            line,
-                            "unsupported: closures are not supported",
-                        ));
-                    }
-                    let expression = self.parser.parse_expr()?;
-                    if self.eat_sym(";") {
-                        self.validate_statement_expr(&expression)?;
-                        statements.push(Stmt::Expr(expression, ExprStmtProvenance::Expression));
-                    } else if matches!(self.parser.peek(), Tok::Sym("..")) {
-                        return Err(TranslateError::new(
-                            line,
-                            "unsupported: ranges are only supported in for name in start..end loops",
-                        ));
-                    } else if matches!(self.parser.peek(), Tok::Sym("}")) && allow_tail_return {
-                        self.validate_expr(&expression)?;
-                        if !self.returns_value {
-                            return Err(TranslateError::new(
-                                line,
-                                "a tail expression requires an explicit -> i32 or -> bool return type",
-                            ));
-                        }
-                        statements.push(Stmt::Return(
-                            Some(expression),
-                            ReturnProvenance::Tail,
-                            line,
-                        ));
-                    } else if matches!(self.parser.peek(), Tok::Sym("}")) {
-                        return Err(TranslateError::new(
-                            line,
-                            "unsupported: value-producing inner blocks and if expressions are not supported",
-                        ));
-                    } else {
-                        return Err(TranslateError::new(
-                            self.parser.line(),
-                            format!("expected ';', found {}", show(self.parser.peek())),
-                        ));
-                    }
-                }
-            }
+            statements.push(self.parse_block_statement(allow_tail_return)?);
             self.eat_sym(";"); // Rust permits a trailing semicolon after block expressions.
         }
         Ok(statements)
+    }
+
+    fn parse_block_statement(&mut self, allow_tail_return: bool) -> Result<Stmt, TranslateError> {
+        match self.parser.peek().clone() {
+            Tok::Kw("let") => self.parse_decl(),
+            Tok::Kw("if") => self.parse_if(),
+            Tok::Kw("while") => self.parse_while(),
+            Tok::Kw("loop") => self.parse_loop(),
+            Tok::Kw("for") => self.parse_for(),
+            Tok::Kw("return") => self.parse_return(),
+            Tok::Kw("break") => (|| -> Result<Stmt, TranslateError> {
+                let line = self.parser.line();
+                self.parser.next();
+                self.expect_sym(";")?;
+                Ok(Stmt::Break(line))
+            })(),
+            Tok::Kw("continue") => (|| -> Result<Stmt, TranslateError> {
+                let line = self.parser.line();
+                self.parser.next();
+                self.expect_sym(";")?;
+                Ok(Stmt::Continue(line))
+            })(),
+            Tok::Sym("{") => (|| -> Result<Stmt, TranslateError> {
+                let line = self.parser.line();
+                self.parser.next();
+                let body = self.parse_block(false)?;
+                Ok(Stmt::If(
+                    Expr::Num(1, ScalarType::I32, line),
+                    body,
+                    Vec::new(),
+                    IfProvenance {
+                        origin: IfOrigin::PlainBlock,
+                        then_body: BodyForm::Braced,
+                        else_body: None,
+                        line,
+                    },
+                ))
+            })(),
+            Tok::Kw("fn") => (|| -> Result<Stmt, TranslateError> {
+                return Err(TranslateError::new(
+                    self.parser.line(),
+                    "unsupported: nested functions are not supported",
+                ))
+            })(),
+            _ => (|| -> Result<Stmt, TranslateError> {
+                let line = self.parser.line();
+                if matches!(self.parser.peek(), Tok::Sym("|") | Tok::Sym("||")) {
+                    return Err(TranslateError::new(
+                        line,
+                        "unsupported: closures are not supported",
+                    ));
+                }
+                let expression = self.parser.parse_expr()?;
+                if self.eat_sym(";") {
+                    self.validate_statement_expr(&expression)?;
+                    Ok(Stmt::Expr(expression, ExprStmtProvenance::Expression))
+                } else if matches!(self.parser.peek(), Tok::Sym("..")) {
+                    return Err(TranslateError::new(
+                        line,
+                        "unsupported: ranges are only supported in for name in start..end loops",
+                    ));
+                } else if matches!(self.parser.peek(), Tok::Sym("}")) && allow_tail_return {
+                    self.validate_expr(&expression)?;
+                    if !self.returns_value {
+                        return Err(TranslateError::new(
+                            line,
+                            "a tail expression requires an explicit -> i32 or -> bool return type",
+                        ));
+                    }
+                    Ok(Stmt::Return(
+                        Some(expression),
+                        ReturnProvenance::Tail,
+                        line,
+                    ))
+                } else if matches!(self.parser.peek(), Tok::Sym("}")) {
+                    return Err(TranslateError::new(
+                        line,
+                        "unsupported: value-producing inner blocks and if expressions are not supported",
+                    ));
+                } else {
+                    return Err(TranslateError::new(
+                        self.parser.line(),
+                        format!("expected ';', found {}", show(self.parser.peek())),
+                    ));
+                }
+            })(),
+        }
     }
 
     fn parse_decl(&mut self) -> Result<Stmt, TranslateError> {
@@ -3549,7 +3637,10 @@ impl RustParser {
         let otherwise = if self.eat_kw("else") {
             if matches!(self.parser.peek(), Tok::Kw("if")) {
                 else_form = Some(ElseForm::ElseIf);
-                vec![self.parse_if()?]
+                self.parser.enter()?;
+                let nested = self.parse_if();
+                self.parser.leave();
+                vec![nested?]
             } else {
                 else_form = Some(ElseForm::Braced);
                 self.expect_sym("{")?;
@@ -3737,25 +3828,29 @@ impl RustParser {
         }
     }
 
+    /// Iterative (explicit work list, left to right) so long operator
+    /// chains, which are checked before the tree-depth limit, cannot
+    /// exhaust the stack.
     fn validate_expr(&self, expression: &Expr) -> Result<(), TranslateError> {
-        match expression {
-            Expr::Num(_, _, _) | Expr::Var(_, _) => Ok(()),
-            Expr::Index(_, index, _) | Expr::Unary(_, index, _) => self.validate_expr(index),
-            Expr::Binary(_, left, right, _) => {
-                self.validate_expr(left)?;
-                self.validate_expr(right)
-            }
-            Expr::Assign(_, _, _, line) => Err(TranslateError::new(
-                *line,
-                "Rust assignment expressions have unit value and are only supported as statements",
-            )),
-            Expr::Call(_, arguments, _) => {
-                for argument in arguments {
-                    self.validate_expr(argument)?;
+        let mut work = vec![expression];
+        while let Some(expression) = work.pop() {
+            match expression {
+                Expr::Num(_, _, _) | Expr::Var(_, _) => {}
+                Expr::Index(_, index, _) | Expr::Unary(_, index, _) => work.push(index),
+                Expr::Binary(_, left, right, _) => {
+                    work.push(right);
+                    work.push(left);
                 }
-                Ok(())
+                Expr::Assign(_, _, _, line) => {
+                    return Err(TranslateError::new(
+                        *line,
+                        "Rust assignment expressions have unit value and are only supported as statements",
+                    ))
+                }
+                Expr::Call(_, arguments, _) => work.extend(arguments.iter().rev()),
             }
         }
+        Ok(())
     }
 
     fn validate_statement_expr(&self, expression: &Expr) -> Result<(), TranslateError> {
@@ -3845,9 +3940,10 @@ struct Parser {
 }
 
 /// Recursion budget for the parser backstop. Bracket nesting is limited
-/// exactly by `check_bracket_depth`; this bound only catches recursion
-/// that brackets do not show (prefix-operator chains, else-if ladders).
-const PARSER_RECURSION_LIMIT: usize = crate::limits::MAX_NESTING_DEPTH * 3;
+/// exactly by `check_bracket_depth`; this bound catches recursion that
+/// brackets do not show (prefix-operator chains, `a = b = c` chains,
+/// else-if ladders). It matches the tree-depth limit applied after parsing.
+const PARSER_RECURSION_LIMIT: usize = crate::limits::MAX_NESTING_DEPTH;
 
 impl Parser {
     fn new(toks: Vec<SpTok>) -> Self {
@@ -3886,7 +3982,7 @@ impl Parser {
                     if value_type.is_ptr() {
                         format!("unsupported: pointers deeper than {MAX_POINTER_DEPTH} levels")
                     } else {
-                        "unsupported: pointers to bool or void; point to an integer type".to_string()
+                        "unsupported: pointers to bool; point to an integer type".to_string()
                     },
                 )
             })?;
@@ -3911,7 +4007,7 @@ impl Parser {
     fn parse_pointer_unary(&mut self, line: usize) -> Result<Expr, TranslateError> {
         let op = if self.next() == Tok::Sym("*") { "*" } else { "&" };
         self.mark_memory(line);
-        Ok(Expr::Unary(op, Box::new(self.parse_unary()?), line))
+        Ok(Expr::Unary(op, Box::new(self.parse_unary_operand()?), line))
     }
 
     /// A string literal becomes a read-only global char array `__strN`
@@ -3994,6 +4090,14 @@ impl Parser {
     }
 
     fn parse_unit(&mut self) -> Result<Unit, TranslateError> {
+        let mut unit = self.parse_unit_tree()?;
+        check_tree_depth(&unit)?;
+        resolve_block_scopes(&mut unit)?;
+        validate_void_usage(&unit)?;
+        Ok(unit)
+    }
+
+    fn parse_unit_tree(&mut self) -> Result<Unit, TranslateError> {
         let mut funcs = Vec::new();
         let mut prototypes = Vec::new();
         let mut loose: Vec<Stmt> = Vec::new();
@@ -4201,9 +4305,10 @@ impl Parser {
         };
         let return_type = if return_type == ScalarType::Unit {
             if *self.peek() == Tok::Sym("*") && self.pointers {
-                return Err(TranslateError::new(line, "unsupported: void pointers; point to an integer type such as char"));
+                self.parse_pointer_suffix(ScalarType::Unit, line, "pointer return types")?
+            } else {
+                return_type
             }
-            return_type
         } else {
             self.parse_pointer_suffix(return_type, line, "pointer return types")?
         };
@@ -4223,11 +4328,15 @@ impl Parser {
         let mut params = Vec::new();
         let mut param_types = Vec::new();
         let mut param_lines = Vec::new();
+        if *self.peek() == Tok::Kw("void") && *self.peek2() == Tok::Sym(")") {
+            self.next(); // `f(void)`: no parameters
+        }
         if !self.eat_sym(")") {
             loop {
                 let parameter_type = match self.next() {
                     Tok::Kw(k) if c_int_type(k).is_some() => c_int_type(k).unwrap_or(ScalarType::I32),
                     Tok::Kw("bool") => ScalarType::Bool,
+                    Tok::Kw("void") if self.pointers && *self.peek() == Tok::Sym("*") => ScalarType::Unit,
                     token => {
                         return Err(TranslateError::new(
                             self.line(),
@@ -4386,6 +4495,7 @@ impl Parser {
         let mut segments: Vec<Vec<Stmt>> = Vec::new();
         let mut cases: Vec<(i64, usize, usize)> = Vec::new(); // (value, segment, line)
         let mut default: Option<usize> = None;
+        let mut continue_flag: Option<String> = None;
         loop {
             match self.peek().clone() {
                 Tok::Sym("}") => {
@@ -4417,14 +4527,20 @@ impl Parser {
                 _ => {
                     let statement_line = self.line();
                     let statement = self.parse_stmt()?;
-                    if stmt_contains_continue(&statement) {
-                        return Err(TranslateError::new(
-                            statement_line,
-                            "unsupported: 'continue' inside a switch is not translatable yet; restructure the loop",
-                        ));
-                    }
+                    let statements = if stmt_contains_continue(&statement) {
+                        // `continue` belongs to the enclosing loop, not to the
+                        // run-once loop a switch becomes: set a flag, leave the
+                        // switch, and continue right after it.
+                        let flag = match &continue_flag {
+                            Some(flag) => flag,
+                            None => continue_flag.insert(self.synthetic_name("switch_continue")),
+                        };
+                        redirect_continue(statement, flag)
+                    } else {
+                        vec![statement]
+                    };
                     match segments.last_mut() {
-                        Some(segment) => segment.push(statement),
+                        Some(segment) => segment.extend(statements),
                         None => {
                             return Err(TranslateError::new(
                                 statement_line,
@@ -4470,11 +4586,22 @@ impl Parser {
             ));
         }
         body.push(Stmt::Break(line));
+        if let Some(flag) = &continue_flag {
+            out.push(Self::int_decl(flag, Expr::Num(0, ScalarType::I32, line), line));
+        }
         out.push(Stmt::While(
             Expr::Num(1, ScalarType::I32, line),
             body,
             LoopProvenance { kind: LoopKind::While, body: BodyForm::Braced, line },
         ));
+        if let Some(flag) = continue_flag {
+            out.push(Stmt::If(
+                Expr::Var(flag, line),
+                vec![Stmt::Continue(line)],
+                Vec::new(),
+                IfProvenance { origin: IfOrigin::Conditional, then_body: BodyForm::Braced, else_body: None, line },
+            ));
+        }
         Ok(Self::plain_block(out, line))
     }
 
@@ -4494,14 +4621,14 @@ impl Parser {
     fn parse_stmt_inner(&mut self) -> Result<Stmt, TranslateError> {
         let line = self.line();
         match self.peek().clone() {
-            Tok::Sym(";") => {
+            Tok::Sym(";") => (|| -> Result<Stmt, TranslateError> {
                 self.next();
                 Ok(Stmt::Expr(
                     Expr::Num(0, ScalarType::I32, line),
                     ExprStmtProvenance::Empty,
                 ))
-            }
-            Tok::Sym("{") => {
+            })(),
+            Tok::Sym("{") => (|| -> Result<Stmt, TranslateError> {
                 self.next();
                 let body = self.parse_block_body()?;
                 Ok(Stmt::If(
@@ -4515,16 +4642,17 @@ impl Parser {
                         line,
                     },
                 ))
-            }
+            })(),
             Tok::Kw("bool") | Tok::Kw("auto") => self.parse_decl(),
             ref t if is_c_int_kw(t) => self.parse_decl(),
+            Tok::Kw("void") if self.pointers => self.parse_decl(),
             Tok::Kw("do") => self.parse_do_while(line),
             Tok::Kw("switch") => self.parse_switch(line),
             Tok::Kw("case") | Tok::Kw("default") => Err(TranslateError::new(
                 line,
                 "'case' and 'default' labels are only allowed inside a switch",
             )),
-            Tok::Kw("if") => {
+            Tok::Kw("if") => (|| -> Result<Stmt, TranslateError> {
                 self.next();
                 self.expect_sym("(")?;
                 let cond = self.parse_expr()?;
@@ -4557,8 +4685,8 @@ impl Parser {
                         line,
                     },
                 ))
-            }
-            Tok::Kw("while") => {
+            })(),
+            Tok::Kw("while") => (|| -> Result<Stmt, TranslateError> {
                 self.next();
                 self.expect_sym("(")?;
                 let cond = self.parse_expr()?;
@@ -4573,8 +4701,8 @@ impl Parser {
                         line,
                     },
                 ))
-            }
-            Tok::Kw("for") => {
+            })(),
+            Tok::Kw("for") => (|| -> Result<Stmt, TranslateError> {
                 self.next();
                 self.expect_sym("(")?;
                 let init = if self.eat_sym(";") {
@@ -4617,8 +4745,8 @@ impl Parser {
                         line,
                     },
                 ))
-            }
-            Tok::Kw("return") => {
+            })(),
+            Tok::Kw("return") => (|| -> Result<Stmt, TranslateError> {
                 self.next();
                 if self.eat_sym(";") {
                     Ok(Stmt::Return(None, ReturnProvenance::Explicit, line))
@@ -4627,22 +4755,22 @@ impl Parser {
                     self.expect_sym(";")?;
                     Ok(Stmt::Return(Some(e), ReturnProvenance::Explicit, line))
                 }
-            }
-            Tok::Kw("break") => {
+            })(),
+            Tok::Kw("break") => (|| -> Result<Stmt, TranslateError> {
                 self.next();
                 self.expect_sym(";")?;
                 Ok(Stmt::Break(line))
-            }
-            Tok::Kw("continue") => {
+            })(),
+            Tok::Kw("continue") => (|| -> Result<Stmt, TranslateError> {
                 self.next();
                 self.expect_sym(";")?;
                 Ok(Stmt::Continue(line))
-            }
-            _ => {
+            })(),
+            _ => (|| -> Result<Stmt, TranslateError> {
                 let e = self.parse_expr()?;
                 self.expect_sym(";")?;
                 Ok(Stmt::Expr(e, ExprStmtProvenance::Expression))
-            }
+            })(),
         }
     }
 
@@ -4660,6 +4788,13 @@ impl Parser {
             Tok::Kw(k) if c_int_type(k).is_some() => c_int_type(k),
             Tok::Kw("bool") => Some(ScalarType::Bool),
             Tok::Kw("auto") => None,
+            Tok::Kw("void") if *self.peek() == Tok::Sym("*") => Some(ScalarType::Unit),
+            Tok::Kw("void") => {
+                return Err(TranslateError::new(
+                    line,
+                    "a variable cannot have type void; use an integer type, or 'void *' for an opaque pointer",
+                ))
+            }
             token => {
                 return Err(TranslateError::new(
                     line,
@@ -4835,16 +4970,64 @@ impl Parser {
     }
 
     fn parse_assign(&mut self) -> Result<Expr, TranslateError> {
-        self.enter()?;
-        let result = self.parse_assign_inner();
-        self.leave();
-        result
+        let lhs = self.parse_binary(0)?;
+        match assignment_operator(self.peek()) {
+            None => Ok(lhs),
+            Some(provenance) => self.assignment_rest(lhs, provenance),
+        }
     }
 
-    fn parse_assign_inner(&mut self) -> Result<Expr, TranslateError> {
+    /// `lhs = rhs` after the operator: kept out of `parse_assign`, which
+    /// is on the stack once per parenthesis level.
+    #[inline(never)]
+    fn assignment_rest(&mut self, lhs: Expr, provenance: AssignmentProvenance) -> Result<Expr, TranslateError> {
         let line = self.line();
-        let lhs = self.parse_binary(0)?;
-        let provenance = match self.peek() {
+        self.next();
+        let lv = self.assignment_target(&lhs, line)?;
+        self.enter()?;
+        let rhs = self.parse_assign();
+        self.leave();
+        Ok(Expr::Assign(Box::new(lv), Box::new(rhs?), provenance, line))
+    }
+
+    #[inline(never)]
+    fn assignment_target(&self, lhs: &Expr, line: usize) -> Result<LValue, TranslateError> {
+        Self::to_lvalue(lhs).ok_or_else(|| {
+            TranslateError::new(
+                line,
+                if self.pointers {
+                    "left side of '=' must be a variable, array element or *pointer"
+                } else {
+                    "left side of '=' must be a variable or array element"
+                },
+            )
+        })
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Postfix {
+    None,
+    Index,
+    Call,
+    Increment,
+    As,
+}
+
+fn postfix_kind(token: &Tok) -> Postfix {
+    match token {
+        Tok::Sym("[") => Postfix::Index,
+        Tok::Sym("(") => Postfix::Call,
+        Tok::Sym("++") | Tok::Sym("--") => Postfix::Increment,
+        Tok::Kw("as") => Postfix::As,
+        _ => Postfix::None,
+    }
+}
+
+/// The assignment operator `token` spells, if any.
+fn assignment_operator(token: &Tok) -> Option<AssignmentProvenance> {
+    {
+        match token {
             Tok::Sym("=") => Some(AssignmentProvenance::Simple),
             Tok::Sym("+=") => Some(AssignmentProvenance::Compound("+")),
             Tok::Sym("-=") => Some(AssignmentProvenance::Compound("-")),
@@ -4857,32 +5040,13 @@ impl Parser {
             Tok::Sym("<<=") => Some(AssignmentProvenance::Compound("<<")),
             Tok::Sym(">>=") => Some(AssignmentProvenance::Compound(">>")),
             _ => None,
-        };
-        let Some(provenance) = provenance else {
-            return Ok(lhs);
-        };
-        self.next();
-        let lv = match Self::to_lvalue(&lhs) {
-            Some(lv) => lv,
-            None => {
-                return Err(TranslateError::new(
-                    line,
-                    if self.pointers {
-                        "left side of '=' must be a variable, array element or *pointer"
-                    } else {
-                        "left side of '=' must be a variable or array element"
-                    },
-                ))
-            }
-        };
-        let rhs = self.parse_assign()?;
-        Ok(Expr::Assign(Box::new(lv), Box::new(rhs), provenance, line))
+        }
     }
+}
 
-    fn parse_binary(&mut self, min_prec: u8) -> Result<Expr, TranslateError> {
-        let mut lhs = self.parse_unary()?;
-        loop {
-            let (op, prec): (&'static str, u8) = match self.peek() {
+/// The binary operator `token` spells and its precedence, if any.
+fn binary_operator(token: &Tok) -> Option<(&'static str, u8)> {
+    Some(match token {
                 Tok::Sym("||") => ("||", 1),
                 Tok::Sym("&&") => ("&&", 2),
                 Tok::Sym("|") => ("|", 3),
@@ -4901,10 +5065,25 @@ impl Parser {
                 Tok::Sym("*") => ("*", 10),
                 Tok::Sym("/") => ("/", 10),
                 Tok::Sym("%") => ("%", 10),
-                _ => break,
-            };
+                _ => return None,
+    })
+}
+
+impl Parser {
+    fn parse_binary(&mut self, min_prec: u8) -> Result<Expr, TranslateError> {
+        let mut lhs = self.parse_unary()?;
+        let mut chain = 0usize;
+        loop {
+            let Some((op, prec)) = binary_operator(self.peek()) else { break };
             if prec < min_prec {
                 break;
+            }
+            // `a + b + c + ...` builds a left-deep tree without recursing
+            // here; stop it at the tree-depth limit so later passes (and
+            // dropping the tree) stay shallow.
+            chain += 1;
+            if chain > crate::limits::MAX_NESTING_DEPTH {
+                return Err(TranslateError::new(self.line(), long_expression_message()));
             }
             let line = self.line();
             self.next();
@@ -4914,14 +5093,16 @@ impl Parser {
         Ok(lhs)
     }
 
-    fn parse_unary(&mut self) -> Result<Expr, TranslateError> {
+    /// Operand of a prefix operator, cast or sizeof: counted against the
+    /// recursion backstop (brackets are already limited by the lexer).
+    fn parse_unary_operand(&mut self) -> Result<Expr, TranslateError> {
         self.enter()?;
-        let result = self.parse_unary_inner();
+        let result = self.parse_unary();
         self.leave();
         result
     }
 
-    fn parse_unary_inner(&mut self) -> Result<Expr, TranslateError> {
+    fn parse_unary(&mut self) -> Result<Expr, TranslateError> {
         // Only the prefix operators that recurse live here: this function
         // is on the stack once per nesting level, so its frame stays small.
         let line = self.line();
@@ -4933,13 +5114,13 @@ impl Parser {
             _ => return self.parse_unary_other(line),
         };
         self.next();
-        Ok(Expr::Unary(op, Box::new(self.parse_unary()?), line))
+        Ok(Expr::Unary(op, Box::new(self.parse_unary_operand()?), line))
     }
 
     #[inline(never)]
     fn parse_unary_other(&mut self, line: usize) -> Result<Expr, TranslateError> {
         match self.peek() {
-            Tok::Sym("(") if is_c_int_kw(self.peek2()) && *self.peek3() == Tok::Sym(")") => {
+            Tok::Sym("(") if is_c_int_kw(self.peek2()) && *self.peek3() == Tok::Sym(")") => (|| -> Result<Expr, TranslateError> {
                 // C cast: (type) operand
                 self.next();
                 let Tok::Kw(keyword) = self.next() else {
@@ -4951,9 +5132,9 @@ impl Parser {
                     .find(|(k, _)| *k == keyword)
                     .map(|(_, op)| *op)
                     .unwrap_or("(int)");
-                Ok(Expr::Unary(op, Box::new(self.parse_unary()?), line))
-            }
-            Tok::Ident(name) if name == "sizeof" => {
+                Ok(Expr::Unary(op, Box::new(self.parse_unary_operand()?), line))
+            })(),
+            Tok::Ident(name) if name == "sizeof" => (|| -> Result<Expr, TranslateError> {
                 self.next();
                 if *self.peek() == Tok::Sym("(") && is_c_int_kw(self.peek2()) && *self.peek3() == Tok::Sym(")") {
                     self.next();
@@ -4968,13 +5149,19 @@ impl Parser {
                         .unwrap_or("sizeof(int)");
                     return Ok(Expr::Unary(op, Box::new(Expr::Num(0, ScalarType::I32, line)), line));
                 }
-                Ok(Expr::Unary("sizeof", Box::new(self.parse_unary()?), line))
-            }
+                Ok(Expr::Unary("sizeof", Box::new(self.parse_unary_operand()?), line))
+            })(),
             Tok::Sym("*") | Tok::Sym("&") if self.pointers => self.parse_pointer_unary(line),
             Tok::Sym("(")
                 if self.pointers
                     && (is_c_int_kw(self.peek2()) || *self.peek2() == Tok::Kw("void"))
                     && *self.peek3() == Tok::Sym("*") =>
+            {
+                self.parse_pointer_cast(line)
+            }
+            Tok::Sym("(")
+                if (is_c_int_kw(self.peek2()) || *self.peek2() == Tok::Kw("void"))
+                    && *self.peek3() == Tok::Sym("(") =>
             {
                 Err(pointer_cast_error(line))
             }
@@ -4986,14 +5173,14 @@ impl Parser {
                 line,
                 "unsupported: address-of (&) is not yet translatable",
             )),
-            Tok::Sym("++") | Tok::Sym("--") => {
+            Tok::Sym("++") | Tok::Sym("--") => (|| -> Result<Expr, TranslateError> {
                 let provenance = if *self.peek() == Tok::Sym("++") {
                     AssignmentProvenance::PrefixIncrement
                 } else {
                     AssignmentProvenance::PrefixDecrement
                 };
                 self.next();
-                let target = self.parse_unary()?;
+                let target = self.parse_unary_operand()?;
                 let Some(lv) = Self::to_lvalue(&target) else {
                     return Err(TranslateError::new(line, "++/-- needs a variable"));
                 };
@@ -5003,7 +5190,7 @@ impl Parser {
                     provenance,
                     line,
                 ))
-            }
+            })(),
             _ => self.parse_postfix(),
         }
     }
@@ -5012,97 +5199,444 @@ impl Parser {
         let line = self.line();
         let mut e = self.parse_primary()?;
         loop {
-            match self.peek() {
-                Tok::Sym("[") => {
-                    self.next();
-                    let idx = self.parse_expr()?;
-                    self.expect_sym("]")?;
-                    let name = match &e {
-                        Expr::Var(n, l) => (n.clone(), *l),
-                        _ => {
-                            return Err(TranslateError::new(
-                                line,
-                                "only simple arrays can be indexed (a[i])",
-                            ))
-                        }
-                    };
-                    e = Expr::Index(name.0, Box::new(idx), name.1);
+            let kind = postfix_kind(self.peek());
+            if kind == Postfix::None {
+                return Ok(e);
+            }
+            e = self.postfix_suffix(kind, e, line)?;
+        }
+    }
+
+    #[inline(never)]
+    fn postfix_suffix(&mut self, kind: Postfix, e: Expr, line: usize) -> Result<Expr, TranslateError> {
+        match kind {
+            Postfix::Index => self.index_suffix(e, line),
+            Postfix::Call => self.call_suffix(e, line),
+            Postfix::Increment => self.increment_suffix(e, line),
+            Postfix::As | Postfix::None => self.as_suffix(e, line),
+        }
+    }
+
+    // Each postfix form lives in its own function so the recursive path
+    // through `parse_postfix` keeps a small stack frame.
+
+    /// `(T *) operand`, `(void **) operand`, ...
+    #[inline(never)]
+    fn parse_pointer_cast(&mut self, line: usize) -> Result<Expr, TranslateError> {
+        self.next(); // (
+        let base = match self.next() {
+            Tok::Kw("void") => ScalarType::Unit,
+            Tok::Kw(k) => c_int_type(k).unwrap_or(ScalarType::I32),
+            _ => return Err(pointer_cast_error(line)),
+        };
+        let target = self.parse_pointer_suffix(base, line, "pointer casts")?;
+        if !self.eat_sym(")") {
+            return Err(pointer_cast_error(line));
+        }
+        let op = pointer_cast_op(target).ok_or_else(|| pointer_cast_error(line))?;
+        Ok(Expr::Unary(op, Box::new(self.parse_unary_operand()?), line))
+    }
+
+    #[inline(never)]
+    fn index_suffix(&mut self, e: Expr, line: usize) -> Result<Expr, TranslateError> {
+        self.next();
+        let idx = self.parse_expr()?;
+        self.expect_sym("]")?;
+        match e {
+            Expr::Var(name, l) => Ok(Expr::Index(name, Box::new(idx), l)),
+            _ => Err(TranslateError::new(line, "only simple arrays can be indexed (a[i])")),
+        }
+    }
+
+    #[inline(never)]
+    fn call_suffix(&mut self, e: Expr, line: usize) -> Result<Expr, TranslateError> {
+        self.next();
+        let Expr::Var(name, l) = e else {
+            return Err(TranslateError::new(line, "only named functions can be called"));
+        };
+        let mut args = Vec::new();
+        if !self.eat_sym(")") {
+            loop {
+                args.push(self.parse_expr()?);
+                if self.eat_sym(")") {
+                    break;
                 }
-                Tok::Sym("(") => {
-                    self.next();
-                    let name = match &e {
-                        Expr::Var(n, l) => (n.clone(), *l),
-                        _ => {
-                            return Err(TranslateError::new(
-                                line,
-                                "only named functions can be called",
-                            ))
-                        }
-                    };
-                    let mut args = Vec::new();
-                    if !self.eat_sym(")") {
-                        loop {
-                            args.push(self.parse_expr()?);
-                            if self.eat_sym(")") {
-                                break;
-                            }
-                            self.expect_sym(",")?;
-                        }
-                    }
-                    e = Expr::Call(name.0, args, name.1);
-                }
-                Tok::Sym("++") | Tok::Sym("--") => {
-                    // postfix: value-after semantics rarely matter in the
-                    // subset's statement contexts; treat as pre (documented).
-                    let provenance = if *self.peek() == Tok::Sym("++") {
-                        AssignmentProvenance::PostfixIncrement
-                    } else {
-                        AssignmentProvenance::PostfixDecrement
-                    };
-                    self.next();
-                    let Some(lv) = Self::to_lvalue(&e) else {
-                        return Err(TranslateError::new(line, "++/-- needs a variable"));
-                    };
-                    e = Expr::Assign(
-                        Box::new(lv),
-                        Box::new(Expr::Num(1, ScalarType::I32, line)),
-                        provenance,
-                        line,
-                    );
-                }
-                Tok::Kw("as") => {
-                    self.next();
-                    if !matches!(self.next(), Tok::Kw("usize")) {
-                        return Err(TranslateError::new(
-                            line,
-                            "only 'as usize' casts are supported for array indexes",
-                        ));
-                    }
-                    e = Expr::Unary("as usize", Box::new(e), line);
-                }
-                _ => break,
+                self.expect_sym(",")?;
             }
         }
-        Ok(e)
+        Ok(Expr::Call(name, args, l))
+    }
+
+    #[inline(never)]
+    fn increment_suffix(&mut self, e: Expr, line: usize) -> Result<Expr, TranslateError> {
+        let provenance = if *self.peek() == Tok::Sym("++") {
+            AssignmentProvenance::PostfixIncrement
+        } else {
+            AssignmentProvenance::PostfixDecrement
+        };
+        self.next();
+        let Some(lv) = Self::to_lvalue(&e) else {
+            return Err(TranslateError::new(line, "++/-- needs a variable"));
+        };
+        Ok(Expr::Assign(Box::new(lv), Box::new(Expr::Num(1, ScalarType::I32, line)), provenance, line))
+    }
+
+    #[inline(never)]
+    fn as_suffix(&mut self, e: Expr, line: usize) -> Result<Expr, TranslateError> {
+        self.next();
+        if !matches!(self.next(), Tok::Kw("usize")) {
+            return Err(TranslateError::new(line, "only 'as usize' casts are supported for array indexes"));
+        }
+        Ok(Expr::Unary("as usize", Box::new(e), line))
     }
 
     fn parse_primary(&mut self) -> Result<Expr, TranslateError> {
+        if *self.peek() == Tok::Sym("(") {
+            self.next();
+            let e = self.parse_expr()?;
+            self.expect_sym(")")?;
+            return Ok(e);
+        }
+        self.parse_atom()
+    }
+
+    #[inline(never)]
+    fn parse_atom(&mut self) -> Result<Expr, TranslateError> {
         let line = self.line();
         match self.next() {
             Tok::Int(n) => Ok(Expr::Num(n, ScalarType::I32, line)),
             Tok::Bool(value) => Ok(Expr::Num(i64::from(value), ScalarType::Bool, line)),
             Tok::Ident(n) => Ok(Expr::Var(n, line)),
             Tok::Str(bytes) => Ok(self.string_literal(bytes, line)),
-            Tok::Sym("(") => {
-                let e = self.parse_expr()?;
-                self.expect_sym(")")?;
-                Ok(e)
-            }
             t => Err(TranslateError::new(
                 line,
                 format!("expected an expression, found {}", show(&t)),
             )),
         }
+    }
+}
+
+/// Reject any statement or expression tree deeper than
+/// `limits::MAX_NESTING_DEPTH` levels, counting every nested statement and
+/// every operator (so `a + b + c` is three levels deep). Runs once, without
+/// recursion, right after parsing: every later pass walks the tree
+/// recursively, and this bound keeps all of them far from the stack limit.
+fn check_tree_depth(unit: &Unit) -> Result<(), TranslateError> {
+    enum Node<'a> {
+        S(&'a Stmt),
+        E(&'a Expr),
+        L(&'a LValue),
+    }
+    let limit = crate::limits::MAX_NESTING_DEPTH;
+    let mut work: Vec<(Node, usize)> = Vec::new();
+    for function in &unit.funcs {
+        work.extend(function.body.iter().map(|s| (Node::S(s), 1)));
+    }
+    while let Some((node, depth)) = work.pop() {
+        if depth > limit {
+            let line = match node {
+                Node::S(s) => stmt_line(s),
+                Node::E(e) => expr_line(e),
+                Node::L(l) => lvalue_line(l),
+            };
+            let what = match node {
+                Node::S(_) => crate::limits::nesting_message("this code (blocks and statements)"),
+                _ => long_expression_message(),
+            };
+            return Err(TranslateError::new(line, what));
+        }
+        let next = depth + 1;
+        match node {
+            Node::S(statement) => match statement {
+                Stmt::Decl(_, init, _, _) => work.extend(init.iter().map(|e| (Node::E(e), next))),
+                Stmt::DeclArray(_, _, init, _, _, _) => work.extend(init.iter().map(|e| (Node::E(e), next))),
+                Stmt::Expr(e, _) => work.push((Node::E(e), next)),
+                Stmt::If(c, then_body, else_body, _) => {
+                    work.push((Node::E(c), next));
+                    work.extend(then_body.iter().chain(else_body).map(|s| (Node::S(s), next)));
+                }
+                Stmt::While(c, body, _) => {
+                    work.push((Node::E(c), next));
+                    work.extend(body.iter().map(|s| (Node::S(s), next)));
+                }
+                Stmt::For(init, c, step, body, _) => {
+                    work.extend(init.iter().map(|s| (Node::S(s), next)));
+                    work.extend(c.iter().chain(step.iter()).map(|e| (Node::E(e), next)));
+                    work.extend(body.iter().map(|s| (Node::S(s), next)));
+                }
+                Stmt::Return(e, _, _) => work.extend(e.iter().map(|e| (Node::E(e), next))),
+                Stmt::Break(_) | Stmt::Continue(_) => {}
+            },
+            Node::E(expression) => match expression {
+                Expr::Num(..) | Expr::Var(..) => {}
+                Expr::Index(_, i, _) | Expr::Unary(_, i, _) => work.push((Node::E(i), next)),
+                Expr::Binary(_, a, b, _) => {
+                    work.push((Node::E(a), next));
+                    work.push((Node::E(b), next));
+                }
+                Expr::Assign(target, value, _, _) => {
+                    work.push((Node::L(target), next));
+                    work.push((Node::E(value), next));
+                }
+                Expr::Call(_, args, _) => work.extend(args.iter().map(|e| (Node::E(e), next))),
+            },
+            Node::L(target) => match target {
+                LValue::Var(..) => {}
+                LValue::Index(_, e, _) | LValue::Deref(e, _) => work.push((Node::E(e), next)),
+            },
+        }
+    }
+    Ok(())
+}
+
+/// C and C++ block scopes. Each `{ }` block, `for` header and `if`/loop
+/// body is a scope; an inner declaration may shadow an outer or global
+/// one; redeclaring a name in the same scope is an error. Every later pass
+/// works with one name per variable and function, so a declaration that
+/// shadows or reuses a name gets a fresh unique name here (the second
+/// loop's `i` becomes `i_2`).
+fn resolve_block_scopes(unit: &mut Unit) -> Result<(), TranslateError> {
+    let mut taken: HashSet<String> = HashSet::new();
+    taken.extend(unit.globals.iter().map(|g| g.name.clone()));
+    taken.extend(unit.prototypes.iter().map(|p| p.name.clone()));
+    for function in &unit.funcs {
+        taken.insert(function.name.clone());
+        taken.extend(function.params.iter().cloned());
+        collect_stmt_names(&function.body, &mut taken);
+    }
+    let globals: HashSet<String> = unit.globals.iter().map(|g| g.name.clone()).collect();
+    for function in &mut unit.funcs {
+        let mut params = HashMap::new();
+        for (name, line) in function.params.iter_mut().zip(&function.param_lines) {
+            let source = name.clone();
+            if globals.contains(&source) {
+                // A parameter may shadow a global, as in C.
+                *name = fresh_name(&source, &mut taken);
+            }
+            if params.insert(source.clone(), (name.clone(), *line)).is_some() {
+                return Err(TranslateError::new(
+                    *line,
+                    format!("parameter '{source}' appears twice in '{}'; give each parameter its own name", function.name),
+                ));
+            }
+        }
+        let mut scopes = Scopes {
+            declared: params.keys().cloned().collect(),
+            stack: vec![params],
+            taken: &mut taken,
+            globals: &globals,
+        };
+        // The function body shares the parameters' scope, as in C.
+        scopes.statements(&mut function.body)?;
+    }
+    Ok(())
+}
+
+/// `name_2`, `name_3`, ...: the first that no identifier in the unit uses.
+fn fresh_name(name: &str, taken: &mut HashSet<String>) -> String {
+    let mut k = 2;
+    loop {
+        let candidate = format!("{name}_{k}");
+        if taken.insert(candidate.clone()) {
+            return candidate;
+        }
+        k += 1;
+    }
+}
+
+fn collect_stmt_names(statements: &[Stmt], names: &mut HashSet<String>) {
+    for statement in statements {
+        match statement {
+            Stmt::Decl(name, ..) | Stmt::DeclArray(name, ..) => {
+                names.insert(name.clone());
+            }
+            Stmt::If(_, a, b, _) => {
+                collect_stmt_names(a, names);
+                collect_stmt_names(b, names);
+            }
+            Stmt::While(_, body, _) => collect_stmt_names(body, names),
+            Stmt::For(init, _, _, body, _) => {
+                if let Some(init) = init {
+                    collect_stmt_names(std::slice::from_ref(&**init), names);
+                }
+                collect_stmt_names(body, names);
+            }
+            _ => {}
+        }
+    }
+}
+
+struct Scopes<'a> {
+    /// Innermost scope last: source name -> (unique name, declaring line).
+    stack: Vec<HashMap<String, (String, usize)>>,
+    /// Source names declared anywhere in this function so far.
+    declared: HashSet<String>,
+    /// Every identifier in the unit (fresh names avoid all of them).
+    taken: &'a mut HashSet<String>,
+    globals: &'a HashSet<String>,
+}
+
+impl Scopes<'_> {
+    fn scoped(&mut self, statements: &mut Vec<Stmt>) -> Result<(), TranslateError> {
+        self.stack.push(HashMap::new());
+        let result = self.statements(statements);
+        self.stack.pop();
+        result
+    }
+
+    fn statements(&mut self, statements: &mut Vec<Stmt>) -> Result<(), TranslateError> {
+        for statement in statements.iter_mut() {
+            self.statement(statement)?;
+        }
+        Ok(())
+    }
+
+    fn statement(&mut self, statement: &mut Stmt) -> Result<(), TranslateError> {
+        match statement {
+            Stmt::Decl(name, init, _, line) => {
+                if let Some(init) = init {
+                    self.expr(init)?;
+                }
+                *name = self.declare(name, *line)?;
+            }
+            Stmt::DeclArray(name, _, init, _, _, line) => {
+                init.iter_mut().try_for_each(|e| self.expr(e))?;
+                *name = self.declare(name, *line)?;
+            }
+            Stmt::Expr(e, _) => self.expr(e)?,
+            Stmt::Return(e, _, _) => e.iter_mut().try_for_each(|e| self.expr(e))?,
+            Stmt::If(c, a, b, _) => {
+                self.expr(c)?;
+                self.scoped(a)?;
+                self.scoped(b)?;
+            }
+            Stmt::While(c, body, _) => {
+                self.expr(c)?;
+                self.scoped(body)?;
+            }
+            Stmt::For(init, c, step, body, _) => {
+                // The header is its own scope around the body's scope.
+                self.stack.push(HashMap::new());
+                let result = (|| {
+                    if let Some(init) = init {
+                        self.statement(init)?;
+                    }
+                    c.iter_mut().chain(step.iter_mut()).try_for_each(|e| self.expr(e))?;
+                    self.scoped(body)
+                })();
+                self.stack.pop();
+                result?;
+            }
+            Stmt::Break(_) | Stmt::Continue(_) => {}
+        }
+        Ok(())
+    }
+
+    fn declare(&mut self, name: &str, line: usize) -> Result<String, TranslateError> {
+        let innermost = self.stack.last().expect("a scope is always open");
+        if let Some((_, first)) = innermost.get(name) {
+            return Err(TranslateError::new(
+                line,
+                format!(
+                    "'{name}' is already declared in this block (on line {first}); \
+                     use a different name, or assign to the existing '{name}' without declaring it again"
+                ),
+            ));
+        }
+        let reused = self.declared.contains(name) || self.globals.contains(name);
+        let unique = if reused {
+            fresh_name(name, self.taken)
+        } else {
+            name.to_string()
+        };
+        self.declared.insert(name.to_string());
+        if let Some(scope) = self.stack.last_mut() {
+            scope.insert(name.to_string(), (unique.clone(), line));
+        }
+        Ok(unique)
+    }
+
+    fn resolve(&self, name: &mut String, line: usize) -> Result<(), TranslateError> {
+        if let Some((unique, _)) = self.stack.iter().rev().find_map(|scope| scope.get(name.as_str())) {
+            if unique != name {
+                *name = unique.clone();
+            }
+            return Ok(());
+        }
+        if self.declared.contains(name.as_str()) && !self.globals.contains(name.as_str()) {
+            return Err(TranslateError::new(
+                line,
+                format!(
+                    "'{name}' is not visible here: it was declared inside a block or for loop that has \
+                     already ended; declare it before that block to use it afterwards"
+                ),
+            ));
+        }
+        Ok(())
+    }
+
+    fn expr(&mut self, e: &mut Expr) -> Result<(), TranslateError> {
+        match e {
+            Expr::Num(..) => Ok(()),
+            Expr::Var(name, line) => self.resolve(name, *line),
+            Expr::Index(name, i, line) => {
+                self.resolve(name, *line)?;
+                self.expr(i)
+            }
+            Expr::Unary(_, i, _) => self.expr(i),
+            Expr::Binary(_, a, b, _) => {
+                self.expr(a)?;
+                self.expr(b)
+            }
+            Expr::Assign(target, value, _, _) => {
+                match &mut **target {
+                    LValue::Var(name, line) => self.resolve(name, *line)?,
+                    LValue::Index(name, i, line) => {
+                        self.resolve(name, *line)?;
+                        self.expr(i)?;
+                    }
+                    LValue::Deref(p, _) => self.expr(p)?,
+                }
+                self.expr(value)
+            }
+            Expr::Call(_, args, _) => args.iter_mut().try_for_each(|a| self.expr(a)),
+        }
+    }
+}
+
+fn long_expression_message() -> String {
+    format!(
+        "this expression is too long or nested too deeply: the limit is {} levels, \
+         and each operator in a chain like a + b + c counts as one; \
+         split it into smaller pieces with extra variables",
+        crate::limits::MAX_NESTING_DEPTH
+    )
+}
+
+fn expr_line(e: &Expr) -> usize {
+    match e {
+        Expr::Num(_, _, l) | Expr::Var(_, l) | Expr::Index(_, _, l) | Expr::Unary(_, _, l) => *l,
+        Expr::Binary(_, _, _, l) | Expr::Assign(_, _, _, l) | Expr::Call(_, _, l) => *l,
+    }
+}
+
+fn lvalue_line(l: &LValue) -> usize {
+    match l {
+        LValue::Var(_, l) | LValue::Index(_, _, l) | LValue::Deref(_, l) => *l,
+    }
+}
+
+fn stmt_line(s: &Stmt) -> usize {
+    match s {
+        Stmt::Decl(_, _, _, l) | Stmt::DeclArray(_, _, _, _, _, l) | Stmt::Return(_, _, l) => *l,
+        Stmt::Break(l) | Stmt::Continue(l) => *l,
+        Stmt::Expr(e, _) | Stmt::If(e, _, _, _) | Stmt::While(e, _, _) => expr_line(e),
+        Stmt::For(init, c, _, body, _) => init
+            .as_deref()
+            .map(stmt_line)
+            .or(c.as_ref().map(expr_line))
+            .or(body.first().map(stmt_line))
+            .unwrap_or(0),
     }
 }
 
@@ -5486,6 +6020,9 @@ impl CodeGen {
         }
         // pre-scan declarations so the frame size is known up front
         prescan(&f.body, &mut ctx, &self.return_types, self.source_language, self.is_rv64())?;
+        if self.memory {
+            self.check_pointer_uses(&f.body, &ctx)?;
+        }
         let frame = (ctx.frame + 15) & !15;
 
         let _ = writeln!(self.out, "{}:", f.name);
@@ -5518,6 +6055,106 @@ impl CodeGen {
         Ok(())
     }
 
+    /// `void *` is opaque: it converts to and from other pointers, but it
+    /// cannot be dereferenced, indexed or used in pointer arithmetic.
+    fn check_pointer_uses(&self, statements: &[Stmt], ctx: &FnCtx) -> Result<(), TranslateError> {
+        for statement in statements {
+            match statement {
+                Stmt::Decl(_, Some(e), _, _) | Stmt::Expr(e, _) | Stmt::Return(Some(e), _, _) => {
+                    self.check_pointer_expr(e, ctx)?
+                }
+                Stmt::DeclArray(_, _, init, _, _, _) => {
+                    for e in init {
+                        self.check_pointer_expr(e, ctx)?;
+                    }
+                }
+                Stmt::If(c, a, b, _) => {
+                    self.check_pointer_expr(c, ctx)?;
+                    self.check_pointer_uses(a, ctx)?;
+                    self.check_pointer_uses(b, ctx)?;
+                }
+                Stmt::While(c, body, _) => {
+                    self.check_pointer_expr(c, ctx)?;
+                    self.check_pointer_uses(body, ctx)?;
+                }
+                Stmt::For(init, c, step, body, _) => {
+                    if let Some(init) = init {
+                        self.check_pointer_uses(std::slice::from_ref(&**init), ctx)?;
+                    }
+                    for e in c.iter().chain(step.iter()) {
+                        self.check_pointer_expr(e, ctx)?;
+                    }
+                    self.check_pointer_uses(body, ctx)?;
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
+    fn check_pointer_expr(&self, e: &Expr, ctx: &FnCtx) -> Result<(), TranslateError> {
+        let opaque = |what: &str, line: usize| {
+            Err(TranslateError::new(
+                line,
+                format!(
+                    "cannot {what} a 'void *': it does not say what it points to; \
+                     cast it to a typed pointer first, for example *(int *)p"
+                ),
+            ))
+        };
+        let is_void_var = |name: &str| {
+            matches!(ctx.vars.get(name), Some(Slot::Local(_) | Slot::Global(_)))
+                && ctx.types.get(name).is_some_and(|t| t.is_void_ptr())
+        };
+        match e {
+            Expr::Num(..) | Expr::Var(..) => Ok(()),
+            Expr::Index(name, i, line) => {
+                if is_void_var(name) {
+                    return opaque("index", *line);
+                }
+                self.check_pointer_expr(i, ctx)
+            }
+            Expr::Unary(op, inner, line) => {
+                if *op == "*" && self.expr_type(inner, ctx).is_void_ptr() {
+                    return opaque("dereference", *line);
+                }
+                self.check_pointer_expr(inner, ctx)
+            }
+            Expr::Binary(op, a, b, line) => {
+                if matches!(*op, "+" | "-")
+                    && (self.expr_type(a, ctx).is_void_ptr() || self.expr_type(b, ctx).is_void_ptr())
+                {
+                    return opaque("do arithmetic on", *line);
+                }
+                self.check_pointer_expr(a, ctx)?;
+                self.check_pointer_expr(b, ctx)
+            }
+            Expr::Assign(target, value, provenance, line) => {
+                match &**target {
+                    LValue::Var(name, _) => {
+                        if is_void_var(name) && !matches!(provenance, AssignmentProvenance::Simple) {
+                            return opaque("do arithmetic on", *line);
+                        }
+                    }
+                    LValue::Index(name, i, _) => {
+                        if is_void_var(name) {
+                            return opaque("index", *line);
+                        }
+                        self.check_pointer_expr(i, ctx)?;
+                    }
+                    LValue::Deref(p, _) => {
+                        if self.expr_type(p, ctx).is_void_ptr() {
+                            return opaque("dereference", *line);
+                        }
+                        self.check_pointer_expr(p, ctx)?;
+                    }
+                }
+                self.check_pointer_expr(value, ctx)
+            }
+            Expr::Call(_, args, _) => args.iter().try_for_each(|a| self.check_pointer_expr(a, ctx)),
+        }
+    }
+
     fn emit_block(
         &mut self,
         stmts: &[Stmt],
@@ -5532,7 +6169,7 @@ impl CodeGen {
 
     fn emit_stmt(&mut self, s: &Stmt, ctx: &mut FnCtx, ret: &str) -> Result<(), TranslateError> {
         match s {
-            Stmt::Decl(name, init, _, line) => {
+            Stmt::Decl(name, init, _, line) => (|| -> Result<(), TranslateError> {
                 let Slot::Local(off) = ctx.vars[name].clone() else {
                     unreachable!()
                 };
@@ -5555,8 +6192,9 @@ impl CodeGen {
                 } else {
                     let _ = line;
                 }
-            }
-            Stmt::DeclArray(name, size, init, source, initializer, line) => {
+                Ok(())
+            })()?,
+            Stmt::DeclArray(name, size, init, source, initializer, line) => (|| -> Result<(), TranslateError> {
                 let Slot::Array(off, _) = ctx.vars[name].clone() else {
                     unreachable!()
                 };
@@ -5598,15 +6236,17 @@ impl CodeGen {
                         }
                     }
                 }
-            }
-            Stmt::Expr(e, source) => {
+                Ok(())
+            })()?,
+            Stmt::Expr(e, source) => (|| -> Result<(), TranslateError> {
                 if *source == ExprStmtProvenance::Empty {
                     return Ok(());
                 }
                 self.emit_expr(e, ctx)?;
                 ctx.depth -= 1;
-            }
-            Stmt::Return(e, _, line) => {
+                Ok(())
+            })()?,
+            Stmt::Return(e, _, line) => (|| -> Result<(), TranslateError> {
                 if let Some(e) = e {
                     let value_type = self.expr_type(e, ctx);
                     self.check_conversion(e, value_type, ctx.return_type, *line)?;
@@ -5624,8 +6264,9 @@ impl CodeGen {
                     self.line("li a0, 0");
                 }
                 self.line(&format!("j {ret}"));
-            }
-            Stmt::If(cond, then, els, source) => {
+                Ok(())
+            })()?,
+            Stmt::If(cond, then, els, source) => (|| -> Result<(), TranslateError> {
                 if source.origin == IfOrigin::PlainBlock {
                     return self.emit_block(then, ctx, ret);
                 }
@@ -5646,8 +6287,9 @@ impl CodeGen {
                     self.emit_block(els, ctx, ret)?;
                     let _ = writeln!(self.out, "{end}:");
                 }
-            }
-            Stmt::While(cond, body, _) => {
+                Ok(())
+            })()?,
+            Stmt::While(cond, body, _) => (|| -> Result<(), TranslateError> {
                 let head = self.label("while");
                 let end = self.label("while_end");
                 let _ = writeln!(self.out, "{head}:");
@@ -5659,8 +6301,9 @@ impl CodeGen {
                 ctx.loops.pop();
                 self.line(&format!("j {head}"));
                 let _ = writeln!(self.out, "{end}:");
-            }
-            Stmt::For(init, cond, post, body, source) => {
+                Ok(())
+            })()?,
+            Stmt::For(init, cond, post, body, source) => (|| -> Result<(), TranslateError> {
                 if let Some(s) = init {
                     self.emit_stmt(s, ctx, ret)?;
                 }
@@ -5704,21 +6347,24 @@ impl CodeGen {
                 }
                 self.line(&format!("j {head}"));
                 let _ = writeln!(self.out, "{end}:");
-            }
-            Stmt::Break(line) => {
+                Ok(())
+            })()?,
+            Stmt::Break(line) => (|| -> Result<(), TranslateError> {
                 let Some((_, end)) = ctx.loops.last() else {
-                    return Err(TranslateError::new(*line, "break outside a loop"));
+                    return Err(TranslateError::new(*line, "break outside a loop: 'break' only works inside a loop or a switch"));
                 };
                 let end = end.clone();
                 self.line(&format!("j {end}"));
-            }
-            Stmt::Continue(line) => {
+                Ok(())
+            })()?,
+            Stmt::Continue(line) => (|| -> Result<(), TranslateError> {
                 let Some((cont, _)) = ctx.loops.last() else {
-                    return Err(TranslateError::new(*line, "continue outside a loop"));
+                    return Err(TranslateError::new(*line, "continue outside a loop: 'continue' only works inside a for, while or do-while loop"));
                 };
                 let cont = cont.clone();
                 self.line(&format!("j {cont}"));
-            }
+                Ok(())
+            })()?,
         }
         Ok(())
     }
@@ -5817,12 +6463,12 @@ impl CodeGen {
     #[inline(never)]
     fn emit_expr_other(&mut self, e: &Expr, ctx: &mut FnCtx) -> Result<&'static str, TranslateError> {
         match e {
-            Expr::Num(n, _, line) => {
+            Expr::Num(n, _, line) => (|| -> Result<&'static str, TranslateError> {
                 let t = self.push_temp(ctx, *line)?;
                 self.line(&format!("li {t}, {n}"));
                 Ok(t)
-            }
-            Expr::Var(name, line) => {
+            })(),
+            Expr::Var(name, line) => (|| -> Result<&'static str, TranslateError> {
                 let slot = ctx
                     .vars
                     .get(name)
@@ -5867,16 +6513,16 @@ indexed here (passing arrays around needs pointers, which are not yet translatab
                     }
                 }
                 Ok(t)
-            }
-            Expr::Index(name, idx, line) => {
+            })(),
+            Expr::Index(name, idx, line) => (|| -> Result<&'static str, TranslateError> {
                 let element = self.element_type(name, ctx);
                 let t = self.emit_array_address(name, idx, *line, ctx)?;
                 let load = self.elem_load(element);
                 self.line(&format!("{load} {t}, 0({t})  # {name}[…]"));
                 Ok(t)
-            }
+            })(),
             Expr::Unary("&", inner, line) if self.memory => self.emit_address(inner, *line, ctx),
-            Expr::Unary("*", inner, line) if self.memory => {
+            Expr::Unary("*", inner, line) if self.memory => (|| -> Result<&'static str, TranslateError> {
                 let pointer_type = self.expr_type(inner, ctx);
                 let Some(element) = pointer_type.pointee() else {
                     return Err(TranslateError::new(
@@ -5888,16 +6534,19 @@ indexed here (passing arrays around needs pointers, which are not yet translatab
                 let load = self.elem_load(element);
                 self.line(&format!("{load} {t}, 0({t})  # *…"));
                 Ok(t)
-            }
-            Expr::Unary(op, inner, line) if cast_target(op).is_some() => {
+            })(),
+            Expr::Unary(op, inner, line) if cast_target(op).is_some() => (|| -> Result<&'static str, TranslateError> {
                 let from = self.expr_type(inner, ctx);
                 let to = cast_target(op).unwrap_or(ScalarType::I32);
+                let literal = matches!(&**inner, Expr::Num(..));
+                if from.is_ptr() != to.is_ptr() && !(to.is_ptr() && literal) {
+                    self.check_pointer_width_cast(from, to, *line)?;
+                }
                 let t = self.emit_expr(inner, ctx)?;
-                let _ = line;
                 self.convert(t, from, to);
                 Ok(t)
-            }
-            Expr::Unary(op, inner, line) if op.starts_with("sizeof") => {
+            })(),
+            Expr::Unary(op, inner, line) if op.starts_with("sizeof") => (|| -> Result<&'static str, TranslateError> {
                 let size = if let Some((keyword, _)) = C_SIZEOF_OPS.iter().find(|(_, o)| o == op) {
                     i64::from(self.ty(c_int_type(keyword).unwrap_or(ScalarType::I32)).bits / 8)
                 } else {
@@ -5921,8 +6570,8 @@ indexed here (passing arrays around needs pointers, which are not yet translatab
                 let t = self.push_temp(ctx, *line)?;
                 self.line(&format!("li {t}, {size}"));
                 Ok(t)
-            }
-            Expr::Unary(op, inner, _) => {
+            })(),
+            Expr::Unary(op, inner, _) => (|| -> Result<&'static str, TranslateError> {
                 let value_type = expression_scalar_type(
                     inner,
                     &ctx.types,
@@ -5941,13 +6590,13 @@ indexed here (passing arrays around needs pointers, which are not yet translatab
                     _ => self.line(&format!("not {t}, {t}")),
                 }
                 Ok(t)
-            }
+            })(),
             // dispatched by `emit_expr`
             Expr::Binary(op, a, b, line) => self.emit_binary_expr(op, a, b, *line, ctx),
-            Expr::Assign(lv, value, source, line) => {
+            Expr::Assign(lv, value, source, line) => (|| -> Result<&'static str, TranslateError> {
                 self.emit_assignment(lv, value, *source, *line, ctx)
-            }
-            Expr::Call(name, args, line) => {
+            })(),
+            Expr::Call(name, args, line) => (|| -> Result<&'static str, TranslateError> {
                 if !self.funcs.contains(name) {
                     return Err(TranslateError::new(
                         *line,
@@ -6014,7 +6663,7 @@ snippet can be called (there is no standard library here)"
                     self.normalize(t, return_type);
                 }
                 Ok(t)
-            }
+            })(),
         }
     }
 
@@ -6080,7 +6729,7 @@ snippet can be called (there is no standard library here)"
         };
 
         match target {
-            LValue::Var(name, target_line) => {
+            LValue::Var(name, target_line) => (|| -> Result<&'static str, TranslateError> {
                 let Slot::Local(off) = self.local_slot(name, *target_line, ctx)? else {
                     return Err(TranslateError::new(
                         *target_line,
@@ -6111,8 +6760,8 @@ snippet can be called (there is no standard library here)"
                     self.line(&format!("sw {original}, {off}(sp)  # {name}"));
                     Ok(original)
                 }
-            }
-            LValue::Index(name, index, target_line) => {
+            })(),
+            LValue::Index(name, index, target_line) => (|| -> Result<&'static str, TranslateError> {
                 let base = ctx.depth;
                 let address = self.emit_array_address(name, index, *target_line, ctx)?;
                 let original = self.push_temp(ctx, line)?;
@@ -6140,10 +6789,10 @@ snippet can be called (there is no standard library here)"
                 }
                 ctx.depth = base + 1;
                 Ok(address)
-            }
-            LValue::Deref(_, target_line) => {
+            })(),
+            LValue::Deref(_, target_line) => (|| -> Result<&'static str, TranslateError> {
                 Err(TranslateError::new(*target_line, "internal: dereference outside a C program"))
-            }
+            })(),
         }
     }
 
@@ -6401,7 +7050,7 @@ snippet can be called (there is no standard library here)"
         let (at, bt) = (self.expr_type(a, ctx), self.expr_type(b, ctx));
         let null = |e: &Expr| matches!(e, Expr::Num(0, _, _));
         match op {
-            "+" | "-" if at.is_ptr() != bt.is_ptr() => {
+            "+" | "-" if at.is_ptr() != bt.is_ptr() => (|| -> Result<&'static str, TranslateError> {
                 if op == "-" && !at.is_ptr() {
                     return Err(TranslateError::new(line, "invalid pointer arithmetic: n - p (subtract a pointer from an integer)"));
                 }
@@ -6412,8 +7061,8 @@ snippet can be called (there is no standard library here)"
                 self.line(&format!("{} {ta}, {ta}, {tb}", if op == "+" { "add" } else { "sub" }));
                 ctx.depth -= 1;
                 Ok(ta)
-            }
-            "-" if at.is_ptr() && bt.is_ptr() => {
+            })(),
+            "-" if at.is_ptr() && bt.is_ptr() => (|| -> Result<&'static str, TranslateError> {
                 if at != bt {
                     return Err(TranslateError::new(
                         line,
@@ -6430,8 +7079,8 @@ snippet can be called (there is no standard library here)"
                 }
                 ctx.depth -= 1;
                 Ok(ta)
-            }
-            "==" | "!=" | "<" | "<=" | ">" | ">=" => {
+            })(),
+            "==" | "!=" | "<" | "<=" | ">" | ">=" => (|| -> Result<&'static str, TranslateError> {
                 let comparable = (at.is_ptr() && bt.is_ptr())
                     || (at.is_ptr() && null(b))
                     || (bt.is_ptr() && null(a));
@@ -6451,7 +7100,7 @@ snippet can be called (there is no standard library here)"
                 self.emit_typed_binary(op, ta, tb, pointer_type, line)?;
                 ctx.depth -= 1;
                 Ok(ta)
-            }
+            })(),
             _ => Err(TranslateError::new(
                 line,
                 format!(
@@ -6466,6 +7115,28 @@ snippet can be called (there is no standard library here)"
     /// C's implicit conversion rules where pointers are involved: pointers
     /// convert only to the identical pointer type, and only the constant 0
     /// converts to a pointer. Integer conversions are unchanged.
+    /// Pointer <-> integer casts keep every bit: the integer must be exactly
+    /// pointer width (32 bits on RV32, 64 on RV64; `long` is both).
+    #[inline(never)]
+    fn check_pointer_width_cast(&self, from: ScalarType, to: ScalarType, line: usize) -> Result<(), TranslateError> {
+        let integer = if from.is_ptr() { to } else { from };
+        let bits = self.ty(integer).bits;
+        if bits == self.xlen() && integer != ScalarType::Bool && integer != ScalarType::Unit {
+            return Ok(());
+        }
+        let (target, xlen) = if self.is_rv64() { ("RV64", 64) } else { ("RV32", 32) };
+        Err(TranslateError::new(
+            line,
+            format!(
+                "cannot cast '{}' to '{}' on {target}: pointers are {xlen} bits but '{}' is {bits}; \
+                 use long or unsigned long, which are pointer-sized on both RV32 and RV64",
+                c_type_name(from),
+                c_type_name(to),
+                c_type_name(integer)
+            ),
+        ))
+    }
+
     fn check_conversion(&self, value: &Expr, from: ScalarType, to: ScalarType, line: usize) -> Result<(), TranslateError> {
         if !self.memory || to == ScalarType::Unit || (!from.is_ptr() && !to.is_ptr()) || from == to {
             return Ok(());
@@ -6477,17 +7148,26 @@ snippet can be called (there is no standard library here)"
             return Err(TranslateError::new(
                 line,
                 format!(
-                    "cannot convert '{}' to '{}': only the constant 0 converts to a pointer \
-(casts to pointer types are not supported)",
+                    "cannot convert '{}' to '{}' implicitly: only the constant 0 converts to a pointer \
+without a cast; write ({}) if you mean it",
                     c_type_name(from),
+                    c_type_name(to),
                     c_type_name(to)
                 ),
             ));
         }
         if from.is_ptr() && to.is_ptr() {
+            if from.is_void_ptr() || to.is_void_ptr() {
+                return Ok(()); // void * converts to and from any object pointer
+            }
             return Err(TranslateError::new(
                 line,
-                format!("incompatible pointer types: cannot use '{}' as '{}'", c_type_name(from), c_type_name(to)),
+                format!(
+                    "incompatible pointer types: cannot use '{}' as '{}'; write a cast such as ({}) if you mean it",
+                    c_type_name(from),
+                    c_type_name(to),
+                    c_type_name(to)
+                ),
             ));
         }
         Err(TranslateError::new(
@@ -7325,6 +8005,22 @@ fn reject_extended_types(unit: &Unit, from: &str, to: &str) -> Result<(), Transl
 }
 
 /// True if `continue` appears in a statement outside any nested loop.
+/// Replace each `continue` that belongs to the loop around a switch (not to
+/// a loop inside it) with `flag = 1; break;`.
+fn redirect_continue(statement: Stmt, flag: &str) -> Vec<Stmt> {
+    match statement {
+        Stmt::Continue(line) => vec![
+            Stmt::Expr(Parser::assign(flag, Expr::Num(1, ScalarType::I32, line), line), ExprStmtProvenance::Expression),
+            Stmt::Break(line),
+        ],
+        Stmt::If(c, a, b, provenance) => {
+            let redirect = |list: Vec<Stmt>| list.into_iter().flat_map(|s| redirect_continue(s, flag)).collect();
+            vec![Stmt::If(c, redirect(a), redirect(b), provenance)]
+        }
+        other => vec![other],
+    }
+}
+
 fn stmt_contains_continue(statement: &Stmt) -> bool {
     match statement {
         Stmt::Continue(_) => true,
@@ -9088,7 +9784,7 @@ mod tests {
     fn c_pointer_fails_gracefully() {
         // pointers themselves are supported now (tests/c_pointers.rs); the
         // forms still outside the subset must fail clearly
-        let err = c_to_asm("int main() { int x = 1; int *p = (int *)x; return 0; }").unwrap_err();
+        let err = c_to_asm("int main() { short x = 1; int *p = (int *)x; return 0; }").unwrap_err();
         assert!(err.message.contains("pointer"), "message: {}", err.message);
         let err = c_to_asm("int main() { int x = 1; return *x; }").unwrap_err();
         assert!(err.message.contains("pointer"), "message: {}", err.message);

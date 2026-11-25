@@ -10,10 +10,10 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::time::{Duration, Instant};
 use support::{entry_points, iterations, sample, vocabulary, Lang, Rng, TextFn};
 
-/// Stack per fuzz call. Release code at the nesting limit fits in 512 KiB,
-/// half of a typical browser WASM stack (1 MiB); unoptimized debug frames are
-/// several times larger, so debug runs get 2 MiB.
-const DEFAULT_STACK: usize = if cfg!(debug_assertions) { 2 << 20 } else { 512 << 10 };
+/// Stack per fuzz call: 1 MiB, the wasm32 default stack a browser module
+/// gets. Worst-case nesting needs at most half of it even in a debug build
+/// (measured per entry point by `tests/stack_budget.rs`).
+const DEFAULT_STACK: usize = 1 << 20;
 const PER_CALL_BOUND: Duration = Duration::from_secs(3);
 
 /// Run `f(input)` and fail with the entry point name if it panics or is slow.

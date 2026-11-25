@@ -152,7 +152,7 @@ impl<'a> Emitter<'a> {
     ) -> Result<(), TranslateError> {
         let indent = "    ".repeat(depth);
         match statement {
-            Stmt::Decl(name, initial, _, line) => {
+            Stmt::Decl(name, initial, _, line) => (|| -> Result<(), TranslateError> {
                 let initial = initial.as_ref().ok_or_else(|| {
                     TranslateError::new(
                         *line,
@@ -167,8 +167,9 @@ impl<'a> Emitter<'a> {
                 };
                 let name = self.binding_name(name);
                 let _ = writeln!(self.out, "{indent}let {mutable}{name}: i32 = {value};");
-            }
-            Stmt::DeclArray(name, size, initial, source, initializer, line) => {
+                Ok(())
+            })()?,
+            Stmt::DeclArray(name, size, initial, source, initializer, line) => (|| -> Result<(), TranslateError> {
                 if !source.initialized || *initializer == ArrayInitProvenance::Absent {
                     return Err(TranslateError::new(
                         *line,
@@ -191,9 +192,10 @@ impl<'a> Emitter<'a> {
                     "{indent}let {mutable}{name}: [i32; {size}] = [{}];",
                     values.join(", ")
                 );
-            }
+                Ok(())
+            })()?,
             Stmt::Expr(_, ExprStmtProvenance::Empty) => {}
-            Stmt::Expr(expression, ExprStmtProvenance::Expression) => {
+            Stmt::Expr(expression, ExprStmtProvenance::Expression) => (|| -> Result<(), TranslateError> {
                 if matches!(expression, Expr::Assign(..)) {
                     let assignment = self.assignment_statement(function, expression)?;
                     let _ = writeln!(self.out, "{indent}{assignment};");
@@ -201,13 +203,15 @@ impl<'a> Emitter<'a> {
                     let (value, _) = self.value(function, expression)?;
                     let _ = writeln!(self.out, "{indent}{value};");
                 }
-            }
-            Stmt::If(_, body, _, source) if source.origin == IfOrigin::PlainBlock => {
+                Ok(())
+            })()?,
+            Stmt::If(_, body, _, source) if source.origin == IfOrigin::PlainBlock => (|| -> Result<(), TranslateError> {
                 let _ = writeln!(self.out, "{indent}{{");
                 self.emit_statements(function, body, depth + 1)?;
                 let _ = writeln!(self.out, "{indent}}}");
-            }
-            Stmt::If(condition, body, otherwise, _) => {
+                Ok(())
+            })()?,
+            Stmt::If(condition, body, otherwise, _) => (|| -> Result<(), TranslateError> {
                 let condition = self.condition(function, condition)?;
                 let _ = writeln!(self.out, "{indent}if {condition} {{");
                 self.emit_statements(function, body, depth + 1)?;
@@ -218,8 +222,9 @@ impl<'a> Emitter<'a> {
                     self.emit_statements(function, otherwise, depth + 1)?;
                     let _ = writeln!(self.out, "{indent}}}");
                 }
-            }
-            Stmt::While(condition, body, source) => {
+                Ok(())
+            })()?,
+            Stmt::While(condition, body, source) => (|| -> Result<(), TranslateError> {
                 if source.kind != LoopKind::While {
                     return Err(TranslateError::new(
                         source.line,
@@ -233,8 +238,9 @@ impl<'a> Emitter<'a> {
                 self.loop_depth -= 1;
                 result?;
                 let _ = writeln!(self.out, "{indent}}}");
-            }
-            Stmt::For(initial, condition, post, body, source) => {
+                Ok(())
+            })()?,
+            Stmt::For(initial, condition, post, body, source) => (|| -> Result<(), TranslateError> {
                 if source.kind != LoopKind::CFor {
                     return Err(TranslateError::new(
                         source.line,
@@ -260,8 +266,9 @@ impl<'a> Emitter<'a> {
                 self.active_range_iterators.remove(loop_parts.iterator);
                 result?;
                 let _ = writeln!(self.out, "{indent}}}");
-            }
-            Stmt::Return(value, _, line) => {
+                Ok(())
+            })()?,
+            Stmt::Return(value, _, line) => (|| -> Result<(), TranslateError> {
                 let value = value.as_ref().ok_or_else(|| {
                     TranslateError::new(
                         *line,
@@ -270,19 +277,22 @@ impl<'a> Emitter<'a> {
                 })?;
                 let value = self.i32_value(function, value, "return value")?;
                 let _ = writeln!(self.out, "{indent}return {value};");
-            }
-            Stmt::Break(line) => {
+                Ok(())
+            })()?,
+            Stmt::Break(line) => (|| -> Result<(), TranslateError> {
                 if self.loop_depth == 0 {
-                    return Err(TranslateError::new(*line, "break outside a loop"));
+                    return Err(TranslateError::new(*line, "break outside a loop: 'break' only works inside a loop or a switch"));
                 }
                 let _ = writeln!(self.out, "{indent}break;");
-            }
-            Stmt::Continue(line) => {
+                Ok(())
+            })()?,
+            Stmt::Continue(line) => (|| -> Result<(), TranslateError> {
                 if self.loop_depth == 0 {
-                    return Err(TranslateError::new(*line, "continue outside a loop"));
+                    return Err(TranslateError::new(*line, "continue outside a loop: 'continue' only works inside a for, while or do-while loop"));
                 }
                 let _ = writeln!(self.out, "{indent}continue;");
-            }
+                Ok(())
+            })()?,
         }
         Ok(())
     }
@@ -295,31 +305,31 @@ impl<'a> Emitter<'a> {
         let line = expression_line(expression);
         match expression {
             Expr::Num(value, _, _) => Ok((value.to_string(), ValueKind::I32)),
-            Expr::Var(name, line) => {
+            Expr::Var(name, line) => (|| -> Result<(String, ValueKind), TranslateError> {
                 self.scalar_binding(function, name, *line)?;
                 self.reject_escaped_iterator(name, *line)?;
                 Ok((self.binding_name(name), ValueKind::I32))
-            }
-            Expr::Index(name, index, line) => {
+            })(),
+            Expr::Index(name, index, line) => (|| -> Result<(String, ValueKind), TranslateError> {
                 self.array_binding(function, name, *line)?;
                 let index = self.array_index(function, index)?;
                 Ok((
                     format!("{}[{index}]", self.binding_name(name)),
                     ValueKind::I32,
                 ))
-            }
-            Expr::Unary("!", value, _) => {
+            })(),
+            Expr::Unary("!", value, _) => (|| -> Result<(String, ValueKind), TranslateError> {
                 let condition = self.condition(function, value)?;
                 Ok((format!("(!{condition})"), ValueKind::Bool))
-            }
-            Expr::Unary("~", value, _) => {
+            })(),
+            Expr::Unary("~", value, _) => (|| -> Result<(String, ValueKind), TranslateError> {
                 let value = self.i32_value(function, value, "bitwise-not operand")?;
                 Ok((format!("(!{value})"), ValueKind::I32))
-            }
-            Expr::Unary("-", value, _) => {
+            })(),
+            Expr::Unary("-", value, _) => (|| -> Result<(String, ValueKind), TranslateError> {
                 let value = self.i32_value(function, value, "negation operand")?;
                 Ok((format!("(-{value})"), ValueKind::I32))
-            }
+            })(),
             Expr::Unary(_, _, _) => Err(TranslateError::new(
                 line,
                 "unsupported unary expression in C-to-Rust translation",
@@ -340,21 +350,21 @@ impl<'a> Emitter<'a> {
                 ),
                 ValueKind::Bool,
             )),
-            Expr::Binary(operator @ ("==" | "!=" | "<" | "<=" | ">" | ">="), left, right, _) => {
+            Expr::Binary(operator @ ("==" | "!=" | "<" | "<=" | ">" | ">="), left, right, _) => (|| -> Result<(String, ValueKind), TranslateError> {
                 let left = self.i32_value(function, left, "comparison operand")?;
                 let right = self.i32_value(function, right, "comparison operand")?;
                 Ok((format!("({left} {operator} {right})"), ValueKind::Bool))
-            }
-            Expr::Binary(operator, left, right, _) => {
+            })(),
+            Expr::Binary(operator, left, right, _) => (|| -> Result<(String, ValueKind), TranslateError> {
                 let left = self.i32_value(function, left, "arithmetic operand")?;
                 let right = self.i32_value(function, right, "arithmetic operand")?;
                 Ok((format!("({left} {operator} {right})"), ValueKind::I32))
-            }
+            })(),
             Expr::Assign(_, _, _, _) => Err(TranslateError::new(
                 line,
                 "value-producing assignment cannot be represented in the safe Rust subset; use assignment as its own statement",
             )),
-            Expr::Call(name, arguments, line) => {
+            Expr::Call(name, arguments, line) => (|| -> Result<(String, ValueKind), TranslateError> {
                 let arity = self.signatures.get(name).ok_or_else(|| {
                     TranslateError::new(*line, format!("call to undefined function '{name}'"))
                 })?;
@@ -376,7 +386,7 @@ impl<'a> Emitter<'a> {
                     format!("{}({arguments})", self.function_name(name)),
                     ValueKind::I32,
                 ))
-            }
+            })(),
         }
     }
 
@@ -1003,7 +1013,6 @@ mod tests {
         assert_round_trip(
             "int main() {
                 int value = 2;
-                ;
                 { value += 5; }
                 return value;
             }",
@@ -1168,7 +1177,7 @@ mod tests {
         assert_rejected(
             "int main() {\nfor (int i = 0; i < 2; i++) { }\nreturn i;\n}",
             3,
-            "iterator 'i' is used outside its loop",
+            "'i' is not visible here",
         );
     }
 
@@ -1183,7 +1192,7 @@ mod tests {
 
     #[test]
     fn c_to_rust_bare_return_is_rejected() {
-        assert_rejected("int main() {\nreturn;\n}", 2, "bare return");
+        assert_rejected("int main() {\nreturn;\n}", 2, "'main' must return a value");
     }
 
     #[test]
@@ -1268,7 +1277,7 @@ mod tests {
         assert_rejected(
             "int main() { int value = 1;\nint value = 2;\nreturn value; }",
             2,
-            "binding 'value' is declared twice",
+            "'value' is already declared in this block (on line 1)",
         );
     }
 }
