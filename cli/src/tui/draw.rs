@@ -65,6 +65,9 @@ impl Th {
     fn info(&self) -> Style {
         self.fg(Color::Cyan)
     }
+    fn ok(&self) -> Style {
+        self.fg(Color::Green)
+    }
     fn dim(&self) -> Style {
         if self.color {
             Style::new().fg(Color::DarkGray)
@@ -101,6 +104,45 @@ fn trunc(s: &str, w: usize) -> String {
 }
 
 pub fn draw(f: &mut Frame, app: &mut App) {
+    draw_frame(f, app);
+    if !app.caps.unicode {
+        ascii_fallback(f);
+    }
+}
+
+/// Non-UTF-8 terminals: swap every non-ASCII cell for an ASCII stand-in,
+/// cell for cell, so the layout is unchanged and nothing prints as mojibake.
+fn ascii_fallback(f: &mut Frame) {
+    let area = f.area();
+    let buf = f.buffer_mut();
+    for y in area.top()..area.bottom() {
+        for x in area.left()..area.right() {
+            let cell = &mut buf[(x, y)];
+            let sym = cell.symbol();
+            if sym.is_ascii() {
+                continue;
+            }
+            let ascii = match sym.chars().next().unwrap_or(' ') {
+                '·' | '•' | '●' => "*",
+                '…' => ".",
+                '‹' | '←' | '◀' | '⟵' => "<",
+                '›' | '→' | '▶' | '⟶' => ">",
+                '↑' | '▲' => "^",
+                '↓' | '▼' | '▾' => "v",
+                '—' | '–' | '─' | '━' | '═' | '╌' => "-",
+                '│' | '┃' | '║' | '╎' => "|",
+                '✕' | '✗' | '×' => "x",
+                '✓' => "+",
+                '┌' | '┐' | '└' | '┘' | '├' | '┤' | '┬' | '┴' | '┼' | '╭' | '╮' | '╰' | '╯' => "+",
+                c if c.is_whitespace() => " ",
+                _ => "?",
+            };
+            cell.set_symbol(ascii);
+        }
+    }
+}
+
+fn draw_frame(f: &mut Frame, app: &mut App) {
     app.hits.clear();
     let th = Th {
         color: app.caps.color,
@@ -111,12 +153,12 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     if area.width < 72 || area.height < 20 {
         let msg = Paragraph::new(vec![
             Line::from(""),
-            Line::from("terminal too small for the interactive simulator"),
-            Line::from(Span::styled(
-                "resize to at least 72x20, or press q to quit",
-                th.dim(),
-            )),
+            Line::from(Span::styled("riscvsim needs a bigger window", Style::new().add_modifier(Modifier::BOLD))),
+            Line::from(format!("now {}x{}, needs at least 72x20", area.width, area.height)),
+            Line::from(""),
+            Line::from(Span::styled("make the window larger, or press q to quit", th.dim())),
         ])
+        .wrap(Wrap { trim: true })
         .centered();
         f.render_widget(msg, area);
         return;
@@ -302,21 +344,26 @@ fn draw_welcome(f: &mut Frame, app: &App, th: &Th) {
     ));
 
     let bullet = th.sym("·", "*");
+    let key = |k: &str, what: &str| {
+        Line::from(vec![
+            Span::styled(format!(" {bullet} "), th.dim()),
+            Span::styled(format!("{k:<12}"), Style::new().add_modifier(Modifier::BOLD)),
+            Span::styled(what.to_string(), th.dim()),
+        ])
+    };
     let mut right: Vec<Line> = vec![
         Line::from(""),
-        Line::styled("Quick tips", Style::new().add_modifier(Modifier::BOLD)),
-        Line::styled(format!(" {bullet} /help lists every command"), th.dim()),
-        Line::styled(format!(" {bullet} /demo runs a sample program"), th.dim()),
-        Line::styled(
-            format!(" {bullet} /serve opens it in the browser"),
-            th.dim(),
-        ),
-        Line::styled(format!(" {bullet} Space runs or pauses"), th.dim()),
+        Line::styled("Watch RISC-V run, cycle by cycle", Style::new().add_modifier(Modifier::BOLD)),
+        Line::styled(" through a real 5-stage pipeline.", th.dim()),
         Line::from(""),
-        Line::styled(th.sym("─", "-").repeat(30), th.dim()),
-        Line::styled("What's new", Style::new().add_modifier(Modifier::BOLD)),
-        Line::styled(format!(" {bullet} slash-command session"), th.dim()),
-        Line::styled(format!(" {bullet} PATH and release doctor"), th.dim()),
+        Line::styled("Try", Style::new().add_modifier(Modifier::BOLD)),
+        key("/demo", "run a sample program"),
+        key("/run prog.s", "run your own file"),
+        key(th.sym("→", ">"), "then step one cycle"),
+        Line::from(""),
+        Line::styled("Help", Style::new().add_modifier(Modifier::BOLD)),
+        key("/help", "every command"),
+        key("?", "keyboard shortcuts"),
     ];
     if let Some(status) = &release {
         if status.update_available {
@@ -435,7 +482,7 @@ fn draw_header(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
     });
 }
 
-fn draw_status(f: &mut Frame, app: &App, th: &Th, area: Rect) {
+fn draw_status(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
     let (text, tone) = &app.status;
     let style = match *tone {
         "ok" => th.accent(),
@@ -447,28 +494,71 @@ fn draw_status(f: &mut Frame, app: &App, th: &Th, area: Rect) {
         area,
     );
 
-    let release = app
+    let update_available = app
         .update_status
         .lock()
         .ok()
-        .and_then(|guard| guard.clone());
-    let update = match release {
-        Some(status) if status.update_available => "update available; /doctor".to_string(),
-        Some(_) => "current".to_string(),
-        None => "".to_string(),
-    };
-    let right = if update.is_empty() {
-        app.install_method.label().to_string()
-    } else {
-        format!("{} | {update}", app.install_method.label())
-    };
-    let width = right.chars().count() as u16;
-    if width + 2 < area.width {
-        f.render_widget(
-            Paragraph::new(Span::styled(right, th.dim())),
-            Rect::new(area.right() - width - 1, area.y, width, 1),
-        );
+        .and_then(|guard| guard.clone())
+        .is_some_and(|status| status.update_available);
+    let used = text.chars().count() as u16 + 3;
+    let room = area.width.saturating_sub(used);
+    let hints = footer_hints(th, room as usize, update_available, &app.speed().label());
+    let width = hints.iter().map(|s| s.content.chars().count()).sum::<usize>() as u16;
+    if width > 0 && width < room {
+        let x0 = area.right() - width - 1;
+        // "? help" and "q quit" stay clickable.
+        let mut x = x0;
+        for (i, span) in hints.iter().enumerate() {
+            let w = span.content.chars().count() as u16;
+            let act = match span.content.as_ref() {
+                "?" => Some(Act::Help),
+                "q" => Some(Act::Quit),
+                _ => None,
+            };
+            if let Some(act) = act {
+                let label_w = hints.get(i + 1).map_or(0, |s| s.content.chars().count() as u16);
+                app.hits.push(Hit { rect: Rect::new(x, area.y, w + label_w, 1), act });
+            }
+            x += w;
+        }
+        f.render_widget(Paragraph::new(Line::from(hints)), Rect::new(x0, area.y, width, 1));
     }
+}
+
+/// The footer's shortcut list, as long as fits in `room` columns.
+fn footer_hints(th: &Th, room: usize, update_available: bool, speed: &str) -> Vec<Span<'static>> {
+    let keys: [(&str, String); 7] = [
+        (th.sym("→", ">"), "step".into()),
+        (th.sym("←", "<"), "back".into()),
+        ("space", "run".into()),
+        ("r", "reset".into()),
+        ("?", "help".into()),
+        ("q", "quit".into()),
+        ("+/-", format!("speed {speed}")),
+    ];
+    let sep = th.sym(" · ", " | ");
+    let mut best = Vec::new();
+    // Drop optional hints from the middle until the rest fits.
+    for keep in [&[0, 1, 2, 6, 3, 4, 5][..], &[0, 1, 2, 6, 4, 5], &[0, 1, 2, 3, 4, 5], &[0, 2, 6, 4, 5], &[0, 2, 4, 5], &[0, 2, 5], &[5]] {
+        let mut spans: Vec<Span<'static>> = Vec::new();
+        if update_available {
+            spans.push(Span::styled("update: /doctor", th.warn()));
+            spans.push(Span::styled(sep, th.dim()));
+        }
+        for (n, &i) in keep.iter().enumerate() {
+            if n > 0 {
+                spans.push(Span::styled(sep, th.dim()));
+            }
+            spans.push(Span::styled(keys[i].0, Style::new().add_modifier(Modifier::BOLD)));
+            spans.push(Span::styled(format!(" {}", keys[i].1), th.dim()));
+        }
+        let w: usize = spans.iter().map(|s| s.content.chars().count()).sum();
+        if w + 1 < room {
+            best = spans;
+            break;
+        }
+    }
+    best
 }
 
 fn draw_prompt(f: &mut Frame, app: &App, th: &Th, area: Rect) {
@@ -531,8 +621,8 @@ fn draw_source(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
     let scroll = match app.src_scroll {
         Some(s) => (s as usize).min(total.saturating_sub(h)),
         None => {
-            // follow execution: keep the executing line roughly centered
-            let center = exec_line.unwrap_or(1);
+            // follow the selection, else execution: keep it roughly centered
+            let center = app.src_sel.or(exec_line).unwrap_or(1);
             center
                 .saturating_sub(h / 2 + 1)
                 .min(total.saturating_sub(h))
@@ -544,12 +634,19 @@ fn draw_source(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
     for (idx, text) in src_lines.iter().enumerate().skip(scroll).take(h) {
         let lineno = idx + 1;
         let is_exec = exec_line == Some(lineno);
-        let marker = if is_exec {
+        let marker = if app.breakpoints.contains(&lineno) {
+            Span::styled(th.sym("●", "*"), th.err().add_modifier(Modifier::BOLD))
+        } else if is_exec {
             Span::styled(th.sym("▶", ">"), th.accent().add_modifier(Modifier::BOLD))
         } else {
             Span::raw(" ")
         };
-        let num = Span::styled(format!("{lineno:>gutter_w$} "), th.dim());
+        let num = if app.src_sel == Some(lineno) {
+            Span::styled(format!("{lineno:>gutter_w$}"), Style::new().add_modifier(Modifier::REVERSED)).patch_style(Style::new())
+        } else {
+            Span::styled(format!("{lineno:>gutter_w$}"), th.dim())
+        };
+        let num = Span::styled(format!("{} ", num.content), num.style);
         let body_style = if is_exec {
             Style::new().add_modifier(Modifier::BOLD)
         } else if text.trim_start().starts_with('#') {
@@ -687,10 +784,17 @@ fn draw_pipeline_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
         let block = Block::bordered()
             .border_set(th.border_set())
             .border_style(border_style)
-            .title(Line::from(vec![
-                Span::styled(code, Style::new().add_modifier(Modifier::BOLD)),
-                Span::styled(format!("·{word}"), th.dim()),
-            ]));
+            .title(Line::from(
+                // "EX·Execute" when it fits the box, otherwise just "EX".
+                if (code.len() + 1 + word.len() + 2) as u16 <= rect.width {
+                    vec![
+                        Span::styled(code, Style::new().add_modifier(Modifier::BOLD)),
+                        Span::styled(format!("·{word}"), th.dim()),
+                    ]
+                } else {
+                    vec![Span::styled(code, Style::new().add_modifier(Modifier::BOLD))]
+                },
+            ));
         let inner = block.inner(rect);
         f.render_widget(block, rect);
 
@@ -816,6 +920,20 @@ fn draw_forward_lanes(
 fn draw_hazard_chips(f: &mut Frame, app: &App, th: &Th, area: Rect) {
     let Some(snap) = &app.snap else { return };
     let mut lines: Vec<Line> = Vec::new();
+
+    // The one-line "why" for this cycle, shared with riscvsim demo.
+    let (kind, why) = crate::explain::cycle(snap);
+    let (mark, style) = match kind {
+        crate::explain::Kind::Stall => (th.sym("!", "!"), th.warn()),
+        crate::explain::Kind::Flush | crate::explain::Kind::Error => (th.sym("✗", "x"), th.err()),
+        crate::explain::Kind::Done => (th.sym("✓", "+"), th.ok()),
+        _ => (th.sym("›", ">"), th.info()),
+    };
+    let room = (area.width as usize).saturating_sub(2).max(20);
+    for (i, part) in wrap_text(&why, room).into_iter().enumerate() {
+        let lead = if i == 0 { format!("{mark} ") } else { "  ".to_string() };
+        lines.push(Line::from(vec![Span::styled(lead, style.add_modifier(Modifier::BOLD)), Span::raw(part)]));
+    }
 
     for fwd in &snap.view.forwards {
         let from = if fwd.from == "exmem" {
@@ -1247,23 +1365,7 @@ fn draw_controls(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
         });
         x += w + 3;
     }
-
-    // help hint (clickable)
-    let hint = "? help · q quit";
-    let w = hint.chars().count() as u16;
-    if x + w < row2.right() {
-        let rect = Rect::new(row2.right().saturating_sub(w + 1), row2.y, w, 1);
-        let style = if app.hover == Some(Act::Help) {
-            Style::new().add_modifier(Modifier::BOLD)
-        } else {
-            th.dim()
-        };
-        f.render_widget(Paragraph::new(Span::styled(hint, style)), rect);
-        app.hits.push(Hit {
-            rect,
-            act: Act::Help,
-        });
-    }
+    let _ = x;
 }
 
 // ---------------------------------------------------------------------------
@@ -1308,46 +1410,63 @@ fn draw_sample_menu(f: &mut Frame, app: &mut App, th: &Th, controls: Rect) {
     }
 }
 
+/// Every key, with a short example of when to use it. Also used by tests.
+pub(crate) fn help_lines(unicode: bool) -> Vec<(String, &'static str)> {
+    let s = |u: &'static str, a: &'static str| if unicode { u } else { a };
+    vec![
+        (format!("{} / n", s("→", "right")), "step one cycle"),
+        (s("←", "left").to_string(), "step back one cycle"),
+        ("space".into(), "run / pause"),
+        ("+ / -".into(), "faster / slower (also ] and [)"),
+        ("f".into(), "fast mode: full speed, no animation"),
+        (format!("{} / j k", s("↑ ↓", "up down")), "select a source line"),
+        ("b".into(), "breakpoint on the selected line"),
+        ("r".into(), "reset to cycle 0"),
+        ("a".into(), "assemble again (reloads the file)"),
+        ("tab / t".into(), "Pipeline or Registers + memory"),
+        ("h".into(), "registers in hex or decimal"),
+        ("g / G".into(), "memory: data or stack"),
+        ("PgUp / PgDn".into(), "memory: scroll a page"),
+        ("s".into(), "pick a sample program"),
+        ("/".into(), "type a command, e.g. /open, /serve"),
+        ("?".into(), "this help (any key closes it)"),
+        ("q".into(), "quit"),
+    ]
+}
+
 fn draw_help(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
-    let w = 46u16.min(area.width.saturating_sub(4));
-    let h = 16u16.min(area.height.saturating_sub(2));
-    let rect = Rect::new((area.width - w) / 2, (area.height - h) / 2, w, h);
+    let entries = help_lines(th.unicode);
+    let example = [
+        "Example: press j until the line after a loop,",
+        "b to set a breakpoint, then space to run to it.",
+    ];
+    let want_h = entries.len() as u16 + example.len() as u16 + 3;
+    let w = 58u16.min(area.width.saturating_sub(4));
+    let h = want_h.min(area.height.saturating_sub(2));
+    let rect = Rect::new(area.x + (area.width - w) / 2, area.y + (area.height - h) / 2, w, h);
     f.render_widget(Clear, rect);
     let block = Block::bordered()
         .border_set(th.border_set())
-        .border_style(th.accent())
+        .border_style(th.info())
         .title(Span::styled(
             " keys ",
             Style::new().add_modifier(Modifier::BOLD),
         ));
     let inner = block.inner(rect);
     f.render_widget(block, rect);
-    let key = |k: &str, what: &str| {
-        Line::from(vec![
-            Span::styled(
-                format!("  {k:<12}"),
-                th.accent().add_modifier(Modifier::BOLD),
-            ),
-            Span::raw(what.to_string()),
-        ])
-    };
-    let lines = vec![
-        key("→ / n", "step one cycle"),
-        key("←", "step back"),
-        key("space", "run / pause"),
-        key("a", "assemble (reloads the file)"),
-        key("r", "reset"),
-        key("tab / t", "switch Pipeline / Registers tab"),
-        key("[ / ]", "slower / faster"),
-        key("s", "sample programs"),
-        key("h", "registers hex / dec"),
-        key("g / G", "memory: data / stack"),
-        key("PgUp / PgDn", "memory: page"),
-        key("?", "this help"),
-        key("q", "quit"),
-        Line::from(""),
-        Line::styled("  every control is also clickable", th.dim()),
-    ];
+    let mut lines: Vec<Line> = entries
+        .iter()
+        .map(|(k, what)| {
+            Line::from(vec![
+                Span::styled(format!(" {k:<13}"), th.info().add_modifier(Modifier::BOLD)),
+                Span::raw(what.to_string()),
+            ])
+        })
+        .collect();
+    lines.push(Line::from(""));
+    for e in example {
+        lines.push(Line::styled(format!(" {e}"), th.dim()));
+    }
     f.render_widget(Paragraph::new(lines), inner);
     app.hits.push(Hit {
         rect,
@@ -1518,6 +1637,80 @@ fn tour_callout_layout(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tui::app::Caps;
+    use ratatui::backend::TestBackend;
+    use ratatui::Terminal;
+    use std::sync::{Arc, Mutex};
+
+    fn sample_app(unicode: bool) -> App {
+        let s = &SAMPLES[0];
+        let mut app = App::new(
+            None,
+            s.source.into(),
+            s.file.into(),
+            false,
+            None,
+            Arc::new(Mutex::new(None)),
+            crate::doctor::InstallMethod::Manual,
+        );
+        app.caps = Caps { color: true, unicode };
+        app.boot();
+        app
+    }
+
+    fn render(app: &mut App, w: u16, h: u16) -> String {
+        let mut t = Terminal::new(TestBackend::new(w, h)).unwrap();
+        t.draw(|f| draw(f, app)).unwrap();
+        let buf = t.backend().buffer().clone();
+        (0..h)
+            .map(|y| (0..w).map(|x| buf[(x, y)].symbol().to_string()).collect::<String>().trim_end().to_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// Text renders of the main screens. With RISCVSIM_CAPTURE_DIR set they
+    /// are also written out for review.
+    #[test]
+    fn screens_fit_and_show_the_footer() {
+        let mut shots = Vec::new();
+        for (w, h) in [(80u16, 24u16), (120, 36)] {
+            let mut app = sample_app(true);
+            shots.push((format!("welcome.{w}x{h}"), render(&mut app, w, h)));
+            app.dismiss_welcome();
+            for _ in 0..4 {
+                app.step(1, true);
+            }
+            let main = render(&mut app, w, h);
+            let last = main.lines().last().unwrap().to_string();
+            assert!(last.contains("quit"), "footer at {w}: {last}");
+            if w >= 120 {
+                for hint in ["step", "back", "run", "reset", "help", "quit"] {
+                    assert!(last.contains(hint), "{hint} missing at {w}: {last}");
+                }
+            }
+            shots.push((format!("pipeline.{w}x{h}"), main));
+        }
+        let mut ascii = sample_app(false);
+        ascii.dismiss_welcome();
+        ascii.step(3, true);
+        let text = render(&mut ascii, 80, 24);
+        assert!(text.is_ascii(), "ASCII mode drew non-ASCII:\n{text}");
+        shots.push(("pipeline.ascii.80x24".into(), text));
+
+        let mut tiny = sample_app(true);
+        tiny.dismiss_welcome();
+        let small = render(&mut tiny, 50, 12);
+        assert!(small.contains("needs a bigger window") && small.contains("50x12"), "{small}");
+        shots.push(("too-small.50x12".into(), small));
+
+        if let Some(dir) = std::env::var_os("RISCVSIM_CAPTURE_DIR") {
+            let dir = std::path::PathBuf::from(dir);
+            std::fs::create_dir_all(&dir).unwrap();
+            for (name, text) in shots {
+                std::fs::write(dir.join(format!("tui.{name}.txt")), text).unwrap();
+            }
+        }
+    }
 
     fn first_callout_at(width: u16, height: u16) -> (Rect, Rect, usize) {
         let area = Rect::new(0, 0, width, height);
@@ -1549,5 +1742,169 @@ mod tests {
             // Border interior has room for title + body before the actions row.
             assert!(1 + body_lines < callout.height.saturating_sub(2) as usize);
         }
+    }
+
+    /// A sample app in the normal stepping state: no welcome, tour or prompt.
+    fn ready_app() -> App {
+        let mut app = sample_app(true);
+        app.dismiss_welcome();
+        app.tour = None;
+        app.prompt_active = false;
+        app
+    }
+
+    fn key(app: &mut App, c: char) {
+        use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        app.on_key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE));
+    }
+
+    fn save(name: &str, text: &str) {
+        if let Some(dir) = std::env::var_os("RISCVSIM_CAPTURE_DIR") {
+            let dir = std::path::PathBuf::from(dir);
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join(format!("tui.{name}.txt")), text).unwrap();
+        }
+    }
+
+    #[test]
+    fn pane_snapshots_at_80x24_and_120x40() {
+        for (w, h) in [(80u16, 24u16), (120, 40)] {
+            let mut app = ready_app();
+            for _ in 0..4 {
+                app.step(1, true);
+            }
+            let pipe = render(&mut app, w, h);
+            // source pane: the executing line is marked
+            assert!(pipe.contains("▶"), "{pipe}");
+            // pipeline pane: the shared why line sits under the stages
+            assert!(pipe.contains("› addi needs x1 from addi"), "why line missing at {w}x{h}:\n{pipe}");
+            // footer shows the speed
+            assert!(pipe.lines().last().unwrap().contains("speed 10 cyc/s") || w < 100, "{pipe}");
+            save(&format!("pane.pipeline.{w}x{h}"), &pipe);
+
+            key(&mut app, 't');
+            let regs = render(&mut app, w, h);
+            assert!(regs.contains("x1") && regs.contains("ra"), "registers pane:\n{regs}");
+            save(&format!("pane.registers.{w}x{h}"), &regs);
+            key(&mut app, 'h');
+            let dec = render(&mut app, w, h);
+            assert_ne!(dec, regs, "h toggles hex and decimal");
+            save(&format!("pane.registers-dec.{w}x{h}"), &dec);
+            key(&mut app, 'g');
+            let mem = render(&mut app, w, h);
+            save(&format!("pane.memory.{w}x{h}"), &mem);
+            for line in pipe.lines().chain(regs.lines()) {
+                assert!(line.chars().count() <= w as usize);
+            }
+        }
+    }
+
+    #[test]
+    fn breakpoints_toggle_and_pause_a_run() {
+        let mut app = ready_app();
+        // Select line 4 (add x3, x2, x1) and set a breakpoint.
+        for _ in 0..3 {
+            key(&mut app, 'j');
+        }
+        assert_eq!(app.src_sel, Some(4));
+        key(&mut app, 'b');
+        assert!(app.breakpoints.contains(&4));
+        let shot = render(&mut app, 80, 24);
+        assert!(shot.contains("●"), "breakpoint mark:\n{shot}");
+        save("breakpoint.80x24", &shot);
+        // Run at full speed: it must stop before fetching line 4.
+        key(&mut app, 'f');
+        app.toggle_run();
+        for _ in 0..10 {
+            app.tick();
+        }
+        assert!(!app.running, "the run paused at the breakpoint");
+        assert!(!app.halted());
+        assert!(app.status.0.contains("breakpoint on line 4"), "{}", app.status.0);
+        // Toggle off again.
+        key(&mut app, 'b');
+        assert!(app.breakpoints.is_empty());
+        // A comment line cannot hold a breakpoint.
+        key(&mut app, 'k');
+        key(&mut app, 'k');
+        key(&mut app, 'k');
+        key(&mut app, 'b');
+        assert!(app.breakpoints.is_empty());
+        assert_eq!(app.status.1, "err");
+    }
+
+    #[test]
+    fn speed_keys_and_fast_mode() {
+        let mut app = ready_app();
+        let start = app.speed_idx;
+        key(&mut app, '+');
+        assert_eq!(app.speed_idx, start + 1);
+        key(&mut app, '-');
+        key(&mut app, '-');
+        assert_eq!(app.speed_idx, start - 1);
+        key(&mut app, 'f');
+        assert!(matches!(app.speed(), crate::tui::app::Speed::Max));
+        assert!(render(&mut app, 120, 40).contains("MAX"), "the speed control shows fast mode");
+        key(&mut app, 'f');
+        assert_eq!(app.speed_idx, start - 1, "f again returns to the previous speed");
+    }
+
+    #[test]
+    fn help_overlay_lists_every_key() {
+        for (w, h) in [(80u16, 24u16), (120, 40)] {
+            let mut app = ready_app();
+            key(&mut app, '?');
+            let shot = render(&mut app, w, h);
+            for needle in ["space", "run / pause", "breakpoint", "fast mode", "+ / -", "quit"] {
+                assert!(shot.contains(needle), "{needle} missing at {w}x{h}:\n{shot}");
+            }
+            save(&format!("help.{w}x{h}"), &shot);
+            key(&mut app, 'x');
+            assert!(!app.help_open, "any key closes help");
+        }
+    }
+
+    #[test]
+    fn redraw_is_fast() {
+        let mut app = ready_app();
+        app.step(4, true);
+        let mut t = Terminal::new(TestBackend::new(120, 40)).unwrap();
+        let start = std::time::Instant::now();
+        let frames = 200;
+        for _ in 0..frames {
+            t.draw(|f| draw(f, &mut app)).unwrap();
+        }
+        let per = start.elapsed() / frames;
+        eprintln!("tui redraw 120x40: {per:?} per frame");
+        assert!(per < std::time::Duration::from_millis(50), "{per:?}");
+    }
+
+    fn type_line(app: &mut App, text: &str) {
+        use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        app.prompt_active = true;
+        for c in text.chars() {
+            app.on_key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE));
+        }
+        app.on_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+    }
+
+    #[test]
+    fn session_suggests_commands_and_keeps_history() {
+        use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        let mut app = ready_app();
+        type_line(&mut app, "/srve");
+        let last = app.log.last().unwrap().text.clone();
+        assert_eq!(last, "there is no /srve. Did you mean /serve? (/help lists them all)");
+        type_line(&mut app, "/help");
+        assert!(app.log.iter().any(|l| l.text.contains("/demo 2")), "help has examples");
+        app.prompt_active = true;
+        app.on_key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
+        assert_eq!(app.command_input, "/help");
+        app.on_key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
+        assert_eq!(app.command_input, "/srve");
+        app.on_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
+        assert_eq!(app.command_input, "/help");
+        app.on_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
+        assert_eq!(app.command_input, "");
     }
 }

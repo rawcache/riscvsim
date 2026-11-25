@@ -34,14 +34,14 @@ fn translate_c_to_rv64_and_run_it() {
 fn translate_errors_name_the_line_and_exit_nonzero() {
     let c = temp("bad.c", "int main() {\n  return y;\n}\n");
     let o = riscvsim(&["translate", "--from", "c", "--to", "rv32", c.to_str().unwrap()]);
-    assert_eq!(o.status.code(), Some(3));
+    assert_eq!(o.status.code(), Some(1), "assembly and translation errors exit 1 (problem with the input)");
     let err = String::from_utf8_lossy(&o.stderr);
     assert!(err.contains(":2:") && err.contains("'y' is not declared"), "{err}");
     let o = riscvsim(&["translate", "--from", "c", "--to", "cobol", c.to_str().unwrap()]);
     assert_eq!(o.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&o.stderr).contains("unknown language 'cobol'"));
     let o = riscvsim(&["translate", "--from", "rv32", "--to", "rust", c.to_str().unwrap()]);
-    assert_eq!(o.status.code(), Some(3));
+    assert_eq!(o.status.code(), Some(1), "assembly and translation errors exit 1 (problem with the input)");
     assert!(String::from_utf8_lossy(&o.stderr).contains("no translator from rv32 to rust"));
     let o = riscvsim(&["translate", "--to", "rv32"]);
     assert_eq!(o.status.code(), Some(2));
@@ -63,7 +63,7 @@ fn run_json_matches_the_shared_engine_report_and_honours_the_limit() {
     assert_eq!(o.status.code(), Some(2));
     let bad = temp("bad.s", "addd a0, a0, a0\n");
     let o = riscvsim(&["run", bad.to_str().unwrap(), "--json"]);
-    assert_eq!(o.status.code(), Some(3));
+    assert_eq!(o.status.code(), Some(1), "assembly and translation errors exit 1 (problem with the input)");
     let json: serde_json::Value = serde_json::from_slice(&o.stdout).expect("json");
     assert_eq!((json["ok"].as_bool(), json["line"].as_u64()), (Some(false), Some(1)));
     let _ = std::fs::remove_file(s);

@@ -32,7 +32,7 @@ pub use assembler64::{assemble64, AsmError64, AsmInstr64, Op64, Program64};
 pub use pipeline::{Pipeline, Snapshot};
 pub use pipeline64::{Pipeline64, Snapshot as Snapshot64};
 pub use translate::{
-    asm64_to_c, asm_to_c, c_to_asm, c_to_asm64, c_to_cpp, c_to_rust, cpp_to_asm, cpp_to_asm64,
+    asm64_to_c, asm_to_c, c_to_asm, c_to_asm64, translate_annotated, AsmLine, c_to_cpp, c_to_rust, cpp_to_asm, cpp_to_asm64,
     cpp_to_c, cpp_to_rust, rust_to_asm, rust_to_asm64, rust_to_c, rust_to_cpp, TranslateError,
     CPP_SUBSET_SUPPORTED, CPP_SUBSET_UNSUPPORTED, C_SUBSET_SUPPORTED, C_SUBSET_UNSUPPORTED,
     RUST_SUBSET_SUPPORTED, RUST_SUBSET_UNSUPPORTED,

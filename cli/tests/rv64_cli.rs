@@ -34,7 +34,7 @@ fn run_xlen64_executes_values_above_u32() {
         String::from_utf8_lossy(&output.stdout)
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("Assembling RV64IM program"));
+    assert!(stdout.contains("RV64IM 5-stage pipeline"));
     assert!(stdout.contains("4294967303"));
     assert!(stdout.contains("RV64 program complete"));
 }

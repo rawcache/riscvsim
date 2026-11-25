@@ -963,6 +963,51 @@ pub fn cpp_to_asm64(source: &str) -> Result<String, TranslateError> {
     gen.emit_unit(&unit)
 }
 
+/// The prefix of the marker lines [`CodeGen`] writes in annotate mode.
+const ANNOTATE_MARK: &str = "#@line ";
+
+/// One line of annotated assembly: the source line it came from (None for
+/// the startup code and data) and the assembly text, exactly as the plain
+/// translation prints it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AsmLine {
+    pub source_line: Option<usize>,
+    pub text: String,
+}
+
+/// Compile C or C++ to RV32 or RV64 assembly and say which source line each
+/// assembly line came from. `from` is `"c"` or `"cpp"`, `xlen` is 32 or 64.
+/// The text of the lines is identical to the plain translation.
+pub fn translate_annotated(from: &str, xlen: u32, source: &str) -> Result<Vec<AsmLine>, TranslateError> {
+    let (unit, mut gen) = match from {
+        "c" => {
+            let tokens = lex(source)?;
+            let unit = Parser::new_c(tokens).parse_unit()?;
+            (unit, if xlen == 64 { CodeGen::new_rv64("C") } else { CodeGen::new() })
+        }
+        "cpp" => (parse_cpp_unit(source)?, if xlen == 64 { CodeGen::new_rv64("C++") } else { CodeGen::new_cpp() }),
+        other => {
+            return Err(TranslateError::new(0, format!("annotated output is available for c and cpp, not {other}")));
+        }
+    };
+    gen.annotate = true;
+    let asm = gen.emit_unit(&unit)?;
+    let mut current = None;
+    let mut out = Vec::new();
+    for line in asm.lines() {
+        if let Some(n) = line.strip_prefix(ANNOTATE_MARK) {
+            current = n.trim().parse::<usize>().ok();
+            continue;
+        }
+        // The data section belongs to no single line.
+        if line.starts_with(".data") || line.starts_with(".rodata") || line.starts_with(".section") {
+            current = None;
+        }
+        out.push(AsmLine { source_line: current, text: line.to_string() });
+    }
+    Ok(out)
+}
+
 /// Translate the documented C integer subset to compilable C++ subset source.
 pub fn c_to_cpp(source: &str) -> Result<String, TranslateError> {
     let tokens = lex(source)?;
@@ -5701,6 +5746,9 @@ struct CodeGen {
     /// (so `&local` sees the same bytes a load of the local does).
     memory: bool,
     globals: Vec<Global>,
+    /// Write `#@line N` markers before the code of each source line
+    /// (only for [`translate_annotated`]; plain output never has them).
+    annotate: bool,
 }
 
 /// A concrete integer representation on the selected target.
@@ -5735,6 +5783,14 @@ impl CodeGen {
             wide: false,
             memory: false,
             globals: Vec::new(),
+            annotate: false,
+        }
+    }
+
+    /// Record that the code that follows comes from source line `line`.
+    fn mark(&mut self, line: usize) {
+        if self.annotate && line > 0 {
+            let _ = writeln!(self.out, "{ANNOTATE_MARK}{line}");
         }
     }
 
@@ -5975,6 +6031,7 @@ impl CodeGen {
     }
 
     fn emit_func(&mut self, f: &Func) -> Result<(), TranslateError> {
+        self.mark(f.line);
         // Frame layout (sp stays fixed for the whole function):
         //   0..4/8       ra
         //   4/8..32/36  temp spill slots (for calls inside expressions)
@@ -6168,6 +6225,7 @@ impl CodeGen {
     }
 
     fn emit_stmt(&mut self, s: &Stmt, ctx: &mut FnCtx, ret: &str) -> Result<(), TranslateError> {
+        self.mark(stmt_line(s));
         match s {
             Stmt::Decl(name, init, _, line) => (|| -> Result<(), TranslateError> {
                 let Slot::Local(off) = ctx.vars[name].clone() else {
@@ -6289,7 +6347,7 @@ impl CodeGen {
                 }
                 Ok(())
             })()?,
-            Stmt::While(cond, body, _) => (|| -> Result<(), TranslateError> {
+            Stmt::While(cond, body, source) => (|| -> Result<(), TranslateError> {
                 let head = self.label("while");
                 let end = self.label("while_end");
                 let _ = writeln!(self.out, "{head}:");
@@ -6299,6 +6357,7 @@ impl CodeGen {
                 ctx.loops.push((head.clone(), end.clone()));
                 self.emit_block(body, ctx, ret)?;
                 ctx.loops.pop();
+                self.mark(source.line);
                 self.line(&format!("j {head}"));
                 let _ = writeln!(self.out, "{end}:");
                 Ok(())
@@ -6327,6 +6386,7 @@ impl CodeGen {
                 let head = self.label("for");
                 let cont = self.label("for_post");
                 let end = self.label("for_end");
+                self.mark(source.line);
                 let _ = writeln!(self.out, "{head}:");
                 if let Some(c) = cond {
                     let t = if let Some(slot) = range_bound {
@@ -6340,6 +6400,7 @@ impl CodeGen {
                 ctx.loops.push((cont.clone(), end.clone()));
                 self.emit_block(body, ctx, ret)?;
                 ctx.loops.pop();
+                self.mark(source.line);
                 let _ = writeln!(self.out, "{cont}:");
                 if let Some(p) = post {
                     self.emit_expr(p, ctx)?;

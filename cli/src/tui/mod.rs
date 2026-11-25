@@ -8,7 +8,7 @@
 mod app;
 mod draw;
 mod logo;
-mod samples;
+pub mod samples;
 mod tour;
 
 pub use app::ServeRequest;
@@ -16,8 +16,10 @@ pub use app::ServeRequest;
 use app::App;
 use ratatui::backend::CrosstermBackend;
 use ratatui::crossterm::event::{DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind};
+use ratatui::crossterm::cursor::Show;
 use ratatui::crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+    disable_raw_mode, enable_raw_mode, BeginSynchronizedUpdate, EndSynchronizedUpdate,
+    EnterAlternateScreen, LeaveAlternateScreen,
 };
 use ratatui::crossterm::{event, execute};
 use ratatui::Terminal;
@@ -31,21 +33,29 @@ pub struct Opts {
     pub force_tour: bool,
 }
 
+/// Put the terminal back the way we found it. Safe to call more than once
+/// (normal exit, error, and the panic hook all call it).
 fn restore_terminal() -> io::Result<()> {
-    disable_raw_mode()?;
-    execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
-    Ok(())
+    let raw = disable_raw_mode();
+    execute!(io::stdout(), EndSynchronizedUpdate, DisableMouseCapture, LeaveAlternateScreen, Show)?;
+    raw
 }
 
 /// Returns a [`ServeRequest`] when the session ended via `/serve` — the caller
 /// starts the server after the terminal is restored.
 pub fn run(opts: Opts) -> Result<Option<ServeRequest>, String> {
     if !io::stdout().is_terminal() {
-        return Err("interactive mode needs a terminal (stdout is not a tty)".into());
+        return Err(
+            "the interactive simulator needs a terminal; output is redirected. \
+             Use riscvsim run <file.s> for plain output"
+                .into(),
+        );
     }
     if std::env::var("TERM").map(|t| t == "dumb").unwrap_or(false) {
         return Err(
-            "TERM=dumb: interactive mode needs a full terminal — use `riscvsim run`".into(),
+            "TERM=dumb: the interactive simulator needs a full terminal. \
+             Use riscvsim run <file.s> for plain output"
+                .into(),
         );
     }
 
@@ -118,7 +128,12 @@ fn event_loop(
     app: &mut App,
 ) -> io::Result<()> {
     loop {
-        terminal.draw(|f| draw::draw(f, app))?;
+        // Synchronized output: the terminal shows the whole frame at once
+        // (no tearing); ratatui itself only writes the cells that changed.
+        execute!(terminal.backend_mut(), BeginSynchronizedUpdate)?;
+        let drawn = terminal.draw(|f| draw::draw(f, app)).map(|_| ());
+        execute!(terminal.backend_mut(), EndSynchronizedUpdate)?;
+        drawn?;
 
         // Block until input or the next animation frame is due; drain every
         // queued event before redrawing so clicks and keys never wait on
@@ -128,7 +143,9 @@ fn event_loop(
                 match event::read()? {
                     Event::Key(key) if key.kind != KeyEventKind::Release => app.on_key(key),
                     Event::Mouse(me) => app.on_mouse(me),
-                    Event::Resize(_, _) => {}
+                    // Redraw at the new size right away (ratatui resizes its
+                    // buffers and repaints everything on the next draw).
+                    Event::Resize(_, _) => terminal.autoresize()?,
                     _ => {}
                 }
                 if !event::poll(std::time::Duration::from_millis(0))? {

@@ -245,6 +245,12 @@ pub struct App {
     pub running: bool,
     next_step_due: Option<Instant>,
     pub speed_idx: usize,
+    /// Speed to return to when fast mode (f) is switched off.
+    pub speed_before_fast: Option<usize>,
+    /// Source line numbers (1-based) where a run pauses before fetching.
+    pub breakpoints: std::collections::BTreeSet<usize>,
+    /// The selected source line (moved with up/down or j/k), 1-based.
+    pub src_sel: Option<usize>,
     pub status: (String, &'static str), // text, "plain" | "ok" | "err"
     pub reg_hex: bool,
     pub mem_addr: u32,
@@ -259,6 +265,9 @@ pub struct App {
     last_update_check: Instant,
     pub command_input: String,
     pub prompt_active: bool,
+    /// Earlier prompt entries, oldest first, and the one being recalled.
+    pub history: Vec<String>,
+    pub history_pos: Option<usize>,
     /// Directory to remember as trusted once confirmed.
     pub trust_key: Option<String>,
     pub tour: Option<Tour>,
@@ -306,6 +315,9 @@ impl App {
             running: false,
             next_step_due: None,
             speed_idx: DEFAULT_SPEED_IDX,
+            speed_before_fast: None,
+            breakpoints: std::collections::BTreeSet::new(),
+            src_sel: None,
             status: (String::new(), "plain"),
             reg_hex: true,
             mem_addr: sim_engine::DATA_BASE,
@@ -325,6 +337,8 @@ impl App {
                 .unwrap_or_else(|_| "working directory unavailable".into()),
             last_update_check: Instant::now(),
             command_input: String::new(),
+            history: Vec::new(),
+            history_pos: None,
             prompt_active: !show_tour,
             trust_key,
             tour: if show_tour {
@@ -379,7 +393,7 @@ impl App {
                 match std::fs::read_to_string(path) {
                     Ok(s) => self.source = s,
                     Err(e) => {
-                        let msg = format!("✗ could not re-read {}: {e}", self.file_name);
+                        let msg = format!("✗ could not re-read {}: {}", self.file_name, crate::io_reason(&e));
                         self.push_log("error", msg.clone(), false);
                         self.set_status(msg, "err");
                         return;
@@ -481,13 +495,86 @@ impl App {
         if p.halted() {
             return;
         }
+        let mut hit: Option<usize> = None;
         for _ in 0..cycles {
             if p.halted() {
                 break;
             }
+            let before = p.fetch_pc();
             p.step_cycle();
+            if self.running && !self.breakpoints.is_empty() {
+                let pc = p.fetch_pc();
+                if pc != before {
+                    if let Some(line) = p.program().instr_at(pc).map(|i| i.line) {
+                        if self.breakpoints.contains(&line) {
+                            hit = Some(line);
+                            break;
+                        }
+                    }
+                }
+            }
         }
         self.refresh_snapshot(animate);
+        if let Some(line) = hit {
+            self.stop_running();
+            self.set_status(format!("paused at the breakpoint on line {line}; space continues"), "plain");
+        }
+    }
+
+    /// Toggle a breakpoint on the selected line (or the executing line).
+    pub fn toggle_breakpoint(&mut self) {
+        let line = self.src_sel.or_else(|| self.exec_line()).unwrap_or(1);
+        let text = self.source.lines().nth(line.saturating_sub(1)).unwrap_or("").trim().to_string();
+        if self.breakpoints.remove(&line) {
+            self.set_status(format!("breakpoint removed from line {line}"), "plain");
+        } else if text.is_empty() || text.starts_with('#') || text.starts_with('.') || text.ends_with(':') {
+            self.set_status(format!("line {line} has no instruction; pick a line with one"), "err");
+        } else {
+            self.breakpoints.insert(line);
+            self.set_status(format!("breakpoint on line {line}: a run pauses before it"), "ok");
+        }
+    }
+
+    /// The source line of the instruction in EX, if any.
+    pub fn exec_line(&self) -> Option<usize> {
+        self.snap.as_ref().and_then(|s| {
+            s.stages
+                .iter()
+                .find(|st| st.name == "EX" && st.state == sim_engine::pipeline::StageState::Normal)
+                .and_then(|st| st.line)
+        })
+    }
+
+    /// Move the source selection by `delta` lines.
+    pub fn move_selection(&mut self, delta: isize) {
+        let total = self.source.lines().count().max(1);
+        let from = self.src_sel.or_else(|| self.exec_line()).unwrap_or(1) as isize;
+        self.src_sel = Some((from + delta).clamp(1, total as isize) as usize);
+    }
+
+    pub fn faster(&mut self) {
+        self.speed_before_fast = None;
+        self.speed_idx = (self.speed_idx + 1).min(SPEEDS.len() - 1);
+    }
+
+    pub fn slower(&mut self) {
+        self.speed_before_fast = None;
+        self.speed_idx = self.speed_idx.saturating_sub(1);
+    }
+
+    /// Fast mode: run at full speed with no animation, or go back.
+    pub fn toggle_fast(&mut self) {
+        match self.speed_before_fast.take() {
+            Some(prev) => {
+                self.speed_idx = prev;
+                self.set_status(format!("fast mode off, {}", SPEEDS[prev].label()), "plain");
+            }
+            None => {
+                self.speed_before_fast = Some(self.speed_idx);
+                self.speed_idx = SPEEDS.len() - 1;
+                self.set_status("fast mode: full speed, no animation (f again to slow down)", "plain");
+            }
+        }
     }
 
     pub fn step_back(&mut self) {
@@ -603,6 +690,13 @@ impl App {
                     "/version       show installed and latest versions",
                     "/examples      show the sample-program walkthrough",
                     "/exit          leave the session (also /quit)",
+                    "",
+                    "Examples:",
+                    "  /demo 2              the load-use stall sample",
+                    "  /run add.s           load and run your file",
+                    "  addi x1, x0, 5       type an instruction to run it",
+                    "  /serve --port 8080   continue in the browser",
+                    "Up and Down recall earlier commands.",
                     "plain input    assemble and run it as RISC-V source",
                 ] {
                     self.push_log("status", line.into(), true);
@@ -698,11 +792,14 @@ impl App {
             }
             "exit" | "quit" => self.quit = true,
             "" => {}
-            unknown => self.push_log(
-                "error",
-                format!("unknown command /{unknown}; type /help"),
-                true,
-            ),
+            unknown => {
+                const KNOWN: &[&str] = &["help", "doctor", "run", "demo", "serve", "reset", "version", "examples", "exit", "quit"];
+                let message = match crate::diag::closest(unknown, KNOWN.iter().copied()) {
+                    Some(guess) => format!("there is no /{unknown}. Did you mean /{guess}? (/help lists them all)"),
+                    None => format!("there is no /{unknown}. Type /help to see the commands."),
+                };
+                self.push_log("error", message, true);
+            }
         }
     }
 
@@ -711,8 +808,33 @@ impl App {
             return false;
         }
         match key.code {
+            KeyCode::Up => {
+                if !self.history.is_empty() {
+                    let pos = match self.history_pos {
+                        Some(p) => p.saturating_sub(1),
+                        None => self.history.len() - 1,
+                    };
+                    self.history_pos = Some(pos);
+                    self.command_input = self.history[pos].clone();
+                }
+            }
+            KeyCode::Down => {
+                if let Some(p) = self.history_pos {
+                    if p + 1 < self.history.len() {
+                        self.history_pos = Some(p + 1);
+                        self.command_input = self.history[p + 1].clone();
+                    } else {
+                        self.history_pos = None;
+                        self.command_input.clear();
+                    }
+                }
+            }
             KeyCode::Enter => {
                 let input = std::mem::take(&mut self.command_input);
+                self.history_pos = None;
+                if !input.trim().is_empty() && self.history.last() != Some(&input) {
+                    self.history.push(input.clone());
+                }
                 self.prompt_active = false;
                 self.dismiss_welcome();
                 self.execute_command(input);
@@ -880,8 +1002,12 @@ impl App {
                     Tab::State => Tab::Pipeline,
                 };
             }
-            KeyCode::Char('[') => self.speed_idx = self.speed_idx.saturating_sub(1),
-            KeyCode::Char(']') => self.speed_idx = (self.speed_idx + 1).min(SPEEDS.len() - 1),
+            KeyCode::Char('[') | KeyCode::Char('-') | KeyCode::Char('_') => self.slower(),
+            KeyCode::Char(']') | KeyCode::Char('+') | KeyCode::Char('=') => self.faster(),
+            KeyCode::Char('f') => self.toggle_fast(),
+            KeyCode::Char('b') => self.toggle_breakpoint(),
+            KeyCode::Up | KeyCode::Char('k') => self.move_selection(-1),
+            KeyCode::Down | KeyCode::Char('j') => self.move_selection(1),
             KeyCode::Char('s') => {
                 self.menu_open = true;
                 self.menu_sel = 0;
@@ -897,7 +1023,7 @@ impl App {
             }
             KeyCode::PageUp => self.mem_addr = self.mem_addr.saturating_sub(128),
             KeyCode::PageDown => self.mem_addr = self.mem_addr.saturating_add(128),
-            KeyCode::Esc => {} // reserved: closes overlays above
+            KeyCode::Esc => self.src_sel = None, // overlays above handle Esc first
             _ => {}
         }
     }

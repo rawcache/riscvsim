@@ -345,6 +345,11 @@ impl Pipeline {
         &self.program
     }
 
+    /// The address the next cycle will fetch from (the program counter).
+    pub fn fetch_pc(&self) -> u32 {
+        self.pc
+    }
+
     pub fn halted(&self) -> bool {
         self.halted
     }

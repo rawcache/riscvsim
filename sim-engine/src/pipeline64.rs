@@ -349,6 +349,11 @@ impl Pipeline64 {
         &self.program
     }
 
+    /// The address the next cycle will fetch from (the program counter).
+    pub fn fetch_pc(&self) -> u64 {
+        self.pc
+    }
+
     pub fn halted(&self) -> bool {
         self.halted
     }

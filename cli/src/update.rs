@@ -2,10 +2,23 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-use std::thread::JoinHandle;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const LATEST_RELEASE_URL: &str = "https://api.github.com/repos/rawcache/riscvsim/releases/latest";
+/// The `owner/name` repository whose releases this build checks for updates.
+/// The release workflow sets it at build time from the repository the
+/// release is built in, so no owner name is hard-coded in the source.
+/// Builds from source leave it unset and simply skip update checks.
+const RELEASE_REPO: Option<&str> = option_env!("RISCVSIM_RELEASE_REPO");
+
+/// The error returned when this build has no release source to check.
+pub const NO_RELEASE_SOURCE: &str = "this build does not check for updates";
+
+fn latest_release_url() -> Result<String, String> {
+    match RELEASE_REPO.map(str::trim).filter(|r| !r.is_empty()) {
+        Some(repo) => Ok(format!("https://api.github.com/repos/{repo}/releases/latest")),
+        None => Err(NO_RELEASE_SOURCE.to_string()),
+    }
+}
 const CACHE_TTL_SECONDS: u64 = 60 * 60;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -25,29 +38,6 @@ struct LatestRelease {
 struct UpdateCache {
     checked_at: u64,
     latest: String,
-}
-
-pub struct UpdateCheck {
-    handle: Option<JoinHandle<Option<ReleaseStatus>>>,
-}
-
-impl UpdateCheck {
-    pub fn finish(mut self) -> Option<ReleaseStatus> {
-        self.handle.take()?.join().ok().flatten()
-    }
-}
-
-/// Start the invocation-level check alongside the command's normal work.
-/// Failures remain internal, and the worker has a 300 ms network ceiling.
-pub fn spawn_check(local_version: &'static str) -> UpdateCheck {
-    if std::env::var_os("RISCVSIM_NO_UPDATE_CHECK").is_some() {
-        return UpdateCheck { handle: None };
-    }
-    UpdateCheck {
-        handle: Some(std::thread::spawn(move || {
-            release_status(local_version).ok()
-        })),
-    }
 }
 
 /// Populate a TUI-owned status slot without blocking rendering.
@@ -73,10 +63,59 @@ pub fn release_status(local_version: &str) -> Result<ReleaseStatus, String> {
     })
 }
 
+/// The last known release from the on-disk cache, without touching the
+/// network. When the cache is missing or older than an hour, a detached
+/// background process refreshes it for the next invocation, so the command
+/// the user is waiting on never blocks on the network.
+pub fn cached_status(local_version: &str) -> Option<ReleaseStatus> {
+    if std::env::var_os("RISCVSIM_NO_UPDATE_CHECK").is_some() {
+        return None;
+    }
+    let cache = read_cache();
+    let stale = cache
+        .as_ref()
+        .map_or(true, |c| now_seconds().saturating_sub(c.checked_at) >= CACHE_TTL_SECONDS);
+    if stale {
+        refresh_in_background();
+    }
+    let latest = cache?.latest;
+    if latest.is_empty() {
+        return None;
+    }
+    Some(ReleaseStatus {
+        update_available: version_newer(&latest, local_version),
+        latest,
+    })
+}
+
+fn refresh_in_background() {
+    let Ok(exe) = std::env::current_exe() else {
+        return;
+    };
+    // Mark the attempt first so parallel invocations do not all spawn.
+    let previous = read_cache().map(|c| c.latest).unwrap_or_default();
+    write_cache(&previous);
+    let _ = Command::new(exe)
+        .arg(REFRESH_COMMAND)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+}
+
+/// Hidden subcommand run by `refresh_in_background`.
+pub const REFRESH_COMMAND: &str = "__refresh-update-cache";
+
+pub fn refresh_now() {
+    if let Ok(latest) = fetch_latest_release_tag() {
+        write_cache(&latest);
+    }
+}
+
 /// Return a fresh-enough latest release. Current-version results avoid a
 /// network request for one hour; update results remain visible on every run.
 pub fn latest_release_tag_cached() -> Result<String, String> {
-    if let Some(cache) = read_fresh_cache() {
+    if let Some(cache) = read_fresh_cache().filter(|c| !c.latest.is_empty()) {
         return Ok(cache.latest);
     }
     let latest = fetch_latest_release_tag()?;
@@ -87,6 +126,7 @@ pub fn latest_release_tag_cached() -> Result<String, String> {
 /// Fetch the published release with a hard 300 ms timeout. Doctor, the TUI,
 /// and invocation checks all reach GitHub through this single function.
 pub fn fetch_latest_release_tag() -> Result<String, String> {
+    let url = latest_release_url()?;
     let output = Command::new("curl")
         .args([
             "-sf",
@@ -96,7 +136,7 @@ pub fn fetch_latest_release_tag() -> Result<String, String> {
             "0.3",
             "-H",
             "Accept: application/vnd.github+json",
-            LATEST_RELEASE_URL,
+            &url,
         ])
         .output()
         .map_err(|error| format!("could not run curl: {error}"))?;
@@ -124,9 +164,13 @@ fn now_seconds() -> u64 {
         .unwrap_or(0)
 }
 
-fn read_fresh_cache() -> Option<UpdateCache> {
+fn read_cache() -> Option<UpdateCache> {
     let body = std::fs::read(cache_path()?).ok()?;
-    let cache: UpdateCache = serde_json::from_slice(&body).ok()?;
+    serde_json::from_slice(&body).ok()
+}
+
+fn read_fresh_cache() -> Option<UpdateCache> {
+    let cache = read_cache()?;
     if now_seconds().saturating_sub(cache.checked_at) < CACHE_TTL_SECONDS {
         Some(cache)
     } else {
