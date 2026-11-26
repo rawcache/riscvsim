@@ -82,11 +82,11 @@ pub const RV64_SAMPLE: Sample = Sample {
     name: "64-bit values",
     file: "wide-values.s",
     source: "# RV64 registers hold 64 bits; build 0x0000_0100_0000_0005
-addi x1, x0, 1     # x1 = 1
-slli x1, x1, 40    # x1 = 1 << 40
-addi x2, x1, 5     # x2 = 0x0000_0100_0000_0005
-addw x3, x2, x0    # addw keeps the low 32 bits: 5
-addi x4, x0, -1    # -1 sets all 64 bits
+addi x5, x0, 1     # x5 = 1
+slli x5, x5, 40    # x5 = 1 << 40
+addi x6, x5, 5     # x6 = 0x0000_0100_0000_0005
+addw x7, x6, x0    # addw keeps the low 32 bits: 5
+addi x10, x0, -1   # -1 sets all 64 bits
 ",
     xlen: 64,
 };

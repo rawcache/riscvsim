@@ -9,8 +9,8 @@
 │                                            ││                                                                        │
 │                                            ││                                                                        │
 │                                            ││                                                                        │
-│                                            ││› addi needs x1 from addi, so it is forwarded from the EX/MEM latch and │
-│                                            ││  nobody waits.                                                         │
+│                                            ││› addi x2 needs x1 from addi x1, so it is forwarded from the EX/MEM     │
+│                                            ││  pipeline register and nobody waits.                                   │
 │                                            ││forward x1: EX/MEM → EX (rs1)                                           │
 │                                            ││                                                                        │
 │                                            ││                                                                        │

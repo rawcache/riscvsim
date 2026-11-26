@@ -7,8 +7,8 @@
 │                            ││ MEM addi x1, x0, 5                  0x00000000 │
 │                            ││ WB  —                                          │
 │                            ││                                                │
-│                            ││› addi needs x1 from addi, so it is forwarded   │
-│                            ││  from the EX/MEM latch and nobody waits.       │
+│                            ││› addi x2 needs x1 from addi x1, so it is       │
+│                            ││  forwarded from the EX/MEM pipeline register…  │
 │                            ││cycles 4 · instr 0 · CPI - · stalls 0           │
 ╰────────────────────────────╯╰────────────────────────────────────────────────╯
 ╭ terminal ────────────────────────────────────────────────────────────────────╮

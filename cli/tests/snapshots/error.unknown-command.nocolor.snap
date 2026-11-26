@@ -1,0 +1,4 @@
+error: unknown command 'completion'
+  → did you mean 'riscvsim completions'?
+  commands: run, demo, tui, translate, serve, doctor, completions
+  riscvsim --help for more

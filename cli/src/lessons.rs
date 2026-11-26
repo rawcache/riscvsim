@@ -37,16 +37,18 @@ pub const LESSONS: &[Lesson] = &[
             file: "first-steps.s",
             source: "# Each line is one instruction. Every cycle, each one
 # moves one stage to the right: IF, ID, EX, MEM, WB.
-addi x1, x0, 6     # x1 = 0 + 6
-addi x2, x0, 7     # x2 = 0 + 7
-addi x3, x0, 100   # x3 = 100
-addi x5, x0, 1     # x5 = 1
-add  x4, x1, x2    # x4 = 6 + 7 = 13
+# Registers are x0 to x31 (x0 is always 0). Each also has
+# an ABI name, such as sp for x2; these lessons use x names.
+addi x5, x0, 6     # x5 = 0 + 6
+addi x6, x0, 7     # x6 = 0 + 7
+addi x7, x0, 100   # x7 = 100
+addi x10, x0, 1    # x10 = 1
+add  x11, x5, x6   # x11 = 6 + 7 = 13
 ",
             xlen: 32,
         },
         watch: &[],
-        expect: &[(1, 6), (2, 7), (3, 100), (5, 1), (4, 13)],
+        expect: &[(5, 6), (6, 7), (7, 100), (10, 1), (11, 13)],
         aliases: &[],
     },
     Lesson {
@@ -61,15 +63,17 @@ add  x4, x1, x2    # x4 = 6 + 7 = 13
 value:  .word 41
 
 .text
-addi x4, x0, 1     # x4 = 1
-lui  x2, 0x10000   # x2 = 0x10000000, where value is
-lw   x1, 0(x2)     # x1 = 41, read from memory
-add  x3, x1, x4    # needs x1 now: one stall
+addi x5, x0, 1     # x5 = 1
+# lui puts 0x10000 in the upper 20 bits of x6, so x6
+# shows 0x10000000: the address where .data starts.
+lui  x6, 0x10000   # x6 = 0x10000000, where value is
+lw   x7, 0(x6)     # x7 = 41, read from memory
+add  x10, x7, x5   # needs x7 now: one stall
 ",
             xlen: 32,
         },
         watch: &[],
-        expect: &[(4, 1), (2, 0x1000_0000), (1, 41), (3, 42)],
+        expect: &[(5, 1), (6, 0x1000_0000), (7, 41), (10, 42)],
         aliases: &["load-use"],
     },
     Lesson {
@@ -80,14 +84,14 @@ add  x3, x1, x4    # needs x1 now: one stall
             file: "forwarding.s",
             source: "# Each add needs the result just computed. Forwarding
 # hands it over between stages, so nothing waits.
-addi x1, x0, 5     # x1 = 5
-addi x2, x1, 3     # needs x1: forwarded, x2 = 8
-add  x3, x2, x1    # needs x2 and x1: x3 = 13
+addi x5, x0, 5     # x5 = 5
+addi x6, x5, 3     # needs x5: forwarded, x6 = 8
+add  x7, x6, x5    # needs x6 and x5: x7 = 13
 ",
             xlen: 32,
         },
         watch: &[],
-        expect: &[(1, 5), (2, 8), (3, 13)],
+        expect: &[(5, 5), (6, 8), (7, 13)],
         aliases: &["add-forward"],
     },
     Lesson {
@@ -98,18 +102,18 @@ add  x3, x2, x1    # needs x2 and x1: x3 = 13
             file: "branches.s",
             source: "# The pipeline guesses where a branch goes before it
 # knows. A wrong guess throws away what came in behind it.
-addi x1, x0, 3     # run the loop 3 times
-addi x2, x0, 0
+addi x5, x0, 3     # run the loop 3 times
+addi x6, x0, 0
 loop:
-addi x2, x2, 1     # count each pass
-addi x1, x1, -1
-bne  x1, x0, loop  # guessed, then checked in EX
-addi x3, x0, 99    # after the loop
+addi x6, x6, 1     # count each pass
+addi x5, x5, -1
+bne  x5, x0, loop  # guessed, then checked in EX
+addi x7, x0, 99    # after the loop
 ",
             xlen: 32,
         },
         watch: &[],
-        expect: &[(1, 0), (2, 3), (3, 99)],
+        expect: &[(5, 0), (6, 3), (7, 99)],
         aliases: &["branch-loop"],
     },
     Lesson {
@@ -118,19 +122,19 @@ addi x3, x0, 99    # after the loop
         sample: Sample {
             name: "Loops",
             file: "loops.s",
-            source: "# Add 1 + 2 + ... + 10. x1 counts down from 10 and
-# x2 collects the sum; bne repeats until x1 is 0.
-addi x1, x0, 10    # counter
-addi x2, x0, 0     # sum
+            source: "# Add 1 + 2 + ... + 10. x5 counts down from 10 and
+# x6 collects the sum; bne repeats until x5 is 0.
+addi x5, x0, 10    # counter
+addi x6, x0, 0     # sum
 loop:
-add  x2, x2, x1    # sum = sum + counter
-addi x1, x1, -1    # counter = counter - 1
-bne  x1, x0, loop  # again until the counter is 0
+add  x6, x6, x5    # sum = sum + counter
+addi x5, x5, -1    # counter = counter - 1
+bne  x5, x0, loop  # again until the counter is 0
 ",
             xlen: 32,
         },
-        watch: &[(1, "counter"), (2, "sum")],
-        expect: &[(1, 0), (2, 55)],
+        watch: &[(5, "counter"), (6, "sum")],
+        expect: &[(5, 0), (6, 55)],
         aliases: &[],
     },
     Lesson {
@@ -138,7 +142,7 @@ bne  x1, x0, loop  # again until the counter is 0
         promise: "RV64 registers hold 64 bits; see what addw keeps.",
         sample: Sample { name: "Wide values", ..RV64_SAMPLE },
         watch: &[],
-        expect: &[(1, 0x0000_0100_0000_0000), (2, 0x0000_0100_0000_0005), (3, 5), (4, u64::MAX)],
+        expect: &[(5, 0x0000_0100_0000_0000), (6, 0x0000_0100_0000_0005), (7, 5), (10, u64::MAX)],
         aliases: &["wide-values"],
     },
 ];
@@ -234,6 +238,28 @@ mod tests {
                 assert!(line.chars().count() <= 60, "{}: {line}", lesson.slug);
             }
         }
+    }
+
+    /// Lessons use x names only, and never registers whose ABI names
+    /// carry a job (x1 ra, x2 sp, x3 gp, x4 tp) as scratch values.
+    #[test]
+    fn lessons_use_plain_scratch_registers_and_x_names() {
+        for lesson in LESSONS {
+            for line in lesson.sample.source.lines() {
+                let code = line.split('#').next().unwrap_or("");
+                for bad in ["x1,", "x2,", "x3,", "x4,", "(x1)", "(x2)", "x1 ", "x2 ", "x3 ", "x4 "] {
+                    assert!(!format!("{code} ").contains(bad), "{}: {line}", lesson.slug);
+                }
+                for abi in ["ra", "sp", "gp", "tp", "t0", "a0", "s0", "zero"] {
+                    assert!(!code.split(|c: char| !c.is_alphanumeric()).any(|w| w == abi), "{}: {line}", lesson.slug);
+                }
+            }
+            for &(reg, _) in lesson.expect {
+                assert!((5..=7).contains(&reg) || (10..=12).contains(&reg), "{} uses x{reg}", lesson.slug);
+            }
+        }
+        assert!(LESSONS[0].sample.source.contains("such as sp for x2"), "lesson 1 mentions ABI names once");
+        assert!(LESSONS[1].sample.source.contains("upper 20 bits"), "lesson 2 explains lui");
     }
 
     #[test]

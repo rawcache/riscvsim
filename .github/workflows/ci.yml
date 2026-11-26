@@ -1,0 +1,62 @@
+# Tests for every push and pull request, on Linux and macOS.
+#
+# sim-engine, cli and rust-core are separate Cargo projects, each with its
+# own Cargo.lock (there is deliberately no root workspace: the website's
+# WebAssembly build depends on this layout). Each one is tested on its own.
+#
+# Uses only actions/checkout and the preinstalled Rust toolchain.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TERM_COLOR: never
+      RISCVSIM_NO_UPDATE_CHECK: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          rustc --version
+          cargo --version
+      - name: sim-engine
+        working-directory: sim-engine
+        run: cargo test --locked
+      - name: cli
+        working-directory: cli
+        run: cargo test --locked
+      - name: rust-core
+        working-directory: rust-core
+        run: cargo test --locked
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clippy if the runner lacks it
+        run: cargo clippy --version || rustup component add clippy
+      # rust-core is clean, so any new warning fails the build.
+      - name: rust-core (warnings are errors)
+        working-directory: rust-core
+        run: cargo clippy --locked --all-targets -- -D warnings
+      # sim-engine and cli still have warnings to clean up: report, do not fail.
+      - name: sim-engine (report only)
+        working-directory: sim-engine
+        run: cargo clippy --locked --all-targets
+      - name: cli (report only)
+        working-directory: cli
+        run: cargo clippy --locked --all-targets

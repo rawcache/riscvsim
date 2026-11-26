@@ -86,8 +86,69 @@ fn stage_instr<'a>(snap: &'a Snapshot, name: &str) -> Option<&'a str> {
         .and_then(|s| s.text.as_deref())
 }
 
+/// How a sentence names an in-flight instruction: its mnemonic, plus its
+/// first operand when another instruction in the pipeline has the same
+/// mnemonic ("addi x6 needs x5 from addi x5", never "addi needs x5 from addi").
+fn name_of(snap: &Snapshot, text: &str) -> String {
+    let m = mnemonic(text);
+    let same = snap
+        .stages
+        .iter()
+        .filter(|s| s.state == StageState::Normal)
+        .filter_map(|s| s.text.as_deref())
+        .filter(|t| mnemonic(t) == m)
+        .count();
+    match text.split_whitespace().nth(1).map(|op| op.trim_end_matches(',')) {
+        Some(op) if same > 1 && !op.is_empty() => format!("{m} {op}"),
+        _ => m.to_string(),
+    }
+}
+
+/// Short plain-English definitions, shown the first time a lesson's
+/// sentence uses the term: (phrase in the sentence, definition).
+pub const GLOSSARY: &[(&str, &str)] = &[
+    ("forwarded", "Forwarding: a result goes straight to the instruction that needs it, before it is written to its register."),
+    ("pipeline register", "A pipeline register holds an instruction and its values between two stages."),
+    ("must wait", "A stall: the instruction stays where it is for a cycle, and an empty slot (a bubble) moves on instead."),
+    ("thrown away", "A flush: instructions fetched down the wrong path are removed before they change anything."),
+];
+
+/// For each sentence, the definitions of terms it is the first to use.
+pub fn first_use_glosses(sentences: &[String]) -> Vec<Vec<&'static str>> {
+    let mut seen = vec![false; GLOSSARY.len()];
+    sentences
+        .iter()
+        .map(|s| {
+            let mut out = Vec::new();
+            for (i, (term, gloss)) in GLOSSARY.iter().enumerate() {
+                if !seen[i] && s.contains(term) {
+                    seen[i] = true;
+                    out.push(*gloss);
+                }
+            }
+            out
+        })
+        .collect()
+}
+
 fn is_jump(m: &str) -> bool {
     matches!(m, "j" | "jal" | "jalr" | "jr" | "ret" | "call" | "tail")
+}
+
+/// Two instructions with the same mnemonic, each named with its first
+/// operand ("addi x6" and "addi x5"), or in full when that is the same too
+/// ("addi x6, x6, 1" and "addi x6, x0, 0").
+fn names_of_pair(a: &str, b: &str) -> (String, String) {
+    let short = |text: &str| {
+        let m = mnemonic(text);
+        match text.split_whitespace().nth(1).map(|op| op.trim_end_matches(',')) {
+            Some(op) if !op.is_empty() => format!("{m} {op}"),
+            _ => m.to_string(),
+        }
+    };
+    let full = |text: &str| text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let (sa, sb) = (short(a), short(b));
+    if sa == sb { (full(a), full(b)) } else { (sa, sb) }
 }
 
 /// What kind of event a cycle was, for summaries and styling.
@@ -142,8 +203,15 @@ pub fn cycle(snap: &Snapshot) -> (Kind, String) {
             .nth(1)
             .and_then(|r| r.split_whitespace().next())
             .unwrap_or("a register");
-        let producer = reason.split('\'').nth(1).map(mnemonic).unwrap_or("the load");
-        let consumer = stage(snap, "ID").and_then(|s| s.text.as_deref()).map(mnemonic).unwrap_or("the next instruction");
+        let producer_text = reason.split('\'').nth(1);
+        let consumer_text = stage(snap, "ID").and_then(|s| s.text.as_deref());
+        let (producer, consumer) = match (producer_text, consumer_text) {
+            (Some(p), Some(c)) if mnemonic(p) == mnemonic(c) => names_of_pair(p, c),
+            (p, c) => (
+                p.map(|t| name_of(snap, t)).unwrap_or_else(|| "the load".into()),
+                c.map(|t| name_of(snap, t)).unwrap_or_else(|| "the next instruction".into()),
+            ),
+        };
         return (
             Kind::Stall,
             format!("{producer} is reading memory. {consumer} must wait one cycle because it needs {reg} from {producer}."),
@@ -151,9 +219,33 @@ pub fn cycle(snap: &Snapshot) -> (Kind, String) {
     }
 
     if let Some(f) = view.forwards.first() {
-        let consumer = stage_instr(snap, "EX").map(mnemonic).unwrap_or("the instruction in EX");
         let (from_stage, latch) = if f.from == "exmem" { ("MEM", "EX/MEM") } else { ("WB", "MEM/WB") };
-        let producer = stage(snap, from_stage).and_then(|s| s.text.as_deref()).map(mnemonic).unwrap_or("an earlier instruction");
+        let consumer_text = stage_instr(snap, "EX");
+        let producer_text = stage(snap, from_stage).and_then(|s| s.text.as_deref());
+        let (consumer, producer) = match (consumer_text, producer_text) {
+            (Some(c), Some(p)) if mnemonic(c) == mnemonic(p) => names_of_pair(c, p),
+            (c, p) => (
+                c.map(|t| name_of(snap, t)).unwrap_or_else(|| "the instruction in EX".into()),
+                p.map(|t| name_of(snap, t)).unwrap_or_else(|| "an earlier instruction".into()),
+            ),
+        };
+        // Two values from two different instructions: name each source.
+        if let Some(g) = view.forwards.iter().find(|g| g.from != f.from && x_name(&g.reg) != x_name(&f.reg)) {
+            let other_stage = if g.from == "exmem" { "MEM" } else { "WB" };
+            let other = stage(snap, other_stage).and_then(|s| s.text.as_deref());
+            let (p1, p2) = match (producer_text, other) {
+                (Some(a), Some(b)) => names_of_pair(a, b),
+                _ => (producer.clone(), "an earlier instruction".into()),
+            };
+            return (
+                Kind::Forward,
+                format!(
+                    "{consumer} needs {} from {p1} and {} from {p2}, so both are forwarded from pipeline registers and nobody waits.",
+                    x_name(&f.reg),
+                    x_name(&g.reg)
+                ),
+            );
+        }
         let regs: Vec<String> = view.forwards.iter().map(|f| x_name(&f.reg)).collect();
         let what = if regs.len() > 1 && regs.iter().any(|r| *r != regs[0]) {
             format!("{} and {}", regs[0], regs[1])
@@ -162,7 +254,7 @@ pub fn cycle(snap: &Snapshot) -> (Kind, String) {
         };
         return (
             Kind::Forward,
-            format!("{consumer} needs {what} from {producer}, so it is forwarded from the {latch} latch and nobody waits."),
+            format!("{consumer} needs {what} from {producer}, so it is forwarded from the {latch} pipeline register and nobody waits."),
         );
     }
 
@@ -175,6 +267,7 @@ pub fn cycle(snap: &Snapshot) -> (Kind, String) {
     }
 
     if let Some(w) = view.reg_writes.first() {
+        // "writes x5" already says which instruction it is.
         let by = stage(snap, "WB").and_then(|s| s.text.as_deref()).map(mnemonic).unwrap_or("an instruction");
         let reg = format!("x{}", w.reg);
         return (Kind::Plain, format!("{by} finishes and writes {reg} = {}.", snap.value(w.after)));
@@ -195,10 +288,10 @@ pub fn cycle(snap: &Snapshot) -> (Kind, String) {
         }
     }
     if let Some(text) = stage_instr(snap, "EX") {
-        return (Kind::Plain, format!("{} is computing in the ALU; everything else moves one stage on.", mnemonic(text)));
+        return (Kind::Plain, format!("{} is computing in the ALU; everything else moves one stage on.", name_of(snap, text)));
     }
     if let Some(text) = stage_instr(snap, "ID") {
-        return (Kind::Plain, format!("{} is decoded and reads its source registers.", mnemonic(text)));
+        return (Kind::Plain, format!("{} is decoded and reads its source registers.", name_of(snap, text)));
     }
     if stage_instr(snap, "IF").is_none() {
         return (Kind::Plain, "Nothing is left to fetch, so the pipeline is emptying.".into());
@@ -243,7 +336,7 @@ mod tests {
         let src = crate::tui::samples::SAMPLES[0].source;
         assert_eq!(
             first(src, Kind::Forward),
-            "addi needs x1 from addi, so it is forwarded from the EX/MEM latch and nobody waits."
+            "addi x2 needs x1 from addi x1, so it is forwarded from the EX/MEM pipeline register and nobody waits."
         );
     }
 
@@ -284,10 +377,10 @@ mod tests {
     fn rv64_sentences_use_64_bit_values() {
         let all = sentences_at(crate::tui::samples::RV64_SAMPLE.source, 64);
         let text: Vec<&str> = all.iter().map(|(_, s)| s.as_str()).collect();
-        assert!(text.contains(&"addi finishes and writes x2 = 0x0000_0100_0000_0005."), "{text:#?}");
-        assert!(text.contains(&"addw finishes and writes x3 = 5."), "{text:#?}");
-        assert!(text.iter().any(|s| s.starts_with("addw needs x2 from addi")), "{text:#?}");
-        assert_eq!(all.last().unwrap().1, "addi writes x4 = -1, and the program is finished.");
+        assert!(text.contains(&"addi finishes and writes x6 = 0x0000_0100_0000_0005."), "{text:#?}");
+        assert!(text.contains(&"addw finishes and writes x7 = 5."), "{text:#?}");
+        assert!(text.iter().any(|s| s.starts_with("addw needs x6 from addi")), "{text:#?}");
+        assert_eq!(all.last().unwrap().1, "addi writes x10 = -1, and the program is finished.");
     }
 
     #[test]
@@ -308,5 +401,38 @@ mod tests {
         assert_eq!(x_name("t0"), "x5");
         assert_eq!(x_name("x7"), "x7");
         assert_eq!(x_name("fp"), "x8");
+    }
+
+    #[test]
+    fn same_mnemonics_are_named_by_their_first_operand() {
+        let all = sentences("addi x5, x0, 6\naddi x6, x0, 7\naddi x7, x5, 1\n");
+        let text: Vec<&str> = all.iter().map(|(_, s)| s.as_str()).collect();
+        assert!(text.contains(&"addi x5 is decoded and reads its source registers."), "{text:#?}");
+        assert!(text.iter().any(|s| s.starts_with("addi x7 needs x5 from addi x5")), "{text:#?}");
+        // same first operand too: the full instructions
+        let lp = sentences("addi x6, x0, 0\naddi x6, x6, 1\n");
+        assert!(lp.iter().any(|(_, s)| s.starts_with("addi x6, x6, 1 needs x6 from addi x6, x0, 0")), "{lp:#?}");
+        // two values from two instructions: each source is named
+        let two = sentences("addi x5, x0, 10\naddi x6, x0, 0\nadd x6, x6, x5\n");
+        assert!(two.iter().any(|(_, s)| s == "add needs x6 from addi x6 and x5 from addi x5, so both are forwarded from pipeline registers and nobody waits."), "{two:#?}");
+        // one addi alone keeps the short name
+        assert_eq!(sentences("addi x5, x0, 7\n")[2].1, "addi is decoded and reads its source registers.");
+    }
+
+    #[test]
+    fn each_gloss_is_given_once_where_the_term_first_appears() {
+        let said: Vec<String> = vec![
+            "a plain cycle.".into(),
+            "it is forwarded from the EX/MEM pipeline register and nobody waits.".into(),
+            "it is forwarded again.".into(),
+            "add must wait one cycle.".into(),
+        ];
+        let g = first_use_glosses(&said);
+        assert!(g[0].is_empty() && g[2].is_empty());
+        assert_eq!(g[1], vec![GLOSSARY[0].1, GLOSSARY[1].1]);
+        assert_eq!(g[3], vec![GLOSSARY[2].1]);
+        for (_, gloss) in GLOSSARY {
+            assert!(gloss.chars().count() <= 120 && gloss.ends_with('.'), "{gloss}");
+        }
     }
 }

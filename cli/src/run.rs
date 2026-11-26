@@ -89,6 +89,110 @@ pub struct RunOpts {
     pub limit: u64,
     /// `--watch REG`: register number to show live on the status line.
     pub watch: Option<u8>,
+    /// `--expect REG=VALUE` checks, compared after the run.
+    pub expect: Vec<Check>,
+}
+
+/// One `--expect REG=VALUE` check, as the user wrote it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Check {
+    /// The register as typed (`x3`, `a0`).
+    pub name: String,
+    pub reg: u8,
+    /// The value as typed (`42`, `0x2a`, `-1`).
+    pub text: String,
+    /// The value, sign-extended to 128 bits so any width can compare.
+    pub value: i128,
+    /// Typed in hex: show the actual value in hex too.
+    pub hex: bool,
+}
+
+/// Every register spelling `--expect` and `--watch` accept, for did-you-mean.
+fn register_names() -> Vec<String> {
+    let mut names: Vec<String> = (0..32).map(|r| format!("x{r}")).collect();
+    names.extend((0..32u8).map(|r| sim_engine::assembler::abi_name(r).to_string()));
+    names.push("fp".into());
+    names
+}
+
+/// Parse `REG=VALUE`. On error: what is wrong, and an optional did-you-mean.
+pub fn parse_check(spec: &str) -> Result<Check, (String, Option<String>)> {
+    let Some((name, text)) = spec.split_once('=') else {
+        return Err((format!("--expect needs REG=VALUE, but found '{spec}'"), Some("for example: --expect x3=42".into())));
+    };
+    let (name, text) = (name.trim(), text.trim());
+    let Some(reg) = parse_register(name) else {
+        let names = register_names();
+        let hint = crate::diag::closest(&name.to_ascii_lowercase(), names.iter().map(String::as_str))
+            .map(|n| format!("did you mean '{n}'?"));
+        return Err((format!("'{name}' is not a register (use x0 to x31, or names like a0, t0)"), hint));
+    };
+    let (negative, digits) = match text.strip_prefix('-') {
+        Some(rest) => (true, rest),
+        None => (false, text.strip_prefix('+').unwrap_or(text)),
+    };
+    let digits = digits.replace('_', "");
+    let (hex, magnitude) = match digits.strip_prefix("0x").or_else(|| digits.strip_prefix("0X")) {
+        Some(h) => (true, u128::from_str_radix(h, 16)),
+        None => (false, digits.parse::<u128>()),
+    };
+    let magnitude = match magnitude {
+        Ok(m) if m <= u64::MAX as u128 => m as i128,
+        _ => {
+            return Err((
+                format!("'{text}' is not a number riscvsim can compare (use decimal like 42 or -1, or hex like 0x2a)"),
+                None,
+            ))
+        }
+    };
+    Ok(Check { name: name.to_string(), reg, text: text.to_string(), value: if negative { -magnitude } else { magnitude }, hex })
+}
+
+impl Check {
+    /// The value fits a register of this width (as signed or unsigned).
+    pub fn fits(&self, xlen: u32) -> bool {
+        let bits = xlen as i128;
+        self.value >= -(1i128 << (bits - 1)) && self.value < (1i128 << bits)
+    }
+
+    /// Compare against a final register value.
+    pub fn matches(&self, actual: u64, xlen: u32) -> bool {
+        let mask: u128 = if xlen == 64 { u64::MAX as u128 } else { u32::MAX as u128 };
+        (self.value as u128) & mask == (actual as u128) & mask
+    }
+
+    /// The actual value, written the way the expected one was.
+    pub fn show_actual(&self, actual: u64, xlen: u32) -> String {
+        if self.hex {
+            if xlen == 64 { format!("0x{actual:x}") } else { format!("0x{:x}", actual as u32) }
+        } else {
+            signed(actual, xlen).to_string()
+        }
+    }
+}
+
+/// One calm line per check: `✓ x3 = 42` or `✗ x3 expected 42, got 41`.
+pub fn check_lines(checks: &[Check], regs: &[u64; 32], xlen: u32, p: &Paint) -> (Vec<String>, bool) {
+    let mut all = true;
+    let lines = checks
+        .iter()
+        .map(|c| {
+            let actual = regs[c.reg as usize];
+            if c.matches(actual, xlen) {
+                format!("{} {} = {}", p.ok_mark(), p.bold(&c.name), c.text)
+            } else {
+                all = false;
+                format!(
+                    "{} {} expected {}, got {}",
+                    p.err_mark(),
+                    p.bold(&c.name),
+                    c.text,
+                    p.error(&c.show_actual(actual, xlen))
+                )
+            }
+        })
+        .collect();
+    (lines, all)
 }
 
 /// Parse a register for `--watch`: `x5`, `t0`, `a0`, `fp` or a number.
@@ -335,7 +439,21 @@ fn execute<M: Machine>(mut m: M, n_instrs: usize, name: &str, opts: &RunOpts) ->
             p.gray(&format!("raise the limit with --limit N (now {})", group_thousands(opts.limit)))
         );
     }
-    code
+    if opts.expect.is_empty() {
+        return code;
+    }
+    // --expect: the checks decide the exit code, except after a fault or
+    // Ctrl-C (a step limit still compares; its note is printed above).
+    let (lines, all) = check_lines(&opts.expect, &final_regs, M::XLEN, &p);
+    println!();
+    for line in lines {
+        println!("{line}");
+    }
+    match outcome {
+        Outcome::Interrupted | Outcome::Fault(_) => code,
+        _ if all => ExitCode::SUCCESS,
+        _ => ExitCode::from(crate::EXIT_RUNTIME),
+    }
 }
 
 pub fn plural(n: u64, word: &str) -> String {
@@ -390,7 +508,7 @@ pub fn hex(v: u64, xlen: u32) -> String {
     }
 }
 
-fn signed(v: u64, xlen: u32) -> i64 {
+pub fn signed(v: u64, xlen: u32) -> i64 {
     if xlen == 64 {
         v as i64
     } else {
@@ -522,5 +640,24 @@ mod tests {
             summary_line(&t, &Paint::fixed(false, true)),
             "14 cycles · 6 instructions · CPI 2.33 · 1 stall · 0 mispredictions"
         );
+    }
+
+    #[test]
+    fn expect_lines_snapshot() {
+        let checks: Vec<Check> = ["x7=13", "a0=-1", "a1=0x2b"].iter().map(|c| parse_check(c).unwrap()).collect();
+        let mut regs = [0u64; 32];
+        regs[7] = 13;
+        regs[10] = u32::MAX as u64;
+        regs[11] = 42;
+        for (name, color) in [("nocolor", false), ("color", true)] {
+            let (lines, all) = check_lines(&checks, &regs, 32, &Paint::fixed(color, true));
+            assert!(!all);
+            let text = lines.join("\n");
+            let text = if color { crate::snapshots::mark_ansi(&text) } else { text };
+            crate::snapshots::check(&format!("run.expect.{name}"), &text);
+        }
+        let (ascii, _) = check_lines(&checks, &regs, 32, &Paint::fixed(false, false));
+        assert_eq!(ascii[0], "[ok] x7 = 13");
+        assert_eq!(ascii[2], "error: a1 expected 0x2b, got 0x2a");
     }
 }

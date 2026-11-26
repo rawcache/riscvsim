@@ -21,17 +21,26 @@ pub fn disable_color() {
     NO_COLOR_FLAG.store(true, Ordering::Relaxed);
 }
 
-fn env_nonempty(key: &str) -> bool {
-    std::env::var_os(key).is_some_and(|v| !v.is_empty())
+/// Reads one environment variable. The real one is `std::env::var`; tests
+/// pass a fixed table so they never touch the process environment.
+pub type Env<'a> = &'a dyn Fn(&str) -> Option<String>;
+
+fn real_env(key: &str) -> Option<String> {
+    std::env::var(key).ok()
 }
 
-fn term_is_dumb() -> bool {
-    std::env::var("TERM").is_ok_and(|t| t == "dumb")
+fn term_is_dumb_in(env: Env) -> bool {
+    env("TERM").is_some_and(|t| t == "dumb")
 }
 
 /// Colour is allowed at all (independent of which stream is a TTY).
 pub fn color_allowed() -> bool {
-    !NO_COLOR_FLAG.load(Ordering::Relaxed) && !env_nonempty("NO_COLOR") && !term_is_dumb()
+    color_allowed_in(&real_env, NO_COLOR_FLAG.load(Ordering::Relaxed))
+}
+
+/// [`color_allowed`] for a given environment and `--no-color` flag.
+pub fn color_allowed_in(env: Env, no_color_flag: bool) -> bool {
+    !no_color_flag && env("NO_COLOR").is_none_or(|v| v.is_empty()) && !term_is_dumb_in(env)
 }
 
 /// `CLICOLOR_FORCE=1`: colour even when piped (for pagers like `less -R`
@@ -42,7 +51,12 @@ pub fn color_forced() -> bool {
 
 /// The locale says UTF-8 and the terminal is not `dumb`.
 pub fn unicode() -> bool {
-    if term_is_dumb() {
+    unicode_in(&real_env)
+}
+
+/// [`unicode`] for a given environment.
+pub fn unicode_in(env: Env) -> bool {
+    if term_is_dumb_in(env) {
         return false;
     }
     if cfg!(windows) {
@@ -50,7 +64,7 @@ pub fn unicode() -> bool {
     }
     ["LC_ALL", "LC_CTYPE", "LANG"]
         .iter()
-        .filter_map(|k| std::env::var(k).ok())
+        .filter_map(|k| env(k))
         .find(|v| !v.is_empty())
         .map(|v| {
             let v = v.to_ascii_lowercase();

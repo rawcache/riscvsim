@@ -1,0 +1,4 @@
+<1;31>error<0><1>:<0> unknown command 'completion'
+  <1;36>→<0> <1;36>did you mean 'riscvsim completions'?<0>
+  <90>commands: run, demo, tui, translate, serve, doctor, completions<0>
+  <90>riscvsim --help for more<0>

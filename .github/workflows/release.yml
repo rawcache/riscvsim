@@ -1,19 +1,26 @@
-# Release riscvsim: on a version tag (v1.2.3), build the CLI for macOS
-# (arm64, x86_64) and Linux (x86_64), and attach the archives, one
-# SHA256SUMS file and install.sh to a GitHub release.
+# Release riscvsim on a version tag (v1.2.3).
+#
+#   preflight  read-only: the tag matches the CLI version and no release
+#              exists for it yet
+#   create     a draft release (gh release create fails if one exists)
+#   build      macOS arm64, macOS x86_64 and Linux x86_64 archives,
+#              uploaded to the draft (never --clobber: an existing asset is
+#              an error, not something to replace)
+#   publish    SHA256SUMS and install.sh, then the draft becomes public
 #
 # Uses only actions/checkout, the preinstalled Rust toolchain and the
 # preinstalled gh CLI. The repository name comes from github.repository at
-# release time, so no owner name is written in this repo.
+# release time, so no owner name is written in this repo. Write access is
+# granted only to the jobs that write to the release.
 
 name: release
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["v[0-9]*"]
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   TAG: ${{ github.ref_name }}
@@ -21,9 +28,33 @@ env:
   GH_REPO: ${{ github.repository }}
 
 jobs:
-  create:
-    name: Create the release
+  preflight:
+    name: Check the tag
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag matches the CLI version
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' cli/Cargo.toml | head -n 1)
+          if [ "v$version" != "$TAG" ]; then
+            echo "::error::tag $TAG does not match cli/Cargo.toml version $version; tag v$version instead"
+            exit 1
+          fi
+      - name: No release exists for this tag
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::a release for $TAG already exists; delete it first or tag a new version"
+            exit 1
+          fi
+
+  create:
+    name: Create the draft release
+    needs: preflight
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Create a draft release with notes
         run: |
@@ -40,13 +71,16 @@ jobs:
 
           First command to try: \`riscvsim demo\`
           NOTES
-          gh release create "$TAG" --draft --title "riscvsim $TAG" --notes-file notes.md
+          # Fails if a release for this tag already exists.
+          gh release create "$TAG" --verify-tag --draft --title "riscvsim $TAG" --notes-file notes.md
 
   build:
     name: Build ${{ matrix.asset }}
     needs: create
+    permissions:
+      contents: write
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - runner: macos-14
@@ -73,21 +107,29 @@ jobs:
           mkdir -p dist
           cp "cli/target/${{ matrix.target }}/release/riscvsim" dist/riscvsim
           tar -czf "${{ matrix.asset }}.tar.gz" -C dist riscvsim
-          gh release upload "$TAG" "${{ matrix.asset }}.tar.gz" --clobber
+          # No --clobber: uploading over an existing asset fails.
+          gh release upload "$TAG" "${{ matrix.asset }}.tar.gz"
 
-  finish:
+  publish:
     name: Checksums, installer, publish
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Write SHA256SUMS and install.sh
         run: |
           mkdir -p out && cd out
           gh release download "$TAG" --pattern '*.tar.gz'
+          count=$(ls ./*.tar.gz | wc -l)
+          if [ "$count" -ne 3 ]; then
+            echo "::error::expected 3 archives on the draft release, found $count"
+            exit 1
+          fi
           sha256sum ./*.tar.gz | sed 's| \./| |' > SHA256SUMS
           sed -e "s|__RISCVSIM_REPO__|${GH_REPO}|" -e "s|__RISCVSIM_TAG__|${TAG}|" ../.github/release/install.sh > install.sh
           sh -n install.sh
-          gh release upload "$TAG" SHA256SUMS install.sh --clobber
+          gh release upload "$TAG" SHA256SUMS install.sh
       - name: Publish
         run: gh release edit "$TAG" --draft=false

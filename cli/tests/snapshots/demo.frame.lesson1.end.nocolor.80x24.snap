@@ -1,0 +1,24 @@
+
+  riscvsim › demo 1 · Your first instructions                     cycle 9 of 9
+
+     1 # Each line is one instruction. Every cycle, each one
+     2 # moves one stage to the right: IF, ID, EX, MEM, WB.
+     3 # Registers are x0 to x31 (x0 is always 0). Each also has
+     4 # an ABI name, such as sp for x2; these lessons use x names.
+     5 addi x5, x0, 6     # x5 = 0 + 6
+     6 addi x6, x0, 7     # x6 = 0 + 7
+     7 addi x7, x0, 100   # x7 = 100
+     8 addi x10, x0, 1    # x10 = 1
+     9 add  x11, x5, x6   # x11 = 6 + 7 = 13                        WB
+
+  ┌─ IF ────────┐┌─ ID ────────┐┌─ EX ────────┐┌─ MEM ───────┐┌─ WB ────────┐
+  │ ·           ││ ·           ││ ·           ││ ·           ││ add x11,x5… │
+  └─────────────┘└─────────────┘└─────────────┘└─────────────┘└─────────────┘
+    ✓ x11 = 13
+
+  ✓ add writes x11 = 13, and the program is finished.
+
+  ✓ 9 cycles · 5 instructions · CPI 1.80 · 0 stalls · 0 mispredictions
+  Next: riscvsim demo 2 (Waiting for memory)
+
+  Enter next lesson   r restart   b back   q quit

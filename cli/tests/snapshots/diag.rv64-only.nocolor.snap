@@ -1,0 +1,6 @@
+error: 'ld' is an RV64-only instruction and is not valid for RV32
+ --> wide.s:1:1
+  |
+1 | ld x5, 0(x6)
+  | ^^
+  = help: an RV64 program? add --xlen=64 to the command; or use the 32-bit form

@@ -2,258 +2,263 @@
   riscvsim › demo 5 · Loops
   Add 1 to 10 and watch the counter count down.
 
-   1  # Add 1 + 2 + ... + 10. x1 counts down from 10 and
-   2  # x2 collects the sum; bne repeats until x1 is 0.
-   3  addi x1, x0, 10    # counter
-   4  addi x2, x0, 0     # sum
+   1  # Add 1 + 2 + ... + 10. x5 counts down from 10 and
+   2  # x6 collects the sum; bne repeats until x5 is 0.
+   3  addi x5, x0, 10    # counter
+   4  addi x6, x0, 0     # sum
    5  loop:
-   6  add  x2, x2, x1    # sum = sum + counter
-   7  addi x1, x1, -1    # counter = counter - 1
-   8  bne  x1, x0, loop  # again until the counter is 0
+   6  add  x6, x6, x5    # sum = sum + counter
+   7  addi x5, x5, -1    # counter = counter - 1
+   8  bne  x5, x0, loop  # again until the counter is 0
 
   cycle 1
-    IF addi x1, x0, 10  ID ·  EX ·  MEM ·  WB ·
-    counter x1 = 0 · sum x2 = 0x7ffffffc
+    IF addi x5, x0, 10  ID ·  EX ·  MEM ·  WB ·
+    counter x5 = 0 · sum x6 = 0
     › The first instruction, addi, is fetched from memory.
 
   cycle 2
-    IF addi x2, x0, 0  ID addi x1, x0, 10  EX ·  MEM ·  WB ·
-    counter x1 = 0 · sum x2 = 0x7ffffffc
-    › addi is decoded and reads its source registers.
+    IF addi x6, x0, 0  ID addi x5, x0, 10  EX ·  MEM ·  WB ·
+    counter x5 = 0 · sum x6 = 0
+    › addi x5 is decoded and reads its source registers.
 
   cycle 3
-    IF add x2, x2, x1  ID addi x2, x0, 0  EX addi x1, x0, 10  MEM ·  WB ·
-    counter x1 = 0 · sum x2 = 0x7ffffffc
-    › addi is computing in the ALU; everything else moves one stage on.
+    IF add x6, x6, x5  ID addi x6, x0, 0  EX addi x5, x0, 10  MEM ·  WB ·
+    counter x5 = 0 · sum x6 = 0
+    › addi x5 is computing in the ALU; everything else moves one stage on.
 
   cycle 4
-    IF addi x1,x1,-1  ID add x2,x2,x1  EX addi x2,x0,0  MEM addi x1,x0…  WB ·
-    counter x1 = 0 · sum x2 = 0x7ffffffc
-    › addi is computing in the ALU; everything else moves one stage on.
+    IF addi x5,x5,-1  ID add x6,x6,x5  EX addi x6,x0,0  MEM addi x5,x0…  WB ·
+    counter x5 = 0 · sum x6 = 0
+    › addi x6 is computing in the ALU; everything else moves one stage on.
 
   cycle 5
-    IF bne x1,x0…  ID addi x1,x1…  EX add x2,x2…  MEM addi x2,x0…  WB addi x1…
-    ✓ x1 = 10
-    counter x1 = 10 · sum x2 = 0x7ffffffc
-    › add needs x2 and x1 from addi, so it is forwarded from the EX/MEM latch
-      and nobody waits.
+    IF bne x5,x0…  ID addi x5,x5…  EX add x6,x6…  MEM addi x6,x0…  WB addi x5…
+    ✓ x5 = 10
+    counter x5 = 10 · sum x6 = 0
+    › add needs x6 from addi x6 and x5 from addi x5, so both are forwarded
+      from pipeline registers and nobody waits.
+      Forwarding: a result goes straight to the instruction that needs it,
+      before it is written to its register.
+      A pipeline register holds an instruction and its values between two
+      stages.
 
   cycle 6
-    IF ·  ID bne x1,x0…  EX addi x1,x1,-1  MEM add x2,x2,x1  WB addi x2,x0,0
-    ✓ x2 = 0
-    counter x1 = 10 · sum x2 = 0
-    › addi finishes and writes x2 = 0.
+    IF ·  ID bne x5,x0…  EX addi x5,x5,-1  MEM add x6,x6,x5  WB addi x6,x0,0
+    counter x5 = 10 · sum x6 = 0
+    › addi finishes and writes x6 = 0.
 
   cycle 7
-    IF ·  ID ·  EX bne x1, x0, loop  MEM addi x1, x1, -1  WB add x2, x2, x1
-    ✓ x2 = 10
-    counter x1 = 10 · sum x2 = 10
-    › bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    IF ·  ID ·  EX bne x5, x0, loop  MEM addi x5, x5, -1  WB add x6, x6, x5
+    ✓ x6 = 10
+    counter x5 = 10 · sum x6 = 10
+    › bne needs x5 from addi, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   cycle 8
-    IF add x2, x2, x1  ID flushed  EX ·  MEM bne x1,x0,loop  WB addi x1,x1,-1
-    ✓ x1 = 9
-    counter x1 = 9 · sum x2 = 10
-    › addi finishes and writes x1 = 9.
+    IF add x6, x6, x5  ID flushed  EX ·  MEM bne x5,x0,loop  WB addi x5,x5,-1
+    ✓ x5 = 9
+    counter x5 = 9 · sum x6 = 10
+    › addi finishes and writes x5 = 9.
 
   cycle 9
-    IF addi x1,x1,-1  ID add x2, x2, x1  EX flushed  MEM ·  WB bne x1,x0,loop
-    counter x1 = 9 · sum x2 = 10
+    IF addi x5,x5,-1  ID add x6, x6, x5  EX flushed  MEM ·  WB bne x5,x0,loop
+    counter x5 = 9 · sum x6 = 10
     › add is decoded and reads its source registers.
 
   cycle 10
-    IF bne x1,x0,loop  ID addi x1,x1,-1  EX add x2, x2, x1  MEM flushed  WB ·
-    counter x1 = 9 · sum x2 = 10
+    IF bne x5,x0,loop  ID addi x5,x5,-1  EX add x6, x6, x5  MEM flushed  WB ·
+    counter x5 = 9 · sum x6 = 10
     › add is computing in the ALU; everything else moves one stage on.
 
   cycle 11
-    IF add x2,x2,x1  ID bne x1,x0…  EX addi x1,x1…  MEM add x2,x2…  WB flushed
-    counter x1 = 9 · sum x2 = 10
+    IF add x6,x6,x5  ID bne x5,x0…  EX addi x5,x5…  MEM add x6,x6…  WB flushed
+    counter x5 = 9 · sum x6 = 10
     › addi is computing in the ALU; everything else moves one stage on.
 
   cycle 12
-    IF addi x1,x1…  ID add x2,x2…  EX bne x1,x0…  MEM addi x1…  WB add x2,x2…
-    ✓ x2 = 19
-    counter x1 = 9 · sum x2 = 19
-    › bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    IF addi x5,x5…  ID add x6,x6…  EX bne x5,x0…  MEM addi x5…  WB add x6,x6…
+    ✓ x6 = 19
+    counter x5 = 9 · sum x6 = 19
+    › bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   cycle 13
-    IF bne x1,x0…  ID addi x1,x1…  EX add x2,x2…  MEM bne x1,x0…  WB addi x1…
-    ✓ x1 = 8
-    counter x1 = 8 · sum x2 = 19
-    › add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    IF bne x5,x0…  ID addi x5,x5…  EX add x6,x6…  MEM bne x5,x0…  WB addi x5…
+    ✓ x5 = 8
+    counter x5 = 8 · sum x6 = 19
+    › add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   cycle 14
-    IF add x2,x2…  ID bne x1,x0…  EX addi x1…  MEM add x2,x2…  WB bne x1,x0…
-    counter x1 = 8 · sum x2 = 19
+    IF add x6,x6…  ID bne x5,x0…  EX addi x5…  MEM add x6,x6…  WB bne x5,x0…
+    counter x5 = 8 · sum x6 = 19
     › addi is computing in the ALU; everything else moves one stage on.
 
   cycle 15
-    IF addi x1,x1…  ID add x2,x2…  EX bne x1,x0…  MEM addi x1…  WB add x2,x2…
-    ✓ x2 = 27
-    counter x1 = 8 · sum x2 = 27
-    › bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    IF addi x5,x5…  ID add x6,x6…  EX bne x5,x0…  MEM addi x5…  WB add x6,x6…
+    ✓ x6 = 27
+    counter x5 = 8 · sum x6 = 27
+    › bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   cycle 16
-    IF bne x1,x0…  ID addi x1,x1…  EX add x2,x2…  MEM bne x1,x0…  WB addi x1…
-    ✓ x1 = 7
-    counter x1 = 7 · sum x2 = 27
-    › add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    IF bne x5,x0…  ID addi x5,x5…  EX add x6,x6…  MEM bne x5,x0…  WB addi x5…
+    ✓ x5 = 7
+    counter x5 = 7 · sum x6 = 27
+    › add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   cycle 17
-    IF add x2,x2…  ID bne x1,x0…  EX addi x1…  MEM add x2,x2…  WB bne x1,x0…
-    counter x1 = 7 · sum x2 = 27
+    IF add x6,x6…  ID bne x5,x0…  EX addi x5…  MEM add x6,x6…  WB bne x5,x0…
+    counter x5 = 7 · sum x6 = 27
     › addi is computing in the ALU; everything else moves one stage on.
 
   cycle 18
-    IF addi x1,x1…  ID add x2,x2…  EX bne x1,x0…  MEM addi x1…  WB add x2,x2…
-    ✓ x2 = 34
-    counter x1 = 7 · sum x2 = 34
-    › bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    IF addi x5,x5…  ID add x6,x6…  EX bne x5,x0…  MEM addi x5…  WB add x6,x6…
+    ✓ x6 = 34
+    counter x5 = 7 · sum x6 = 34
+    › bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   cycle 19
-    IF bne x1,x0…  ID addi x1,x1…  EX add x2,x2…  MEM bne x1,x0…  WB addi x1…
-    ✓ x1 = 6
-    counter x1 = 6 · sum x2 = 34
-    › add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    IF bne x5,x0…  ID addi x5,x5…  EX add x6,x6…  MEM bne x5,x0…  WB addi x5…
+    ✓ x5 = 6
+    counter x5 = 6 · sum x6 = 34
+    › add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   cycle 20
-    IF add x2,x2…  ID bne x1,x0…  EX addi x1…  MEM add x2,x2…  WB bne x1,x0…
-    counter x1 = 6 · sum x2 = 34
+    IF add x6,x6…  ID bne x5,x0…  EX addi x5…  MEM add x6,x6…  WB bne x5,x0…
+    counter x5 = 6 · sum x6 = 34
     › addi is computing in the ALU; everything else moves one stage on.
 
   cycle 21
-    IF addi x1,x1…  ID add x2,x2…  EX bne x1,x0…  MEM addi x1…  WB add x2,x2…
-    ✓ x2 = 40
-    counter x1 = 6 · sum x2 = 40
-    › bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    IF addi x5,x5…  ID add x6,x6…  EX bne x5,x0…  MEM addi x5…  WB add x6,x6…
+    ✓ x6 = 40
+    counter x5 = 6 · sum x6 = 40
+    › bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   cycle 22
-    IF bne x1,x0…  ID addi x1,x1…  EX add x2,x2…  MEM bne x1,x0…  WB addi x1…
-    ✓ x1 = 5
-    counter x1 = 5 · sum x2 = 40
-    › add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    IF bne x5,x0…  ID addi x5,x5…  EX add x6,x6…  MEM bne x5,x0…  WB addi x5…
+    ✓ x5 = 5
+    counter x5 = 5 · sum x6 = 40
+    › add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   cycle 23
-    IF add x2,x2…  ID bne x1,x0…  EX addi x1…  MEM add x2,x2…  WB bne x1,x0…
-    counter x1 = 5 · sum x2 = 40
+    IF add x6,x6…  ID bne x5,x0…  EX addi x5…  MEM add x6,x6…  WB bne x5,x0…
+    counter x5 = 5 · sum x6 = 40
     › addi is computing in the ALU; everything else moves one stage on.
 
   cycle 24
-    IF addi x1,x1…  ID add x2,x2…  EX bne x1,x0…  MEM addi x1…  WB add x2,x2…
-    ✓ x2 = 45
-    counter x1 = 5 · sum x2 = 45
-    › bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    IF addi x5,x5…  ID add x6,x6…  EX bne x5,x0…  MEM addi x5…  WB add x6,x6…
+    ✓ x6 = 45
+    counter x5 = 5 · sum x6 = 45
+    › bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   cycle 25
-    IF bne x1,x0…  ID addi x1,x1…  EX add x2,x2…  MEM bne x1,x0…  WB addi x1…
-    ✓ x1 = 4
-    counter x1 = 4 · sum x2 = 45
-    › add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    IF bne x5,x0…  ID addi x5,x5…  EX add x6,x6…  MEM bne x5,x0…  WB addi x5…
+    ✓ x5 = 4
+    counter x5 = 4 · sum x6 = 45
+    › add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   cycle 26
-    IF add x2,x2…  ID bne x1,x0…  EX addi x1…  MEM add x2,x2…  WB bne x1,x0…
-    counter x1 = 4 · sum x2 = 45
+    IF add x6,x6…  ID bne x5,x0…  EX addi x5…  MEM add x6,x6…  WB bne x5,x0…
+    counter x5 = 4 · sum x6 = 45
     › addi is computing in the ALU; everything else moves one stage on.
 
   cycle 27
-    IF addi x1,x1…  ID add x2,x2…  EX bne x1,x0…  MEM addi x1…  WB add x2,x2…
-    ✓ x2 = 49
-    counter x1 = 4 · sum x2 = 49
-    › bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    IF addi x5,x5…  ID add x6,x6…  EX bne x5,x0…  MEM addi x5…  WB add x6,x6…
+    ✓ x6 = 49
+    counter x5 = 4 · sum x6 = 49
+    › bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   cycle 28
-    IF bne x1,x0…  ID addi x1,x1…  EX add x2,x2…  MEM bne x1,x0…  WB addi x1…
-    ✓ x1 = 3
-    counter x1 = 3 · sum x2 = 49
-    › add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    IF bne x5,x0…  ID addi x5,x5…  EX add x6,x6…  MEM bne x5,x0…  WB addi x5…
+    ✓ x5 = 3
+    counter x5 = 3 · sum x6 = 49
+    › add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   cycle 29
-    IF add x2,x2…  ID bne x1,x0…  EX addi x1…  MEM add x2,x2…  WB bne x1,x0…
-    counter x1 = 3 · sum x2 = 49
+    IF add x6,x6…  ID bne x5,x0…  EX addi x5…  MEM add x6,x6…  WB bne x5,x0…
+    counter x5 = 3 · sum x6 = 49
     › addi is computing in the ALU; everything else moves one stage on.
 
   cycle 30
-    IF addi x1,x1…  ID add x2,x2…  EX bne x1,x0…  MEM addi x1…  WB add x2,x2…
-    ✓ x2 = 52
-    counter x1 = 3 · sum x2 = 52
-    › bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    IF addi x5,x5…  ID add x6,x6…  EX bne x5,x0…  MEM addi x5…  WB add x6,x6…
+    ✓ x6 = 52
+    counter x5 = 3 · sum x6 = 52
+    › bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   cycle 31
-    IF bne x1,x0…  ID addi x1,x1…  EX add x2,x2…  MEM bne x1,x0…  WB addi x1…
-    ✓ x1 = 2
-    counter x1 = 2 · sum x2 = 52
-    › add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    IF bne x5,x0…  ID addi x5,x5…  EX add x6,x6…  MEM bne x5,x0…  WB addi x5…
+    ✓ x5 = 2
+    counter x5 = 2 · sum x6 = 52
+    › add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   cycle 32
-    IF add x2,x2…  ID bne x1,x0…  EX addi x1…  MEM add x2,x2…  WB bne x1,x0…
-    counter x1 = 2 · sum x2 = 52
+    IF add x6,x6…  ID bne x5,x0…  EX addi x5…  MEM add x6,x6…  WB bne x5,x0…
+    counter x5 = 2 · sum x6 = 52
     › addi is computing in the ALU; everything else moves one stage on.
 
   cycle 33
-    IF addi x1,x1…  ID add x2,x2…  EX bne x1,x0…  MEM addi x1…  WB add x2,x2…
-    ✓ x2 = 54
-    counter x1 = 2 · sum x2 = 54
-    › bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    IF addi x5,x5…  ID add x6,x6…  EX bne x5,x0…  MEM addi x5…  WB add x6,x6…
+    ✓ x6 = 54
+    counter x5 = 2 · sum x6 = 54
+    › bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   cycle 34
-    IF bne x1,x0…  ID addi x1,x1…  EX add x2,x2…  MEM bne x1,x0…  WB addi x1…
-    ✓ x1 = 1
-    counter x1 = 1 · sum x2 = 54
-    › add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    IF bne x5,x0…  ID addi x5,x5…  EX add x6,x6…  MEM bne x5,x0…  WB addi x5…
+    ✓ x5 = 1
+    counter x5 = 1 · sum x6 = 54
+    › add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   cycle 35
-    IF add x2,x2…  ID bne x1,x0…  EX addi x1…  MEM add x2,x2…  WB bne x1,x0…
-    counter x1 = 1 · sum x2 = 54
+    IF add x6,x6…  ID bne x5,x0…  EX addi x5…  MEM add x6,x6…  WB bne x5,x0…
+    counter x5 = 1 · sum x6 = 54
     › addi is computing in the ALU; everything else moves one stage on.
 
   cycle 36
-    IF ✗ addi x1…  ID ✗ add x2…  EX bne x1,x0…  MEM addi x1,x1…  WB add x2,x2…
-    ✓ x2 = 55
-    counter x1 = 1 · sum x2 = 55
+    IF ✗ addi x5…  ID ✗ add x6…  EX bne x5,x0…  MEM addi x5,x5…  WB add x6,x6…
+    ✓ x6 = 55
+    counter x5 = 1 · sum x6 = 55
     ✗ The branch was wrong (bne was guessed taken, but it fell through), so
       two instructions were thrown away.
+      A flush: instructions fetched down the wrong path are removed before
+      they change anything.
 
   cycle 37
-    IF ·  ID flushed  EX flushed  MEM bne x1, x0, loop  WB addi x1, x1, -1
-    ✓ x1 = 0
-    counter x1 = 0 · sum x2 = 55
-    › addi finishes and writes x1 = 0.
+    IF ·  ID flushed  EX flushed  MEM bne x5, x0, loop  WB addi x5, x5, -1
+    ✓ x5 = 0
+    counter x5 = 0 · sum x6 = 55
+    › addi finishes and writes x5 = 0.
 
   cycle 38
-    IF ·  ID ·  EX flushed  MEM flushed  WB bne x1, x0, loop
-    counter x1 = 0 · sum x2 = 55
+    IF ·  ID ·  EX flushed  MEM flushed  WB bne x5, x0, loop
+    counter x5 = 0 · sum x6 = 55
     › Nothing is left to fetch, so the pipeline is emptying.
 
   cycle 39
     IF ·  ID ·  EX ·  MEM flushed  WB flushed
-    counter x1 = 0 · sum x2 = 55
+    counter x5 = 0 · sum x6 = 55
     › Nothing is left to fetch, so the pipeline is emptying.
 
   cycle 40
     IF ·  ID ·  EX ·  MEM ·  WB flushed
-    counter x1 = 0 · sum x2 = 55
+    counter x5 = 0 · sum x6 = 55
     ✓ The program finished: the last instruction has left the pipeline.
 
   ✓ 40 cycles · 32 instructions · CPI 1.25 · 0 stalls · 2 mispredictions
-    Ends with x1 = 0 · x2 = 55
+    Ends with x5 = 0 · x6 = 55
     Why it slowed down:
     • The branch was wrong (bne was guessed taken, but it fell through), so
       two instructions were thrown away.

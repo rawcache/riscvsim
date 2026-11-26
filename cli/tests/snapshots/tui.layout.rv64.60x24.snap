@@ -2,21 +2,21 @@
 ╭──────────────────────────────────────────────────────────╮
 │  Pipeline    Registers · Memory                          │
 │ IF  —                                                    │
-│ ID  addi x4, x0, -1                           0x00000010 │
-│ EX  addw x3, x2, x0                     ◂ x2 from EX/MEM │
-│ MEM addi x2, x1, 5                            0x00000008 │
-│ WB  slli x1, x1, 40                           0x00000004 │
+│ ID  addi x10, x0, -1                          0x00000010 │
+│ EX  addw x7, x6, x0                     ◂ x6 from EX/MEM │
+│ MEM addi x6, x5, 5                            0x00000008 │
+│ WB  slli x5, x5, 40                           0x00000004 │
 │                                                          │
-│› addw needs x2 from addi, so it is forwarded from the    │
-│  EX/MEM latch and nobody waits.                          │
+│› addw needs x6 from addi x6, so it is forwarded from the │
+│  EX/MEM pipeline register and nobody waits.              │
 │cycles 6 · instr 2 · CPI 3.00 · stalls 0 · flushed 0      │
 ╰──────────────────────────────────────────────────────────╯
 ╭ terminal ────────────────────────────────────────────────╮
 │Loading wide-values.s...                                  │
 │Assembling program...                                     │
 │✓ assembled 5 instructions                                │
-│addi x1, x0, 1  x1: 0 -> 1                                │
-│slli x1, x1, 40  x1: 1 -> 1099511627776                   │
+│addi x5, x0, 1  x5: 0 -> 1                                │
+│slli x5, x5, 40  x5: 1 -> 1099511627776                   │
 ╰──────────────────────────────────────────────────────────╯
  [ Assemble ]  [ ◀ Back ]  [ Step ▶ ]  [ ▶ Run ]
  speed ├━━━━━━━●───────┤ 10 cyc/s sample ▾ wide-values.s

@@ -1,17 +1,17 @@
  ❯_ riscvsim v0.2.0  ·  wide-values.s  ·  RV64  ·  cycle 6  ·  pc 0x00000014                                                                                 ✕
 ╭ source · wide-values.s ───────────────────────────────────╮╭─────────────────────────────────────────────────────────────────────────────────────────────────╮
 │  1 # RV64 registers hold 64 bits; build 0x0000_0100_0000_…││  Pipeline    Registers · Memory                                                                 │
-│  2 addi x1, x0, 1     # x1 = 1                            ││╭IF·Fetch─────────╮ ╭ID·Decode───────╮ ╭EX·Execute───────╮ ╭MEM·Memory──────╮ ╭WB·Writeback─────╮│
-│  3 slli x1, x1, 40    # x1 = 1 << 40 ‹WB›                 │││—                │ │addi x4, x0, -1 │ │addw x3, x2, x0  │ │addi x2, x1, 5  │ │slli x1, x1, 40  ││
-│  4 addi x2, x1, 5     # x2 = 0x0000_0100_0000_0005 ‹MEM›  │││                 │ │                │ │                 │ │                │ │                 ││
-│▶ 5 addw x3, x2, x0    # addw keeps the low 32 bits: 5 ‹EX›│││                 │ │0x00000010      │ │0x0000000c       │ │0x00000008      │ │0x00000004       ││
-│  6 addi x4, x0, -1    # -1 sets all 64 bits ‹ID›          ││╰─────────────────╯ ╰────────────────╯ ╰─────────────────╯ ╰────────────────╯ ╰─────────────────╯│
+│  2 addi x5, x0, 1     # x5 = 1                            ││╭IF·Fetch─────────╮ ╭ID·Decode───────╮ ╭EX·Execute───────╮ ╭MEM·Memory──────╮ ╭WB·Writeback─────╮│
+│  3 slli x5, x5, 40    # x5 = 1 << 40 ‹WB›                 │││—                │ │addi x10, x0, -1│ │addw x7, x6, x0  │ │addi x6, x5, 5  │ │slli x5, x5, 40  ││
+│  4 addi x6, x5, 5     # x6 = 0x0000_0100_0000_0005 ‹MEM›  │││                 │ │                │ │                 │ │                │ │                 ││
+│▶ 5 addw x7, x6, x0    # addw keeps the low 32 bits: 5 ‹EX›│││                 │ │0x00000010      │ │0x0000000c       │ │0x00000008      │ │0x00000004       ││
+│  6 addi x10, x0, -1   # -1 sets all 64 bits ‹ID›          ││╰─────────────────╯ ╰────────────────╯ ╰─────────────────╯ ╰────────────────╯ ╰─────────────────╯│
 │                                                           ││                                                ▲                   │                            │
-│                                                           ││                                                ╰──────────[x2=1099511627781]                    │
+│                                                           ││                                                ╰──────────[x6=1099511627781]                    │
 │                                                           ││                                                                                                 │
-│                                                           ││› addw needs x2 from addi, so it is forwarded from the EX/MEM latch and nobody waits.            │
-│                                                           ││forward x2: EX/MEM → EX (rs1)                                                                    │
-│                                                           ││                                                                                                 │
+│                                                           ││› addw needs x6 from addi x6, so it is forwarded from the EX/MEM pipeline register and nobody    │
+│                                                           ││  waits.                                                                                         │
+│                                                           ││forward x6: EX/MEM → EX (rs1)                                                                    │
 │                                                           ││                                                                                                 │
 │                                                           ││                                                                                                 │
 │                                                           ││                                                                                                 │
@@ -31,8 +31,8 @@
 │Loading wide-values.s...                                                                                                                                      │
 │Assembling program...                                                                                                                                         │
 │✓ assembled 5 instructions                                                                                                                                    │
-│addi x1, x0, 1  x1: 0 -> 1                                                                                                                                    │
-│slli x1, x1, 40  x1: 1 -> 1099511627776                                                                                                                       │
+│addi x5, x0, 1  x5: 0 -> 1                                                                                                                                    │
+│slli x5, x5, 40  x5: 1 -> 1099511627776                                                                                                                       │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
  [ Assemble ]  [ ◀ Back ]  [ Step ▶ ]  [ ▶ Run ]  [ ⟲ Reset ]
  speed ├━━━━━━━●───────┤ 10 cyc/s sample ▾ wide-values.s

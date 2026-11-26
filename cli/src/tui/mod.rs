@@ -80,12 +80,6 @@ pub fn run(opts: Opts) -> Result<Option<ServeRequest>, String> {
     };
 
     let show_tour = opts.force_tour || !tour::seen();
-    // Trust check: only when loading a real file from a directory the user
-    // hasn't confirmed before. Built-in samples never prompt.
-    let trust_key = file_path
-        .as_ref()
-        .and_then(|p| tour::trust_key(p))
-        .filter(|key| !tour::is_trusted(key));
     let update_status = Arc::new(Mutex::new(None));
     crate::update::spawn_status_check(env!("CARGO_PKG_VERSION"), update_status.clone());
     let install_method = crate::doctor::active_install_method();
@@ -94,7 +88,6 @@ pub fn run(opts: Opts) -> Result<Option<ServeRequest>, String> {
         source,
         file_name,
         show_tour,
-        trust_key,
         update_status,
         install_method,
     );

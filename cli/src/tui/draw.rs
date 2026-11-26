@@ -15,12 +15,8 @@ use ratatui::Frame;
 use crate::machine::{self, StageState};
 use std::time::Instant;
 
-const ABI_NAMES: [&str; 32] = [
-    "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2", "s0", "s1", "a0", "a1", "a2", "a3", "a4",
-    "a5", "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "t3", "t4",
-    "t5", "t6",
-];
-
+// Registers are labelled x0 to x31, the names every lesson and "why"
+// line uses (ABI names such as sp appear only in run's register table).
 const STAGE_LABELS: [(&str, &str); 5] = [
     ("IF", "Fetch"),
     ("ID", "Decode"),
@@ -165,10 +161,6 @@ fn draw_frame(f: &mut Frame, app: &mut App) {
     }
 
     match app.gate {
-        Gate::Trust { .. } => {
-            draw_trust(f, app, &th);
-            return;
-        }
         Gate::Welcome => {
             draw_welcome(f, app, &th);
             return;
@@ -217,90 +209,8 @@ fn draw_frame(f: &mut Frame, app: &mut App) {
 }
 
 // ---------------------------------------------------------------------------
-// Startup gates: the trust confirmation and the welcome screen.
-// Both mirror Claude Code's own terminal onboarding: a quiet safety check
-// with selectable options, then a bordered identity/info box.
+// Startup gate: the welcome screen.
 // ---------------------------------------------------------------------------
-
-fn draw_trust(f: &mut Frame, app: &mut App, th: &Th) {
-    let Gate::Trust { selected } = app.gate else {
-        return;
-    };
-    let area = f.area();
-    let file = app
-        .file_path
-        .as_ref()
-        .map(|p| p.display().to_string())
-        .unwrap_or_else(|| app.file_name.clone());
-
-    let w = 64u16.min(area.width.saturating_sub(4));
-    let x = (area.width.saturating_sub(w)) / 2;
-
-    let mut lines: Vec<Line> = vec![
-        Line::styled(th.sym("─", "-").repeat(w as usize), th.dim()),
-        Line::from(vec![Span::styled(
-            " Loading program:",
-            Style::new().add_modifier(Modifier::BOLD),
-        )]),
-        Line::from(""),
-        Line::from(vec![
-            Span::raw("   "),
-            Span::styled(
-                trunc(&file, w as usize - 4),
-                th.accent().add_modifier(Modifier::BOLD),
-            ),
-        ]),
-        Line::from(""),
-        Line::from(" Quick safety check: is this a file you wrote or one you trust?"),
-        Line::styled(
-            " It runs inside the simulated RV32IM pipeline only — it cannot",
-            th.dim(),
-        ),
-        Line::styled(
-            " touch your real system. Confirming remembers this folder.",
-            th.dim(),
-        ),
-        Line::from(""),
-    ];
-
-    let options = ["1. Yes, I trust this folder", "2. No, exit"];
-    let opts_start = lines.len() as u16;
-    for (i, label) in options.iter().enumerate() {
-        let is_sel = selected == i;
-        let marker = if is_sel { th.sym("❯", ">") } else { " " };
-        let style = if is_sel {
-            th.accent().add_modifier(Modifier::BOLD)
-        } else {
-            th.dim()
-        };
-        lines.push(Line::from(vec![
-            Span::styled(
-                format!(" {marker} "),
-                th.accent().add_modifier(Modifier::BOLD),
-            ),
-            Span::styled((*label).to_string(), style),
-        ]));
-    }
-    lines.push(Line::from(""));
-    lines.push(Line::styled(
-        " Enter to confirm · Esc to cancel · ↑↓ or 1/2 to choose",
-        th.dim(),
-    ));
-    lines.push(Line::styled(th.sym("─", "-").repeat(w as usize), th.dim()));
-
-    let h = lines.len() as u16;
-    let y = area.height.saturating_sub(h) / 2;
-    let rect = Rect::new(x, y, w, h.min(area.height));
-    f.render_widget(Paragraph::new(lines), rect);
-
-    // both options are clickable
-    for i in 0..2u16 {
-        app.hits.push(Hit {
-            rect: Rect::new(x, y + opts_start + i, w, 1),
-            act: if i == 0 { Act::TrustYes } else { Act::TrustNo },
-        });
-    }
-}
 
 fn draw_welcome(f: &mut Frame, app: &App, th: &Th) {
     let area = f.area();
@@ -1346,7 +1256,7 @@ fn draw_state_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
                 let Some(&i) = shown.get(row * wide_cols + col) else { break };
                 let text = &wide_values[i];
                 let vstyle = flash_style(i as u8).unwrap_or_default();
-                spans.push(Span::styled(format!("{:>4} ", ABI_NAMES[i]), th.dim()));
+                spans.push(Span::styled(format!("{:>4} ", format!("x{i}")), th.dim()));
                 spans.push(Span::styled(format!("{text:>wide_vw$}"), vstyle));
                 spans.push(Span::raw("  "));
             }
@@ -1367,7 +1277,7 @@ fn draw_state_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
             let i = row * 4 + col;
             let text = wide_values[i].clone();
             let vstyle = flash_style(i as u8).unwrap_or_default();
-            spans.push(Span::styled(format!("{:>4} ", ABI_NAMES[i]), th.dim()));
+            spans.push(Span::styled(format!("{:>4} ", format!("x{i}")), th.dim()));
             let pad = cell_w.saturating_sub(5 + text.chars().count());
             spans.push(Span::styled(text, vstyle));
             spans.push(Span::raw(" ".repeat(pad)));
@@ -1921,7 +1831,6 @@ mod tests {
             s.source.into(),
             s.file.into(),
             false,
-            None,
             Arc::new(Mutex::new(None)),
             crate::doctor::InstallMethod::Manual,
         );
@@ -1940,6 +1849,40 @@ mod tests {
             .map(|y| (0..w).map(|x| buf[(x, y)].symbol().to_string()).collect::<String>().trim_end().to_string())
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    /// The tui decides color and symbols with the same rules as every other
+    /// command, and the frame it draws follows that decision.
+    #[test]
+    fn capabilities_follow_the_shared_terminal_rules() {
+        let utf8 = [("LANG", "en_US.UTF-8"), ("TERM", "xterm-256color")];
+        // (case, environment, --no-color, want color, want Unicode)
+        type Case<'a> = (&'a str, Vec<(&'a str, &'a str)>, bool, bool, bool);
+        let cases: Vec<Case> = vec![
+            ("utf-8 terminal", utf8.to_vec(), false, true, true),
+            ("--no-color", utf8.to_vec(), true, false, true),
+            ("NO_COLOR=1", [utf8.as_slice(), &[("NO_COLOR", "1")]].concat(), false, false, true),
+            ("NO_COLOR empty", [utf8.as_slice(), &[("NO_COLOR", "")]].concat(), false, true, true),
+            ("TERM=dumb", vec![("LANG", "en_US.UTF-8"), ("TERM", "dumb")], false, false, false),
+            ("C locale", vec![("LANG", "C"), ("TERM", "xterm")], false, true, false),
+        ];
+        for (name, vars, flag, want_color, want_unicode) in cases {
+            let env = |k: &str| vars.iter().find(|(n, _)| *n == k).map(|(_, v)| v.to_string());
+            let caps = Caps::detect_in(&env, flag);
+            assert_eq!((caps.color, caps.unicode), (want_color, want_unicode), "{name}");
+
+            let mut app = sample_app(true);
+            app.caps = caps;
+            app.dismiss_welcome();
+            app.step(4, true);
+            let mut t = Terminal::new(TestBackend::new(80, 24)).unwrap();
+            t.draw(|f| draw(f, &mut app)).unwrap();
+            let buf = t.backend().buffer().clone();
+            let colored = buf.content().iter().any(|c| c.fg != Color::Reset || c.bg != Color::Reset);
+            assert_eq!(colored, want_color, "{name}: color in the frame");
+            let ascii = buf.content().iter().all(|c| c.symbol().is_ascii());
+            assert_eq!(ascii, !want_unicode, "{name}: ASCII symbols");
+        }
     }
 
     /// Text renders of the main screens. With RISCVSIM_CAPTURE_DIR set they
@@ -2051,7 +1994,7 @@ mod tests {
             // source pane: the executing line is marked
             assert!(pipe.contains("▶"), "{pipe}");
             // pipeline pane: the shared why line sits under the stages
-            assert!(pipe.contains("› addi needs x1 from addi"), "why line missing at {w}x{h}:\n{pipe}");
+            assert!(pipe.contains("› addi x2 needs x1 from addi x1"), "why line missing at {w}x{h}:\n{pipe}");
             // footer shows the speed
             assert!(pipe.lines().last().unwrap().contains("speed 10 cyc/s") || w < 100, "{pipe}");
             save(&format!("pane.pipeline.{w}x{h}"), &pipe);
@@ -2190,7 +2133,6 @@ mod tests {
             s.source.into(),
             s.file.into(),
             false,
-            None,
             Arc::new(Mutex::new(None)),
             crate::doctor::InstallMethod::Manual,
         );
@@ -2220,7 +2162,13 @@ mod tests {
                 key(&mut app, 't');
                 let regs = render(&mut app, w, h);
                 assert!(regs.contains("0x0000_0100_0000_0005"), "{regs}");
-                assert!(regs.contains("0xffff_ffff_ffff_ffff"), "{regs}");
+                // Five registers are non-zero (sp keeps its start value);
+                // a short window folds the rest behind a note.
+                if h >= 40 {
+                    assert!(regs.contains("0xffff_ffff_ffff_ffff"), "{regs}");
+                } else {
+                    assert!(regs.contains("+2 more; a taller window shows them"), "{regs}");
+                }
                 crate::snapshots::check(&format!("tui.rv64.registers.{tag}.{w}x{h}"), &regs);
                 key(&mut app, 'h');
                 let dec = render(&mut app, w, h);
@@ -2252,7 +2200,6 @@ mod tests {
             sample.source.into(),
             sample.file.into(),
             false,
-            None,
             Arc::new(Mutex::new(None)),
             crate::doctor::InstallMethod::Manual,
         );

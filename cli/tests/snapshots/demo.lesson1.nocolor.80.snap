@@ -4,55 +4,57 @@
 
    1  # Each line is one instruction. Every cycle, each one
    2  # moves one stage to the right: IF, ID, EX, MEM, WB.
-   3  addi x1, x0, 6     # x1 = 0 + 6
-   4  addi x2, x0, 7     # x2 = 0 + 7
-   5  addi x3, x0, 100   # x3 = 100
-   6  addi x5, x0, 1     # x5 = 1
-   7  add  x4, x1, x2    # x4 = 6 + 7 = 13
+   3  # Registers are x0 to x31 (x0 is always 0). Each also has
+   4  # an ABI name, such as sp for x2; these lessons use x names.
+   5  addi x5, x0, 6     # x5 = 0 + 6
+   6  addi x6, x0, 7     # x6 = 0 + 7
+   7  addi x7, x0, 100   # x7 = 100
+   8  addi x10, x0, 1    # x10 = 1
+   9  add  x11, x5, x6   # x11 = 6 + 7 = 13
 
   cycle 1
-    IF addi x1, x0, 6  ID ·  EX ·  MEM ·  WB ·
+    IF addi x5, x0, 6  ID ·  EX ·  MEM ·  WB ·
     › The first instruction, addi, is fetched from memory.
 
   cycle 2
-    IF addi x2, x0, 7  ID addi x1, x0, 6  EX ·  MEM ·  WB ·
-    › addi is decoded and reads its source registers.
+    IF addi x6, x0, 7  ID addi x5, x0, 6  EX ·  MEM ·  WB ·
+    › addi x5 is decoded and reads its source registers.
 
   cycle 3
-    IF addi x3, x0, 100  ID addi x2, x0, 7  EX addi x1, x0, 6  MEM ·  WB ·
-    › addi is computing in the ALU; everything else moves one stage on.
+    IF addi x7, x0, 100  ID addi x6, x0, 7  EX addi x5, x0, 6  MEM ·  WB ·
+    › addi x5 is computing in the ALU; everything else moves one stage on.
 
   cycle 4
-    IF addi x5, x0, 1  ID addi x3,x0…  EX addi x2,x0,7  MEM addi x1,x0,6  WB ·
-    › addi is computing in the ALU; everything else moves one stage on.
+    IF addi x10,x0,1  ID addi x7,x0…  EX addi x6,x0,7  MEM addi x5,x0,6  WB ·
+    › addi x6 is computing in the ALU; everything else moves one stage on.
 
   cycle 5
-    IF add x4,x1…  ID addi x5,x0…  EX addi x3,x0…  MEM addi x2…  WB addi x1…
-    ✓ x1 = 6
-    › addi finishes and writes x1 = 6.
+    IF add x11,x5…  ID addi x10…  EX addi x7,x0…  MEM addi x6,x0…  WB addi x5…
+    ✓ x5 = 6
+    › addi finishes and writes x5 = 6.
 
   cycle 6
-    IF ·  ID add x4, x1, x2  EX addi x5,x0,1  MEM addi x3,x0…  WB addi x2,x0,7
-    ✓ x2 = 7
-    › addi finishes and writes x2 = 7.
+    IF ·  ID add x11,x5,x6  EX addi x10,x0,1  MEM addi x7,x0…  WB addi x6,x0,7
+    ✓ x6 = 7
+    › addi finishes and writes x6 = 7.
 
   cycle 7
-    IF ·  ID ·  EX add x4, x1, x2  MEM addi x5, x0, 1  WB addi x3, x0, 100
-    ✓ x3 = 100
-    › addi finishes and writes x3 = 100.
+    IF ·  ID ·  EX add x11, x5, x6  MEM addi x10, x0, 1  WB addi x7, x0, 100
+    ✓ x7 = 100
+    › addi finishes and writes x7 = 100.
 
   cycle 8
-    IF ·  ID ·  EX ·  MEM add x4, x1, x2  WB addi x5, x0, 1
-    ✓ x5 = 1
-    › addi finishes and writes x5 = 1.
+    IF ·  ID ·  EX ·  MEM add x11, x5, x6  WB addi x10, x0, 1
+    ✓ x10 = 1
+    › addi finishes and writes x10 = 1.
 
   cycle 9
-    IF ·  ID ·  EX ·  MEM ·  WB add x4, x1, x2
-    ✓ x4 = 13
-    ✓ add writes x4 = 13, and the program is finished.
+    IF ·  ID ·  EX ·  MEM ·  WB add x11, x5, x6
+    ✓ x11 = 13
+    ✓ add writes x11 = 13, and the program is finished.
 
   ✓ 9 cycles · 5 instructions · CPI 1.80 · 0 stalls · 0 mispredictions
-    Ends with x1 = 6 · x2 = 7 · x3 = 100 · x5 = 1 · x4 = 13
+    Ends with x5 = 6 · x6 = 7 · x7 = 100 · x10 = 1 · x11 = 13
     No stalls: every instruction moved one stage each cycle.
 
   Next: riscvsim demo 2 (Waiting for memory)

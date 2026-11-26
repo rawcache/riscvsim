@@ -21,8 +21,20 @@ fn spawn(args: &[&str]) -> Child {
         .expect("spawn riscvsim")
 }
 
+/// A free port no other test in this run will get. (Asking the system for
+/// port 0 and releasing it let two parallel tests receive the same port.)
 fn free_port() -> u16 {
-    TcpListener::bind(("127.0.0.1", 0)).unwrap().local_addr().unwrap().port()
+    use std::sync::atomic::{AtomicU16, Ordering};
+    static NEXT: AtomicU16 = AtomicU16::new(0);
+    // Stay below 49152, where the system picks ports for outgoing
+    // connections (the tests' own requests among them).
+    let base = 20_000 + (std::process::id() % 1000) * 20;
+    loop {
+        let port = (base + u32::from(NEXT.fetch_add(1, Ordering::Relaxed)) % 2_000) as u16;
+        if TcpListener::bind(("127.0.0.1", port)).is_ok() {
+            return port;
+        }
+    }
 }
 
 /// Read stdout lines until the address line shows up; return all lines read.
@@ -151,4 +163,118 @@ fn verbose_logs_requests() {
     let _ = reader.read_line(&mut logged);
     let _ = stop(&mut child);
     assert_eq!(logged.trim(), "GET /api/snapshot 200");
+}
+
+fn post(port: u16, path: &str, body: &str) -> String {
+    let mut s = TcpStream::connect(("127.0.0.1", port)).expect("connect");
+    write!(
+        s,
+        "POST {path} HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}",
+        body.len()
+    )
+    .unwrap();
+    let mut text = String::new();
+    s.read_to_string(&mut text).unwrap();
+    text
+}
+
+fn json_body(response: &str) -> serde_json::Value {
+    let body = response.split("\r\n\r\n").nth(1).expect("a body");
+    serde_json::from_str(body).expect("json")
+}
+
+/// Serve `source` (written to a temp file) with extra args; return the
+/// session JSON, a snapshot after 6 cycles, and the panel.
+fn serve_session(name: &str, source: &str, extra: &[&str]) -> (serde_json::Value, serde_json::Value, String) {
+    let dir = std::env::temp_dir().join(format!("riscvsim-serve-{name}-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = dir.join(format!("{name}.s"));
+    std::fs::write(&file, source).unwrap();
+    let port = free_port();
+    let port_s = port.to_string();
+    let mut args = vec!["serve", file.to_str().unwrap(), "--port", &port_s, "--no-open"];
+    args.extend_from_slice(extra);
+    let mut child = spawn(&args);
+    let panel = read_until_address(&mut child).join("\n");
+    let session = json_body(&get(port, "/api/session"));
+    let snap = json_body(&post(port, "/api/step", r#"{"cycles":6}"#));
+    let (code, _) = stop(&mut child);
+    assert_eq!(code, 0);
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), source, "the user's file is never changed");
+    let _ = std::fs::remove_dir_all(&dir);
+    (session, snap, panel)
+}
+
+const RV64_PROGRAM: &str = "addi x5, x0, 1\nslli x5, x5, 40\naddi x6, x5, 5\n";
+
+#[test]
+fn rv32_session_stays_rv32() {
+    let (session, snap, panel) = serve_session("rv32", "addi x5, x0, 5\naddi x6, x5, 3\n", &[]);
+    assert_eq!(session["xlen"], 32);
+    assert_eq!(session["source"], "addi x5, x0, 5\naddi x6, x5, 3\n");
+    assert!(session["listing"][0]["addr"].is_u64());
+    assert!(snap["registers"][5].is_u64(), "RV32 values stay numbers: {snap}");
+    assert!(!panel.contains("RV64"), "{panel}");
+}
+
+#[test]
+fn xlen_64_opens_in_the_page_as_rv64() {
+    let (session, snap, panel) = serve_session("rv64", RV64_PROGRAM, &["--xlen=64"]);
+    assert!(panel.contains("rv64.s · RV64 · 3 instructions"), "{panel}");
+    assert_eq!(session["xlen"], 64);
+    let source = session["source"].as_str().unwrap();
+    assert_eq!(source, format!("# xlen=64\n{RV64_PROGRAM}"), "the page reads the marker");
+    // listing lines match the source the page shows (the marker is line 1)
+    assert_eq!(session["listing"][0]["line"], 2);
+    assert_eq!(session["listing"][0]["addr"], "0x0000000000000000");
+    assert_eq!(snap["xlen"], 64);
+    assert_eq!(snap["registers"][5], "0x0000010000000000", "{snap}");
+    assert!(snap["pc"].as_str().is_some_and(|pc| pc.len() == 18));
+}
+
+#[test]
+fn marker_line_alone_means_rv64_and_is_not_doubled() {
+    let marked = format!("# xlen=64\n{RV64_PROGRAM}");
+    let (session, snap, _) = serve_session("marked", &marked, &[]);
+    assert_eq!(session["xlen"], 64);
+    assert_eq!(session["source"], marked.as_str());
+    assert_eq!(snap["registers"][5], "0x0000010000000000");
+}
+
+#[test]
+fn rv64_program_without_the_flag_explains_what_to_do() {
+    let dir = std::env::temp_dir().join(format!("riscvsim-serve-hint-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("wide.s");
+    std::fs::write(&file, "ld x5, 0(x6)\n").unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_riscvsim"))
+        .args(["serve", file.to_str().unwrap(), "--no-open"])
+        .env("RISCVSIM_NO_UPDATE_CHECK", "1")
+        .env("NO_COLOR", "1")
+        .env("LANG", "en_US.UTF-8")
+        .output()
+        .unwrap();
+    let _ = std::fs::remove_dir_all(&dir);
+    assert_eq!(out.status.code(), Some(1));
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(err.contains("RV64"), "{err}");
+}
+
+#[test]
+fn assemble_follows_the_page_width_or_the_marker() {
+    let port = free_port();
+    let mut child = spawn(&["serve", "--port", &port.to_string(), "--no-open"]);
+    let _ = read_until_address(&mut child);
+    let wide = r#"{"source":"addi x5, x0, 1\naddw x6, x5, x5\n","xlen":64}"#;
+    let ok = json_body(&post(port, "/api/assemble", wide));
+    assert_eq!(ok["ok"], true, "{ok}");
+    assert!(ok["listing"][0]["addr"].is_string(), "RV64 listing: {ok}");
+    let marked = r##"{"source":"# xlen=64\naddw x6, x5, x5\n"}"##;
+    assert_eq!(json_body(&post(port, "/api/assemble", marked))["ok"], true);
+    let narrow = r#"{"source":"addw x6, x5, x5\n","xlen":32}"#;
+    let err = json_body(&post(port, "/api/assemble", narrow));
+    assert_eq!(err["ok"], false, "addw is not RV32: {err}");
+    let plain = json_body(&post(port, "/api/assemble", r#"{"source":"addi x5, x0, 1\n"}"#));
+    assert!(plain["listing"][0]["addr"].is_u64(), "{plain}");
+    let _ = stop(&mut child);
 }

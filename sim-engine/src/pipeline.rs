@@ -11,7 +11,7 @@ use crate::{DATA_BASE, DATA_SIZE, STACK_LIMIT, STACK_TOP, TEXT_BASE};
 use serde::Serialize;
 use std::collections::{HashMap, VecDeque};
 
-const BTB_SIZE: usize = 16;
+const BTB_SIZE: usize = crate::BTB_ENTRIES;
 const HISTORY_CAP: usize = 10_000; // step-back depth
 const LOG_CAP: usize = 1_000; // execution log ring buffer
 

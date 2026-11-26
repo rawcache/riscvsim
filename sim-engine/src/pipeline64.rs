@@ -15,7 +15,7 @@ const STACK_LIMIT64: u64 = crate::STACK_LIMIT as u64;
 /// RV64 uses the same stack region as RV32 with an ABI-aligned initial SP.
 pub const STACK_TOP64: u64 = 0x7fff_fff0;
 
-const BTB_SIZE: usize = 16;
+const BTB_SIZE: usize = crate::BTB_ENTRIES;
 const HISTORY_CAP: usize = 10_000; // step-back depth
 const LOG_CAP: usize = 1_000; // execution log ring buffer
 

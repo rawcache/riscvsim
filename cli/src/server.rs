@@ -5,7 +5,7 @@
 //! memory only — when this process exits, the session is gone.
 
 use crate::Paint;
-use sim_engine::{assemble, Pipeline};
+use sim_engine::{assemble, assemble64, Pipeline, Pipeline64};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
@@ -16,7 +16,166 @@ const INDEX_HTML: &str = include_str!("../web/index.html");
 
 struct State {
     source: String,
-    pipeline: Pipeline,
+    sim: Sim,
+}
+
+/// First line that marks a program as RV64, the same marker the browser
+/// simulator uses for saved programs.
+pub const XLEN_MARKER: &str = "# xlen=64";
+
+/// True when the program's first line is the RV64 marker.
+pub fn has_xlen_marker(source: &str) -> bool {
+    source.lines().next().is_some_and(|l| l.trim() == XLEN_MARKER)
+}
+
+/// The source as the page should see it: an RV64 program starts with the
+/// marker line (added here when missing; the user's file is not touched).
+pub fn page_source(source: &str, xlen: u32) -> String {
+    if xlen == 64 && !has_xlen_marker(source) {
+        format!("{XLEN_MARKER}\n{source}")
+    } else {
+        source.to_string()
+    }
+}
+
+/// The program being served: an RV32 or an RV64 pipeline.
+pub enum Sim {
+    Rv32(Box<Pipeline>),
+    Rv64(Box<Pipeline64>),
+}
+
+impl Sim {
+    pub fn xlen(&self) -> u32 {
+        match self {
+            Sim::Rv32(_) => 32,
+            Sim::Rv64(_) => 64,
+        }
+    }
+
+    fn instructions(&self) -> usize {
+        match self {
+            Sim::Rv32(p) => p.program().instrs.len(),
+            Sim::Rv64(p) => p.program().instrs.len(),
+        }
+    }
+
+    fn halted(&self) -> bool {
+        match self {
+            Sim::Rv32(p) => p.halted(),
+            Sim::Rv64(p) => p.halted(),
+        }
+    }
+
+    fn step_cycle(&mut self) {
+        match self {
+            Sim::Rv32(p) => p.step_cycle(),
+            Sim::Rv64(p) => p.step_cycle(),
+        }
+    }
+
+    fn step_back(&mut self) {
+        match self {
+            Sim::Rv32(p) => {
+                p.step_back();
+            }
+            Sim::Rv64(p) => {
+                p.step_back();
+            }
+        }
+    }
+
+    fn reset(&mut self) {
+        match self {
+            Sim::Rv32(p) => p.reset(),
+            Sim::Rv64(p) => p.reset(),
+        }
+    }
+
+    fn read_memory(&self, addr: u64, len: usize) -> Vec<u8> {
+        match self {
+            Sim::Rv32(p) => p.read_memory(addr as u32, len),
+            Sim::Rv64(p) => p.read_memory(addr, len),
+        }
+    }
+
+    /// `[{ addr, text, line }]`; RV64 addresses are 16-digit hex strings,
+    /// as in the browser engine.
+    fn listing_json(&self) -> serde_json::Value {
+        let rows: Vec<serde_json::Value> = match self {
+            Sim::Rv32(p) => p
+                .program()
+                .instrs
+                .iter()
+                .map(|i| serde_json::json!({ "addr": i.addr, "text": i.text, "line": i.line }))
+                .collect(),
+            Sim::Rv64(p) => p
+                .program()
+                .instrs
+                .iter()
+                .map(|i| serde_json::json!({ "addr": hex64(i.addr), "text": i.text, "line": i.line }))
+                .collect(),
+        };
+        serde_json::Value::Array(rows)
+    }
+
+    fn snapshot_json(&self) -> String {
+        match self {
+            Sim::Rv32(p) => serde_json::to_string(&p.snapshot()).unwrap_or_else(|_| "{}".to_string()),
+            Sim::Rv64(p) => snapshot64_json(&p.snapshot()).to_string(),
+        }
+    }
+}
+
+/// `0x` + exactly 16 lowercase hex digits.
+fn hex64(value: u64) -> String {
+    format!("0x{value:016x}")
+}
+
+/// An RV64 snapshot in the shape the browser's RV64 engine hands the page:
+/// every register, PC, address and forwarded value is a 16-digit hex
+/// string (a JS Number cannot hold 64 bits), and `xlen` is 64.
+fn snapshot64_json(snap: &sim_engine::Snapshot64) -> serde_json::Value {
+    use serde_json::Value;
+    let mut v = serde_json::to_value(snap).unwrap_or(Value::Null);
+    fn hexify(v: &mut Value) {
+        if let Some(n) = v.as_u64() {
+            *v = Value::String(hex64(n));
+        }
+    }
+    if let Value::Object(map) = &mut v {
+        map.insert("xlen".into(), Value::from(64));
+        map.get_mut("pc").map(hexify);
+        if let Some(Value::Array(regs)) = map.get_mut("registers") {
+            regs.iter_mut().for_each(hexify);
+        }
+        if let Some(Value::Array(stages)) = map.get_mut("stages") {
+            for st in stages {
+                st.get_mut("pc").map(hexify);
+            }
+        }
+        if let Some(view) = map.get_mut("view") {
+            if let Some(Value::Array(fw)) = view.get_mut("forwards") {
+                fw.iter_mut().for_each(|f| {
+                    f.get_mut("value").map(hexify);
+                });
+            }
+            if let Some(Value::Array(fl)) = view.get_mut("flushed") {
+                fl.iter_mut().for_each(|f| {
+                    f.get_mut("pc").map(hexify);
+                });
+            }
+            if let Some(p) = view.get_mut("predictor").filter(|p| p.is_object()) {
+                p.get_mut("pc").map(hexify);
+            }
+            if let Some(Value::Array(ws)) = view.get_mut("reg_writes") {
+                for w in ws {
+                    w.get_mut("before").map(hexify);
+                    w.get_mut("after").map(hexify);
+                }
+            }
+        }
+    }
+    v
 }
 
 /// The ports `serve` tries when none is given: 4200, then the next ten.
@@ -154,7 +313,7 @@ fn open_browser(url: &str) {
 
 pub fn serve(
     source: String,
-    pipeline: Pipeline,
+    sim: Sim,
     label: &str,
     opts: &ServeOpts,
     paint: Paint,
@@ -162,7 +321,8 @@ pub fn serve(
     let bound = bind(opts.port, DEFAULT_PORTS)?;
     let port = bound.port;
     let opening = opts.open;
-    for line in panel(&paint, label, pipeline.program().instrs.len(), port, bound.moved_from, opening) {
+    let label = if sim.xlen() == 64 { format!("{label} {} RV64", paint.dot()) } else { label.to_string() };
+    for line in panel(&paint, &label, sim.instructions(), port, bound.moved_from, opening) {
         println!("{line}");
     }
     let _ = std::io::stdout().flush();
@@ -174,7 +334,8 @@ pub fn serve(
     let listener = bound.listener;
     // Poll so Ctrl-C is noticed promptly without a signal-unsafe exit.
     let _ = listener.set_nonblocking(true);
-    let state = Arc::new(Mutex::new(State { source, pipeline }));
+    let source = page_source(&source, sim.xlen());
+    let state = Arc::new(Mutex::new(State { source, sim }));
     let paint = Arc::new(paint);
     let verbose = opts.verbose;
 
@@ -256,23 +417,6 @@ fn handle_connection(
     Ok(())
 }
 
-fn listing_json(pipeline: &Pipeline) -> serde_json::Value {
-    serde_json::Value::Array(
-        pipeline
-            .program()
-            .instrs
-            .iter()
-            .map(|i| {
-                serde_json::json!({
-                    "addr": i.addr,
-                    "text": i.text,
-                    "line": i.line,
-                })
-            })
-            .collect(),
-    )
-}
-
 fn query_param(query: &str, key: &str) -> Option<u64> {
     query.split('&').find_map(|pair| {
         let (k, v) = pair.split_once('=')?;
@@ -303,14 +447,15 @@ fn route(
                 JSON,
                 serde_json::json!({
                     "source": guard.source,
-                    "listing": listing_json(&guard.pipeline),
+                    "listing": guard.sim.listing_json(),
+                    "xlen": guard.sim.xlen(),
                 })
                 .to_string(),
             )
         }
         ("GET", "/api/snapshot") => {
             let guard = state.lock().unwrap();
-            (OK, JSON, snapshot_json(&guard.pipeline))
+            (OK, JSON, guard.sim.snapshot_json())
         }
         ("POST", "/api/step") => {
             let cycles = serde_json::from_str::<serde_json::Value>(body)
@@ -320,59 +465,65 @@ fn route(
                 .min(100_000);
             let mut guard = state.lock().unwrap();
             for _ in 0..cycles {
-                if guard.pipeline.halted() {
+                if guard.sim.halted() {
                     break;
                 }
-                guard.pipeline.step_cycle();
+                guard.sim.step_cycle();
             }
-            (OK, JSON, snapshot_json(&guard.pipeline))
+            (OK, JSON, guard.sim.snapshot_json())
         }
         ("POST", "/api/step_back") => {
             let mut guard = state.lock().unwrap();
-            guard.pipeline.step_back();
-            (OK, JSON, snapshot_json(&guard.pipeline))
+            guard.sim.step_back();
+            (OK, JSON, guard.sim.snapshot_json())
         }
         ("POST", "/api/reset") => {
             let mut guard = state.lock().unwrap();
-            guard.pipeline.reset();
-            (OK, JSON, snapshot_json(&guard.pipeline))
+            guard.sim.reset();
+            (OK, JSON, guard.sim.snapshot_json())
         }
         ("POST", "/api/assemble") => {
-            let source = serde_json::from_str::<serde_json::Value>(body)
-                .ok()
-                .and_then(|v| {
-                    v.get("source")
-                        .and_then(|s| s.as_str())
-                        .map(str::to_string)
-                })
+            let request = serde_json::from_str::<serde_json::Value>(body).ok();
+            let source = request
+                .as_ref()
+                .and_then(|v| v.get("source").and_then(|s| s.as_str()).map(str::to_string))
                 .unwrap_or_default();
-            match assemble(&source) {
-                Ok(program) => {
+            // The page's width switch when it sends one; otherwise the page's
+            // own rule: a first line of `# xlen=64` means RV64, else RV32.
+            let wants_64 = match request.as_ref().and_then(|v| v.get("xlen")).and_then(|x| x.as_u64()) {
+                Some(xlen) => xlen == 64,
+                None => has_xlen_marker(&source),
+            };
+            let built = if wants_64 {
+                assemble64(&source)
+                    .map(|p| Sim::Rv64(Box::new(Pipeline64::new(p))))
+                    .map_err(|e| serde_json::json!(e))
+            } else {
+                assemble(&source).map(|p| Sim::Rv32(Box::new(Pipeline::new(p)))).map_err(|e| serde_json::json!(e))
+            };
+            match built {
+                Ok(sim) => {
                     let mut guard = state.lock().unwrap();
-                    guard.pipeline = Pipeline::new(program);
+                    guard.sim = sim;
                     guard.source = source;
                     (
                         OK,
                         JSON,
                         serde_json::json!({
                             "ok": true,
-                            "listing": listing_json(&guard.pipeline),
+                            "listing": guard.sim.listing_json(),
                         })
                         .to_string(),
                     )
                 }
-                Err(errors) => (
-                    OK,
-                    JSON,
-                    serde_json::json!({ "ok": false, "errors": errors }).to_string(),
-                ),
+                Err(errors) => (OK, JSON, serde_json::json!({ "ok": false, "errors": errors }).to_string()),
             }
         }
         ("GET", "/api/memory") => {
-            let addr = query_param(query, "addr").unwrap_or(0) as u32;
+            let addr = query_param(query, "addr").unwrap_or(0);
             let len = query_param(query, "len").unwrap_or(0).min(4096) as usize;
             let guard = state.lock().unwrap();
-            let bytes = guard.pipeline.read_memory(addr, len);
+            let bytes = guard.sim.read_memory(addr, len);
             (OK, JSON, serde_json::json!({ "bytes": bytes }).to_string())
         }
         _ => (
@@ -383,9 +534,6 @@ fn route(
     }
 }
 
-fn snapshot_json(pipeline: &Pipeline) -> String {
-    serde_json::to_string(&pipeline.snapshot()).unwrap_or_else(|_| "{}".to_string())
-}
 
 #[cfg(test)]
 mod tests {

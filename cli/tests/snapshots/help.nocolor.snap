@@ -1,0 +1,34 @@
+riscvsim v0.2.0 · RISC-V (RV32IM / RV64IM) 5-stage pipeline simulator
+
+Usage
+  riscvsim                      interactive session (on a terminal)
+  riscvsim <command> [options]
+
+Commands
+  run          assemble and run a program, print registers and stats
+  demo         six short lessons on the pipeline, cycle by cycle
+  tui          interactive simulator: step, rewind, watch the pipeline
+  translate    a documented subset of C, C++ and Rust to assembly, and back
+  serve        the browser simulator on this computer, no account needed
+  doctor       check the install, PATH copies and updates
+  completions  tab completion for bash, zsh or fish
+
+Examples
+  riscvsim demo                 lesson 1 of the course, cycle by cycle
+  riscvsim run add.s            final registers + cycles, CPI, stalls
+  riscvsim run add.s -v         watch every instruction retire
+  riscvsim run wide.s --xlen=64 run with 64-bit registers
+  riscvsim tui add.s            step through it in the terminal
+  riscvsim translate --from c --to rv64 prog.c
+  riscvsim translate --from c --to rv32 prog.c --annotate
+
+Options
+  --no-color      never use color (NO_COLOR=1 works too)
+  -h, --help      help for riscvsim or for one command
+  -V, --version   print the version
+
+Run 'riscvsim <command> --help' for a command's options.
+Exit codes
+  0 ok · 1 a problem with the program or input · 2 usage error
+  130 stopped with Ctrl-C
+Docs: https://studyriscv.com/docs/

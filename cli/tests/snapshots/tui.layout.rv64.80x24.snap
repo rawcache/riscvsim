@@ -1,22 +1,22 @@
  ❯_ riscvsim v0.2.0  ·  wide-values.s  ·  RV64  ·  cycle 6  ·  pc 0x00000014 ✕
 ╭ source · wide-values.s ────╮╭────────────────────────────────────────────────╮
 │  1 # RV64 registers hold 6…││  Pipeline    Registers · Memory                │
-│  2 addi x1, x0, 1     # x1…││ IF  —                                          │
-│  3 slli x1, x1, 40   … ‹WB›││ ID  addi x4, x0, -1                 0x00000010 │
-│  4 addi x2, x1, 5    … ‹MEM││ EX  addw x3, x2, x0           ◂ x2 from EX/MEM │
-│▶ 5 addw x3, x2, x0   … ‹EX›││ MEM addi x2, x1, 5                  0x00000008 │
-│  6 addi x4, x0, -1   … ‹ID›││ WB  slli x1, x1, 40                 0x00000004 │
+│  2 addi x5, x0, 1     # x5…││ IF  —                                          │
+│  3 slli x5, x5, 40   … ‹WB›││ ID  addi x10, x0, -1                0x00000010 │
+│  4 addi x6, x5, 5    … ‹MEM││ EX  addw x7, x6, x0           ◂ x6 from EX/MEM │
+│▶ 5 addw x7, x6, x0   … ‹EX›││ MEM addi x6, x5, 5                  0x00000008 │
+│  6 addi x10, x0, -1  … ‹ID›││ WB  slli x5, x5, 40                 0x00000004 │
 │                            ││                                                │
-│                            ││› addw needs x2 from addi, so it is forwarded   │
-│                            ││  from the EX/MEM latch and nobody waits.       │
+│                            ││› addw needs x6 from addi x6, so it is forwarded│
+│                            ││  from the EX/MEM pipeline register and nobody… │
 │                            ││cycles 6 · instr 2 · CPI 3.00 · stalls 0        │
 ╰────────────────────────────╯╰────────────────────────────────────────────────╯
 ╭ terminal ────────────────────────────────────────────────────────────────────╮
 │Loading wide-values.s...                                                      │
 │Assembling program...                                                         │
 │✓ assembled 5 instructions                                                    │
-│addi x1, x0, 1  x1: 0 -> 1                                                    │
-│slli x1, x1, 40  x1: 1 -> 1099511627776                                       │
+│addi x5, x0, 1  x5: 0 -> 1                                                    │
+│slli x5, x5, 40  x5: 1 -> 1099511627776                                       │
 ╰──────────────────────────────────────────────────────────────────────────────╯
  [ Assemble ]  [ ◀ Back ]  [ Step ▶ ]  [ ▶ Run ]  [ ⟲ Reset ]
  speed ├━━━━━━━●───────┤ 10 cyc/s sample ▾ wide-values.s

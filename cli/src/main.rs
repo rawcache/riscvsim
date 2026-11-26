@@ -51,10 +51,6 @@ pub const EXIT_USAGE: u8 = 2;
 /// like every other problem with the program (see the exit codes above).
 pub const EXIT_ASSEMBLY: u8 = 1;
 
-/// Names accepted as commands, for did-you-mean (the table below, plus
-/// `help` and `version`).
-const COMMANDS: &[&str] = &["run", "demo", "tui", "translate", "serve", "doctor", "completions", "help", "version"];
-
 // ---------------------------------------------------------------------------
 // Help, home screen, version
 // ---------------------------------------------------------------------------
@@ -92,7 +88,7 @@ fn version_line(p: &Paint) -> String {
     format!(
         "riscvsim {VERSION} {dot} {} {dot} {}",
         p.gray("RV32IM and RV64IM"),
-        p.gray("translates C, C++ and Rust")
+        p.gray("translates a subset of C, C++ and Rust")
     )
 }
 
@@ -109,7 +105,7 @@ fn help_text(p: &Paint) -> String {
   run          assemble and run a program, print registers and stats
   demo         six short lessons on the pipeline, cycle by cycle
   tui          interactive simulator: step, rewind, watch the pipeline
-  translate    C, C++ and Rust to RV32/RV64 assembly, and back
+  translate    a documented subset of C, C++ and Rust to assembly, and back
   serve        the browser simulator on this computer, no account needed
   doctor       check the install, PATH copies and updates
   completions  tab completion for bash, zsh or fish
@@ -162,6 +158,9 @@ Long runs show a live status line; Ctrl-C stops with a summary.
       --limit N      stop after N cycles (default {limit});
                      --max-cycles N is the same
       --watch REG    show one register live while it runs (t0, x5)
+      --expect R=V   after the run, check that register R holds V (42,
+                     -1 or 0x2a; x3 or a0); repeatable; exit 0 if all
+                     match, 1 if any does not
       --json         one JSON result, the same shape the browser uses
   -i, --interactive  open the program in the interactive simulator
 
@@ -170,7 +169,10 @@ Long runs show a live status line; Ctrl-C stops with a summary.
   riscvsim run loop.s --verbose
   riscvsim run wide.s --xlen=64
   riscvsim run big.s --limit 5000000 --watch a0
-  riscvsim run add.s --json | jq .registers",
+  riscvsim run add.s --json | jq .registers
+
+  Grade a submission: exit 0 only if both registers are right
+  riscvsim run hw1.s --expect a0=55 --expect x6=0x2a && echo pass",
         dot = p.dot(),
         title = p.bold("riscvsim run"),
         usage = p.bold("Usage"),
@@ -189,9 +191,9 @@ fn demo_help(p: &Paint) -> String {
   riscvsim demo --list
 
 Six lessons, each a tiny program. On a terminal a lesson is interactive:
-Enter next cycle, a autoplay, +/- speed, b back, r restart, q quit.
-Piped, it prints the same lesson as text. Each cycle gets one plain
-sentence saying what happened and why.
+Enter next cycle, a autoplay, +/- speed, b back, r restart, q quit; when
+a lesson ends, Enter starts the next one. Piped, it prints the same lesson
+as text. Each cycle gets one plain sentence saying what happened and why.
 
 {options}
   --list      the lessons, with what each one shows
@@ -262,6 +264,8 @@ session. Nothing is uploaded and no account is needed. The session lives
 in memory; press Ctrl-C to stop.
 
 {options}
+  --xlen=32|64 register width (default 32), as in riscvsim run; a file
+               whose first line is # xlen=64 is RV64 too
   --port N     local port (default 4200; if it is busy, the next free
                port is used and the panel says so)
   --no-open    do not open a browser, just print the address
@@ -270,6 +274,7 @@ in memory; press Ctrl-C to stop.
 {examples}
   riscvsim serve                a sample, opened in your browser
   riscvsim serve add.s          your program
+  riscvsim serve wide.s --xlen=64
   riscvsim serve add.s --port 8080 --no-open",
         dot = p.dot(),
         title = p.bold("riscvsim serve"),
@@ -287,9 +292,10 @@ fn translate_help(p: &Paint) -> String {
   riscvsim translate --from LANG --to LANG <file> [-o output]
   riscvsim translate --subset LANG
 
-Languages: rv32 (or asm), rv64, c, cpp, rust. C, C++ and Rust compile
-to rv32 or rv64 assembly and translate to each other; rv32 and rv64 lift
-to C pseudocode and convert between each other.
+Languages: rv32 (or asm), rv64, c, cpp, rust. A documented subset of C,
+C++ and Rust compiles to rv32 or rv64 assembly and translates between the
+three; --subset LANG lists exactly what it accepts. rv32 and rv64 lift to
+C pseudocode and convert between each other.
 
 The result goes to stdout, or to the file given with -o. Errors point at
 the line and say what to change; the exit code is 1 for a translation error.
@@ -363,6 +369,7 @@ type Spec = &'static [(&'static str, bool)];
 
 const RUN_FLAGS: Spec = &[
     ("--watch", true),
+    ("--expect", true),
     ("--verbose", false),
     ("-v", false),
     ("--xlen", true),
@@ -385,7 +392,7 @@ const DEMO_FLAGS: Spec = &[
     ("-i", false),
 ];
 const TUI_FLAGS: Spec = &[("--tour", false), ("--xlen", true)];
-const SERVE_FLAGS: Spec = &[("--port", true), ("--no-open", false), ("--verbose", false), ("-v", false)];
+const SERVE_FLAGS: Spec = &[("--port", true), ("--xlen", true), ("--no-open", false), ("--verbose", false), ("-v", false)];
 const TRANSLATE_FLAGS: Spec = &[
     ("--from", true),
     ("--to", true),
@@ -405,28 +412,46 @@ enum Operand {
     Shell,
 }
 
-/// One command: its name, a one-line summary, its flags and what it takes.
-/// Argument parsing and the completion scripts both read this table, so
-/// they cannot drift apart.
+/// One command: its name, a one-line summary, its flags, what it takes,
+/// its help screen and the function that runs it. The dispatcher, argument
+/// parsing, the completion scripts and the unknown-command error all read
+/// this table, so they cannot drift apart.
 struct CommandDef {
     name: &'static str,
     about: &'static str,
     flags: Spec,
     operand: Operand,
+    help: fn(&Paint) -> String,
+    run: fn(&Args) -> ExitCode,
 }
 
 const CLI: &[CommandDef] = &[
-    CommandDef { name: "run", about: "assemble and run a program", flags: RUN_FLAGS, operand: Operand::File },
-    CommandDef { name: "demo", about: "a six-lesson course on the pipeline", flags: DEMO_FLAGS, operand: Operand::Sample },
-    CommandDef { name: "tui", about: "the interactive simulator", flags: TUI_FLAGS, operand: Operand::File },
-    CommandDef { name: "translate", about: "C, C++ and Rust to assembly, and back", flags: TRANSLATE_FLAGS, operand: Operand::File },
-    CommandDef { name: "serve", about: "the browser simulator on this computer", flags: SERVE_FLAGS, operand: Operand::File },
-    CommandDef { name: "doctor", about: "check the install and updates", flags: NO_FLAGS, operand: Operand::None },
-    CommandDef { name: "completions", about: "shell completion script", flags: NO_FLAGS, operand: Operand::Shell },
+    CommandDef { name: "run", about: "assemble and run a program", flags: RUN_FLAGS, operand: Operand::File, help: run_help, run: cmd_run },
+    CommandDef { name: "demo", about: "a six-lesson course on the pipeline", flags: DEMO_FLAGS, operand: Operand::Sample, help: demo_help, run: cmd_demo },
+    CommandDef { name: "tui", about: "the interactive simulator", flags: TUI_FLAGS, operand: Operand::File, help: tui_help, run: cmd_tui },
+    CommandDef { name: "translate", about: "a subset of C, C++ and Rust to assembly, and back", flags: TRANSLATE_FLAGS, operand: Operand::File, help: translate_help, run: cmd_translate },
+    CommandDef { name: "serve", about: "the browser simulator on this computer", flags: SERVE_FLAGS, operand: Operand::File, help: serve_help, run: cmd_serve },
+    CommandDef { name: "doctor", about: "check the install and updates", flags: NO_FLAGS, operand: Operand::None, help: doctor_help, run: cmd_doctor },
+    CommandDef { name: "completions", about: "shell completion script", flags: NO_FLAGS, operand: Operand::Shell, help: completions_help, run: cmd_completions },
 ];
 
-fn command_def(name: &str) -> &'static CommandDef {
-    CLI.iter().find(|c| c.name == name).expect("command in table")
+fn find_command(name: &str) -> Option<&'static CommandDef> {
+    CLI.iter().find(|c| c.name == name)
+}
+
+/// Every word accepted as a command, for did-you-mean: the table, plus
+/// `help` and `version`.
+fn command_words() -> impl Iterator<Item = &'static str> {
+    CLI.iter().map(|c| c.name).chain(["help", "version"])
+}
+
+/// "run, demo, tui, ...": the commands, in table order.
+fn command_list() -> String {
+    CLI.iter().map(|c| c.name).collect::<Vec<_>>().join(", ")
+}
+
+fn cmd_doctor(_: &Args) -> ExitCode {
+    doctor::run(VERSION)
 }
 
 /// Values a flag accepts, for completion.
@@ -448,6 +473,10 @@ struct Args {
 impl Args {
     fn has(&self, names: &[&str]) -> bool {
         self.flags.iter().any(|(f, _)| names.contains(f))
+    }
+    /// Every value given for a repeatable flag, in order.
+    fn values(&self, names: &[&str]) -> Vec<&str> {
+        self.flags.iter().filter(|(f, _)| names.contains(f)).filter_map(|(_, v)| v.as_deref()).collect()
     }
     fn value(&self, names: &[&str]) -> Option<&str> {
         self.flags
@@ -515,6 +544,7 @@ fn example_value(flag: &str) -> &'static str {
         "--limit" | "--max-cycles" => "5000000",
         "--port" => "4200",
         "--watch" => "t0",
+        "--expect" => "x3=42",
         "--from" => "c",
         "--to" => "rv64",
         "--subset" => "c",
@@ -527,13 +557,23 @@ fn usage_error(message: &str) -> ExitCode {
 }
 
 fn usage_error_with(message: &str, suggestion: Option<&str>, help: Option<&str>) -> ExitCode {
-    let p = Paint::stderr();
-    eprintln!("{}{} {message}", p.error_bold("error"), p.bold(":"));
-    if let Some(s) = suggestion {
-        eprintln!("  {} {}", p.info_bold(p.sym("→", "->")), p.info_bold(s));
-    }
-    eprintln!("  {}", p.gray(help.unwrap_or("riscvsim --help for usage")));
+    eprint!("{}", usage_text(&Paint::stderr(), message, suggestion, help));
     ExitCode::from(EXIT_USAGE)
+}
+
+/// A usage error: what went wrong, an optional suggestion, then what to do.
+fn usage_text(p: &Paint, message: &str, suggestion: Option<&str>, help: Option<&str>) -> String {
+    let mut out = format!("{}{} {message}\n", p.error_bold("error"), p.bold(":"));
+    if let Some(s) = suggestion {
+        out.push_str(&format!("  {} {}\n", p.info_bold(p.sym("→", "->")), p.info_bold(s)));
+    }
+    let help = help.unwrap_or("riscvsim --help for usage");
+    // Keep within 78 columns: a long hint wraps under itself.
+    let lines = help.lines().flat_map(|l| if l.chars().count() > 76 { term::wrap(l, 76) } else { vec![l.to_string()] });
+    for line in lines {
+        out.push_str(&format!("  {}\n", p.gray(&line)));
+    }
+    out
 }
 
 fn print_text(text: String) -> ExitCode {
@@ -576,53 +616,19 @@ fn main() -> ExitCode {
         && !rest.iter().any(|a| a == "--json" || a == "-i" || a == "--interactive");
 
     let exit = match command.as_str() {
-        "--help" | "-h" | "help" => match rest.first().map(String::as_str) {
-            Some("run") => print_text(run_help(&p)),
-            Some("demo") => print_text(demo_help(&p)),
-            Some("tui") => print_text(tui_help(&p)),
-            Some("serve") => print_text(serve_help(&p)),
-            Some("translate") => print_text(translate_help(&p)),
-            Some("doctor") => print_text(doctor_help(&p)),
-            Some("completions") => print_text(completions_help(&p)),
-            _ => print_text(help_text(&p)),
+        "--help" | "-h" | "help" => match rest.first().and_then(|name| find_command(name)) {
+            Some(def) => print_text((def.help)(&p)),
+            None => print_text(help_text(&p)),
         },
         "--version" | "-V" | "version" => print_text(version_line(&p)),
-        "run" if wants_help => print_text(run_help(&p)),
-        "demo" if wants_help => print_text(demo_help(&p)),
-        "tui" if wants_help => print_text(tui_help(&p)),
-        "serve" if wants_help => print_text(serve_help(&p)),
-        "translate" if wants_help => print_text(translate_help(&p)),
-        "doctor" if wants_help => print_text(doctor_help(&p)),
-        "completions" if wants_help => print_text(completions_help(&p)),
-        "run" => match parse_args("run", rest, command_def("run").flags) {
-            Ok(a) => cmd_run(&a),
-            Err(code) => code,
+        name => match find_command(name) {
+            Some(def) if wants_help => print_text((def.help)(&p)),
+            Some(def) => match parse_args(def.name, rest, def.flags) {
+                Ok(a) => (def.run)(&a),
+                Err(code) => code,
+            },
+            None => unknown_command(name),
         },
-        "demo" => match parse_args("demo", rest, command_def("demo").flags) {
-            Ok(a) => cmd_demo(&a),
-            Err(code) => code,
-        },
-        "tui" => match parse_args("tui", rest, command_def("tui").flags) {
-            Ok(a) => cmd_tui(&a),
-            Err(code) => code,
-        },
-        "serve" => match parse_args("serve", rest, command_def("serve").flags) {
-            Ok(a) => cmd_serve(&a),
-            Err(code) => code,
-        },
-        "translate" => match parse_args("translate", rest, command_def("translate").flags) {
-            Ok(a) => cmd_translate(&a),
-            Err(code) => code,
-        },
-        "doctor" => match parse_args("doctor", rest, command_def("doctor").flags) {
-            Ok(_) => doctor::run(VERSION),
-            Err(code) => code,
-        },
-        "completions" => match parse_args("completions", rest, command_def("completions").flags) {
-            Ok(a) => cmd_completions(&a),
-            Err(code) => code,
-        },
-        other => unknown_command(other),
     };
 
     if shows_update_notice && term::Stream::Stderr.is_tty() {
@@ -657,11 +663,17 @@ fn unknown_command(other: &str) -> ExitCode {
             None,
         );
     }
-    let hint = diag::closest(other, COMMANDS.iter().copied()).map(|c| format!("did you mean 'riscvsim {c}'?"));
-    usage_error_with(
-        &format!("unknown command '{other}'"),
-        hint.as_deref(),
-        Some("commands: run, demo, tui, translate, serve, doctor; riscvsim --help for more"),
+    let (message, hint, help) = unknown_command_parts(other);
+    usage_error_with(&message, hint.as_deref(), Some(&help))
+}
+
+/// The unknown-command error: message, did-you-mean, and every command.
+fn unknown_command_parts(other: &str) -> (String, Option<String>, String) {
+    let hint = diag::closest(other, command_words()).map(|c| format!("did you mean 'riscvsim {c}'?"));
+    (
+        format!("unknown command '{other}'"),
+        hint,
+        format!("commands: {}\nriscvsim --help for more", command_list()),
     )
 }
 
@@ -690,10 +702,34 @@ fn xlen(args: &Args) -> Result<u32, ExitCode> {
     }
 }
 
+/// `--expect REG=VALUE` (repeatable), checked against the register width.
+fn expect_checks(args: &Args, xlen: u32) -> Result<Vec<run::Check>, ExitCode> {
+    let mut checks = Vec::new();
+    for spec in args.values(&["--expect"]) {
+        match run::parse_check(spec) {
+            Ok(check) if check.fits(xlen) => checks.push(check),
+            Ok(check) => {
+                let hint = (xlen == 32).then_some("for a 64-bit value run with --xlen=64");
+                return Err(usage_error_with(
+                    &format!("--expect {spec}: {} does not fit in a {xlen}-bit register", check.text),
+                    hint,
+                    Some("riscvsim run --help shows --expect"),
+                ));
+            }
+            Err((message, hint)) => {
+                return Err(usage_error_with(&message, hint.as_deref(), Some("riscvsim run --help shows --expect")));
+            }
+        }
+    }
+    Ok(checks)
+}
+
 fn run_opts(args: &Args, path: String) -> Result<run::RunOpts, ExitCode> {
+    let width = xlen(args)?;
     Ok(run::RunOpts {
         path,
-        xlen: xlen(args)?,
+        xlen: width,
+        expect: expect_checks(args, width)?,
         verbose: args.has(&["--verbose", "-v"]),
         limit: step_limit(args)?,
         watch: match args.value(&["--watch"]) {
@@ -820,13 +856,26 @@ fn json_report(source: &str, opts: &run::RunOpts) -> ExitCode {
     } else {
         sim_engine::report::run32(source, opts.limit)
     };
+    let assembled = !report.registers.is_empty();
+    let mut checks_pass = None;
     match serde_json::to_string_pretty(&report) {
-        Ok(json) => println!("{json}"),
+        Ok(json) if opts.expect.is_empty() || !assembled => println!("{json}"),
+        Ok(json) => {
+            let (expect, all) = expect_json(&opts.expect, &report.registers, opts.xlen);
+            checks_pass = Some(all);
+            println!("{}", with_expect(&json, &expect));
+        }
         Err(error) => {
             let _ = error;
             eprintln!("error: could not format the result as JSON; please report this");
             return ExitCode::from(EXIT_RUNTIME);
         }
+    }
+    if let Some(all) = checks_pass {
+        // Like the text output: the checks decide, a step limit still
+        // compares, any other stop is a failure.
+        let limited = report.message.starts_with("step limit reached");
+        return if all && (report.ok || limited) { ExitCode::SUCCESS } else { ExitCode::from(EXIT_RUNTIME) };
     }
     if report.ok {
         ExitCode::SUCCESS
@@ -835,6 +884,37 @@ fn json_report(source: &str, opts: &run::RunOpts) -> ExitCode {
     } else {
         ExitCode::from(EXIT_RUNTIME)
     }
+}
+
+/// The `expect` array: one object per check with its result.
+fn expect_json(checks: &[run::Check], registers: &[String], xlen: u32) -> (serde_json::Value, bool) {
+    let mut all = true;
+    let items = checks
+        .iter()
+        .map(|c| {
+            let actual = registers
+                .get(c.reg as usize)
+                .and_then(|h| u64::from_str_radix(h.trim_start_matches("0x"), 16).ok())
+                .unwrap_or(0);
+            let pass = c.matches(actual, xlen);
+            all &= pass;
+            serde_json::json!({
+                "register": c.name,
+                "expected": c.text,
+                "actual": c.show_actual(actual, xlen),
+                "pass": pass,
+            })
+        })
+        .collect();
+    (serde_json::Value::Array(items), all)
+}
+
+/// The run result with `"expect": [...]` as its last field; every other
+/// byte is exactly what `--json` prints without `--expect`.
+fn with_expect(json: &str, expect: &serde_json::Value) -> String {
+    let body = json.strip_suffix("\n}").unwrap_or(json);
+    let list = serde_json::to_string_pretty(expect).unwrap_or_else(|_| "[]".into()).replace('\n', "\n  ");
+    format!("{body},\n  \"expect\": {list}\n}}")
 }
 
 // ---------------------------------------------------------------------------
@@ -1107,7 +1187,7 @@ fn cmd_tui(args: &Args) -> ExitCode {
     match tui::run(tui::Opts { file, force_tour, xlen }) {
         // The session ended with /serve: the terminal is back to normal, so
         // hand the loaded program to the same server `riscvsim serve` uses.
-        Ok(Some(request)) => serve_program(request.source, &request.file_name, request.port),
+        Ok(Some(request)) => serve_program(request.source, &request.file_name, request.port, request.xlen),
         Ok(None) => ExitCode::SUCCESS,
         Err(message) => {
             let p = Paint::stderr();
@@ -1119,9 +1199,9 @@ fn cmd_tui(args: &Args) -> ExitCode {
 
 /// Assemble in-memory source and serve it. Shared by `riscvsim serve <file>`
 /// and the interactive session's `/serve`.
-fn serve_program(source: String, label: &str, port: Option<u16>) -> ExitCode {
+fn serve_program(source: String, label: &str, port: Option<u16>, xlen: u32) -> ExitCode {
     let opts = server::ServeOpts { port, open: browser_allowed(false), verbose: false };
-    serve_with(source, label, &opts)
+    serve_with(source, label, &opts, xlen)
 }
 
 /// Open a browser only for a person at a real terminal.
@@ -1132,17 +1212,35 @@ fn browser_allowed(no_open: bool) -> bool {
         && !std::env::var("TERM").is_ok_and(|t| t == "dumb")
 }
 
-fn serve_with(source: String, label: &str, opts: &server::ServeOpts) -> ExitCode {
+/// Assemble and serve. `xlen` is 64 for `--xlen=64`; a program whose first
+/// line is `# xlen=64` is RV64 too, the browser simulator's own rule. An
+/// RV64 program reaches the page with that marker line on top (the file on
+/// disk is not changed), so the page shows it as RV64.
+fn serve_with(source: String, label: &str, opts: &server::ServeOpts, xlen: u32) -> ExitCode {
     let paint = Paint::new();
-    let program = match assemble(&source) {
-        Ok(program) => program,
-        Err(errors) => {
-            let errs: Vec<_> = errors.into_iter().map(|e| (e.line, e.message)).collect();
-            run::print_diagnostics(label, &source, &errs);
-            return ExitCode::from(EXIT_ASSEMBLY);
+    let xlen = if server::has_xlen_marker(&source) { 64 } else { xlen };
+    // Assemble what the page will show, so listing lines match its editor.
+    let shown = server::page_source(&source, xlen);
+    let sim = if xlen == 64 {
+        match sim_engine::assemble64(&shown) {
+            Ok(program) => server::Sim::Rv64(Box::new(sim_engine::Pipeline64::new(program))),
+            Err(errors) => {
+                let errs: Vec<_> = errors.into_iter().map(|e| (e.line, e.message)).collect();
+                run::print_diagnostics(label, &shown, &errs);
+                return ExitCode::from(EXIT_ASSEMBLY);
+            }
+        }
+    } else {
+        match assemble(&shown) {
+            Ok(program) => server::Sim::Rv32(Box::new(Pipeline::new(program))),
+            Err(errors) => {
+                let errs: Vec<_> = errors.into_iter().map(|e| (e.line, e.message)).collect();
+                run::print_diagnostics(label, &shown, &errs);
+                return ExitCode::from(EXIT_ASSEMBLY);
+            }
         }
     };
-    match server::serve(source, Pipeline::new(program), label, opts, paint) {
+    match server::serve(shown, sim, label, opts, paint) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             let (what, next) = error.explain();
@@ -1208,15 +1306,20 @@ fn cmd_serve(args: &Args) -> ExitCode {
             _ => return usage_error(&format!("--port must be a number from 1 to 65535, but found '{v}'")),
         },
     };
+    let xlen = match xlen(args) {
+        Ok(x) => x,
+        Err(code) => return code,
+    };
     let opts = server::ServeOpts {
         port,
         open: browser_allowed(args.has(&["--no-open"])),
         verbose: args.has(&["--verbose", "-v"]),
     };
-    // No file: serve the first built-in sample so `riscvsim serve` just works.
+    // No file: serve a built-in sample so `riscvsim serve` just works (the
+    // 64-bit one for --xlen=64, as in riscvsim tui).
     let Some(path) = args.positionals.first() else {
-        let sample = &tui::samples::SAMPLES[0];
-        return serve_with(sample.source.to_string(), sample.file, &opts);
+        let sample = if xlen == 64 { &tui::samples::RV64_SAMPLE } else { &tui::samples::SAMPLES[0] };
+        return serve_with(sample.source.to_string(), sample.file, &opts, xlen);
     };
     let source = match run::read_source(path) {
         Ok(s) => s,
@@ -1226,7 +1329,7 @@ fn cmd_serve(args: &Args) -> ExitCode {
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| path.clone());
-    serve_with(source, &label, &opts)
+    serve_with(source, &label, &opts, xlen)
 }
 
 #[cfg(test)]
@@ -1279,18 +1382,62 @@ mod tests {
                 }
             }
         }
-        // Every table command is a real command and has help.
+        // Every table command is a word the did-you-mean knows.
         for c in CLI {
-            assert!(COMMANDS.contains(&c.name));
+            assert!(command_words().any(|w| w == c.name));
         }
     }
 
     #[test]
     fn version_line_starts_with_name_and_number() {
         let line = version_line(&Paint::fixed(false, true));
-        assert_eq!(line, format!("riscvsim {VERSION} · RV32IM and RV64IM · translates C, C++ and Rust"));
+        assert_eq!(line, format!("riscvsim {VERSION} · RV32IM and RV64IM · translates a subset of C, C++ and Rust"));
         assert!(line.chars().count() <= 78);
         assert!(version_line(&Paint::fixed(false, false)).is_ascii());
+    }
+
+    #[test]
+    fn help_and_version_snapshots_say_subset() {
+        for (name, color) in [("nocolor", false), ("color", true)] {
+            let p = Paint::fixed(color, true);
+            let mark = |t: String| if color { crate::snapshots::mark_ansi(&t) } else { t };
+            crate::snapshots::check(&format!("help.{name}"), &mark(help_text(&p)));
+            crate::snapshots::check(&format!("version.{name}"), &mark(version_line(&p)));
+            crate::snapshots::check(&format!("help.translate.{name}"), &mark(translate_help(&p)));
+        }
+        let plain = Paint::fixed(false, true);
+        assert!(help_text(&plain).contains("a documented subset of C, C++ and Rust"));
+        assert!(translate_help(&plain).contains("--subset LANG lists exactly what it accepts"));
+    }
+
+    #[test]
+    fn unknown_command_lists_every_dispatchable_command() {
+        let (message, hint, help) = unknown_command_parts("completion");
+        assert_eq!(message, "unknown command 'completion'");
+        assert_eq!(hint.as_deref(), Some("did you mean 'riscvsim completions'?"));
+        let cmds: Vec<completions::Cmd> = CLI
+            .iter()
+            .map(|c| completions::Cmd { name: c.name, about: c.about, flags: vec![], operand: "" })
+            .collect();
+        let scripts = [completions::bash(&cmds, &[]), completions::zsh(&cmds, &[]), completions::fish(&cmds, &[])];
+        for c in CLI {
+            // the dispatcher finds it, the error lists it, completion offers it
+            assert!(find_command(c.name).is_some());
+            assert!(help.contains(c.name), "{} missing from: {help}", c.name);
+            for script in &scripts {
+                assert!(script.contains(c.name), "{} missing from completions", c.name);
+            }
+        }
+        assert_eq!(help, "commands: run, demo, tui, translate, serve, doctor, completions\nriscvsim --help for more");
+        for (name, color) in [("nocolor", false), ("color", true)] {
+            let p = Paint::fixed(color, true);
+            let text = usage_text(&p, &message, hint.as_deref(), Some(&help));
+            for line in text.lines() {
+                assert!(term::visible_width(line) <= 78, "{line}");
+            }
+            let text = if color { crate::snapshots::mark_ansi(&text) } else { text };
+            crate::snapshots::check(&format!("error.unknown-command.{name}"), &text);
+        }
     }
 
     #[test]

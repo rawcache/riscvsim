@@ -6,8 +6,12 @@ use std::process::{Command, Output};
 
 const ESC: char = '\x1b';
 
+/// A fixture in this run's own folder. (The shared temp folder can hold
+/// more files than the did-you-mean scans, which made suggestions flaky.)
 fn temp(name: &str, contents: &str) -> std::path::PathBuf {
-    let path = std::env::temp_dir().join(format!("riscvsim-term-{}-{name}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("riscvsim-term-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("fixture folder");
+    let path = dir.join(name);
     std::fs::write(&path, contents).expect("write fixture");
     path
 }

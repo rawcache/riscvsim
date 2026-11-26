@@ -2,258 +2,263 @@
   <1>riscvsim<0> <36>›<0> <1>demo 5<0> · Loops
   <90>Add 1 to 10 and watch the counter count down.<0>
 
-  <90> 1  # Add 1 + 2 + ... + 10. x1 counts down from 10 and<0>
-  <90> 2  # x2 collects the sum; bne repeats until x1 is 0.<0>
-   3  addi x1, x0, 10    # counter
-   4  addi x2, x0, 0     # sum
+  <90> 1  # Add 1 + 2 + ... + 10. x5 counts down from 10 and<0>
+  <90> 2  # x6 collects the sum; bne repeats until x5 is 0.<0>
+   3  addi x5, x0, 10    # counter
+   4  addi x6, x0, 0     # sum
    5  loop:
-   6  add  x2, x2, x1    # sum = sum + counter
-   7  addi x1, x1, -1    # counter = counter - 1
-   8  bne  x1, x0, loop  # again until the counter is 0
+   6  add  x6, x6, x5    # sum = sum + counter
+   7  addi x5, x5, -1    # counter = counter - 1
+   8  bne  x5, x0, loop  # again until the counter is 0
 
   <1>cycle 1<0>
-    <36>IF<0> <1>addi x1, x0, 10<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
-    <90>counter x1 = 0 · sum x2 = 0x7ffffffc<0>
+    <36>IF<0> <1>addi x5, x0, 10<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <90>counter x5 = 0 · sum x6 = 0<0>
     <36>›<0> The first instruction, addi, is fetched from memory.
 
   <1>cycle 2<0>
-    <36>IF<0> <1>addi x2, x0, 0<0>  <36>ID<0> <1>addi x1, x0, 10<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
-    <90>counter x1 = 0 · sum x2 = 0x7ffffffc<0>
-    <36>›<0> addi is decoded and reads its source registers.
+    <36>IF<0> <1>addi x6, x0, 0<0>  <36>ID<0> <1>addi x5, x0, 10<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <90>counter x5 = 0 · sum x6 = 0<0>
+    <36>›<0> addi x5 is decoded and reads its source registers.
 
   <1>cycle 3<0>
-    <36>IF<0> <1>add x2, x2, x1<0>  <36>ID<0> <1>addi x2, x0, 0<0>  <36>EX<0> <1>addi x1, x0, 10<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
-    <90>counter x1 = 0 · sum x2 = 0x7ffffffc<0>
-    <36>›<0> addi is computing in the ALU; everything else moves one stage on.
+    <36>IF<0> <1>add x6, x6, x5<0>  <36>ID<0> <1>addi x6, x0, 0<0>  <36>EX<0> <1>addi x5, x0, 10<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <90>counter x5 = 0 · sum x6 = 0<0>
+    <36>›<0> addi x5 is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 4<0>
-    <36>IF<0> <1>addi x1,x1,-1<0>  <36>ID<0> <1>add x2,x2,x1<0>  <36>EX<0> <1>addi x2,x0,0<0>  <36>MEM<0> <1>addi x1,x0…<0>  <36>WB<0> <90>·<0>
-    <90>counter x1 = 0 · sum x2 = 0x7ffffffc<0>
-    <36>›<0> addi is computing in the ALU; everything else moves one stage on.
+    <36>IF<0> <1>addi x5,x5,-1<0>  <36>ID<0> <1>add x6,x6,x5<0>  <36>EX<0> <1>addi x6,x0,0<0>  <36>MEM<0> <1>addi x5,x0…<0>  <36>WB<0> <90>·<0>
+    <90>counter x5 = 0 · sum x6 = 0<0>
+    <36>›<0> addi x6 is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 5<0>
-    <36>IF<0> <1>bne x1,x0…<0>  <36>ID<0> <1>addi x1,x1…<0>  <36>EX<0> <1>add x2,x2…<0>  <36>MEM<0> <1>addi x2,x0…<0>  <36>WB<0> <1>addi x1…<0>
-    <32>✓<0> <1;32>x1<0> = <1;32>10<0>
-    <90>counter x1 = 10 · sum x2 = 0x7ffffffc<0>
-    <36>›<0> add needs x2 and x1 from addi, so it is forwarded from the EX/MEM latch
-      and nobody waits.
+    <36>IF<0> <1>bne x5,x0…<0>  <36>ID<0> <1>addi x5,x5…<0>  <36>EX<0> <1>add x6,x6…<0>  <36>MEM<0> <1>addi x6,x0…<0>  <36>WB<0> <1>addi x5…<0>
+    <32>✓<0> <1;32>x5<0> = <1;32>10<0>
+    <90>counter x5 = 10 · sum x6 = 0<0>
+    <36>›<0> add needs x6 from addi x6 and x5 from addi x5, so both are forwarded
+      from pipeline registers and nobody waits.
+      <90>Forwarding: a result goes straight to the instruction that needs it,<0>
+      <90>before it is written to its register.<0>
+      <90>A pipeline register holds an instruction and its values between two<0>
+      <90>stages.<0>
 
   <1>cycle 6<0>
-    <36>IF<0> <90>·<0>  <36>ID<0> <1>bne x1,x0…<0>  <36>EX<0> <1>addi x1,x1,-1<0>  <36>MEM<0> <1>add x2,x2,x1<0>  <36>WB<0> <1>addi x2,x0,0<0>
-    <32>✓<0> <1;32>x2<0> = <1;32>0<0>
-    <90>counter x1 = 10 · sum x2 = 0<0>
-    <36>›<0> addi finishes and writes x2 = 0.
+    <36>IF<0> <90>·<0>  <36>ID<0> <1>bne x5,x0…<0>  <36>EX<0> <1>addi x5,x5,-1<0>  <36>MEM<0> <1>add x6,x6,x5<0>  <36>WB<0> <1>addi x6,x0,0<0>
+    <90>counter x5 = 10 · sum x6 = 0<0>
+    <36>›<0> addi finishes and writes x6 = 0.
 
   <1>cycle 7<0>
-    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <1>bne x1, x0, loop<0>  <36>MEM<0> <1>addi x1, x1, -1<0>  <36>WB<0> <1>add x2, x2, x1<0>
-    <32>✓<0> <1;32>x2<0> = <1;32>10<0>
-    <90>counter x1 = 10 · sum x2 = 10<0>
-    <36>›<0> bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <1>bne x5, x0, loop<0>  <36>MEM<0> <1>addi x5, x5, -1<0>  <36>WB<0> <1>add x6, x6, x5<0>
+    <32>✓<0> <1;32>x6<0> = <1;32>10<0>
+    <90>counter x5 = 10 · sum x6 = 10<0>
+    <36>›<0> bne needs x5 from addi, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   <1>cycle 8<0>
-    <36>IF<0> <1>add x2, x2, x1<0>  <36>ID<0> <31>flushed<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <1>bne x1,x0,loop<0>  <36>WB<0> <1>addi x1,x1,-1<0>
-    <32>✓<0> <1;32>x1<0> = <1;32>9<0>
-    <90>counter x1 = 9 · sum x2 = 10<0>
-    <36>›<0> addi finishes and writes x1 = 9.
+    <36>IF<0> <1>add x6, x6, x5<0>  <36>ID<0> <31>flushed<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <1>bne x5,x0,loop<0>  <36>WB<0> <1>addi x5,x5,-1<0>
+    <32>✓<0> <1;32>x5<0> = <1;32>9<0>
+    <90>counter x5 = 9 · sum x6 = 10<0>
+    <36>›<0> addi finishes and writes x5 = 9.
 
   <1>cycle 9<0>
-    <36>IF<0> <1>addi x1,x1,-1<0>  <36>ID<0> <1>add x2, x2, x1<0>  <36>EX<0> <31>flushed<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <1>bne x1,x0,loop<0>
-    <90>counter x1 = 9 · sum x2 = 10<0>
+    <36>IF<0> <1>addi x5,x5,-1<0>  <36>ID<0> <1>add x6, x6, x5<0>  <36>EX<0> <31>flushed<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <1>bne x5,x0,loop<0>
+    <90>counter x5 = 9 · sum x6 = 10<0>
     <36>›<0> add is decoded and reads its source registers.
 
   <1>cycle 10<0>
-    <36>IF<0> <1>bne x1,x0,loop<0>  <36>ID<0> <1>addi x1,x1,-1<0>  <36>EX<0> <1>add x2, x2, x1<0>  <36>MEM<0> <31>flushed<0>  <36>WB<0> <90>·<0>
-    <90>counter x1 = 9 · sum x2 = 10<0>
+    <36>IF<0> <1>bne x5,x0,loop<0>  <36>ID<0> <1>addi x5,x5,-1<0>  <36>EX<0> <1>add x6, x6, x5<0>  <36>MEM<0> <31>flushed<0>  <36>WB<0> <90>·<0>
+    <90>counter x5 = 9 · sum x6 = 10<0>
     <36>›<0> add is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 11<0>
-    <36>IF<0> <1>add x2,x2,x1<0>  <36>ID<0> <1>bne x1,x0…<0>  <36>EX<0> <1>addi x1,x1…<0>  <36>MEM<0> <1>add x2,x2…<0>  <36>WB<0> <31>flushed<0>
-    <90>counter x1 = 9 · sum x2 = 10<0>
+    <36>IF<0> <1>add x6,x6,x5<0>  <36>ID<0> <1>bne x5,x0…<0>  <36>EX<0> <1>addi x5,x5…<0>  <36>MEM<0> <1>add x6,x6…<0>  <36>WB<0> <31>flushed<0>
+    <90>counter x5 = 9 · sum x6 = 10<0>
     <36>›<0> addi is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 12<0>
-    <36>IF<0> <1>addi x1,x1…<0>  <36>ID<0> <1>add x2,x2…<0>  <36>EX<0> <1>bne x1,x0…<0>  <36>MEM<0> <1>addi x1…<0>  <36>WB<0> <1>add x2,x2…<0>
-    <32>✓<0> <1;32>x2<0> = <1;32>19<0>
-    <90>counter x1 = 9 · sum x2 = 19<0>
-    <36>›<0> bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    <36>IF<0> <1>addi x5,x5…<0>  <36>ID<0> <1>add x6,x6…<0>  <36>EX<0> <1>bne x5,x0…<0>  <36>MEM<0> <1>addi x5…<0>  <36>WB<0> <1>add x6,x6…<0>
+    <32>✓<0> <1;32>x6<0> = <1;32>19<0>
+    <90>counter x5 = 9 · sum x6 = 19<0>
+    <36>›<0> bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   <1>cycle 13<0>
-    <36>IF<0> <1>bne x1,x0…<0>  <36>ID<0> <1>addi x1,x1…<0>  <36>EX<0> <1>add x2,x2…<0>  <36>MEM<0> <1>bne x1,x0…<0>  <36>WB<0> <1>addi x1…<0>
-    <32>✓<0> <1;32>x1<0> = <1;32>8<0>
-    <90>counter x1 = 8 · sum x2 = 19<0>
-    <36>›<0> add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    <36>IF<0> <1>bne x5,x0…<0>  <36>ID<0> <1>addi x5,x5…<0>  <36>EX<0> <1>add x6,x6…<0>  <36>MEM<0> <1>bne x5,x0…<0>  <36>WB<0> <1>addi x5…<0>
+    <32>✓<0> <1;32>x5<0> = <1;32>8<0>
+    <90>counter x5 = 8 · sum x6 = 19<0>
+    <36>›<0> add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   <1>cycle 14<0>
-    <36>IF<0> <1>add x2,x2…<0>  <36>ID<0> <1>bne x1,x0…<0>  <36>EX<0> <1>addi x1…<0>  <36>MEM<0> <1>add x2,x2…<0>  <36>WB<0> <1>bne x1,x0…<0>
-    <90>counter x1 = 8 · sum x2 = 19<0>
+    <36>IF<0> <1>add x6,x6…<0>  <36>ID<0> <1>bne x5,x0…<0>  <36>EX<0> <1>addi x5…<0>  <36>MEM<0> <1>add x6,x6…<0>  <36>WB<0> <1>bne x5,x0…<0>
+    <90>counter x5 = 8 · sum x6 = 19<0>
     <36>›<0> addi is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 15<0>
-    <36>IF<0> <1>addi x1,x1…<0>  <36>ID<0> <1>add x2,x2…<0>  <36>EX<0> <1>bne x1,x0…<0>  <36>MEM<0> <1>addi x1…<0>  <36>WB<0> <1>add x2,x2…<0>
-    <32>✓<0> <1;32>x2<0> = <1;32>27<0>
-    <90>counter x1 = 8 · sum x2 = 27<0>
-    <36>›<0> bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    <36>IF<0> <1>addi x5,x5…<0>  <36>ID<0> <1>add x6,x6…<0>  <36>EX<0> <1>bne x5,x0…<0>  <36>MEM<0> <1>addi x5…<0>  <36>WB<0> <1>add x6,x6…<0>
+    <32>✓<0> <1;32>x6<0> = <1;32>27<0>
+    <90>counter x5 = 8 · sum x6 = 27<0>
+    <36>›<0> bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   <1>cycle 16<0>
-    <36>IF<0> <1>bne x1,x0…<0>  <36>ID<0> <1>addi x1,x1…<0>  <36>EX<0> <1>add x2,x2…<0>  <36>MEM<0> <1>bne x1,x0…<0>  <36>WB<0> <1>addi x1…<0>
-    <32>✓<0> <1;32>x1<0> = <1;32>7<0>
-    <90>counter x1 = 7 · sum x2 = 27<0>
-    <36>›<0> add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    <36>IF<0> <1>bne x5,x0…<0>  <36>ID<0> <1>addi x5,x5…<0>  <36>EX<0> <1>add x6,x6…<0>  <36>MEM<0> <1>bne x5,x0…<0>  <36>WB<0> <1>addi x5…<0>
+    <32>✓<0> <1;32>x5<0> = <1;32>7<0>
+    <90>counter x5 = 7 · sum x6 = 27<0>
+    <36>›<0> add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   <1>cycle 17<0>
-    <36>IF<0> <1>add x2,x2…<0>  <36>ID<0> <1>bne x1,x0…<0>  <36>EX<0> <1>addi x1…<0>  <36>MEM<0> <1>add x2,x2…<0>  <36>WB<0> <1>bne x1,x0…<0>
-    <90>counter x1 = 7 · sum x2 = 27<0>
+    <36>IF<0> <1>add x6,x6…<0>  <36>ID<0> <1>bne x5,x0…<0>  <36>EX<0> <1>addi x5…<0>  <36>MEM<0> <1>add x6,x6…<0>  <36>WB<0> <1>bne x5,x0…<0>
+    <90>counter x5 = 7 · sum x6 = 27<0>
     <36>›<0> addi is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 18<0>
-    <36>IF<0> <1>addi x1,x1…<0>  <36>ID<0> <1>add x2,x2…<0>  <36>EX<0> <1>bne x1,x0…<0>  <36>MEM<0> <1>addi x1…<0>  <36>WB<0> <1>add x2,x2…<0>
-    <32>✓<0> <1;32>x2<0> = <1;32>34<0>
-    <90>counter x1 = 7 · sum x2 = 34<0>
-    <36>›<0> bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    <36>IF<0> <1>addi x5,x5…<0>  <36>ID<0> <1>add x6,x6…<0>  <36>EX<0> <1>bne x5,x0…<0>  <36>MEM<0> <1>addi x5…<0>  <36>WB<0> <1>add x6,x6…<0>
+    <32>✓<0> <1;32>x6<0> = <1;32>34<0>
+    <90>counter x5 = 7 · sum x6 = 34<0>
+    <36>›<0> bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   <1>cycle 19<0>
-    <36>IF<0> <1>bne x1,x0…<0>  <36>ID<0> <1>addi x1,x1…<0>  <36>EX<0> <1>add x2,x2…<0>  <36>MEM<0> <1>bne x1,x0…<0>  <36>WB<0> <1>addi x1…<0>
-    <32>✓<0> <1;32>x1<0> = <1;32>6<0>
-    <90>counter x1 = 6 · sum x2 = 34<0>
-    <36>›<0> add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    <36>IF<0> <1>bne x5,x0…<0>  <36>ID<0> <1>addi x5,x5…<0>  <36>EX<0> <1>add x6,x6…<0>  <36>MEM<0> <1>bne x5,x0…<0>  <36>WB<0> <1>addi x5…<0>
+    <32>✓<0> <1;32>x5<0> = <1;32>6<0>
+    <90>counter x5 = 6 · sum x6 = 34<0>
+    <36>›<0> add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   <1>cycle 20<0>
-    <36>IF<0> <1>add x2,x2…<0>  <36>ID<0> <1>bne x1,x0…<0>  <36>EX<0> <1>addi x1…<0>  <36>MEM<0> <1>add x2,x2…<0>  <36>WB<0> <1>bne x1,x0…<0>
-    <90>counter x1 = 6 · sum x2 = 34<0>
+    <36>IF<0> <1>add x6,x6…<0>  <36>ID<0> <1>bne x5,x0…<0>  <36>EX<0> <1>addi x5…<0>  <36>MEM<0> <1>add x6,x6…<0>  <36>WB<0> <1>bne x5,x0…<0>
+    <90>counter x5 = 6 · sum x6 = 34<0>
     <36>›<0> addi is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 21<0>
-    <36>IF<0> <1>addi x1,x1…<0>  <36>ID<0> <1>add x2,x2…<0>  <36>EX<0> <1>bne x1,x0…<0>  <36>MEM<0> <1>addi x1…<0>  <36>WB<0> <1>add x2,x2…<0>
-    <32>✓<0> <1;32>x2<0> = <1;32>40<0>
-    <90>counter x1 = 6 · sum x2 = 40<0>
-    <36>›<0> bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    <36>IF<0> <1>addi x5,x5…<0>  <36>ID<0> <1>add x6,x6…<0>  <36>EX<0> <1>bne x5,x0…<0>  <36>MEM<0> <1>addi x5…<0>  <36>WB<0> <1>add x6,x6…<0>
+    <32>✓<0> <1;32>x6<0> = <1;32>40<0>
+    <90>counter x5 = 6 · sum x6 = 40<0>
+    <36>›<0> bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   <1>cycle 22<0>
-    <36>IF<0> <1>bne x1,x0…<0>  <36>ID<0> <1>addi x1,x1…<0>  <36>EX<0> <1>add x2,x2…<0>  <36>MEM<0> <1>bne x1,x0…<0>  <36>WB<0> <1>addi x1…<0>
-    <32>✓<0> <1;32>x1<0> = <1;32>5<0>
-    <90>counter x1 = 5 · sum x2 = 40<0>
-    <36>›<0> add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    <36>IF<0> <1>bne x5,x0…<0>  <36>ID<0> <1>addi x5,x5…<0>  <36>EX<0> <1>add x6,x6…<0>  <36>MEM<0> <1>bne x5,x0…<0>  <36>WB<0> <1>addi x5…<0>
+    <32>✓<0> <1;32>x5<0> = <1;32>5<0>
+    <90>counter x5 = 5 · sum x6 = 40<0>
+    <36>›<0> add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   <1>cycle 23<0>
-    <36>IF<0> <1>add x2,x2…<0>  <36>ID<0> <1>bne x1,x0…<0>  <36>EX<0> <1>addi x1…<0>  <36>MEM<0> <1>add x2,x2…<0>  <36>WB<0> <1>bne x1,x0…<0>
-    <90>counter x1 = 5 · sum x2 = 40<0>
+    <36>IF<0> <1>add x6,x6…<0>  <36>ID<0> <1>bne x5,x0…<0>  <36>EX<0> <1>addi x5…<0>  <36>MEM<0> <1>add x6,x6…<0>  <36>WB<0> <1>bne x5,x0…<0>
+    <90>counter x5 = 5 · sum x6 = 40<0>
     <36>›<0> addi is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 24<0>
-    <36>IF<0> <1>addi x1,x1…<0>  <36>ID<0> <1>add x2,x2…<0>  <36>EX<0> <1>bne x1,x0…<0>  <36>MEM<0> <1>addi x1…<0>  <36>WB<0> <1>add x2,x2…<0>
-    <32>✓<0> <1;32>x2<0> = <1;32>45<0>
-    <90>counter x1 = 5 · sum x2 = 45<0>
-    <36>›<0> bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    <36>IF<0> <1>addi x5,x5…<0>  <36>ID<0> <1>add x6,x6…<0>  <36>EX<0> <1>bne x5,x0…<0>  <36>MEM<0> <1>addi x5…<0>  <36>WB<0> <1>add x6,x6…<0>
+    <32>✓<0> <1;32>x6<0> = <1;32>45<0>
+    <90>counter x5 = 5 · sum x6 = 45<0>
+    <36>›<0> bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   <1>cycle 25<0>
-    <36>IF<0> <1>bne x1,x0…<0>  <36>ID<0> <1>addi x1,x1…<0>  <36>EX<0> <1>add x2,x2…<0>  <36>MEM<0> <1>bne x1,x0…<0>  <36>WB<0> <1>addi x1…<0>
-    <32>✓<0> <1;32>x1<0> = <1;32>4<0>
-    <90>counter x1 = 4 · sum x2 = 45<0>
-    <36>›<0> add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    <36>IF<0> <1>bne x5,x0…<0>  <36>ID<0> <1>addi x5,x5…<0>  <36>EX<0> <1>add x6,x6…<0>  <36>MEM<0> <1>bne x5,x0…<0>  <36>WB<0> <1>addi x5…<0>
+    <32>✓<0> <1;32>x5<0> = <1;32>4<0>
+    <90>counter x5 = 4 · sum x6 = 45<0>
+    <36>›<0> add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   <1>cycle 26<0>
-    <36>IF<0> <1>add x2,x2…<0>  <36>ID<0> <1>bne x1,x0…<0>  <36>EX<0> <1>addi x1…<0>  <36>MEM<0> <1>add x2,x2…<0>  <36>WB<0> <1>bne x1,x0…<0>
-    <90>counter x1 = 4 · sum x2 = 45<0>
+    <36>IF<0> <1>add x6,x6…<0>  <36>ID<0> <1>bne x5,x0…<0>  <36>EX<0> <1>addi x5…<0>  <36>MEM<0> <1>add x6,x6…<0>  <36>WB<0> <1>bne x5,x0…<0>
+    <90>counter x5 = 4 · sum x6 = 45<0>
     <36>›<0> addi is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 27<0>
-    <36>IF<0> <1>addi x1,x1…<0>  <36>ID<0> <1>add x2,x2…<0>  <36>EX<0> <1>bne x1,x0…<0>  <36>MEM<0> <1>addi x1…<0>  <36>WB<0> <1>add x2,x2…<0>
-    <32>✓<0> <1;32>x2<0> = <1;32>49<0>
-    <90>counter x1 = 4 · sum x2 = 49<0>
-    <36>›<0> bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    <36>IF<0> <1>addi x5,x5…<0>  <36>ID<0> <1>add x6,x6…<0>  <36>EX<0> <1>bne x5,x0…<0>  <36>MEM<0> <1>addi x5…<0>  <36>WB<0> <1>add x6,x6…<0>
+    <32>✓<0> <1;32>x6<0> = <1;32>49<0>
+    <90>counter x5 = 4 · sum x6 = 49<0>
+    <36>›<0> bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   <1>cycle 28<0>
-    <36>IF<0> <1>bne x1,x0…<0>  <36>ID<0> <1>addi x1,x1…<0>  <36>EX<0> <1>add x2,x2…<0>  <36>MEM<0> <1>bne x1,x0…<0>  <36>WB<0> <1>addi x1…<0>
-    <32>✓<0> <1;32>x1<0> = <1;32>3<0>
-    <90>counter x1 = 3 · sum x2 = 49<0>
-    <36>›<0> add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    <36>IF<0> <1>bne x5,x0…<0>  <36>ID<0> <1>addi x5,x5…<0>  <36>EX<0> <1>add x6,x6…<0>  <36>MEM<0> <1>bne x5,x0…<0>  <36>WB<0> <1>addi x5…<0>
+    <32>✓<0> <1;32>x5<0> = <1;32>3<0>
+    <90>counter x5 = 3 · sum x6 = 49<0>
+    <36>›<0> add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   <1>cycle 29<0>
-    <36>IF<0> <1>add x2,x2…<0>  <36>ID<0> <1>bne x1,x0…<0>  <36>EX<0> <1>addi x1…<0>  <36>MEM<0> <1>add x2,x2…<0>  <36>WB<0> <1>bne x1,x0…<0>
-    <90>counter x1 = 3 · sum x2 = 49<0>
+    <36>IF<0> <1>add x6,x6…<0>  <36>ID<0> <1>bne x5,x0…<0>  <36>EX<0> <1>addi x5…<0>  <36>MEM<0> <1>add x6,x6…<0>  <36>WB<0> <1>bne x5,x0…<0>
+    <90>counter x5 = 3 · sum x6 = 49<0>
     <36>›<0> addi is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 30<0>
-    <36>IF<0> <1>addi x1,x1…<0>  <36>ID<0> <1>add x2,x2…<0>  <36>EX<0> <1>bne x1,x0…<0>  <36>MEM<0> <1>addi x1…<0>  <36>WB<0> <1>add x2,x2…<0>
-    <32>✓<0> <1;32>x2<0> = <1;32>52<0>
-    <90>counter x1 = 3 · sum x2 = 52<0>
-    <36>›<0> bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    <36>IF<0> <1>addi x5,x5…<0>  <36>ID<0> <1>add x6,x6…<0>  <36>EX<0> <1>bne x5,x0…<0>  <36>MEM<0> <1>addi x5…<0>  <36>WB<0> <1>add x6,x6…<0>
+    <32>✓<0> <1;32>x6<0> = <1;32>52<0>
+    <90>counter x5 = 3 · sum x6 = 52<0>
+    <36>›<0> bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   <1>cycle 31<0>
-    <36>IF<0> <1>bne x1,x0…<0>  <36>ID<0> <1>addi x1,x1…<0>  <36>EX<0> <1>add x2,x2…<0>  <36>MEM<0> <1>bne x1,x0…<0>  <36>WB<0> <1>addi x1…<0>
-    <32>✓<0> <1;32>x1<0> = <1;32>2<0>
-    <90>counter x1 = 2 · sum x2 = 52<0>
-    <36>›<0> add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    <36>IF<0> <1>bne x5,x0…<0>  <36>ID<0> <1>addi x5,x5…<0>  <36>EX<0> <1>add x6,x6…<0>  <36>MEM<0> <1>bne x5,x0…<0>  <36>WB<0> <1>addi x5…<0>
+    <32>✓<0> <1;32>x5<0> = <1;32>2<0>
+    <90>counter x5 = 2 · sum x6 = 52<0>
+    <36>›<0> add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   <1>cycle 32<0>
-    <36>IF<0> <1>add x2,x2…<0>  <36>ID<0> <1>bne x1,x0…<0>  <36>EX<0> <1>addi x1…<0>  <36>MEM<0> <1>add x2,x2…<0>  <36>WB<0> <1>bne x1,x0…<0>
-    <90>counter x1 = 2 · sum x2 = 52<0>
+    <36>IF<0> <1>add x6,x6…<0>  <36>ID<0> <1>bne x5,x0…<0>  <36>EX<0> <1>addi x5…<0>  <36>MEM<0> <1>add x6,x6…<0>  <36>WB<0> <1>bne x5,x0…<0>
+    <90>counter x5 = 2 · sum x6 = 52<0>
     <36>›<0> addi is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 33<0>
-    <36>IF<0> <1>addi x1,x1…<0>  <36>ID<0> <1>add x2,x2…<0>  <36>EX<0> <1>bne x1,x0…<0>  <36>MEM<0> <1>addi x1…<0>  <36>WB<0> <1>add x2,x2…<0>
-    <32>✓<0> <1;32>x2<0> = <1;32>54<0>
-    <90>counter x1 = 2 · sum x2 = 54<0>
-    <36>›<0> bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
+    <36>IF<0> <1>addi x5,x5…<0>  <36>ID<0> <1>add x6,x6…<0>  <36>EX<0> <1>bne x5,x0…<0>  <36>MEM<0> <1>addi x5…<0>  <36>WB<0> <1>add x6,x6…<0>
+    <32>✓<0> <1;32>x6<0> = <1;32>54<0>
+    <90>counter x5 = 2 · sum x6 = 54<0>
+    <36>›<0> bne needs x5 from addi x5, so it is forwarded from the EX/MEM pipeline
+      register and nobody waits.
 
   <1>cycle 34<0>
-    <36>IF<0> <1>bne x1,x0…<0>  <36>ID<0> <1>addi x1,x1…<0>  <36>EX<0> <1>add x2,x2…<0>  <36>MEM<0> <1>bne x1,x0…<0>  <36>WB<0> <1>addi x1…<0>
-    <32>✓<0> <1;32>x1<0> = <1;32>1<0>
-    <90>counter x1 = 1 · sum x2 = 54<0>
-    <36>›<0> add needs x1 from addi, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    <36>IF<0> <1>bne x5,x0…<0>  <36>ID<0> <1>addi x5,x5…<0>  <36>EX<0> <1>add x6,x6…<0>  <36>MEM<0> <1>bne x5,x0…<0>  <36>WB<0> <1>addi x5…<0>
+    <32>✓<0> <1;32>x5<0> = <1;32>1<0>
+    <90>counter x5 = 1 · sum x6 = 54<0>
+    <36>›<0> add needs x5 from addi x5, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
 
   <1>cycle 35<0>
-    <36>IF<0> <1>add x2,x2…<0>  <36>ID<0> <1>bne x1,x0…<0>  <36>EX<0> <1>addi x1…<0>  <36>MEM<0> <1>add x2,x2…<0>  <36>WB<0> <1>bne x1,x0…<0>
-    <90>counter x1 = 1 · sum x2 = 54<0>
+    <36>IF<0> <1>add x6,x6…<0>  <36>ID<0> <1>bne x5,x0…<0>  <36>EX<0> <1>addi x5…<0>  <36>MEM<0> <1>add x6,x6…<0>  <36>WB<0> <1>bne x5,x0…<0>
+    <90>counter x5 = 1 · sum x6 = 54<0>
     <36>›<0> addi is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 36<0>
-    <36>IF<0> <31>✗ addi x1…<0>  <36>ID<0> <31>✗ add x2…<0>  <36>EX<0> <1>bne x1,x0…<0>  <36>MEM<0> <1>addi x1,x1…<0>  <36>WB<0> <1>add x2,x2…<0>
-    <32>✓<0> <1;32>x2<0> = <1;32>55<0>
-    <90>counter x1 = 1 · sum x2 = 55<0>
+    <36>IF<0> <31>✗ addi x5…<0>  <36>ID<0> <31>✗ add x6…<0>  <36>EX<0> <1>bne x5,x0…<0>  <36>MEM<0> <1>addi x5,x5…<0>  <36>WB<0> <1>add x6,x6…<0>
+    <32>✓<0> <1;32>x6<0> = <1;32>55<0>
+    <90>counter x5 = 1 · sum x6 = 55<0>
     <31>✗<0> The branch was wrong (bne was guessed taken, but it fell through), so
       two instructions were thrown away.
+      <90>A flush: instructions fetched down the wrong path are removed before<0>
+      <90>they change anything.<0>
 
   <1>cycle 37<0>
-    <36>IF<0> <90>·<0>  <36>ID<0> <31>flushed<0>  <36>EX<0> <31>flushed<0>  <36>MEM<0> <1>bne x1, x0, loop<0>  <36>WB<0> <1>addi x1, x1, -1<0>
-    <32>✓<0> <1;32>x1<0> = <1;32>0<0>
-    <90>counter x1 = 0 · sum x2 = 55<0>
-    <36>›<0> addi finishes and writes x1 = 0.
+    <36>IF<0> <90>·<0>  <36>ID<0> <31>flushed<0>  <36>EX<0> <31>flushed<0>  <36>MEM<0> <1>bne x5, x0, loop<0>  <36>WB<0> <1>addi x5, x5, -1<0>
+    <32>✓<0> <1;32>x5<0> = <1;32>0<0>
+    <90>counter x5 = 0 · sum x6 = 55<0>
+    <36>›<0> addi finishes and writes x5 = 0.
 
   <1>cycle 38<0>
-    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <31>flushed<0>  <36>MEM<0> <31>flushed<0>  <36>WB<0> <1>bne x1, x0, loop<0>
-    <90>counter x1 = 0 · sum x2 = 55<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <31>flushed<0>  <36>MEM<0> <31>flushed<0>  <36>WB<0> <1>bne x5, x0, loop<0>
+    <90>counter x5 = 0 · sum x6 = 55<0>
     <36>›<0> Nothing is left to fetch, so the pipeline is emptying.
 
   <1>cycle 39<0>
     <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <31>flushed<0>  <36>WB<0> <31>flushed<0>
-    <90>counter x1 = 0 · sum x2 = 55<0>
+    <90>counter x5 = 0 · sum x6 = 55<0>
     <36>›<0> Nothing is left to fetch, so the pipeline is emptying.
 
   <1>cycle 40<0>
     <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <31>flushed<0>
-    <90>counter x1 = 0 · sum x2 = 55<0>
+    <90>counter x5 = 0 · sum x6 = 55<0>
     <32>✓<0> The program finished: the last instruction has left the pipeline.
 
   <32>✓<0> 40 cycles · 32 instructions · CPI 1.25 · 0 stalls · 2 mispredictions
-    <90>Ends with<0> <1;32>x1 = 0 · x2 = 55<0>
+    <90>Ends with<0> <1;32>x5 = 0 · x6 = 55<0>
     <90>Why it slowed down:<0>
     • The branch was wrong (bne was guessed taken, but it fell through), so
       two instructions were thrown away.

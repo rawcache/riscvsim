@@ -28,6 +28,8 @@ pub struct Tour {
     pub snaps: Vec<Snapshot>,
     /// Set for the six lessons; extra samples (array-sum) are plain tours.
     pub lesson: Option<&'static lessons::Lesson>,
+    /// Per cycle: definitions of the terms its sentence is first to use.
+    pub glosses: Vec<Vec<&'static str>>,
 }
 
 impl Tour {
@@ -49,7 +51,14 @@ impl Tour {
             pipeline.step_cycle();
             snaps.push(pipeline.snapshot());
         }
-        Ok(Self { number, sample, snaps, lesson: None })
+        let sentences: Vec<String> = snaps.iter().map(|s| explain::cycle(s).1).collect();
+        let glosses = explain::first_use_glosses(&sentences);
+        Ok(Self { number, sample, snaps, lesson: None, glosses })
+    }
+
+    /// The lesson after this one, when this is a lesson and not the last.
+    pub fn next_lesson(&self) -> Option<usize> {
+        self.lesson.map(|_| self.number + 1).filter(|n| *n <= LESSONS.len())
     }
 
     pub fn last(&self) -> usize {
@@ -268,6 +277,19 @@ fn explain_line(p: &Paint, snap: &Snapshot, width: usize, indent: usize) -> Vec<
         .collect()
 }
 
+/// The first time a cycle's sentence uses a term, its short definition,
+/// dim, under the sentence.
+fn gloss_lines(p: &Paint, tour: &Tour, at: usize, width: usize, indent: usize) -> Vec<String> {
+    let room = width.min(78).saturating_sub(indent + 2).max(30);
+    let mut out = Vec::new();
+    for gloss in tour.glosses.get(at).into_iter().flatten() {
+        for line in term::wrap(gloss, room) {
+            out.push(format!("{}  {}", " ".repeat(indent), p.gray(&line)));
+        }
+    }
+    out
+}
+
 fn title(p: &Paint, tour: &Tour) -> String {
     let width = if tour.sample.xlen == 64 { format!(" {} RV64", p.dot()) } else { String::new() };
     match tour.lesson {
@@ -467,6 +489,7 @@ pub fn walkthrough(p: &Paint, tour: &Tour, width: usize) -> Vec<String> {
         }
         out.extend(watch_line(p, tour, snap));
         out.extend(explain_line(p, snap, width, 4));
+        out.extend(gloss_lines(p, tour, i, width, 4));
     }
     out.push(String::new());
     out.extend(summary(p, tour));
@@ -493,6 +516,7 @@ pub fn frame(p: &Paint, tour: &Tour, state: &State, width: usize, rows: usize) -
     bottom.extend(watch_line(p, tour, snap));
     bottom.push(String::new());
     bottom.extend(explain_line(p, snap, width, 2));
+    bottom.extend(gloss_lines(p, tour, state.at, width, 2));
     bottom.push(String::new());
     if state.at == state.last {
         let summary = summary(p, tour);
@@ -504,7 +528,16 @@ pub fn frame(p: &Paint, tour: &Tour, state: &State, width: usize, rows: usize) -
             bottom.extend(next_lines(p, tour));
         }
         bottom.push(String::new());
-        bottom.push(format!("  {}   {}   {}", p.key("r", "restart"), p.key("b", "back"), p.key("q", "quit")));
+        match tour.next_lesson() {
+            Some(_) => bottom.push(format!(
+                "  {}   {}   {}   {}",
+                p.key("Enter", "next lesson"),
+                p.key("r", "restart"),
+                p.key("b", "back"),
+                p.key("q", "quit")
+            )),
+            None => bottom.push(format!("  {}   {}   {}", p.key("r", "restart"), p.key("b", "back"), p.key("q", "quit"))),
+        }
     } else {
         let play = if state.autoplay { "pause" } else { "autoplay" };
         bottom.push(format!(
@@ -559,8 +592,16 @@ fn read_key(timeout: Duration) -> std::io::Result<Option<Key>> {
     })
 }
 
-fn interactive(tour: &Tour) -> std::io::Result<State> {
+/// Enter at the end of a lesson moves on to the next one.
+pub fn advances_lesson(tour: &Tour, state: &State, key: Key) -> Option<usize> {
+    (key == Key::Next && state.at == state.last).then(|| tour.next_lesson()).flatten()
+}
+
+/// The interactive tour. At the end of a lesson, Enter opens the next
+/// one in the same screen; the tour that was showing last is returned.
+fn interactive(first: Tour) -> std::io::Result<(State, Tour)> {
     let p = Paint::fixed(term::color_allowed(), term::unicode());
+    let mut tour = first;
     let mut state = State::new(tour.last());
     term::screen::enter()?;
     let result = (|| -> std::io::Result<State> {
@@ -569,12 +610,20 @@ fn interactive(tour: &Tour) -> std::io::Result<State> {
         loop {
             if dirty {
                 let (w, h) = term::screen::size();
-                term::screen::draw(&frame(&p, tour, &state, w, h), h)?;
+                term::screen::draw(&frame(&p, &tour, &state, w, h), h)?;
                 dirty = false;
             }
             let wait = if state.autoplay { next_tick.saturating_duration_since(Instant::now()) } else { Duration::from_secs(3600) };
             match read_key(wait)? {
                 Some(key) => {
+                    if let Some(next) = advances_lesson(&tour, &state, key) {
+                        if let Ok(t) = Tour::lesson(next) {
+                            tour = t;
+                            state = State::new(tour.last());
+                            dirty = true;
+                            continue;
+                        }
+                    }
                     let before = state;
                     state = state.press(key);
                     if state.quit {
@@ -595,7 +644,7 @@ fn interactive(tour: &Tour) -> std::io::Result<State> {
         }
     })();
     let _ = term::screen::leave();
-    result
+    result.map(|state| (state, tour))
 }
 
 /// Should the demo be interactive? Only for a person at a real terminal.
@@ -621,8 +670,8 @@ pub fn run(tour: Result<Tour, String>) -> ExitCode {
         }
         return ExitCode::SUCCESS;
     }
-    match interactive(&tour) {
-        Ok(state) => {
+    match interactive(tour) {
+        Ok((state, tour)) => {
             // Leave a short record on the normal screen.
             println!();
             println!("{}", title(&p, &tour));
@@ -718,10 +767,10 @@ mod tests {
     #[test]
     fn loops_lesson_keeps_the_counter_in_view() {
         let plain = walkthrough(&Paint::fixed(false, true), &tour(5), 80).join("\n");
-        let watched = plain.lines().filter(|l| l.trim_start().starts_with("counter x1 = ")).count();
+        let watched = plain.lines().filter(|l| l.trim_start().starts_with("counter x5 = ")).count();
         assert_eq!(watched, tour(5).last(), "every cycle shows the counter");
-        assert!(plain.contains("counter x1 = 7 · sum x2 = 27"), "{plain}");
-        assert!(plain.contains("Ends with x1 = 0 · x2 = 55"), "{plain}");
+        assert!(plain.contains("counter x5 = 7 · sum x6 = 27"), "{plain}");
+        assert!(plain.contains("Ends with x5 = 0 · x6 = 55"), "{plain}");
     }
 
     #[test]
@@ -748,7 +797,7 @@ mod tests {
     fn static_walkthrough_ascii_and_color() {
         let ascii = walkthrough(&Paint::fixed(false, false), &tour(2), 80).join("\n");
         assert!(ascii.is_ascii(), "{ascii}");
-        assert!(ascii.contains("    ! lw is reading memory. add must wait one cycle because it needs x1 from"), "{ascii}");
+        assert!(ascii.contains("    ! lw is reading memory. add must wait one cycle because it needs x7 from"), "{ascii}");
         assert!(ascii.contains("bubble"));
         let color = walkthrough(&Paint::fixed(true, true), &tour(2), 80).join("\n");
         assert!(color.contains("\x1b[33mbubble\x1b[0m"), "stalls are yellow");
@@ -792,7 +841,7 @@ mod tests {
         let s = (0..stall).fold(s, |s, _| s.press(Key::Next));
         let text = frame(&p, &t, &s, 80, 24).join("\n");
         crate::snapshots::check("demo.frame.lesson2.stall.80x24", &text);
-        assert!(text.contains("! lw is reading memory. add must wait one cycle because it needs x1 from lw."), "{text}");
+        assert!(text.contains("! lw is reading memory. add must wait one cycle because it needs x7 from lw."), "{text}");
         assert!(text.lines().count() <= 24);
     }
 
@@ -815,10 +864,49 @@ mod tests {
     fn rv64_walkthrough_snapshots() {
         let t = tour(6);
         let plain = walkthrough(&Paint::fixed(false, true), &t, 80).join("\n");
-        assert!(plain.contains("x2 = 0x0000_0100_0000_0005"), "{plain}");
-        assert!(plain.contains("x4 = -1"), "{plain}");
+        assert!(plain.contains("x6 = 0x0000_0100_0000_0005"), "{plain}");
+        assert!(plain.contains("x10 = -1"), "{plain}");
         assert!(plain.contains("addw"), "{plain}");
         // (the full text is the demo.lesson6 snapshot)
-        assert!(plain.contains("x4 = -1 (0xffff_ffff_ffff_ffff)"), "{plain}");
+        assert!(plain.contains("x10 = -1 (0xffff_ffff_ffff_ffff)"), "{plain}");
+    }
+
+    #[test]
+    fn enter_at_the_end_of_a_lesson_opens_the_next_one() {
+        let one = tour(1);
+        let end = (0..one.last()).fold(State::new(one.last()), |s, _| s.press(Key::Next));
+        assert_eq!(advances_lesson(&one, &end, Key::Next), Some(2));
+        assert_eq!(advances_lesson(&one, &end, Key::Quit), None);
+        assert_eq!(advances_lesson(&one, &State::new(one.last()), Key::Next), None, "only at the end");
+        let six = tour(6);
+        let end6 = (0..six.last()).fold(State::new(six.last()), |s, _| s.press(Key::Next));
+        assert_eq!(advances_lesson(&six, &end6, Key::Next), None, "the course is over");
+        let extra = Tour::new(4, &crate::tui::samples::SAMPLES[3]).unwrap();
+        let end_x = (0..extra.last()).fold(State::new(extra.last()), |s, _| s.press(Key::Next));
+        assert_eq!(advances_lesson(&extra, &end_x, Key::Next), None, "not a lesson");
+
+        for (name, color) in [("nocolor", false), ("color", true)] {
+            let p = Paint::fixed(color, true);
+            let text = frame(&p, &one, &end, 80, 24).join("\n");
+            assert!(text.lines().count() <= 24);
+            let shown = if color { crate::snapshots::mark_ansi(&text) } else { text.clone() };
+            crate::snapshots::check(&format!("demo.frame.lesson1.end.{name}.80x24"), &shown);
+            if !color {
+                assert!(text.contains("Enter next lesson   r restart   b back   q quit"), "{text}");
+            }
+        }
+        let last = frame(&Paint::fixed(false, true), &six, &end6, 80, 24).join("\n");
+        assert!(!last.contains("next lesson"), "{last}");
+    }
+
+    #[test]
+    fn glosses_appear_once_on_first_use() {
+        let t = tour(2);
+        let plain = walkthrough(&Paint::fixed(false, true), &t, 80).join("\n");
+        for (_, gloss) in [crate::explain::GLOSSARY[0], crate::explain::GLOSSARY[2]] {
+            let first = gloss.split_whitespace().take(4).collect::<Vec<_>>().join(" ");
+            assert_eq!(plain.matches(&first).count(), 1, "{first}:\n{plain}");
+        }
+        assert!(!plain.contains("latch"), "no unexplained jargon");
     }
 }

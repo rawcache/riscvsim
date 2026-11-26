@@ -1,0 +1,27 @@
+riscvsim translate · translate between assembly, C, C++ and Rust
+
+Usage
+  riscvsim translate --from LANG --to LANG <file> [-o output]
+  riscvsim translate --subset LANG
+
+Languages: rv32 (or asm), rv64, c, cpp, rust. A documented subset of C,
+C++ and Rust compiles to rv32 or rv64 assembly and translates between the
+three; --subset LANG lists exactly what it accepts. rv32 and rv64 lift to
+C pseudocode and convert between each other.
+
+The result goes to stdout, or to the file given with -o. Errors point at
+the line and say what to change; the exit code is 1 for a translation error.
+
+Options
+  --from LANG       input language
+  --to LANG         output language
+  -o, --output F    write to a file instead of stdout
+  --subset LANG     list what the c, cpp or rust translator supports
+  --annotate        C or C++ to assembly with each source line shown as a
+                    comment above the instructions it became
+
+Examples
+  riscvsim translate --from c --to rv64 prog.c
+  riscvsim translate --from c --to rv32 prog.c -o prog.s && riscvsim run prog.s
+  riscvsim translate --from rust --to c lib.rs -o lib.c
+  riscvsim translate --subset c

@@ -70,8 +70,6 @@ pub enum Act {
     RegFmt,
     TourNext,
     TourSkip,
-    TrustYes,
-    TrustNo,
     Help,
     Quit,
 }
@@ -89,25 +87,17 @@ pub struct Caps {
 }
 
 impl Caps {
+    /// The same rules as every other command (term::color_allowed and
+    /// term::unicode): `--no-color`, a non-empty `NO_COLOR` or `TERM=dumb`
+    /// turn color off; a non-UTF-8 locale or `TERM=dumb` means ASCII.
     pub fn detect() -> Self {
-        let no_color = std::env::var_os("NO_COLOR").is_some();
-        let unicode = if cfg!(windows) {
-            true
-        } else {
-            ["LC_ALL", "LC_CTYPE", "LANG"]
-                .iter()
-                .filter_map(|k| std::env::var(k).ok())
-                .find(|v| !v.is_empty())
-                .map(|v| {
-                    let v = v.to_ascii_lowercase();
-                    v.contains("utf-8") || v.contains("utf8")
-                })
-                .unwrap_or(false)
-        };
-        Self {
-            color: !no_color,
-            unicode,
-        }
+        Self { color: crate::term::color_allowed(), unicode: crate::term::unicode() }
+    }
+
+    /// [`Caps::detect`] for a given environment and `--no-color` flag.
+    #[cfg(test)]
+    pub fn detect_in(env: crate::term::Env, no_color_flag: bool) -> Self {
+        Self { color: crate::term::color_allowed_in(env, no_color_flag), unicode: crate::term::unicode_in(env) }
     }
 }
 
@@ -189,11 +179,9 @@ impl Anims {
     }
 }
 
-/// Startup phases, in order: the trust check (only when loading a file from
-/// a directory the user hasn't confirmed before), the welcome screen, then
-/// the simulator itself.
+/// Startup phases, in order: the welcome screen (skipped while the
+/// first-run walkthrough shows), then the simulator itself.
 pub enum Gate {
-    Trust { selected: usize }, // 0 = yes, 1 = no/exit
     Welcome,
     Done,
 }
@@ -209,6 +197,8 @@ pub struct ServeRequest {
     pub source: String,
     pub file_name: String,
     pub port: Option<u16>,
+    /// 32 or 64: an RV64 session opens in the page as RV64.
+    pub xlen: u32,
 }
 
 pub const TOUR_STEPS: &[(&str, &str)] = &[
@@ -273,8 +263,6 @@ pub struct App {
     /// Earlier prompt entries, oldest first, and the one being recalled.
     pub history: Vec<String>,
     pub history_pos: Option<usize>,
-    /// Directory to remember as trusted once confirmed.
-    pub trust_key: Option<String>,
     pub tour: Option<Tour>,
     /// Set by the renderer after at least one walkthrough frame reaches the terminal.
     pub tour_shown: bool,
@@ -302,7 +290,6 @@ impl App {
         source: String,
         file_name: String,
         show_tour: bool,
-        trust_key: Option<String>,
         update_status: crate::update::StatusSlot,
         install_method: crate::doctor::InstallMethod,
     ) -> Self {
@@ -329,9 +316,7 @@ impl App {
             mem_addr: DATA_BASE,
             src_scroll: None,
             anims: Anims::default(),
-            gate: if trust_key.is_some() {
-                Gate::Trust { selected: 0 }
-            } else if show_tour {
+            gate: if show_tour {
                 Gate::Done
             } else {
                 Gate::Welcome
@@ -346,7 +331,6 @@ impl App {
             history: Vec::new(),
             history_pos: None,
             prompt_active: !show_tour,
-            trust_key,
             tour: if show_tour {
                 Some(Tour { step: 0 })
             } else {
@@ -764,12 +748,6 @@ impl App {
                         "nothing to serve: load a program first (/run <file> or /demo)".into(),
                         true,
                     );
-                } else if self.xlen == 64 {
-                    self.push_log(
-                        "error",
-                        "the browser simulator runs RV32 programs; this one is RV64, so it stays here".into(),
-                        true,
-                    );
                 } else {
                     // --port N, or a bare port number.
                     let port = arguments
@@ -780,6 +758,7 @@ impl App {
                         source: self.source.clone(),
                         file_name: self.file_name.clone(),
                         port,
+                        xlen: self.xlen,
                     });
                     self.quit = true;
                 }
@@ -877,18 +856,6 @@ impl App {
         true
     }
 
-    /// Confirm the trust prompt: remember the directory and move on.
-    pub fn trust_confirm(&mut self) {
-        if let Some(key) = &self.trust_key {
-            super::tour::mark_trusted(key);
-        }
-        self.gate = if self.tour.is_some() {
-            Gate::Done
-        } else {
-            Gate::Welcome
-        };
-    }
-
     pub fn dismiss_welcome(&mut self) {
         if matches!(self.gate, Gate::Welcome) {
             self.gate = Gate::Done;
@@ -939,24 +906,6 @@ impl App {
     pub fn on_key(&mut self, key: KeyEvent) {
         if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
             self.quit = true;
-            return;
-        }
-        if let Gate::Trust { selected } = &mut self.gate {
-            match key.code {
-                KeyCode::Up | KeyCode::Char('k') => *selected = 0,
-                KeyCode::Down | KeyCode::Char('j') => *selected = 1,
-                KeyCode::Char('1') => *selected = 0,
-                KeyCode::Char('2') => *selected = 1,
-                KeyCode::Enter => {
-                    if *selected == 0 {
-                        self.trust_confirm();
-                    } else {
-                        self.quit = true;
-                    }
-                }
-                KeyCode::Esc | KeyCode::Char('q') => self.quit = true,
-                _ => {}
-            }
             return;
         }
         if matches!(self.gate, Gate::Welcome) {
@@ -1063,14 +1012,6 @@ impl App {
                 self.hover = self.hit_at(me.column, me.row);
             }
             MouseEventKind::Down(MouseButton::Left) => {
-                if let Gate::Trust { .. } = self.gate {
-                    match self.hit_at(me.column, me.row) {
-                        Some(Act::TrustYes) => self.trust_confirm(),
-                        Some(Act::TrustNo) => self.quit = true,
-                        _ => {}
-                    }
-                    return;
-                }
                 if matches!(self.gate, Gate::Welcome) {
                     self.dismiss_welcome();
                     return;
@@ -1163,8 +1104,6 @@ impl App {
             Act::RegFmt => self.reg_hex = !self.reg_hex,
             Act::TourNext => self.tour_next(),
             Act::TourSkip => self.tour_skip(),
-            Act::TrustYes => self.trust_confirm(),
-            Act::TrustNo => self.quit = true,
             Act::Help => self.help_open = !self.help_open,
             Act::Quit => self.quit = true,
         }
@@ -1190,13 +1129,12 @@ mod tests {
     use super::*;
     use std::sync::{Arc, Mutex};
 
-    fn app(show_tour: bool, trust_key: Option<String>) -> App {
+    fn app(show_tour: bool) -> App {
         App::new(
             None,
-            "addi x1, x0, 1\n".into(),
+            "addi x5, x0, 1\n".into(),
             "sample.s".into(),
             show_tour,
-            trust_key,
             Arc::new(Mutex::new(None)),
             crate::doctor::InstallMethod::Manual,
         )
@@ -1204,7 +1142,7 @@ mod tests {
 
     #[test]
     fn first_run_tour_bypasses_welcome_gate() {
-        let app = app(true, None);
+        let app = app(true);
         assert!(matches!(app.gate, Gate::Done));
         assert!(app.tour.is_some());
         assert!(!app.prompt_active);
@@ -1213,19 +1151,45 @@ mod tests {
 
     #[test]
     fn returning_user_still_gets_welcome_gate() {
-        let app = app(false, None);
+        let app = app(false);
         assert!(matches!(app.gate, Gate::Welcome));
         assert!(app.tour.is_none());
         assert!(app.prompt_active);
     }
 
     #[test]
-    fn trust_confirmation_leads_to_tour_before_welcome() {
-        let mut app = app(true, Some("already-tested".into()));
-        assert!(matches!(app.gate, Gate::Trust { .. }));
-        app.trust_key = None;
-        app.trust_confirm();
-        assert!(matches!(app.gate, Gate::Done));
-        assert!(app.tour.is_some());
+    fn a_program_file_opens_straight_into_the_tour_or_welcome() {
+        // No confirmation step before a file: the walkthrough (first run)
+        // or the welcome screen comes first, and the program is already
+        // assembled underneath.
+        let mut first = App::new(
+            Some(PathBuf::from("examples/prog.s")),
+            "addi x5, x0, 1\n".into(),
+            "prog.s".into(),
+            true,
+            Arc::new(Mutex::new(None)),
+            crate::doctor::InstallMethod::Manual,
+        );
+        first.boot();
+        assert!(matches!(first.gate, Gate::Done) && first.tour.is_some());
+        assert!(first.assembled());
+        let again = app(false);
+        assert!(matches!(again.gate, Gate::Welcome));
+    }
+
+    #[test]
+    fn slash_serve_hands_over_rv32_and_rv64_programs() {
+        for (source, xlen) in [("addi x5, x0, 1\n", 32u32), ("addi x5, x0, 1\naddw x6, x5, x5\n", 64)] {
+            let mut app = app(false);
+            app.source = source.into();
+            app.xlen = xlen;
+            app.boot();
+            app.execute_command("/serve --port 8080".into());
+            let request = app.serve_request.as_ref().expect("a serve request, not a refusal");
+            assert_eq!((request.xlen, request.port), (xlen, Some(8080)));
+            assert_eq!(request.source, source);
+            assert!(app.quit);
+            assert!(!app.log.iter().any(|l| l.kind == "error"), "no error logged");
+        }
     }
 }

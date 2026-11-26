@@ -8,57 +8,65 @@
    4  value:  .word 41
    5
    6  .text
-   7  addi x4, x0, 1     # x4 = 1
-   8  lui  x2, 0x10000   # x2 = 0x10000000, where value is
-   9  lw   x1, 0(x2)     # x1 = 41, read from memory
-  10  add  x3, x1, x4    # needs x1 now: one stall
+   7  addi x5, x0, 1     # x5 = 1
+  <90> 8  # lui puts 0x10000 in the upper 20 bits of x6, so x6<0>
+  <90> 9  # shows 0x10000000: the address where .data starts.<0>
+  10  lui  x6, 0x10000   # x6 = 0x10000000, where value is
+  11  lw   x7, 0(x6)     # x7 = 41, read from memory
+  12  add  x10, x7, x5   # needs x7 now: one stall
 
   <1>cycle 1<0>
-    <36>IF<0> <1>addi x4, x0, 1<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>IF<0> <1>addi x5, x0, 1<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
     <36>›<0> The first instruction, addi, is fetched from memory.
 
   <1>cycle 2<0>
-    <36>IF<0> <1>lui x2, 0x10000<0>  <36>ID<0> <1>addi x4, x0, 1<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>IF<0> <1>lui x6, 0x10000<0>  <36>ID<0> <1>addi x5, x0, 1<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
     <36>›<0> addi is decoded and reads its source registers.
 
   <1>cycle 3<0>
-    <36>IF<0> <1>lw x1, 0(x2)<0>  <36>ID<0> <1>lui x2, 0x10000<0>  <36>EX<0> <1>addi x4, x0, 1<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>IF<0> <1>lw x7, 0(x6)<0>  <36>ID<0> <1>lui x6, 0x10000<0>  <36>EX<0> <1>addi x5, x0, 1<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
     <36>›<0> addi is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 4<0>
-    <36>IF<0> <1>add x3, x1, x4<0>  <36>ID<0> <1>lw x1, 0(x2)<0>  <36>EX<0> <1>lui x2…<0>  <36>MEM<0> <1>addi x4,x0,1<0>  <36>WB<0> <90>·<0>
+    <36>IF<0> <1>add x10,x7,x5<0>  <36>ID<0> <1>lw x7, 0(x6)<0>  <36>EX<0> <1>lui x6…<0>  <36>MEM<0> <1>addi x5,x0,1<0>  <36>WB<0> <90>·<0>
     <36>›<0> lui is computing in the ALU; everything else moves one stage on.
 
   <1>cycle 5<0>
-    <36>IF<0> <90>·<0>  <36>ID<0> <1>add x3, x1, x4<0>  <36>EX<0> <1>lw x1, 0(x2)<0>  <36>MEM<0> <1>lui x2…<0>  <36>WB<0> <1>addi x4,x0,1<0>
-    <32>✓<0> <1;32>x4<0> = <1;32>1<0>
-    <33>!<0> lw is reading memory. add must wait one cycle because it needs x1 from
+    <36>IF<0> <90>·<0>  <36>ID<0> <1>add x10,x7,x5<0>  <36>EX<0> <1>lw x7, 0(x6)<0>  <36>MEM<0> <1>lui x6…<0>  <36>WB<0> <1>addi x5,x0,1<0>
+    <32>✓<0> <1;32>x5<0> = <1;32>1<0>
+    <33>!<0> lw is reading memory. add must wait one cycle because it needs x7 from
       lw.
+      <90>A stall: the instruction stays where it is for a cycle, and an empty<0>
+      <90>slot (a bubble) moves on instead.<0>
 
   <1>cycle 6<0>
-    <36>IF<0> <90>·<0>  <36>ID<0> <1>add x3, x1, x4<0>  <36>EX<0> <33>bubble<0>  <36>MEM<0> <1>lw x1, 0(x2)<0>  <36>WB<0> <1>lui x2, 0x10000<0>
-    <32>✓<0> <1;32>x2<0> = <1;32>0x10000000<0>
-    <36>›<0> lui finishes and writes x2 = 0x10000000.
+    <36>IF<0> <90>·<0>  <36>ID<0> <1>add x10, x7, x5<0>  <36>EX<0> <33>bubble<0>  <36>MEM<0> <1>lw x7, 0(x6)<0>  <36>WB<0> <1>lui x6, 0x10000<0>
+    <32>✓<0> <1;32>x6<0> = <1;32>0x10000000<0>
+    <36>›<0> lui finishes and writes x6 = 0x10000000.
 
   <1>cycle 7<0>
-    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <1>add x3, x1, x4<0>  <36>MEM<0> <33>bubble<0>  <36>WB<0> <1>lw x1, 0(x2)<0>
-    <32>✓<0> <1;32>x1<0> = <1;32>41<0>
-    <36>›<0> add needs x1 from lw, so it is forwarded from the MEM/WB latch and
-      nobody waits.
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <1>add x10, x7, x5<0>  <36>MEM<0> <33>bubble<0>  <36>WB<0> <1>lw x7, 0(x6)<0>
+    <32>✓<0> <1;32>x7<0> = <1;32>41<0>
+    <36>›<0> add needs x7 from lw, so it is forwarded from the MEM/WB pipeline
+      register and nobody waits.
+      <90>Forwarding: a result goes straight to the instruction that needs it,<0>
+      <90>before it is written to its register.<0>
+      <90>A pipeline register holds an instruction and its values between two<0>
+      <90>stages.<0>
 
   <1>cycle 8<0>
-    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <1>add x3, x1, x4<0>  <36>WB<0> <33>bubble<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <1>add x10, x7, x5<0>  <36>WB<0> <33>bubble<0>
     <36>›<0> Nothing is left to fetch, so the pipeline is emptying.
 
   <1>cycle 9<0>
-    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <1>add x3, x1, x4<0>
-    <32>✓<0> <1;32>x3<0> = <1;32>42<0>
-    <32>✓<0> add writes x3 = 42, and the program is finished.
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <1>add x10, x7, x5<0>
+    <32>✓<0> <1;32>x10<0> = <1;32>42<0>
+    <32>✓<0> add writes x10 = 42, and the program is finished.
 
   <32>✓<0> 9 cycles · 4 instructions · CPI 2.25 · 1 stall · 0 mispredictions
-    <90>Ends with<0> <1;32>x4 = 1 · x2 = 0x10000000 · x1 = 41 · x3 = 42<0>
+    <90>Ends with<0> <1;32>x5 = 1 · x6 = 0x10000000 · x7 = 41 · x10 = 42<0>
     <90>Why it slowed down:<0>
-    • lw is reading memory. add must wait one cycle because it needs x1 from
+    • lw is reading memory. add must wait one cycle because it needs x7 from
       lw.
 
   <1>Next:<0> <36>riscvsim demo 3 (Skipping the wait)<0>

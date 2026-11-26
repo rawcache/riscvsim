@@ -1,0 +1,24 @@
+
+  <1>riscvsim<0> <36>›<0> <1>demo 1<0> · Your first instructions                     <90>cycle 9 of 9<0>
+
+    <90> 1<0> <90># Each line is one instruction. Every cycle, each one       <0>
+    <90> 2<0> <90># moves one stage to the right: IF, ID, EX, MEM, WB.        <0>
+    <90> 3<0> <90># Registers are x0 to x31 (x0 is always 0). Each also has   <0>
+    <90> 4<0> <90># an ABI name, such as sp for x2; these lessons use x names.<0>
+    <90> 5<0> addi x5, x0, 6     # x5 = 0 + 6
+    <90> 6<0> addi x6, x0, 7     # x6 = 0 + 7
+    <90> 7<0> addi x7, x0, 100   # x7 = 100
+    <90> 8<0> addi x10, x0, 1    # x10 = 1
+    <90> 9<0> add  x11, x5, x6   # x11 = 6 + 7 = 13                        <36>WB<0>
+
+  <90>┌─<0><36> IF <0><90>────────┐<0><90>┌─<0><36> ID <0><90>────────┐<0><90>┌─<0><36> EX <0><90>────────┐<0><90>┌─<0><36> MEM <0><90>───────┐<0><90>┌─<0><36> WB <0><90>────────┐<0>
+  <90>│<0> <90>·<0>           <90>│<0><90>│<0> <90>·<0>           <90>│<0><90>│<0> <90>·<0>           <90>│<0><90>│<0> <90>·<0>           <90>│<0><90>│<0> <1>add x11,x5…<0> <90>│<0>
+  <90>└─────────────┘<0><90>└─────────────┘<0><90>└─────────────┘<0><90>└─────────────┘<0><90>└─────────────┘<0>
+    <32>✓<0> <1;32>x11<0> = <1;32>13<0>
+
+  <32>✓<0> add writes x11 = 13, and the program is finished.
+
+  <32>✓<0> 9 cycles · 5 instructions · CPI 1.80 · 0 stalls · 0 mispredictions
+  <1>Next:<0> <36>riscvsim demo 2 (Waiting for memory)<0>
+
+  <36>Enter<0> <90>next lesson<0>   <36>r<0> <90>restart<0>   <36>b<0> <90>back<0>   <36>q<0> <90>quit<0>

@@ -46,6 +46,9 @@ impl Diagnostic {
     /// source it refers to.
     pub fn from_engine(file: &str, source: &str, line: usize, message: &str) -> Self {
         let (message, mut suggestion) = split_suggestion(message);
+        // The engine's wording is for the browser's RV32/RV64 switch; at a
+        // terminal the switch is a flag, named in the help line below.
+        let message = message.replace(": switch the simulator to RV64, or use the 32-bit form", "");
         let source_line = if line > 0 {
             source.lines().nth(line - 1).map(|l| l.trim_end_matches('\r').to_string())
         } else {
@@ -309,6 +312,9 @@ fn suggest_for(message: &str, token: &str, source: &str) -> Option<String> {
 
 fn help_for(message: &str) -> Option<String> {
     let lower = message.to_lowercase();
+    if lower.contains("rv64-only instruction") {
+        return Some("an RV64 program? add --xlen=64 to the command; or use the 32-bit form".into());
+    }
     if lower.starts_with("invalid register") {
         return Some("registers are x0 to x31, or ABI names such as zero, ra, sp, a0-a7, t0-t6, s0-s11".into());
     }
@@ -438,5 +444,18 @@ mod tests {
         let long = format!("{}adddi x1, x2, 3", "    nop; ".repeat(20));
         let d = Diagnostic::from_engine("w.s", &long, 1, "unknown instruction 'adddi'");
         assert!(d.render(&Paint::fixed(false, false), 80).is_ascii());
+    }
+
+    #[test]
+    fn rv64_only_instruction_names_the_flag() {
+        let src = "ld x5, 0(x6)\n";
+        let msg = "'ld' is an RV64-only instruction and is not valid for RV32: switch the simulator to RV64, or use the 32-bit form";
+        let d = Diagnostic::from_engine("wide.s", src, 1, msg);
+        let text = plain(&d);
+        assert!(!text.contains("switch the simulator"), "{text}");
+        assert!(text.contains("= help: an RV64 program? add --xlen=64 to the command; or use the 32-bit form"), "{text}");
+        crate::snapshots::check("diag.rv64-only.nocolor", &text);
+        let color = d.render(&Paint::fixed(true, true), 80);
+        crate::snapshots::check("diag.rv64-only.color", &crate::snapshots::mark_ansi(&color));
     }
 }

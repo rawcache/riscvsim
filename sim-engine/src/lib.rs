@@ -27,6 +27,10 @@ pub const STACK_LIMIT: u32 = 0x7fc0_0000;
 /// Safety cap so `run` can never hang a browser tab or terminal.
 pub const DEFAULT_MAX_CYCLES: u64 = 1_000_000;
 
+/// Branch target buffer entries (direct-mapped, one 2-bit counter each),
+/// shared by the RV32 and RV64 pipelines.
+pub const BTB_ENTRIES: usize = 16;
+
 pub use assembler::{assemble, AsmError, AsmInstr, Program};
 pub use assembler64::{assemble64, AsmError64, AsmInstr64, Op64, Program64};
 pub use pipeline::{Pipeline, Snapshot};
