@@ -1,0 +1,24 @@
+ ❯_ riscvsim v0.2.0  ·  branch-loop.s  ·  cycle 7  ·  pc 0x00000008          ✕
+╭ source · branch-loop.s ────╮╭────────────────────────────────────────────────╮
+│  1 # a 3x loop: the predic…││  Pipeline    Registers · Memory                │
+│  2 addi x1, x0, 3          ││ IF  —                                          │
+│  3 addi x2, x0, 0          ││ ID  addi x3, x0, 99                  ✗ flushed │
+│  4 loop:                   ││ EX  bne x1, x0, loop        ◂ x1=2 from EX/MEM │
+│  5 addi x2, x2, 1 ‹WB›     ││ MEM addi x1, x1, -1                 0x0000000c │
+│  6 addi x1, x1, -1 ‹MEM›   ││ WB  addi x2, x2, 1                  0x00000008 │
+│▶ 7 bne  x1, x0, loop ‹EX›  ││                                                │
+│  8 addi x3, x0, 99         ││✗ The branch was wrong (bne was guessed not     │
+│                            ││  taken, but it was taken), so one instruction… │
+│                            ││cycles 7 · instr 3 · CPI 2.33 · stalls 0        │
+╰────────────────────────────╯╰────────────────────────────────────────────────╯
+╭ terminal ────────────────────────────────────────────────────────────────────╮
+│Assembling program...                                                         │
+│✓ assembled 6 instructions                                                    │
+│addi x1, x0, 3  x1: 0 -> 3                                                    │
+│addi x2, x0, 0  x2: 2147483644 -> 0                                           │
+│addi x2, x2, 1  x2: 0 -> 1                                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+ [ Assemble ]  [ ◀ Back ]  [ Step ▶ ]  [ ▶ Run ]  [ ⟲ Reset ]
+ speed ├━━━━━━━●───────┤ 10 cyc/s sample ▾ branch-loop.s
+> Press Enter for commands
+ cycle 7, pc 0x00000008                    → step · space run · ? help · q quit

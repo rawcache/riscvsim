@@ -252,9 +252,41 @@ pub fn wrap(text: &str, width: usize) -> Vec<String> {
     lines
 }
 
+/// Word-wrap `text` to at most `max_lines` lines of `width` columns. When it
+/// does not fit, the last line ends at a word boundary with an ellipsis.
+pub fn wrap_at_most(text: &str, width: usize, max_lines: usize, unicode: bool) -> Vec<String> {
+    let mut lines = wrap(text, width);
+    if lines.len() <= max_lines || max_lines == 0 {
+        return lines;
+    }
+    let ellipsis = if unicode { "…" } else { "..." };
+    let rest = lines[max_lines - 1..].join(" ");
+    lines.truncate(max_lines - 1);
+    let mut last = String::new();
+    for word in rest.split_whitespace() {
+        let next = if last.is_empty() { word.to_string() } else { format!("{last} {word}") };
+        if next.chars().count() + ellipsis.chars().count() > width {
+            break;
+        }
+        last = next;
+    }
+    last.push_str(ellipsis);
+    lines.push(last);
+    lines
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn wrap_at_most_ends_on_a_word() {
+        let t = "addi needs x1 from addi, so it is forwarded from the EX/MEM latch and nobody waits.";
+        assert_eq!(wrap_at_most(t, 40, 2, true).len(), 2);
+        assert_eq!(wrap_at_most(t, 30, 2, true), vec!["addi needs x1 from addi, so it", "is forwarded from the EX/MEM…"]);
+        assert_eq!(wrap_at_most(t, 30, 2, false)[1], "is forwarded from the...");
+        assert_eq!(wrap_at_most(t, 200, 2, true), vec![t.to_string()]);
+    }
 
     #[test]
     fn disabled_paint_emits_no_escapes() {

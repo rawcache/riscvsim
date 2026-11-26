@@ -1,0 +1,40 @@
+ ❯_ riscvsim v0.2.0  ·  load-use.s  ·  cycle 6  ·  pc 0x00000014                                                                                             ✕
+╭ source · load-use.s ──────────────────────────────────────╮╭─────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  1 # the add needs x1 one cycle before the load can deliv…││  Pipeline    Registers · Memory                                                                 │
+│  2 .data                                                  ││╭IF·Fetch─────────╮ ╭ID·Decode───────╮ ╭EX·Execute───────╮ ╭MEM·Memory──────╮ ╭WB·Writeback─────╮│
+│  3 value:  .word 41                                       │││—                │ │add x3, x1, x4  │ │lw x1, 0(x2)     │ │addi sp, sp, 0  │ │lui sp, 0x10000  ││
+│  4                                                        │││                 │ │! waits for x1  │ │                 │ │                │ │                 ││
+│  5 .text                                                  │││                 │ │0x00000010      │ │0x0000000c       │ │0x00000008      │ │0x00000004       ││
+│  6 addi x4, x0, 1                                         ││╰─────────────────╯ ╰────────────────╯ ╰─────────────────╯ ╰────────────────╯ ╰─────────────────╯│
+│  7 la   x2, value ‹MEM› ‹WB›                              ││                                                ▲                   │                            │
+│▶ 8 lw   x1, 0(x2) ‹EX›                                    ││                                                ╰────────────[x2=268435456]                      │
+│  9 add  x3, x1, x4 ‹ID›                                   ││                                                                                                 │
+│                                                           ││! lw is reading memory. add must wait one cycle because it needs x1 from lw.                     │
+│                                                           ││forward x2: EX/MEM → EX (rs1)                                                                    │
+│                                                           ││stall: load-use hazard: waiting for x1 from 'lw   x1, 0(x2)'                                     │
+│                                                           ││                                                                                                 │
+│                                                           ││                                                                                                 │
+│                                                           ││                                                                                                 │
+│                                                           ││                                                                                                 │
+│                                                           ││                                                                                                 │
+│                                                           ││                                                                                                 │
+│                                                           ││                                                                                                 │
+│                                                           ││                                                                                                 │
+│                                                           ││                                                                                                 │
+│                                                           ││                                                                                                 │
+│                                                           ││                                                                                                 │
+│                                                           ││                                                                                                 │
+│                                                           ││                                                                                                 │
+│                                                           ││cycles 6 · instr 2 · CPI 3.00 · stalls 1 · flushed 0 · mispredict 0                              │
+╰───────────────────────────────────────────────────────────╯╰─────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭ terminal ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│Loading load-use.s...                                                                                                                                         │
+│Assembling program...                                                                                                                                         │
+│✓ assembled 5 instructions                                                                                                                                    │
+│addi x4, x0, 1  x4: 0 -> 1                                                                                                                                    │
+│lui sp, 0x10000  x2: 2147483644 -> 268435456                                                                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ [ Assemble ]  [ ◀ Back ]  [ Step ▶ ]  [ ▶ Run ]  [ ⟲ Reset ]
+ speed ├━━━━━━━●───────┤ 10 cyc/s sample ▾ load-use.s
+> Press Enter for commands
+ cycle 6, pc 0x00000014                                                            → step · ← back · space run · +/- speed 10 cyc/s · r reset · ? help · q quit

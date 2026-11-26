@@ -1,0 +1,24 @@
+ ❯_ riscvsim v0.2.0  ·  add-forward.s  ·  cycle 0        ✕
+╭──────────────────────────────────────────────────────────╮
+│  Pipeline    Registers · Memory                          │
+│ IF  —                                                    │
+│ ID  —                                                    │
+│ EX  —                                                    │
+│ MEM —                                                    │
+│ WB  —                                                    │
+│                                                          │
+│› Nothing has happened yet. Each step moves every         │
+│  instruction one stage to the right.                     │
+│cycles 0 · instr 0 · CPI - · stalls 0 · flushed 0         │
+╰╭────────────────────────────────────────────────────────╮╯
+╭│ ❯_ Your program                                        │╮
+││ Your program runs through the five stages above; at 80 ││
+││ columns or wider its source sits beside them. Edit the ││
+││ file in your editor, then press [a] Assemble to reload ││
+││ it.                                                    ││
+││ [ Next ]   Skip                                  ● ○ ○ ││
+╰╰────────────────────────────────────────────────────────╯╯
+ [ Assemble ]  [ ◀ Back ]  [ Step ▶ ]  [ ▶ Run ]
+ speed ├━━━━━━━●───────┤ 10 cyc/s sample ▾ add-forward.s
+> Try /help or paste one RISC-V instruction
+ ✓ assembled 3 instructions (press Run or Step)      q quit

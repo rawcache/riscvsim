@@ -1,195 +1,109 @@
 # StudyRISC-V
 
-RISC-V (RV32IM and RV64IM) 5-stage pipeline simulator, in the browser at
-[studyriscv.com/simulator](https://studyriscv.com/simulator/) and in your
-terminal as the `riscvsim` CLI.
+`riscvsim` is a RISC-V simulator for your terminal: it runs RV32IM and
+RV64IM programs on a real 5-stage pipeline and explains every cycle in plain
+English.
 
-Watch real assembly move through Fetch, Decode, Execute, Memory and
-Writeback cycle by cycle: forwarding paths light up as they trigger,
-load-use hazards insert visible stall bubbles, and a 2-bit branch predictor
-learns your loops (and gets flushed when it guesses wrong).
-
-## Install the CLI
-
-### Quick start (macOS / Linux)
+## The first ten seconds
 
 ```sh
-curl -fsSL https://studyriscv.com/install.sh | sh
+riscvsim demo
 ```
 
-The script downloads the prebuilt release binary for your platform and
-installs it to `~/.local/bin/riscvsim` (override with `RISCVSIM_INSTALL_DIR`).
-If that directory is not on your `PATH`, it prints the line to add to your
-shell config:
+```text
+  riscvsim › demo 1 · Add + forwarding
+
+   1  # each add uses the previous result (watch the forwarded values travel)
+   2  addi x1, x0, 5
+   3  addi x2, x1, 3
+   4  add  x3, x2, x1
+
+  cycle 1
+    IF addi x1, x0, 5  ID ·  EX ·  MEM ·  WB ·
+    › The first instruction, addi, is fetched from memory.
+
+  cycle 2
+    IF addi x2, x1, 3  ID addi x1, x0, 5  EX ·  MEM ·  WB ·
+    › addi is decoded and reads its source registers.
+
+  cycle 3
+    IF add x3, x2, x1  ID addi x2, x1, 3  EX addi x1, x0, 5  MEM ·  WB ·
+    › addi is computing in the ALU; everything else moves one stage on.
+
+  cycle 4
+    IF ·  ID add x3, x2, x1  EX addi x2, x1, 3  MEM addi x1, x0, 5  WB ·
+    › addi needs x1 from addi, so it is forwarded from the EX/MEM latch and
+      nobody waits.
+```
+
+...one block per cycle, then the summary:
+
+```text
+  ✓ 7 cycles · 3 instructions · CPI 2.33 · 0 stalls · 0 mispredictions
+    No stalls: forwarding kept every instruction moving.
+
+  Next: riscvsim demo 2, riscvsim tui, riscvsim serve
+```
+
+On a terminal the tour is interactive: `Enter` next cycle, `a` autoplay,
+`+`/`-` speed, `b` back, `r` restart, `q` quit.
+
+## Install
+
+Prebuilt archives with checksums are on the [releases page](../../releases).
+To build and install from this repo instead:
 
 ```sh
-export PATH="$HOME/.local/bin:$PATH"
+cargo install --path cli
 ```
 
-Scripted / CI installs:
+## Commands
 
-```sh
-curl -fsSL https://studyriscv.com/install.sh | sh -s -- --yes
-```
+| Command | Example |
+| --- | --- |
+| `demo` | `riscvsim demo 2` (lesson 2: why a load makes the next instruction wait) |
+| `demo --list` | `riscvsim demo --list` (six short lessons, from first instructions to 64-bit values) |
+| `run` | `riscvsim run prog.s --watch t0` (registers, cycles, CPI, stalls) |
+| `tui` | `riscvsim tui prog.s` (step, rewind, breakpoints with `b`, help with `?`; `--xlen=64` for RV64) |
+| `translate` | `riscvsim translate --from c --to rv32 prog.c --annotate` |
+| `serve` | `riscvsim serve prog.s` (the browser simulator, on this computer) |
+| `doctor` | `riscvsim doctor` (check the install, PATH and updates) |
+| `completions` | `source <(riscvsim completions bash)` (also `zsh`, `fish`; completes commands, flags and lesson names) |
+| *(none)* | `riscvsim` (the interactive session; `/help` lists its commands) |
 
-### Homebrew
+Every command has `--help` with examples. Colors follow your terminal theme
+and turn off with `NO_COLOR=1`, `--no-color` or when output is piped.
 
-```sh
-brew tap rawcache/riscvsim && brew install riscvsim
-```
+## Web version
 
-Quick start and Homebrew install the same binary from the same GitHub
-release assets. If no prebuilt binary exists for your platform, the quick
-start script falls back to building from source with `cargo` (requires
-[Rust](https://rustup.rs)).
+The same engine runs in the browser at [studyriscv.com](https://studyriscv.com/simulator/).
+`riscvsim serve` shows that simulator locally: nothing is uploaded, and only
+this computer can reach it.
 
-### Windows
+## Exit codes
 
-```powershell
-irm https://studyriscv.com/install.ps1 | iex
-```
-
-Windows currently builds from source: no Windows binary is published yet,
-so the script needs `cargo` and `git`. The Windows installer is not
-release-ready.
-
-### PATH shadowing
-
-If you install with both Homebrew and the quick start script, two copies of
-`riscvsim` end up on your `PATH` and whichever directory comes first wins.
-The quick start script warns when Homebrew already manages `riscvsim`.
-Run `riscvsim doctor` to list every copy on your `PATH`, which one your shell
-selects, how each was installed, and how to update or remove it.
-
-## Use it
-
-```sh
-riscvsim                          # interactive session (slash commands below)
-riscvsim run program.s            # assemble + run, print final registers and stats
-riscvsim run program.s -v         # full instruction-by-instruction trace
-riscvsim run wide.s --xlen=64     # run an RV64IM program
-riscvsim tui program.s            # step through it in the terminal
-riscvsim serve program.s          # step through it in the browser UI
-riscvsim doctor                   # versions, PATH copies, update instructions
-riscvsim --help                   # usage, examples, exit codes
-```
-
-### Interactive session
-
-Run `riscvsim` with no arguments to open the interactive session, then
-drive it with slash commands:
-
-| Command | What it does |
-|---|---|
-| `/help` | list every command |
-| `/doctor` | inspect versions, PATH copies and update instructions |
-| `/run <file>` | load and run an assembly file |
-| `/demo [n]` | load a built-in sample program and run it |
-| `/serve [--port N]` | open the loaded program in the browser UI |
-| `/reset` | reset the loaded program |
-| `/version` | show installed and latest versions |
-| `/examples` | show the sample-program walkthrough |
-| `/exit`, `/quit` | leave the session |
-
-Anything not starting with `/` is assembled and run as RISC-V source.
-
-### Browser UI
-
-`riscvsim serve` starts a local server (default `http://localhost:4200`)
-hosting the simulator UI, pointed at the live in-memory RV32IM session:
-step, rewind, and inspect registers and memory. The session ends when the
-process exits.
-
-### Update check
-
-Except for `doctor` and the interactive session (which check on their own),
-each command checks for a newer release in the background with a 300 ms
-timeout and caches the result for one hour. Failures are silent and never
-change the exit code; when an update exists, a one-line notice is printed to
-stderr. Set `RISCVSIM_NO_UPDATE_CHECK=1` to disable it.
-
-### A first program
-
-```asm
-addi x1, x0, 5      # x1 = 5
-addi x2, x1, 3      # x2 = 8   (forwarded from EX/MEM)
-add  x3, x2, x1     # x3 = 13  (both operands forwarded)
-```
-
-```
-$ riscvsim run add.s
-Loading add.s...
-Assembling program...
-✓ assembled 3 instructions
-Running simulator...
-
-x1: 0 -> 5
-x2: 0 -> 8
-x3: 0 -> 13
-
-3 instructions, 7 cycles, 0 stalls, 0 mispredictions
-✓ program complete
-```
-
-## What's in this repo
-
-| Directory | What it is |
-|---|---|
-| `sim-engine/` | The simulator core: RV32IM and RV64IM two-pass assemblers and classic 5-stage pipelines (explicit pipeline registers, EX/MEM and MEM/WB forwarding, load-use stalls, 2-bit predictor with BTB, branches resolved in EX), RV32/RV64 conversion, and source translation. Pure Rust. |
-| `cli/` | The `riscvsim` binary: `run`, `tui`, `serve`, `doctor` and the interactive session. |
-| `rust-core/` | WASM bindings that compile the same engine for the browser. |
-| `Formula/` | Homebrew formula for the tap `rawcache/homebrew-riscvsim`. |
-
-`cli/web/index.html` is a generated asset embedded into the binary for
-`riscvsim serve`; do not edit it by hand.
-
-One engine, two surfaces: the browser consumes `sim-engine` through WASM,
-the CLI links it directly, with identical results cycle for cycle.
-
-## Translation
-
-`sim-engine` (and the WASM bindings in `rust-core`) translate between
-languages for documented subsets:
-
-- C, C++ and Rust to RV32IM or RV64IM assembly
-- RV32IM or RV64IM assembly to C
-- C, C++ and Rust to each other
-- RV32IM to RV64IM and RV64IM to RV32IM
-
-Each source language has a published supported and unsupported subset
-(`C_SUBSET_SUPPORTED`, `C_SUBSET_UNSUPPORTED` and the C++ and Rust
-equivalents). Input outside the subset is rejected with an error (with a source
-line number where one applies) rather than translated approximately. Translation is a
-library and browser feature; the CLI does not expose it.
+| Code | Meaning |
+| --- | --- |
+| 0 | ok |
+| 1 | a problem with the program or input (assembly or translation error, trap, step limit, unreadable file, busy port) |
+| 2 | usage error (unknown command or option, missing argument) |
+| 130 | stopped with Ctrl-C |
 
 ## Build from source
 
 ```sh
-cd cli && cargo build --release     # -> cli/target/release/riscvsim
-cd sim-engine && cargo test         # engine test suite
-cd cli && cargo test                # CLI tests
-cd rust-core && cargo test          # WASM binding tests (native)
+cd sim-engine && cargo build --release && cargo test   # the engine
+cd cli && cargo build --release && cargo test          # riscvsim, in cli/target/release
 ```
 
-## ISA coverage
+## How it fits together
 
-RV32I and RV64I base + M extension (`mul`/`div`/`rem` families, spec-correct
-non-trapping division by zero), and the common pseudo-instructions
-(`li`, `la`, `mv`, `nop`, `j`, `jr`, `ret`, `call`, `beqz`/`bnez` and
-friends, `not`, `neg`, `seqz`/`snez`). Sections and data directives:
-`.text`, `.data`, `.word`, `.half`, `.byte`, `.asciz`, `.space`, `.align`.
-RV64 runs through `riscvsim run --xlen=64`; `tui` and `serve` are RV32IM.
+- **One engine:** `sim-engine` assembles and runs RV32IM and RV64IM programs on a 5-stage pipeline.
+- **A terminal tool:** `cli` links the engine directly and builds the `riscvsim` binary.
+- **A browser version:** `rust-core` compiles the engine to WebAssembly, so the web simulator gives identical results, cycle for cycle.
 
-Memory map: text at `0x00000000`, data at `0x10000000`, stack pointer
-initialized to `0x7FFFFFFC` (RV32) or `0x7FFFFFF0` (RV64).
+## Folders
 
-## Releases
-
-Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds
-`riscvsim` for macOS and Linux on arm64 and x86_64 and attaches the tarballs
-the install script and Homebrew formula download. A tag that already has a
-published release is rejected, and existing assets are never overwritten.
-
-## License
-
-[MIT](LICENSE)
+- [`sim-engine/`](sim-engine): the simulator core (assemblers, pipelines, forwarding, stalls, branch prediction), pure Rust.
+- [`cli/`](cli): the `riscvsim` command and its embedded browser UI.
+- [`rust-core/`](rust-core): WebAssembly bindings that expose the engine to the browser.

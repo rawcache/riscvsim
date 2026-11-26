@@ -1,0 +1,23 @@
+ ╭ riscvsim v0.2.0 ───────────────────────────────────────╮
+ │                                                        │
+ │                  Welcome to riscvsim!                  │
+ │                                                        │
+ │Watch RISC-V run, cycle by cycle                        │
+ │ through a real 5-stage pipeline.                       │
+ │                                                        │
+ │Try                                                     │
+ │ · /demo       run a sample program                     │
+ │ · /run prog.s run your own file                        │
+ │ · →           then step one cycle                      │
+ │                                                        │
+ │Help                                                    │
+ │ · /help       every command                            │
+ │ · ?           keyboard shortcuts                       │
+ │                                                        │
+ │v0.2.0 | RV32IM 5-stage pipeline                        │
+ │file: add-forward.s                                     │
+ │cwd: projects/riscv                                     │
+ ╰────────────────────────────────────────────────────────╯
+
+  > Try "/help"
+  manual or system install | updates: /doctor

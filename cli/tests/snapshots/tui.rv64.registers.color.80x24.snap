@@ -1,0 +1,24 @@
+ ❯_ riscvsim v0.2.0  ·  wide-values.s  ·  RV64  ·  cycle 9  ·  pc 0x00000014 ✕
+╭ source · wide-values.s ────╮╭────────────────────────────────────────────────╮
+│  1 # RV64 registers hold 6…││  Pipeline    Registers · Memory                │
+│  2 addi x1, x0, 1     # x1…││╭ registers [hex] · non-zero ──────────────────╮│
+│  3 slli x1, x1, 40    # x1…│││  ra 0x0000_0100_0000_0000                    ││
+│  4 addi x2, x1, 5     # x2…│││  sp 0x0000_0100_0000_0005                    ││
+│  5 addw x3, x2, x0    # ad…│││  gp 0x0000_0000_0000_0005                    ││
+│  6 addi x4, x0, -1   … ‹WB›│││  tp 0xffff_ffff_ffff_ffff                    ││
+│                            ││╰──────────────────────────────────────────────╯│
+│                            ││╭ memory · 0x10000000 ─────────────────────────╮│
+│                            │││ data   stack   ◀   ▶                         ││
+│                            ││╰──────────────────────────────────────────────╯│
+╰────────────────────────────╯╰────────────────────────────────────────────────╯
+╭ terminal ────────────────────────────────────────────────────────────────────╮
+│slli x1, x1, 40  x1: 1 -> 1099511627776                                       │
+│addi x2, x1, 5  x2: 2147483632 -> 1099511627781                               │
+│addw x3, x2, x0  x3: 0 -> 5                                                   │
+│addi x4, x0, -1  x4: 0 -> -1                                                  │
+│✓ program complete                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+ [ Assemble ]  [ ◀ Back ]  [ Step ▶ ]  [ ▶ Run ]  [ ⟲ Reset ]
+ speed ├━━━━━━━●───────┤ 10 cyc/s sample ▾ wide-values.s
+> Press Enter for commands
+ ✓ program complete     → step · ← back · space run · r reset · ? help · q quit

@@ -5,9 +5,11 @@ use ratatui::crossterm::event::{
     KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
 use ratatui::layout::{Position, Rect};
-use sim_engine::{assemble, Pipeline, Snapshot};
+use crate::machine::{Machine, Snap as Snapshot, StageState};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
+
+const DATA_BASE: u64 = sim_engine::DATA_BASE as u64;
 
 /// Cycles per second, matching the browser simulator's speed slider.
 pub const SPEEDS: &[Speed] = &[
@@ -80,6 +82,7 @@ pub struct Hit {
 }
 
 /// Terminal capabilities, detected once at startup.
+#[derive(Clone, Copy)]
 pub struct Caps {
     pub color: bool,
     pub unicode: bool,
@@ -119,7 +122,7 @@ pub struct FwdAnim {
     /// "exmem" or "memwb"
     pub from: &'static str,
     pub reg: String,
-    pub value: u32,
+    pub value: u64,
     pub started: Instant,
 }
 
@@ -129,7 +132,7 @@ pub struct Anims {
     pub reg_flash: Vec<(u8, Instant)>,
     /// Border pulse when a new instruction enters a stage.
     pub stage_pulse: [Option<Instant>; 5],
-    stage_prev: [Option<u32>; 5],
+    stage_prev: [Option<u64>; 5],
     pub forwards: Vec<FwdAnim>,
 }
 
@@ -137,7 +140,7 @@ impl Anims {
     fn note_snapshot(&mut self, snap: &Snapshot, animate: bool) {
         let now = Instant::now();
         for (i, st) in snap.stages.iter().enumerate().take(5) {
-            let pc = if st.state == sim_engine::pipeline::StageState::Normal {
+            let pc = if st.state == StageState::Normal {
                 st.pc
             } else {
                 None
@@ -235,10 +238,12 @@ pub struct App {
     pub file_path: Option<PathBuf>,
     pub file_name: String,
     pub source: String,
-    pub pipeline: Option<Pipeline>,
+    pub pipeline: Option<Machine>,
     pub snap: Option<Snapshot>,
+    /// Register width: 32, or 64 for `--xlen=64` and RV64 samples.
+    pub xlen: u32,
     /// (addr, text) rows of the assembled program.
-    pub listing: Vec<(u32, String)>,
+    pub listing: Vec<(u64, String)>,
     pub log: Vec<LogEntry>,
     log_seen: u64,
     pub tab: Tab,
@@ -253,7 +258,7 @@ pub struct App {
     pub src_sel: Option<usize>,
     pub status: (String, &'static str), // text, "plain" | "ok" | "err"
     pub reg_hex: bool,
-    pub mem_addr: u32,
+    pub mem_addr: u64,
     /// Manual scroll offset for the source panel; None = follow execution.
     pub src_scroll: Option<u16>,
     pub anims: Anims,
@@ -308,6 +313,7 @@ impl App {
             source,
             pipeline: None,
             snap: None,
+            xlen: 32,
             listing: Vec::new(),
             log: Vec::new(),
             log_seen: 0,
@@ -320,7 +326,7 @@ impl App {
             src_sel: None,
             status: (String::new(), "plain"),
             reg_hex: true,
-            mem_addr: sim_engine::DATA_BASE,
+            mem_addr: DATA_BASE,
             src_scroll: None,
             anims: Anims::default(),
             gate: if trust_key.is_some() {
@@ -380,7 +386,8 @@ impl App {
 
     /// First assemble at launch: logs the invocation like a shell session.
     pub fn boot(&mut self) {
-        self.push_log("cmd", format!("riscvsim tui {}", self.file_name), true);
+        let cmd = self.command_line(&self.file_name);
+        self.push_log("cmd", cmd, true);
         self.assemble(false);
     }
 
@@ -403,15 +410,11 @@ impl App {
         }
         self.push_log("status", format!("Loading {}...", self.file_name), false);
         self.push_log("status", "Assembling program...".into(), false);
-        match assemble(&self.source) {
-            Ok(program) => {
-                self.listing = program
-                    .instrs
-                    .iter()
-                    .map(|i| (i.addr, i.text.clone()))
-                    .collect();
+        match crate::machine::build(&self.source, self.xlen) {
+            Ok(built) => {
+                self.listing = built.listing;
                 let n = self.listing.len();
-                let pipeline = Pipeline::new(program);
+                let pipeline = built.machine;
                 self.log_seen = 0;
                 self.snap = Some(pipeline.snapshot());
                 self.pipeline = Some(pipeline);
@@ -430,7 +433,7 @@ impl App {
                 for err in errors.iter().take(8) {
                     self.push_log(
                         "error",
-                        format!("✗ line {}: {}", err.line, err.message),
+                        format!("✗ line {}: {}", err.0, err.1),
                         false,
                     );
                 }
@@ -440,7 +443,7 @@ impl App {
                     false,
                 );
                 let first = &errors[0];
-                self.set_status(format!("✗ line {}: {}", first.line, first.message), "err");
+                self.set_status(format!("✗ line {}: {}", first.0, first.1), "err");
             }
         }
     }
@@ -470,7 +473,7 @@ impl App {
             }
         } else if snap.cycle > 0 {
             self.set_status(
-                format!("cycle {}, pc 0x{:08x}", snap.cycle, snap.pc),
+                format!("cycle {}, pc {}", snap.cycle, crate::machine::addr(snap.pc)),
                 "plain",
             );
         }
@@ -505,7 +508,7 @@ impl App {
             if self.running && !self.breakpoints.is_empty() {
                 let pc = p.fetch_pc();
                 if pc != before {
-                    if let Some(line) = p.program().instr_at(pc).map(|i| i.line) {
+                    if let Some(line) = p.line_at(pc) {
                         if self.breakpoints.contains(&line) {
                             hit = Some(line);
                             break;
@@ -540,7 +543,7 @@ impl App {
         self.snap.as_ref().and_then(|s| {
             s.stages
                 .iter()
-                .find(|st| st.name == "EX" && st.state == sim_engine::pipeline::StageState::Normal)
+                .find(|st| st.name == "EX" && st.state == StageState::Normal)
                 .and_then(|st| st.line)
         })
     }
@@ -586,7 +589,7 @@ impl App {
             self.refresh_snapshot(false);
             let snap = self.snap.as_ref().unwrap();
             self.set_status(
-                format!("rewound to cycle {}, pc 0x{:08x}", snap.cycle, snap.pc),
+                format!("rewound to cycle {}, pc {}", snap.cycle, crate::machine::addr(snap.pc)),
                 "plain",
             );
         }
@@ -619,6 +622,15 @@ impl App {
         self.next_step_due = None;
     }
 
+    /// How this session would be started from a shell, for the log.
+    fn command_line(&self, file: &str) -> String {
+        if self.xlen == 64 {
+            format!("riscvsim tui --xlen=64 {file}")
+        } else {
+            format!("riscvsim tui {file}")
+        }
+    }
+
     pub fn load_sample(&mut self, idx: usize) {
         let Some(sample) = SAMPLES.get(idx) else {
             return;
@@ -627,7 +639,9 @@ impl App {
         self.file_path = None;
         self.file_name = sample.file.to_string();
         self.source = sample.source.to_string();
-        self.push_log("cmd", format!("riscvsim tui {}", sample.file), true);
+        self.xlen = sample.xlen;
+        let cmd = self.command_line(sample.file);
+        self.push_log("cmd", cmd, true);
         self.assemble(false);
     }
 
@@ -748,6 +762,12 @@ impl App {
                     self.push_log(
                         "error",
                         "nothing to serve: load a program first (/run <file> or /demo)".into(),
+                        true,
+                    );
+                } else if self.xlen == 64 {
+                    self.push_log(
+                        "error",
+                        "the browser simulator runs RV32 programs; this one is RV64, so it stays here".into(),
                         true,
                     );
                 } else {
@@ -1015,7 +1035,7 @@ impl App {
             KeyCode::Char('h') => self.reg_hex = !self.reg_hex,
             KeyCode::Char('g') => {
                 self.tab = Tab::State;
-                self.mem_addr = sim_engine::DATA_BASE;
+                self.mem_addr = DATA_BASE;
             }
             KeyCode::Char('G') => {
                 self.tab = Tab::State;
@@ -1136,7 +1156,7 @@ impl App {
                 self.menu_open = false;
                 self.load_sample(i);
             }
-            Act::MemData => self.mem_addr = sim_engine::DATA_BASE,
+            Act::MemData => self.mem_addr = DATA_BASE,
             Act::MemStack => self.mem_addr = 0x7fff_ff80,
             Act::MemPrev => self.mem_addr = self.mem_addr.saturating_sub(128),
             Act::MemNext => self.mem_addr = self.mem_addr.saturating_add(128),

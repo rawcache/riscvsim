@@ -1,4 +1,4 @@
-//! `riscvsim demo`: a guided tour of the pipeline, one cycle at a time.
+//! `riscvsim demo`: a six-lesson course on the pipeline, one cycle at a time.
 //!
 //! On a terminal it is interactive (Enter for the next cycle, a for
 //! autoplay, b back, r restart, q quit). Piped or on a dumb terminal it
@@ -9,9 +9,9 @@
 
 use crate::explain::{self, Kind};
 use crate::term::{self, visible_width, Paint};
-use crate::tui::samples::{Sample, SAMPLES};
-use sim_engine::pipeline::StageState;
-use sim_engine::{assemble, Pipeline, Snapshot};
+use crate::lessons::{self, LESSONS};
+use crate::tui::samples::Sample;
+use crate::machine::{Snap as Snapshot, StageState};
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
@@ -26,18 +26,30 @@ pub struct Tour {
     pub number: usize,
     pub sample: &'static Sample,
     pub snaps: Vec<Snapshot>,
+    /// Set for the six lessons; extra samples (array-sum) are plain tours.
+    pub lesson: Option<&'static lessons::Lesson>,
 }
 
 impl Tour {
+    /// Lesson `n` (1-based) of the course.
+    pub fn lesson(n: usize) -> Result<Self, String> {
+        let lesson = LESSONS.get(n.wrapping_sub(1)).ok_or_else(|| format!("there is no lesson {n}"))?;
+        let mut tour = Self::new(n, &lesson.sample)?;
+        tour.lesson = Some(lesson);
+        Ok(tour)
+    }
+
+    /// A built-in sample that is not one of the lessons.
     pub fn new(number: usize, sample: &'static Sample) -> Result<Self, String> {
-        let program = assemble(sample.source).map_err(|e| format!("the sample did not assemble: {}", e[0].message))?;
-        let mut pipeline = Pipeline::new(program);
+        let mut pipeline = crate::machine::build(sample.source, sample.xlen)
+            .map_err(|e| format!("the sample did not assemble: {}", e[0].1))?
+            .machine;
         let mut snaps = vec![pipeline.snapshot()];
         while !pipeline.halted() && snaps.len() <= MAX_CYCLES {
             pipeline.step_cycle();
             snaps.push(pipeline.snapshot());
         }
-        Ok(Self { number, sample, snaps })
+        Ok(Self { number, sample, snaps, lesson: None })
     }
 
     pub fn last(&self) -> usize {
@@ -136,16 +148,10 @@ pub fn speed_label(speed: usize) -> String {
 // Rendering pieces shared by both modes
 // ---------------------------------------------------------------------------
 
-/// Instruction text squeezed for a narrow box: `addi x1, x0, 5` -> `addi x1,x0,5`.
+/// Instruction text for a narrow box, shortened on whole tokens (the same
+/// rule the tui uses): `addi x1, x0, 5` -> `addi x1,x0,5` -> `addi x1,x0…`.
 fn squeeze(text: &str, room: usize) -> String {
-    let collapsed: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
-    let fit = if collapsed.chars().count() <= room { collapsed } else { collapsed.replace(", ", ",") };
-    if fit.chars().count() <= room {
-        return fit;
-    }
-    let mut s: String = fit.chars().take(room.saturating_sub(1)).collect();
-    s.push('…');
-    s
+    explain::fit_instr(text, room, true)
 }
 
 fn stage_text(snap: &Snapshot, i: usize, room: usize, p: &Paint) -> (String, StageState) {
@@ -223,18 +229,9 @@ pub fn stage_line(p: &Paint, snap: &Snapshot, width: usize) -> String {
 }
 
 /// Registers that changed between two snapshots: `x1 = 5`.
-pub fn changed_registers(prev: Option<&Snapshot>, snap: &Snapshot) -> Vec<(usize, u32)> {
+pub fn changed_registers(prev: Option<&Snapshot>, snap: &Snapshot) -> Vec<(usize, u64)> {
     let Some(prev) = prev else { return Vec::new() };
     (1..32).filter(|&r| prev.registers[r] != snap.registers[r]).map(|r| (r, snap.registers[r])).collect()
-}
-
-fn reg_value(v: u32) -> String {
-    let s = v as i32;
-    if (-4096..=4096).contains(&s) {
-        format!("{s}")
-    } else {
-        format!("0x{v:08x}")
-    }
 }
 
 fn changed_line(p: &Paint, prev: Option<&Snapshot>, snap: &Snapshot) -> Option<String> {
@@ -244,7 +241,7 @@ fn changed_line(p: &Paint, prev: Option<&Snapshot>, snap: &Snapshot) -> Option<S
     }
     let parts: Vec<String> = changed
         .iter()
-        .map(|(r, v)| format!("{} = {}", p.changed(&format!("x{r}")), p.changed(&reg_value(*v))))
+        .map(|(r, v)| format!("{} = {}", p.changed(&format!("x{r}")), p.changed(&snap.value(*v))))
         .collect();
     Some(format!("    {} {}", p.success(p.sym("✓", "+")), parts.join("  ")))
 }
@@ -272,7 +269,38 @@ fn explain_line(p: &Paint, snap: &Snapshot, width: usize, indent: usize) -> Vec<
 }
 
 fn title(p: &Paint, tour: &Tour) -> String {
-    format!("{} {} {}", p.heading(&format!("demo {}", tour.number)), p.dot(), tour.sample.name)
+    let width = if tour.sample.xlen == 64 { format!(" {} RV64", p.dot()) } else { String::new() };
+    match tour.lesson {
+        Some(_) => format!("{} {} {}{width}", p.heading(&format!("demo {}", tour.number)), p.dot(), tour.sample.name),
+        None => format!("{} {} {}{width}", p.heading(&format!("demo {}", tour.sample.file.trim_end_matches(".s"))), p.dot(), tour.sample.name),
+    }
+}
+
+/// The registers a lesson watches, every cycle: `counter x1 = 7 · sum x2 = 27`.
+fn watch_line(p: &Paint, tour: &Tour, snap: &Snapshot) -> Option<String> {
+    let watch = tour.lesson?.watch;
+    if watch.is_empty() {
+        return None;
+    }
+    let parts: Vec<String> = watch
+        .iter()
+        .map(|(r, what)| format!("{what} x{r} = {}", snap.value(snap.registers[*r as usize])))
+        .collect();
+    Some(format!("    {}", p.gray(&parts.join(&format!(" {} ", p.dot())))))
+}
+
+/// Where to go after this tour.
+fn next_lines(p: &Paint, tour: &Tour) -> Vec<String> {
+    match tour.lesson {
+        Some(_) if tour.number < LESSONS.len() => {
+            vec![format!("  {} {}", p.bold("Next:"), p.status(&lessons::next_line(tour.number)))]
+        }
+        Some(_) => vec![
+            format!("  {} {}", p.ok_mark(), p.success("You finished all six lessons.")),
+            format!("  {} {} {}", p.bold("Next:"), p.status("riscvsim tui"), p.gray("to step through your own program")),
+        ],
+        None => vec![format!("  {} {} {}", p.bold("Next:"), p.status("riscvsim demo --list"), p.gray("for the six lessons"))],
+    }
 }
 
 /// The program with line numbers, a marker on the instruction in EX and
@@ -287,6 +315,9 @@ fn listing(p: &Paint, snap: &Snapshot, source: &str) -> Vec<String> {
         }
     }
     let ex_line = snap.stages.iter().find(|s| s.name == "EX" && s.state == StageState::Normal).and_then(|s| s.line);
+    // Stage tags line up in one column after the longest line (lesson
+    // sources stay within 60 columns, so tags still fit in 78).
+    let col = source.lines().map(|l| l.chars().count()).max().unwrap_or(0).clamp(30, 60);
     source
         .lines()
         .enumerate()
@@ -294,7 +325,7 @@ fn listing(p: &Paint, snap: &Snapshot, source: &str) -> Vec<String> {
             let n = i + 1;
             let marker = if ex_line == Some(n) { p.status(p.chevron()) } else { " ".into() };
             let tags: Vec<&str> = at_line.iter().filter(|(l, _)| *l == n).map(|(_, s)| *s).collect();
-            let body = format!("{:<30}", text);
+            let body = format!("{text:<col$}");
             let body = if text.trim_start().starts_with('#') { p.gray(&body) } else { body };
             let tag = if tags.is_empty() { String::new() } else { p.status(&tags.join(" ")) };
             format!("  {marker} {} {body} {tag}", p.gray(&format!("{n:>2}"))).trim_end().to_string()
@@ -326,8 +357,47 @@ pub fn summary(p: &Paint, tour: &Tour) -> Vec<String> {
             seen.push(text);
         }
     }
+    if let Some(lesson) = tour.lesson {
+        // The registers the lesson is about, read from the final state.
+        // Negative values also show their bits: -1 (0xffff_ffff_ffff_ffff).
+        let parts: Vec<String> = lesson
+            .expect
+            .iter()
+            .map(|(r, _)| {
+                let v = last.registers[*r as usize];
+                let shown = last.value(v);
+                if crate::machine::signed(v, last.xlen) < 0 && !shown.starts_with("0x") {
+                    format!("x{r} = {shown} ({})", crate::run::hex(v, last.xlen))
+                } else {
+                    format!("x{r} = {shown}")
+                }
+            })
+            .collect();
+        // Break between values, never inside one.
+        let sep = format!(" {} ", p.dot());
+        let mut rows: Vec<String> = Vec::new();
+        for part in parts {
+            match rows.last_mut() {
+                Some(row) if row.chars().count() + sep.chars().count() + part.chars().count() <= 60 => {
+                    row.push_str(&sep);
+                    row.push_str(&part);
+                }
+                _ => rows.push(part),
+            }
+        }
+        for (j, l) in rows.into_iter().enumerate() {
+            let lead = if j == 0 { "Ends with" } else { "         " };
+            lines.push(format!("    {} {}", p.gray(lead), p.changed(&l)));
+        }
+    }
     if seen.is_empty() {
-        lines.push(format!("    {}", p.gray("No stalls: forwarding kept every instruction moving.")));
+        let forwarded = tour.snaps.iter().any(|s| !s.view.forwards.is_empty());
+        let why = if forwarded {
+            "No stalls: forwarding kept every instruction moving."
+        } else {
+            "No stalls: every instruction moved one stage each cycle."
+        };
+        lines.push(format!("    {}", p.gray(why)));
     }
     for (i, text) in seen.iter().enumerate() {
         let lead = if i == 0 { "Why it slowed down:" } else { "" };
@@ -338,16 +408,40 @@ pub fn summary(p: &Paint, tour: &Tour) -> Vec<String> {
             lines.push(format!("    {} {l}", if j == 0 { p.sym("•", "-") } else { " " }));
         }
     }
-    let next = tour.number % SAMPLES.len() + 1;
     lines.push(String::new());
-    lines.push(format!(
-        "  {} {}, {}, {}",
-        p.bold("Next:"),
-        p.status(&format!("riscvsim demo {next}")),
-        p.status("riscvsim tui"),
-        p.status("riscvsim serve")
-    ));
+    lines.extend(next_lines(p, tour));
     lines
+}
+
+// ---------------------------------------------------------------------------
+// The course menu: `riscvsim demo --list`
+// ---------------------------------------------------------------------------
+
+/// The numbered lessons: title and name on one line, the promise below.
+pub fn menu(p: &Paint, width: usize) -> Vec<String> {
+    let width = width.clamp(40, 78);
+    let mut out = vec![
+        String::new(),
+        format!("{} {} {}", p.heading("demo"), p.dot(), "a short course on the pipeline, in six lessons"),
+        String::new(),
+    ];
+    for (i, lesson) in LESSONS.iter().enumerate() {
+        let title = if lesson.sample.xlen == 64 { format!("{} (RV64)", lesson.title()) } else { lesson.title().to_string() };
+        let used = 7 + title.chars().count() + lesson.slug.len();
+        let gap = width.saturating_sub(used).max(2);
+        out.push(format!("  {}  {}{}{}", p.status(&format!("{:>2}", i + 1)), p.bold(&title), " ".repeat(gap), p.gray(lesson.slug)));
+        for line in term::wrap(lesson.promise, width.saturating_sub(6)) {
+            out.push(format!("      {}", p.gray(&line)));
+        }
+    }
+    out.push(String::new());
+    out.push(format!(
+        "  {} {} {}",
+        p.bold("Start:"),
+        p.status("riscvsim demo 1"),
+        p.gray("(or by name: riscvsim demo loops)")
+    ));
+    out
 }
 
 // ---------------------------------------------------------------------------
@@ -355,7 +449,11 @@ pub fn summary(p: &Paint, tour: &Tour) -> Vec<String> {
 // ---------------------------------------------------------------------------
 
 pub fn walkthrough(p: &Paint, tour: &Tour, width: usize) -> Vec<String> {
-    let mut out = vec![String::new(), title(p, tour), String::new()];
+    let mut out = vec![String::new(), title(p, tour)];
+    if let Some(lesson) = tour.lesson {
+        out.push(format!("  {}", p.gray(lesson.promise)));
+    }
+    out.push(String::new());
     for (i, line) in tour.sample.source.lines().enumerate() {
         let body = format!("{:>2}  {line}", i + 1);
         out.push(format!("  {}", if line.trim_start().starts_with('#') { p.gray(&body) } else { body }).trim_end().to_string());
@@ -367,6 +465,7 @@ pub fn walkthrough(p: &Paint, tour: &Tour, width: usize) -> Vec<String> {
         if let Some(l) = changed_line(p, tour.snaps.get(i - 1), snap) {
             out.push(l);
         }
+        out.extend(watch_line(p, tour, snap));
         out.extend(explain_line(p, snap, width, 4));
     }
     out.push(String::new());
@@ -391,6 +490,7 @@ pub fn frame(p: &Paint, tour: &Tour, state: &State, width: usize, rows: usize) -
     let mut bottom = vec![String::new()];
     bottom.extend(stage_boxes(p, snap, width));
     bottom.push(changed_line(p, state.at.checked_sub(1).and_then(|i| tour.snaps.get(i)), snap).unwrap_or_default());
+    bottom.extend(watch_line(p, tour, snap));
     bottom.push(String::new());
     bottom.extend(explain_line(p, snap, width, 2));
     bottom.push(String::new());
@@ -401,7 +501,7 @@ pub fn frame(p: &Paint, tour: &Tour, state: &State, width: usize, rows: usize) -
             bottom.extend(summary);
         } else {
             bottom.push(summary[0].clone());
-            bottom.push(summary.last().cloned().unwrap_or_default());
+            bottom.extend(next_lines(p, tour));
         }
         bottom.push(String::new());
         bottom.push(format!("  {}   {}   {}", p.key("r", "restart"), p.key("b", "back"), p.key("q", "quit")));
@@ -505,8 +605,8 @@ pub fn interactive_terminal() -> bool {
         && !std::env::var("TERM").is_ok_and(|t| t == "dumb")
 }
 
-pub fn run(number: usize, sample: &'static Sample) -> ExitCode {
-    let tour = match Tour::new(number, sample) {
+pub fn run(tour: Result<Tour, String>) -> ExitCode {
+    let tour = match tour {
         Ok(t) => t,
         Err(message) => {
             let e = Paint::stderr();
@@ -534,12 +634,14 @@ pub fn run(number: usize, sample: &'static Sample) -> ExitCode {
             } else {
                 println!("  {} stopped at cycle {} of {}", p.gray(p.chevron()), state.at, state.last);
                 println!();
-                println!(
-                    "  {} {}, {}",
-                    p.bold("Next:"),
-                    p.status(&format!("riscvsim demo {number}")),
-                    p.status("riscvsim tui")
-                );
+                let again = match tour.lesson {
+                    Some(_) => format!("riscvsim demo {}", tour.number),
+                    None => format!("riscvsim demo {}", tour.sample.file.trim_end_matches(".s")),
+                };
+                println!("  {} {}", p.bold("Again:"), p.status(&again));
+                for line in next_lines(&p, &tour) {
+                    println!("{line}");
+                }
             }
             ExitCode::SUCCESS
         }
@@ -557,7 +659,7 @@ mod tests {
     use super::*;
 
     fn tour(n: usize) -> Tour {
-        Tour::new(n, &SAMPLES[n - 1]).unwrap()
+        Tour::lesson(n).unwrap()
     }
 
     #[test]
@@ -591,59 +693,55 @@ mod tests {
         assert!(!State::new(5).press(Key::Autoplay).press(Key::Next).autoplay);
     }
 
+    /// Every lesson's static (piped) output, plain and in color.
     #[test]
-    fn static_walkthrough_snapshot_plain() {
-        let p = Paint::fixed(false, true);
-        let text = walkthrough(&p, &tour(1), 80).join("\n");
-        let expected = "
-  riscvsim › demo 1 · Add + forwarding
+    fn lesson_walkthrough_snapshots() {
+        for n in 1..=LESSONS.len() {
+            let t = tour(n);
+            let plain = walkthrough(&Paint::fixed(false, true), &t, 80).join("\n");
+            for line in plain.lines() {
+                assert!(line.chars().count() <= 78, "lesson {n}: {line}");
+            }
+            assert!(plain.contains(LESSONS[n - 1].promise), "lesson {n} shows its promise");
+            if n < LESSONS.len() {
+                let next = format!("Next: riscvsim demo {} ({})", n + 1, LESSONS[n].title());
+                assert!(plain.trim_end().ends_with(&next), "lesson {n} ends with {next}:\n{plain}");
+            } else {
+                assert!(plain.contains("You finished all six lessons."), "{plain}");
+            }
+            crate::snapshots::check(&format!("demo.lesson{n}.nocolor.80"), &plain);
+            let color = walkthrough(&Paint::fixed(true, true), &t, 80).join("\n");
+            crate::snapshots::check(&format!("demo.lesson{n}.color.80"), &crate::snapshots::mark_ansi(&color));
+        }
+    }
 
-   1  # each add uses the previous result (watch the forwarded values travel)
-   2  addi x1, x0, 5
-   3  addi x2, x1, 3
-   4  add  x3, x2, x1
+    #[test]
+    fn loops_lesson_keeps_the_counter_in_view() {
+        let plain = walkthrough(&Paint::fixed(false, true), &tour(5), 80).join("\n");
+        let watched = plain.lines().filter(|l| l.trim_start().starts_with("counter x1 = ")).count();
+        assert_eq!(watched, tour(5).last(), "every cycle shows the counter");
+        assert!(plain.contains("counter x1 = 7 · sum x2 = 27"), "{plain}");
+        assert!(plain.contains("Ends with x1 = 0 · x2 = 55"), "{plain}");
+    }
 
-  cycle 1
-    IF addi x1, x0, 5  ID ·  EX ·  MEM ·  WB ·
-    › The first instruction, addi, is fetched from memory.
-
-  cycle 2
-    IF addi x2, x1, 3  ID addi x1, x0, 5  EX ·  MEM ·  WB ·
-    › addi is decoded and reads its source registers.
-
-  cycle 3
-    IF add x3, x2, x1  ID addi x2, x1, 3  EX addi x1, x0, 5  MEM ·  WB ·
-    › addi is computing in the ALU; everything else moves one stage on.
-
-  cycle 4
-    IF ·  ID add x3, x2, x1  EX addi x2, x1, 3  MEM addi x1, x0, 5  WB ·
-    › addi needs x1 from addi, so it is forwarded from the EX/MEM latch and
-      nobody waits.
-
-  cycle 5
-    IF ·  ID ·  EX add x3, x2, x1  MEM addi x2, x1, 3  WB addi x1, x0, 5
-    ✓ x1 = 5
-    › add needs x2 and x1 from addi, so it is forwarded from the EX/MEM latch
-      and nobody waits.
-
-  cycle 6
-    IF ·  ID ·  EX ·  MEM add x3, x2, x1  WB addi x2, x1, 3
-    ✓ x2 = 8
-    › addi finishes and writes x2 = 8.
-
-  cycle 7
-    IF ·  ID ·  EX ·  MEM ·  WB add x3, x2, x1
-    ✓ x3 = 13
-    ✓ add writes x3 = 13, and the program is finished.
-
-  ✓ 7 cycles · 3 instructions · CPI 2.33 · 0 stalls · 0 mispredictions
-    No stalls: forwarding kept every instruction moving.
-
-  Next: riscvsim demo 2, riscvsim tui, riscvsim serve";
-        assert_eq!(text, expected);
-        for line in text.lines() {
+    #[test]
+    fn menu_snapshots() {
+        let plain = menu(&Paint::fixed(false, true), 80).join("\n");
+        for (i, l) in LESSONS.iter().enumerate() {
+            assert!(plain.contains(&format!("{:>2}  {}", i + 1, l.title())), "{plain}");
+            assert!(plain.contains(l.promise) && plain.contains(l.slug));
+        }
+        for line in plain.lines() {
             assert!(line.chars().count() <= 78, "{line}");
         }
+        crate::snapshots::check("demo.menu.nocolor.80", &plain);
+        crate::snapshots::check("demo.menu.nocolor.120", &menu(&Paint::fixed(false, true), 120).join("\n"));
+        crate::snapshots::check("demo.menu.nocolor.60", &menu(&Paint::fixed(false, true), 60).join("\n"));
+        let ascii = menu(&Paint::fixed(false, false), 80).join("\n");
+        assert!(ascii.is_ascii(), "{ascii}");
+        crate::snapshots::check("demo.menu.ascii.80", &ascii);
+        let color = menu(&Paint::fixed(true, true), 80).join("\n");
+        crate::snapshots::check("demo.menu.color.80", &crate::snapshots::mark_ansi(&color));
     }
 
     #[test]
@@ -657,7 +755,7 @@ mod tests {
         for line in color.lines() {
             assert!(visible_width(line) <= 78, "{line}");
         }
-        let flush = walkthrough(&Paint::fixed(false, true), &tour(3), 80).join("\n");
+        let flush = walkthrough(&Paint::fixed(false, true), &tour(4), 80).join("\n");
         assert!(flush.contains("✗ The branch was wrong"), "{flush}");
         assert!(flush.contains("Why it slowed down:"));
     }
@@ -666,8 +764,9 @@ mod tests {
     fn interactive_frames_fit_80x24_and_120x40() {
         let p = Paint::fixed(false, true);
         for (w, h) in [(80, 24), (120, 40)] {
-            for n in 1..=SAMPLES.len() {
-                let t = tour(n);
+            for n in 1..=LESSONS.len() + 1 {
+                // the six lessons, then array-sum (a sample that is not one)
+                let t = if n <= LESSONS.len() { tour(n) } else { Tour::new(4, &crate::tui::samples::SAMPLES[3]).unwrap() };
                 let mut s = State::new(t.last());
                 loop {
                     let lines = frame(&p, &t, &s, w, h);
@@ -688,31 +787,12 @@ mod tests {
     fn interactive_frame_snapshot() {
         let p = Paint::fixed(false, true);
         let t = tour(2);
+        let stall = t.snaps.iter().position(|s| s.view.stall.is_some()).expect("lesson 2 stalls");
         let s = State::new(t.last());
-        let s = (0..6).fold(s, |s, _| s.press(Key::Next));
+        let s = (0..stall).fold(s, |s, _| s.press(Key::Next));
         let text = frame(&p, &t, &s, 80, 24).join("\n");
-        let expected = "
-  riscvsim › demo 2 · Load-use stall                             cycle 6 of 10
-
-     1 # the add needs x1 one cycle before the load can deliver it (one stall)
-     2 .data
-     3 value:  .word 41
-     4
-     5 .text
-     6 addi x4, x0, 1
-     7 la   x2, value                 MEM WB
-  ›  8 lw   x1, 0(x2)                 EX
-     9 add  x3, x1, x4                ID
-
-  ┌─ IF ────────┐┌─ ID ────────┐┌─ EX ────────┐┌─ MEM ───────┐┌─ WB ────────┐
-  │ ·           ││ add x3,x1,… ││ lw x1,0(x2) ││ addi sp,sp… ││ lui sp,0x1… │
-  └─────────────┘└─────────────┘└─────────────┘└─────────────┘└─────────────┘
-    ✓ x2 = 0x10000000
-
-  ! lw is reading memory. add must wait one cycle because it needs x1 from lw.
-
-  Enter next   a autoplay   +/- speed 2/s   b back   r restart   q quit";
-        assert_eq!(text, expected);
+        crate::snapshots::check("demo.frame.lesson2.stall.80x24", &text);
+        assert!(text.contains("! lw is reading memory. add must wait one cycle because it needs x1 from lw."), "{text}");
         assert!(text.lines().count() <= 24);
     }
 
@@ -729,5 +809,16 @@ mod tests {
                 "unexpected SGR {sgr}"
             );
         }
+    }
+
+    #[test]
+    fn rv64_walkthrough_snapshots() {
+        let t = tour(6);
+        let plain = walkthrough(&Paint::fixed(false, true), &t, 80).join("\n");
+        assert!(plain.contains("x2 = 0x0000_0100_0000_0005"), "{plain}");
+        assert!(plain.contains("x4 = -1"), "{plain}");
+        assert!(plain.contains("addw"), "{plain}");
+        // (the full text is the demo.lesson6 snapshot)
+        assert!(plain.contains("x4 = -1 (0xffff_ffff_ffff_ffff)"), "{plain}");
     }
 }

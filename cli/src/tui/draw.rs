@@ -12,7 +12,7 @@ use ratatui::symbols::border;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph, Wrap};
 use ratatui::Frame;
-use sim_engine::pipeline::StageState;
+use crate::machine::{self, StageState};
 use std::time::Instant;
 
 const ABI_NAMES: [&str; 32] = [
@@ -150,11 +150,11 @@ fn draw_frame(f: &mut Frame, app: &mut App) {
     };
     let area = f.area();
 
-    if area.width < 72 || area.height < 20 {
+    if area.width < MIN_WIDTH || area.height < 20 {
         let msg = Paragraph::new(vec![
             Line::from(""),
             Line::from(Span::styled("riscvsim needs a bigger window", Style::new().add_modifier(Modifier::BOLD))),
-            Line::from(format!("now {}x{}, needs at least 72x20", area.width, area.height)),
+            Line::from(format!("now {}x{}, needs at least {MIN_WIDTH}x20", area.width, area.height)),
             Line::from(""),
             Line::from(Span::styled("make the window larger, or press q to quit", th.dim())),
         ])
@@ -186,13 +186,19 @@ fn draw_frame(f: &mut Frame, app: &mut App) {
     ])
     .areas(area);
 
-    let [src, right] =
-        Layout::horizontal([Constraint::Percentage(38), Constraint::Percentage(62)]).areas(body);
-    app.rect_source = src;
-
+    // Below 80 columns the source pane folds away and the pipeline gets the
+    // whole width (each stage row still names the instruction).
     draw_header(f, app, &th, header);
-    draw_source(f, app, &th, src);
-    draw_right(f, app, &th, right);
+    if area.width >= SOURCE_PANE_MIN {
+        let [src, right] =
+            Layout::horizontal([Constraint::Percentage(38), Constraint::Percentage(62)]).areas(body);
+        app.rect_source = src;
+        draw_source(f, app, &th, src);
+        draw_right(f, app, &th, right);
+    } else {
+        app.rect_source = body;
+        draw_right(f, app, &th, body);
+    }
     app.rect_terminal = term;
     draw_terminal(f, app, &th, term);
     draw_controls(f, app, &th, controls);
@@ -334,7 +340,7 @@ fn draw_welcome(f: &mut Frame, app: &App, th: &Th) {
     }
     left.push(Line::from(""));
     left.push(Line::styled(
-        format!("{version} | RV32IM 5-stage pipeline"),
+        format!("{version} | {} 5-stage pipeline", if app.xlen == 64 { "RV64IM" } else { "RV32IM" }),
         th.dim(),
     ));
     left.push(Line::styled(format!("file: {}", app.file_name), th.dim()));
@@ -376,9 +382,18 @@ fn draw_welcome(f: &mut Frame, app: &App, th: &Th) {
         }
     }
 
-    let left_w = 36u16;
+    // Narrow windows: one column, the words first and no logo.
+    let narrow = area.width < 72;
+    if narrow {
+        let details: Vec<Line> = left.split_off(left.len() - 3);
+        left.truncate(2);
+        left.append(&mut right);
+        left.push(Line::from(""));
+        left.extend(details);
+    }
+    let left_w = if narrow { area.width.saturating_sub(4) } else { 36u16 };
     let right_w = 40u16;
-    let box_w = (left_w + right_w + 3).min(area.width.saturating_sub(2));
+    let box_w = if narrow { area.width.saturating_sub(2) } else { (left_w + right_w + 3).min(area.width.saturating_sub(2)) };
     let rows = left.len().max(right.len()) as u16;
     let box_h = rows + 2;
     let bx = (area.width.saturating_sub(box_w)) / 2;
@@ -401,6 +416,25 @@ fn draw_welcome(f: &mut Frame, app: &App, th: &Th) {
         Constraint::Min(10),
     ])
     .areas(inner);
+    if narrow {
+        f.render_widget(Paragraph::new(left), inner);
+    } else {
+        draw_welcome_columns(f, th, area, left, divider, left_area, right, right_area);
+    }
+    draw_welcome_prompt(f, app, th, area, rect, release);
+}
+
+#[allow(clippy::too_many_arguments)]
+fn draw_welcome_columns(
+    f: &mut Frame,
+    th: &Th,
+    area: Rect,
+    left: Vec<Line<'static>>,
+    divider: Rect,
+    left_area: Rect,
+    right: Vec<Line<'static>>,
+    right_area: Rect,
+) {
     f.render_widget(Paragraph::new(left), left_area);
     let buf = f.buffer_mut();
     for y in divider.y..divider.bottom() {
@@ -411,7 +445,16 @@ fn draw_welcome(f: &mut Frame, app: &App, th: &Th) {
         }
     }
     f.render_widget(Paragraph::new(right), right_area);
+}
 
+fn draw_welcome_prompt(
+    f: &mut Frame,
+    app: &App,
+    th: &Th,
+    area: Rect,
+    rect: Rect,
+    release: Option<crate::update::ReleaseStatus>,
+) {
     let prompt_y = rect.bottom().min(area.bottom().saturating_sub(2));
     let mut prompt = vec![Span::styled("> ", th.accent().add_modifier(Modifier::BOLD))];
     if app.command_input.is_empty() {
@@ -454,17 +497,26 @@ fn draw_header(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
         Span::styled(" riscvsim ", Style::new().add_modifier(Modifier::BOLD)),
         Span::styled(concat!("v", env!("CARGO_PKG_VERSION")), th.dim()),
     ];
-    if let Some(snap) = &app.snap {
-        left.push(Span::styled(
-            format!(
-                "  ·  {}  ·  cycle {}  ·  pc 0x{:08x}",
-                app.file_name, snap.cycle, snap.pc
-            ),
-            th.dim(),
-        ));
-    } else {
-        left.push(Span::styled(format!("  ·  {}", app.file_name), th.dim()));
+    // file · [RV64 ·] cycle · pc, keeping whole items that fit before the ✕.
+    let mut items = vec![app.file_name.clone()];
+    if app.xlen == 64 {
+        items.push("RV64".into());
     }
+    if let Some(snap) = &app.snap {
+        items.push(format!("cycle {}", snap.cycle));
+        items.push(format!("pc {}", machine::addr(snap.pc)));
+    }
+    let used: usize = left.iter().map(|s| s.content.chars().count()).sum();
+    let room = (area.width as usize).saturating_sub(used + 4);
+    let mut tail = String::new();
+    for item in items {
+        let next = format!("{tail}  ·  {item}");
+        if next.chars().count() > room {
+            break;
+        }
+        tail = next;
+    }
+    left.push(Span::styled(tail, th.dim()));
     f.render_widget(Paragraph::new(Line::from(left)), area);
 
     // clickable ✕ in the corner
@@ -744,7 +796,26 @@ fn draw_right(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
 // Pipeline tab
 // ---------------------------------------------------------------------------
 
+/// The narrowest terminal the simulator draws in.
+pub const MIN_WIDTH: u16 = 60;
+/// From this width the source pane sits beside the pipeline.
+const SOURCE_PANE_MIN: u16 = 80;
+/// From this width the stages are five boxes side by side; below it, one
+/// row per stage so every instruction stays readable.
+const STAGE_BOXES_MIN: u16 = 120;
+/// From this width the stage rows also spell out the stage name.
+const STAGE_WORDS_MIN: u16 = 100;
+
+/// One stage's instruction text, shortened on whole tokens.
+fn stage_fit(th: &Th, text: &str, room: usize) -> String {
+    crate::explain::fit_instr(text, room, th.unicode)
+}
+
 fn draw_pipeline_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
+    if f.area().width < STAGE_BOXES_MIN {
+        draw_pipeline_rows(f, app, th, area);
+        return;
+    }
     let [boxes_row, lanes, chips, stats_row] = Layout::vertical([
         Constraint::Length(5),
         Constraint::Length(3),
@@ -803,7 +874,7 @@ fn draw_pipeline_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
         match state {
             StageState::Empty => lines.push(Line::styled("—", th.dim())),
             StageState::Stall => {
-                lines.push(Line::styled("bubble", th.warn()));
+                lines.push(Line::styled(trunc(&bubble(th), w), th.dim()));
                 lines.push(Line::styled(
                     "stall",
                     th.warn().add_modifier(Modifier::BOLD),
@@ -813,7 +884,7 @@ fn draw_pipeline_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
                 let text = stage
                     .and_then(|s| s.text.clone())
                     .unwrap_or_else(|| "bubble".into());
-                lines.push(Line::styled(trunc(&text, w), th.err()));
+                lines.push(Line::styled(stage_fit(th, &text, w), th.err()));
                 lines.push(Line::styled(
                     format!("{} flushed", th.sym("✗", "x")),
                     th.err().add_modifier(Modifier::BOLD),
@@ -821,14 +892,20 @@ fn draw_pipeline_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
             }
             StageState::Normal => {
                 let text = stage.and_then(|s| s.text.clone()).unwrap_or_default();
-                lines.push(Line::styled(trunc(&text, w), Style::new()));
+                lines.push(Line::styled(stage_fit(th, &text, w), Style::new()));
                 if let Some(detail) = stage.and_then(|s| s.detail.clone()) {
+                    let detail = match waits_for(&detail) {
+                        Some(d) if d.chars().count() + 2 <= w => format!("! {d}"),
+                        Some(d) => format!("! wait {}", d.trim_start_matches("waits for ")),
+                        None => detail,
+                    };
                     lines.push(Line::styled(trunc(&detail, w), th.warn()));
                 } else {
                     lines.push(Line::from(""));
                 }
-                if let Some(pc) = stage.and_then(|s| s.pc) {
-                    lines.push(Line::styled(trunc(&format!("0x{pc:08x}"), w), th.dim()));
+                // The address only when it fits whole.
+                if let Some(pc) = stage.and_then(|s| s.pc).map(machine::addr).filter(|a| a.chars().count() <= w) {
+                    lines.push(Line::styled(pc, th.dim()));
                 }
             }
         }
@@ -836,6 +913,117 @@ fn draw_pipeline_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
     }
 
     draw_forward_lanes(f, app, th, lanes, centers, now);
+    draw_hazard_chips(f, app, th, chips);
+    draw_stats(f, app, th, stats_row);
+}
+
+fn bubble(th: &Th) -> String {
+    format!("{} bubble", th.sym("◌", "o"))
+}
+
+/// What a load-use stall is waiting for, from the engine's reason:
+/// "load-use hazard: waiting for x1 from 'lw ...'" -> "waits for x1".
+fn waits_for(reason: &str) -> Option<String> {
+    let reg = reason.split("waiting for ").nth(1)?.split_whitespace().next()?;
+    Some(format!("waits for {reg}"))
+}
+
+/// Compact layout (below 100 columns): one row per stage.
+///
+/// ```text
+///  IF   add x3, x2, x1
+///  ID   ◌ bubble
+///  EX   addi x2, x1, 3          ◂ x1=5 from EX/MEM
+/// ```
+fn draw_pipeline_rows(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
+    let [rows, _gap, chips, stats_row] = Layout::vertical([
+        Constraint::Length(5),
+        Constraint::Length(1),
+        Constraint::Min(2),
+        Constraint::Length(1),
+    ])
+    .areas(area);
+    let now = Instant::now();
+    let snap = app.snap.as_ref();
+    let width = rows.width as usize;
+    let words = f.area().width >= STAGE_WORDS_MIN;
+    let label_w = if words { 15 } else { 5 }; // " MEM Memory     " or " MEM "
+    let mut lines: Vec<Line> = Vec::new();
+    for (i, &(code, word)) in STAGE_LABELS.iter().enumerate() {
+        let stage = snap.and_then(|s| s.stages.get(i));
+        let state = stage.map(|s| s.state.clone()).unwrap_or(StageState::Empty);
+        let pulsing = app.anims.stage_pulse[i]
+            .map(|t| now.duration_since(t).as_millis() < STAGE_PULSE_MS as u128)
+            .unwrap_or(false);
+        let label_style = if pulsing {
+            th.accent().add_modifier(Modifier::BOLD)
+        } else {
+            match state {
+                StageState::Stall => th.warn().add_modifier(Modifier::BOLD),
+                StageState::Flush => th.err().add_modifier(Modifier::BOLD),
+                StageState::Empty => th.dim(),
+                StageState::Normal => Style::new().add_modifier(Modifier::BOLD),
+            }
+        };
+        let room = width.saturating_sub(label_w + 1);
+        // (text, style) and right-hand notes, most useful first. A note
+        // that explains the cycle shows while the text keeps at least 10
+        // columns; the address only when the text still reads in full.
+        let (text, style, notes): (String, Style, Vec<(String, Style)>) = match state {
+            StageState::Empty => ("—".into(), th.dim(), vec![]),
+            StageState::Stall => (bubble(th), th.dim(), vec![("stall".into(), th.warn())]),
+            StageState::Flush => {
+                let t = stage.and_then(|s| s.text.clone()).unwrap_or_else(|| "bubble".into());
+                (t, th.err(), vec![(format!("{} flushed", th.sym("✗", "x")), th.err())])
+            }
+            StageState::Normal => {
+                let t = stage.and_then(|s| s.text.clone()).unwrap_or_default();
+                let mut notes = Vec::new();
+                if let Some(fw) = (code == "EX").then(|| snap.and_then(|s| s.view.forwards.first())).flatten() {
+                    let from = if fw.from == "exmem" { "EX/MEM" } else { "MEM/WB" };
+                    let arrow = th.sym("◂", "<");
+                    let v = machine::short_value(fw.value, app.xlen);
+                    notes.push((format!("{arrow} {}={v} from {from}", fw.reg), th.accent()));
+                    notes.push((format!("{arrow} {} from {from}", fw.reg), th.accent()));
+                }
+                if let Some(w) = stage.and_then(|s| s.detail.as_deref()).and_then(waits_for) {
+                    notes.push((format!("! {w}"), th.warn()));
+                }
+                if let Some(pc) = stage.and_then(|s| s.pc) {
+                    notes.push((machine::addr(pc), th.dim()));
+                }
+                (t, Style::new(), notes)
+            }
+        };
+        let full = stage_fit(th, &text, usize::MAX);
+        let mut spans = vec![Span::styled(format!(" {code:<4}"), label_style)];
+        if words {
+            spans.push(Span::styled(format!("{word:<10}"), th.dim()));
+        }
+        // First choice: a note beside the full text; second: an explaining
+        // note beside text that keeps at least 10 columns.
+        let pick = notes
+            .iter()
+            .find(|(n, _)| stage_fit(th, &text, room.saturating_sub(n.chars().count() + 2)) == full)
+            .or_else(|| notes.iter().find(|(n, ns)| *ns != th.dim() && room.saturating_sub(n.chars().count() + 2) >= 10));
+        let mut shown = false;
+        if let Some((n, ns)) = pick {
+            let avail = room.saturating_sub(n.chars().count() + 2);
+            let fitted = stage_fit(th, &text, avail);
+            {
+                let pad = avail.saturating_sub(fitted.chars().count());
+                spans.push(Span::styled(fitted, style));
+                spans.push(Span::raw(" ".repeat(pad + 2)));
+                spans.push(Span::styled(n.clone(), *ns));
+                shown = true;
+            }
+        }
+        if !shown {
+            spans.push(Span::styled(stage_fit(th, &text, room), style));
+        }
+        lines.push(Line::from(spans));
+    }
+    f.render_widget(Paragraph::new(lines), rows);
     draw_hazard_chips(f, app, th, chips);
     draw_stats(f, app, th, stats_row);
 }
@@ -893,7 +1081,7 @@ fn draw_forward_lanes(
         if elapsed < FWD_TRAVEL_MS {
             // chip slides right → left along the lane
             let p = elapsed as f32 / FWD_TRAVEL_MS as f32;
-            let chip = format!("[{}={}]", fwd.reg, fwd.value as i32);
+            let chip = format!("[{}={}]", fwd.reg, machine::signed(fwd.value, app.xlen));
             let span = src as f32 - dst as f32;
             let cx = src as f32 - p * span;
             let start = (cx as i32 - chip.chars().count() as i32 / 2).max(dst as i32 + 1) as u16;
@@ -929,8 +1117,9 @@ fn draw_hazard_chips(f: &mut Frame, app: &App, th: &Th, area: Rect) {
         crate::explain::Kind::Done => (th.sym("✓", "+"), th.ok()),
         _ => (th.sym("›", ">"), th.info()),
     };
+    // At most two lines, ending on a whole word.
     let room = (area.width as usize).saturating_sub(2).max(20);
-    for (i, part) in wrap_text(&why, room).into_iter().enumerate() {
+    for (i, part) in crate::term::wrap_at_most(&why, room, 2, th.unicode).into_iter().enumerate() {
         let lead = if i == 0 { format!("{mark} ") } else { "  ".to_string() };
         lines.push(Line::from(vec![Span::styled(lead, style.add_modifier(Modifier::BOLD)), Span::raw(part)]));
     }
@@ -1032,8 +1221,13 @@ fn draw_stats(f: &mut Frame, app: &App, th: &Th, area: Rect) {
         format!("flushed {}", s.flushes),
         format!("mispredict {}", s.mispredictions),
     ];
+    // Whole items only: drop from the right until the row fits.
+    let mut keep = parts.len();
+    while keep > 1 && parts[..keep].join(sep).chars().count() > area.width as usize {
+        keep -= 1;
+    }
     f.render_widget(
-        Paragraph::new(Line::styled(parts.join(sep), th.dim())),
+        Paragraph::new(Line::styled(parts[..keep].join(sep), th.dim())),
         area,
     );
 }
@@ -1042,9 +1236,50 @@ fn draw_stats(f: &mut Frame, app: &App, th: &Th, area: Rect) {
 // Registers + memory tab
 // ---------------------------------------------------------------------------
 
+/// How the RV64 register grid fits a width: (columns, value width).
+/// A cell is `name value` plus a two-space gap.
+fn wide_reg_grid(inner_width: usize, values: &[String]) -> (usize, usize) {
+    let vw = values.iter().map(|v| v.chars().count()).max().unwrap_or(1);
+    let cell = 5 + vw + 2;
+    (((inner_width + 2) / cell).clamp(1, 4), vw)
+}
+
 fn draw_state_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
+    let regs: Vec<u64> = app
+        .snap
+        .as_ref()
+        .map(|s| s.registers.clone())
+        .unwrap_or_else(|| vec![0; 32]);
+    let xlen = app.xlen;
+    let reg_text = |v: u64| -> String {
+        if app.reg_hex {
+            crate::run::hex(v, xlen)
+        } else {
+            machine::signed(v, xlen).to_string()
+        }
+    };
+    let wide_values: Vec<String> = regs.iter().map(|&v| reg_text(v)).collect();
+    // RV32: the classic 4 x 8 grid. RV64: as many columns as fit, and as
+    // many rows as needed, leaving the memory view at least 4 rows.
+    let (wide_cols, wide_vw) = wide_reg_grid(area.width.saturating_sub(2) as usize, &wide_values);
+    // When all 32 do not fit, RV64 shows the non-zero registers (and any
+    // just written) and says so in the title; they get priority over the
+    // memory view's height.
+    let nonzero: Vec<usize> = (0..32)
+        .filter(|&i| regs[i] != 0 || app.anims.reg_flash.iter().any(|(r, _)| *r as usize == i))
+        .collect();
+    let all_rows = 32usize.div_ceil(wide_cols) as u16;
+    let wide_fits = xlen == 64 && all_rows + 2 <= area.height.saturating_sub(4);
+    let regs_height = if xlen != 64 {
+        10
+    } else if wide_fits {
+        all_rows + 2
+    } else {
+        let need = nonzero.len().div_ceil(wide_cols).max(1) as u16 + 2;
+        need.max(area.height.saturating_sub(4)).min(area.height.saturating_sub(3)).max(3)
+    };
     let [regs_area, mem_area] =
-        Layout::vertical([Constraint::Length(10), Constraint::Min(4)]).areas(area);
+        Layout::vertical([Constraint::Length(regs_height), Constraint::Min(if xlen == 64 { 3 } else { 4 })]).areas(area);
 
     // -- registers ------------------------------------------------------
     let fmt_label = if app.reg_hex { "[hex]" } else { "[dec]" };
@@ -1062,6 +1297,7 @@ fn draw_state_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
             Span::styled(" registers ", Style::new().add_modifier(Modifier::BOLD)),
             Span::styled(fmt_label, fmt_style),
             Span::raw(" "),
+            Span::styled(if xlen == 64 && !wide_fits { "· non-zero " } else { "" }, th.dim()),
         ]));
     let inner = block.inner(regs_area);
     f.render_widget(block, regs_area);
@@ -1071,11 +1307,6 @@ fn draw_state_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
         act: Act::RegFmt,
     });
 
-    let regs: Vec<u32> = app
-        .snap
-        .as_ref()
-        .map(|s| s.registers.clone())
-        .unwrap_or_else(|| vec![0; 32]);
     let now = Instant::now();
     let flash_style = |reg: u8| -> Option<Style> {
         app.anims
@@ -1098,16 +1329,43 @@ fn draw_state_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
     };
     let cell_w = (inner.width as usize / 4).max(16);
     let mut lines: Vec<Line> = Vec::new();
+    if xlen == 64 {
+        let shown: Vec<usize> = if wide_fits { (0..32).collect() } else { nonzero.clone() };
+        let rows_avail = inner.height as usize;
+        let mut shown_rows = shown.len().div_ceil(wide_cols);
+        // Too many even so: keep the last row for a "+N more" note.
+        let more = if shown_rows > rows_avail {
+            shown_rows = rows_avail.saturating_sub(1);
+            shown.len() - shown_rows * wide_cols
+        } else {
+            0
+        };
+        for row in 0..shown_rows {
+            let mut spans: Vec<Span> = Vec::new();
+            for col in 0..wide_cols {
+                let Some(&i) = shown.get(row * wide_cols + col) else { break };
+                let text = &wide_values[i];
+                let vstyle = flash_style(i as u8).unwrap_or_default();
+                spans.push(Span::styled(format!("{:>4} ", ABI_NAMES[i]), th.dim()));
+                spans.push(Span::styled(format!("{text:>wide_vw$}"), vstyle));
+                spans.push(Span::raw("  "));
+            }
+            lines.push(Line::from(spans));
+        }
+        if shown.is_empty() {
+            lines.push(Line::styled("every register is 0", th.dim()));
+        } else if more > 0 {
+            lines.push(Line::styled(trunc(&format!("+{more} more; a taller window shows them"), inner.width as usize), th.dim()));
+        }
+        f.render_widget(Paragraph::new(lines), inner);
+        draw_memory(f, app, th, mem_area);
+        return;
+    }
     for row in 0..8 {
         let mut spans: Vec<Span> = Vec::new();
         for col in 0..4 {
             let i = row * 4 + col;
-            let val = regs[i];
-            let text = if app.reg_hex {
-                format!("0x{val:08x}")
-            } else {
-                format!("{}", val as i32)
-            };
+            let text = wide_values[i].clone();
             let vstyle = flash_style(i as u8).unwrap_or_default();
             spans.push(Span::styled(format!("{:>4} ", ABI_NAMES[i]), th.dim()));
             let pad = cell_w.saturating_sub(5 + text.chars().count());
@@ -1117,13 +1375,15 @@ fn draw_state_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
         lines.push(Line::from(spans));
     }
     f.render_widget(Paragraph::new(lines), inner);
+    draw_memory(f, app, th, mem_area);
+}
 
-    // -- memory ----------------------------------------------------------
+fn draw_memory(f: &mut Frame, app: &mut App, th: &Th, mem_area: Rect) {
     let block = Block::bordered()
         .border_set(th.border_set())
         .border_style(th.dim())
         .title(Line::from(vec![Span::styled(
-            format!(" memory · 0x{:08x} ", app.mem_addr),
+            format!(" memory · {} ", machine::addr(app.mem_addr)),
             Style::new().add_modifier(Modifier::BOLD),
         )]));
     let inner = block.inner(mem_area);
@@ -1156,7 +1416,7 @@ fn draw_state_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
     if let Some(p) = &app.pipeline {
         let bytes = p.read_memory(app.mem_addr, rows * 16);
         for r in 0..rows {
-            let addr = app.mem_addr.wrapping_add((r * 16) as u32);
+            let addr = app.mem_addr.wrapping_add((r * 16) as u64);
             let mut words: Vec<String> = Vec::new();
             for wi in 0..4 {
                 let o = r * 16 + wi * 4;
@@ -1164,7 +1424,7 @@ fn draw_state_tab(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
                 words.push(format!("{w:08x}"));
             }
             lines.push(Line::from(vec![
-                Span::styled(format!("0x{addr:08x}  "), th.dim()),
+                Span::styled(format!("{}  ", machine::addr(addr)), th.dim()),
                 Span::raw(words.join("  ")),
             ]));
         }
@@ -1478,7 +1738,12 @@ fn draw_tour(f: &mut Frame, app: &mut App, th: &Th, area: Rect) {
     let Some(tour) = &app.tour else { return };
     app.tour_shown = true;
     let step = tour.step.min(TOUR_STEPS.len() - 1);
-    let (title, body) = TOUR_STEPS[step];
+    let (title, mut body) = TOUR_STEPS[step];
+    if step == 0 && area.width < SOURCE_PANE_MIN {
+        body = "Your program runs through the five stages above; at 80 columns \
+or wider its source sits beside them. Edit the file in your editor, then \
+press [a] Assemble to reload it.";
+    }
     let target = match step {
         0 => app.rect_source,
         1 => Rect::new(
@@ -1618,9 +1883,16 @@ fn tour_callout_layout(
     let body_lines = wrap_text(body, w.saturating_sub(4) as usize);
     let desired_h = (body_lines.len() as u16) + 5;
     let rect = if step == 0 {
-        let h = desired_h.min(terminal.height);
+        // Inside the terminal panel; on a narrow window the text wraps to
+        // more lines, so the card grows upward instead of cutting it.
+        let need = body_lines.len() as u16 + 4; // borders, title, actions
         let x = terminal.x + terminal.width.saturating_sub(w) / 2;
-        Rect::new(x, terminal.y, w, h)
+        if need <= terminal.height {
+            Rect::new(x, terminal.y, w, desired_h.min(terminal.height))
+        } else {
+            let h = need.min(area.height);
+            Rect::new(x, terminal.bottom().saturating_sub(h), w, h)
+        }
     } else {
         let below = target.bottom() + 1 + desired_h <= area.bottom();
         let y = if below {
@@ -1654,6 +1926,8 @@ mod tests {
             crate::doctor::InstallMethod::Manual,
         );
         app.caps = Caps { color: true, unicode };
+        // Never the real directory: snapshots are committed.
+        app.working_dir = "projects/riscv".into();
         app.boot();
         app
     }
@@ -1906,5 +2180,188 @@ mod tests {
         assert_eq!(app.command_input, "/help");
         app.on_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
         assert_eq!(app.command_input, "");
+    }
+
+    /// An app on the RV64 sample, as `riscvsim tui --xlen=64` starts it.
+    fn rv64_app(color: bool) -> App {
+        let s = &crate::tui::samples::RV64_SAMPLE;
+        let mut app = App::new(
+            None,
+            s.source.into(),
+            s.file.into(),
+            false,
+            None,
+            Arc::new(Mutex::new(None)),
+            crate::doctor::InstallMethod::Manual,
+        );
+        app.caps = Caps { color, unicode: true };
+        app.xlen = 64;
+        app.boot();
+        app.dismiss_welcome();
+        app.tour = None;
+        app.prompt_active = false;
+        app
+    }
+
+    #[test]
+    fn rv64_screens_at_80x24_and_120x40() {
+        for color in [true, false] {
+            let tag = if color { "color" } else { "nocolor" };
+            for (w, h) in [(80u16, 24u16), (120, 40)] {
+                let mut app = rv64_app(color);
+                assert!(app.log.iter().any(|l| l.text == "riscvsim tui --xlen=64 wide-values.s"));
+                // cycle 6: addi x2 writes back, addw is in EX
+                app.step(6, false);
+                let pipe = render(&mut app, w, h);
+                assert!(pipe.contains("addw"), "{pipe}");
+                crate::snapshots::check(&format!("tui.rv64.pipeline.{tag}.{w}x{h}"), &pipe);
+                // run to the end, then the registers tab in hex and decimal
+                app.step(20, false);
+                key(&mut app, 't');
+                let regs = render(&mut app, w, h);
+                assert!(regs.contains("0x0000_0100_0000_0005"), "{regs}");
+                assert!(regs.contains("0xffff_ffff_ffff_ffff"), "{regs}");
+                crate::snapshots::check(&format!("tui.rv64.registers.{tag}.{w}x{h}"), &regs);
+                key(&mut app, 'h');
+                let dec = render(&mut app, w, h);
+                assert!(dec.contains("1099511627781") && dec.contains("-1"), "{dec}");
+                crate::snapshots::check(&format!("tui.rv64.registers-dec.{tag}.{w}x{h}"), &dec);
+                for line in pipe.lines().chain(regs.lines()).chain(dec.lines()) {
+                    assert!(line.chars().count() <= w as usize, "{line}");
+                }
+            }
+        }
+    }
+
+    /// RV32 screens are locked: the RV64 work must not change them.
+    #[test]
+    fn rv32_screens_unchanged() {
+        for (w, h) in [(80u16, 24u16), (120, 40)] {
+            let mut app = ready_app();
+            app.step(4, false);
+            crate::snapshots::check(&format!("tui.rv32.pipeline.{w}x{h}"), &render(&mut app, w, h));
+            key(&mut app, 't');
+            crate::snapshots::check(&format!("tui.rv32.registers.{w}x{h}"), &render(&mut app, w, h));
+        }
+    }
+
+    /// An app on `sample`, stepped until `want` holds (or the program ends).
+    fn app_at(sample: &crate::tui::samples::Sample, caps: Caps, want: impl Fn(&crate::machine::Snap) -> bool) -> App {
+        let mut app = App::new(
+            None,
+            sample.source.into(),
+            sample.file.into(),
+            false,
+            None,
+            Arc::new(Mutex::new(None)),
+            crate::doctor::InstallMethod::Manual,
+        );
+        app.caps = caps;
+        app.xlen = sample.xlen;
+        app.boot();
+        app.dismiss_welcome();
+        app.tour = None;
+        app.prompt_active = false;
+        while !app.halted() && !app.snap.as_ref().is_some_and(&want) {
+            app.step(1, true);
+        }
+        assert!(app.snap.as_ref().is_some_and(&want), "{} never reached the wanted cycle", sample.file);
+        app
+    }
+
+    #[test]
+    fn adaptive_layout_snapshots() {
+        use crate::tui::samples::{RV64_SAMPLE, SAMPLES};
+        let busy = |s: &crate::machine::Snap| s.stages.iter().all(|st| st.state == StageState::Normal);
+        let stall = |s: &crate::machine::Snap| s.view.stall.is_some();
+        let flush = |s: &crate::machine::Snap| !s.view.flushed.is_empty();
+        let rv64 = |s: &crate::machine::Snap| s.stages.iter().any(|st| st.state == StageState::Normal && st.name == "EX" && st.text.as_deref().is_some_and(|t| t.starts_with("addw")));
+        let color = Caps { color: true, unicode: true };
+        let plain = Caps { color: false, unicode: false };
+        type Want<'a> = &'a dyn Fn(&crate::machine::Snap) -> bool;
+        let cases: Vec<(&str, &crate::tui::samples::Sample, Want, Caps)> = vec![
+            ("busy", &SAMPLES[3], &busy, color),
+            ("busy.ascii-nocolor", &SAMPLES[3], &busy, plain),
+            ("stall", &SAMPLES[1], &stall, color),
+            ("flush", &SAMPLES[2], &flush, color),
+            ("rv64", &RV64_SAMPLE, &rv64, color),
+        ];
+        for (name, sample, want, caps) in cases {
+            for (w, h) in [(60u16, 24u16), (80, 24), (100, 30), (120, 40), (160, 40)] {
+                let mut app = app_at(sample, caps, want);
+                let text = render(&mut app, w, h);
+                for line in text.lines() {
+                    assert!(line.chars().count() <= w as usize, "{name} {w}: {line}");
+                }
+                assert!(!text.contains("needs a bigger window"), "{name} {w}x{h}:\n{text}");
+                if !caps.unicode {
+                    assert!(text.is_ascii(), "{name} {w}:\n{text}");
+                }
+                // every busy stage names its instruction's mnemonic in full
+                let snap = app.snap.as_ref().unwrap();
+                for st in snap.stages.iter().filter(|st| st.state == StageState::Normal) {
+                    let m = crate::explain::mnemonic(st.text.as_deref().unwrap_or(""));
+                    assert!(text.contains(m), "{name} {w}: {m} missing\n{text}");
+                }
+                crate::snapshots::check(&format!("tui.layout.{name}.{w}x{h}"), &text);
+            }
+        }
+    }
+
+    #[test]
+    fn below_the_minimum_explains_itself() {
+        let mut app = ready_app();
+        let text = render(&mut app, 59, 24);
+        assert!(text.contains("needs a bigger window") && text.contains("59x24") && text.contains("60x20"), "{text}");
+        crate::snapshots::check("tui.too-small.59x24", &text);
+    }
+
+    /// Every screen still fits at the narrowest supported width.
+    #[test]
+    fn narrow_screens_at_60_columns() {
+        let (w, h) = (60u16, 24u16);
+        let mut shots: Vec<(String, String)> = Vec::new();
+        let mut app = sample_app(true);
+        shots.push(("welcome".into(), render(&mut app, w, h)));
+        app.dismiss_welcome();
+        app.tour = Some(crate::tui::app::Tour { step: 0 });
+        shots.push(("tour-0".into(), render(&mut app, w, h)));
+        app.tour = None;
+        app.prompt_active = false;
+        key(&mut app, '?');
+        shots.push(("help".into(), render(&mut app, w, h)));
+        key(&mut app, '?');
+        app.step(4, false);
+        key(&mut app, 't');
+        shots.push(("registers".into(), render(&mut app, w, h)));
+        let mut wide = rv64_app(true);
+        wide.step(20, false);
+        key(&mut wide, 't');
+        shots.push(("registers.rv64".into(), render(&mut wide, w, h)));
+        for (name, text) in shots {
+            for line in text.lines() {
+                assert!(line.chars().count() <= w as usize, "{name}: {line}");
+            }
+            crate::snapshots::check(&format!("tui.narrow.{name}.{w}x{h}"), &text);
+        }
+    }
+
+    /// A full redraw stays far under the 50 ms "instant" bound at every
+    /// layout width (run with --nocapture to see the numbers).
+    #[test]
+    fn redraw_is_instant_at_every_width() {
+        let busy = |s: &crate::machine::Snap| s.stages.iter().all(|st| st.state == StageState::Normal);
+        for (w, h) in [(60u16, 24u16), (80, 24), (100, 30), (120, 40), (160, 40)] {
+            let mut app = app_at(&SAMPLES[3], Caps { color: true, unicode: true }, busy);
+            // A fresh terminal each frame, so this is an upper bound.
+            let start = std::time::Instant::now();
+            let frames = 200;
+            for _ in 0..frames {
+                render(&mut app, w, h);
+            }
+            let per = start.elapsed().as_secs_f64() * 1000.0 / frames as f64;
+            println!("redraw {w}x{h}: {per:.3} ms per frame");
+            assert!(per < 50.0, "{w}x{h}: {per:.1} ms per frame");
+        }
     }
 }

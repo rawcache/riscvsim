@@ -18,12 +18,12 @@ fn piped_demo_prints_one_block_per_cycle_without_escape_codes() {
     let (code, text) = demo(&[], &[]);
     assert_eq!(code, 0);
     assert!(!text.contains('\x1b'), "piped output must be plain");
-    assert!(text.contains("  riscvsim › demo 1 · Add + forwarding"), "{text}");
-    for n in 1..=7 {
+    assert!(text.contains("  riscvsim › demo 1 · Your first instructions"), "{text}");
+    for n in 1..=9 {
         assert!(text.contains(&format!("\n  cycle {n}\n")), "missing cycle {n}");
     }
-    assert!(text.contains("CPI 2.33"));
-    assert!(text.trim_end().ends_with("Next: riscvsim demo 2, riscvsim tui, riscvsim serve"), "{text}");
+    assert!(text.contains("CPI 1.80"));
+    assert!(text.trim_end().ends_with("Next: riscvsim demo 2 (Waiting for memory)"), "{text}");
     for line in text.lines() {
         assert!(line.chars().count() <= 78, "{line}");
     }
@@ -40,8 +40,85 @@ fn dumb_terminal_and_ascii_locale_get_plain_text() {
 fn summary_flag_keeps_the_classic_run_output() {
     let (code, text) = demo(&["--summary"], &[]);
     assert_eq!(code, 0);
-    assert!(text.contains("✓ add-forward.s · 3 instructions · RV32IM 5-stage pipeline"), "{text}");
+    assert!(text.contains("✓ first-steps.s · 5 instructions · RV32IM 5-stage pipeline"), "{text}");
     assert!(!text.contains("cycle 1\n"));
+}
+
+fn demo_err(args: &[&str]) -> (i32, String) {
+    let out = Command::new(env!("CARGO_BIN_EXE_riscvsim"))
+        .arg("demo")
+        .args(args)
+        .env("RISCVSIM_NO_UPDATE_CHECK", "1")
+        .env("LANG", "en_US.UTF-8")
+        .env_remove("CLICOLOR_FORCE")
+        .output()
+        .expect("run");
+    (out.status.code().unwrap_or(-1), String::from_utf8_lossy(&out.stderr).into_owned())
+}
+
+#[test]
+fn list_prints_the_six_lessons() {
+    let (code, text) = demo(&["--list"], &[]);
+    assert_eq!(code, 0);
+    assert!(!text.contains('\x1b'));
+    for (n, title) in [
+        (1, "Your first instructions"),
+        (2, "Waiting for memory"),
+        (3, "Skipping the wait"),
+        (4, "Guessing wrong"),
+        (5, "Loops"),
+        (6, "Wide values (RV64)"),
+    ] {
+        assert!(text.contains(&format!(" {n}  {title}")), "{text}");
+    }
+    assert!(text.contains("Start: riscvsim demo 1"), "{text}");
+}
+
+#[test]
+fn every_lesson_runs_by_number_and_name_and_points_to_the_next() {
+    for (n, name, next) in [
+        (1, "first-steps", Some("Next: riscvsim demo 2 (Waiting for memory)")),
+        (2, "load-use", Some("Next: riscvsim demo 3 (Skipping the wait)")),
+        (3, "forwarding", Some("Next: riscvsim demo 4 (Guessing wrong)")),
+        (4, "branches", Some("Next: riscvsim demo 5 (Loops)")),
+        (5, "loops", Some("Next: riscvsim demo 6 (Wide values)")),
+        (6, "wide-values", None),
+    ] {
+        let (code, by_number) = demo(&[&n.to_string()], &[]);
+        assert_eq!(code, 0, "lesson {n}");
+        let (_, by_name) = demo(&[name], &[]);
+        assert_eq!(by_number, by_name, "lesson {n} by name");
+        match next {
+            Some(next) => assert!(by_number.trim_end().ends_with(next), "lesson {n}:\n{by_number}"),
+            None => assert!(by_number.contains("You finished all six lessons."), "{by_number}"),
+        }
+    }
+    // the old sample names still work and lead to their lesson
+    assert_eq!(demo(&["add-forward"], &[]).1, demo(&["3"], &[]).1);
+    let (code, sum) = demo(&["array-sum"], &[]);
+    assert_eq!(code, 0);
+    assert!(sum.contains("demo array-sum · Array sum") && sum.contains("Next: riscvsim demo --list"), "{sum}");
+}
+
+#[test]
+fn unknown_lessons_get_a_suggestion() {
+    let (code, err) = demo_err(&["lops"]);
+    assert_eq!(code, 2, "{err}");
+    assert!(err.contains("there is no lesson called 'lops'"), "{err}");
+    assert!(err.contains("did you mean 'loops'?"), "{err}");
+    assert!(err.contains("riscvsim demo --list shows all six lessons"), "{err}");
+    let (_, err) = demo_err(&["forwrding"]);
+    assert!(err.contains("did you mean 'forwarding'?"), "{err}");
+    let (code, err) = demo_err(&["7"]);
+    assert_eq!(code, 2);
+    assert!(err.contains("there is no lesson 7") && err.contains("lessons are 1 to 6"), "{err}");
+}
+
+#[test]
+fn rv64_lesson_summary_runs_at_64_bits() {
+    let (code, text) = demo(&["6", "--summary"], &[]);
+    assert_eq!(code, 0, "{text}");
+    assert!(text.contains("RV64IM") && text.contains("0x0000_0100_0000_0005"), "{text}");
 }
 
 /// Drive the interactive tour through a pseudo-terminal: Space steps, q
@@ -78,5 +155,5 @@ fn keys_work_in_a_real_terminal() {
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(text.contains("\x1b[?1049h"), "uses the alternate screen");
     assert!(text.contains("The first instruction, addi, is fetched from memory."), "stepped to cycle 1");
-    assert!(text.contains("stopped at cycle 1 of 7"), "{text}");
+    assert!(text.contains("stopped at cycle 1 of 9"), "{text}");
 }

@@ -1,0 +1,24 @@
+ ❯_ riscvsim v0.2.0  ·  load-use.s  ·  cycle 6           ✕
+╭──────────────────────────────────────────────────────────╮
+│  Pipeline    Registers · Memory                          │
+│ IF  —                                                    │
+│ ID  add x3, x1, x4                        ! waits for x1 │
+│ EX  lw x1, 0(x2)             ◂ x2=0x10000000 from EX/MEM │
+│ MEM addi sp, sp, 0                            0x00000008 │
+│ WB  lui sp, 0x10000                           0x00000004 │
+│                                                          │
+│! lw is reading memory. add must wait one cycle because it│
+│  needs x1 from lw.                                       │
+│cycles 6 · instr 2 · CPI 3.00 · stalls 1 · flushed 0      │
+╰──────────────────────────────────────────────────────────╯
+╭ terminal ────────────────────────────────────────────────╮
+│Loading load-use.s...                                     │
+│Assembling program...                                     │
+│✓ assembled 5 instructions                                │
+│addi x4, x0, 1  x4: 0 -> 1                                │
+│lui sp, 0x10000  x2: 2147483644 -> 268435456              │
+╰──────────────────────────────────────────────────────────╯
+ [ Assemble ]  [ ◀ Back ]  [ Step ▶ ]  [ ▶ Run ]
+ speed ├━━━━━━━●───────┤ 10 cyc/s sample ▾ load-use.s
+> Press Enter for commands
+ cycle 6, pc 0x00000014         → step · space run · q quit

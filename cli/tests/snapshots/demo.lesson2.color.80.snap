@@ -1,0 +1,64 @@
+
+  <1>riscvsim<0> <36>›<0> <1>demo 2<0> · Waiting for memory
+  <90>See why an add must wait one cycle for a load.<0>
+
+  <90> 1  # A load reads memory in MEM, one stage later than the<0>
+  <90> 2  # ALU, so the add right after it must wait one cycle.<0>
+   3  .data
+   4  value:  .word 41
+   5
+   6  .text
+   7  addi x4, x0, 1     # x4 = 1
+   8  lui  x2, 0x10000   # x2 = 0x10000000, where value is
+   9  lw   x1, 0(x2)     # x1 = 41, read from memory
+  10  add  x3, x1, x4    # needs x1 now: one stall
+
+  <1>cycle 1<0>
+    <36>IF<0> <1>addi x4, x0, 1<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>›<0> The first instruction, addi, is fetched from memory.
+
+  <1>cycle 2<0>
+    <36>IF<0> <1>lui x2, 0x10000<0>  <36>ID<0> <1>addi x4, x0, 1<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>›<0> addi is decoded and reads its source registers.
+
+  <1>cycle 3<0>
+    <36>IF<0> <1>lw x1, 0(x2)<0>  <36>ID<0> <1>lui x2, 0x10000<0>  <36>EX<0> <1>addi x4, x0, 1<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>›<0> addi is computing in the ALU; everything else moves one stage on.
+
+  <1>cycle 4<0>
+    <36>IF<0> <1>add x3, x1, x4<0>  <36>ID<0> <1>lw x1, 0(x2)<0>  <36>EX<0> <1>lui x2…<0>  <36>MEM<0> <1>addi x4,x0,1<0>  <36>WB<0> <90>·<0>
+    <36>›<0> lui is computing in the ALU; everything else moves one stage on.
+
+  <1>cycle 5<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <1>add x3, x1, x4<0>  <36>EX<0> <1>lw x1, 0(x2)<0>  <36>MEM<0> <1>lui x2…<0>  <36>WB<0> <1>addi x4,x0,1<0>
+    <32>✓<0> <1;32>x4<0> = <1;32>1<0>
+    <33>!<0> lw is reading memory. add must wait one cycle because it needs x1 from
+      lw.
+
+  <1>cycle 6<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <1>add x3, x1, x4<0>  <36>EX<0> <33>bubble<0>  <36>MEM<0> <1>lw x1, 0(x2)<0>  <36>WB<0> <1>lui x2, 0x10000<0>
+    <32>✓<0> <1;32>x2<0> = <1;32>0x10000000<0>
+    <36>›<0> lui finishes and writes x2 = 0x10000000.
+
+  <1>cycle 7<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <1>add x3, x1, x4<0>  <36>MEM<0> <33>bubble<0>  <36>WB<0> <1>lw x1, 0(x2)<0>
+    <32>✓<0> <1;32>x1<0> = <1;32>41<0>
+    <36>›<0> add needs x1 from lw, so it is forwarded from the MEM/WB latch and
+      nobody waits.
+
+  <1>cycle 8<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <1>add x3, x1, x4<0>  <36>WB<0> <33>bubble<0>
+    <36>›<0> Nothing is left to fetch, so the pipeline is emptying.
+
+  <1>cycle 9<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <1>add x3, x1, x4<0>
+    <32>✓<0> <1;32>x3<0> = <1;32>42<0>
+    <32>✓<0> add writes x3 = 42, and the program is finished.
+
+  <32>✓<0> 9 cycles · 4 instructions · CPI 2.25 · 1 stall · 0 mispredictions
+    <90>Ends with<0> <1;32>x4 = 1 · x2 = 0x10000000 · x1 = 41 · x3 = 42<0>
+    <90>Why it slowed down:<0>
+    • lw is reading memory. add must wait one cycle because it needs x1 from
+      lw.
+
+  <1>Next:<0> <36>riscvsim demo 3 (Skipping the wait)<0>

@@ -2,7 +2,7 @@
 //!
 //!   riscvsim run <file.s> [--verbose] [--limit N] [--xlen=32|64] [--json]
 //!   riscvsim demo [n|name]
-//!   riscvsim tui [file.s] [--tour]
+//!   riscvsim tui [file.s] [--xlen=32|64] [--tour]
 //!   riscvsim translate --from LANG --to LANG <file> [-o out]
 //!   riscvsim serve [file.s] [--port N] [--no-open] [-v]
 //!   riscvsim doctor
@@ -27,11 +27,15 @@ use std::process::ExitCode;
 mod completions;
 mod diag;
 mod explain;
+mod lessons;
+mod machine;
 mod demo;
 mod doctor;
 mod progress;
 mod run;
 mod server;
+#[cfg(test)]
+mod snapshots;
 mod term;
 mod tui;
 mod update;
@@ -66,7 +70,7 @@ Runs RV32IM and RV64IM programs cycle by cycle: forwarding, load-use
 stalls and branch prediction, the same engine as studyriscv.com.
 
 {try_}
-  {c1}            a guided tour of the pipeline, no files needed
+  {c1}            six short lessons on the pipeline, no files needed
   {c2}      run your program, print registers and stats
   {c3}             step through the pipeline interactively
 
@@ -103,7 +107,7 @@ fn help_text(p: &Paint) -> String {
 
 {commands}
   run          assemble and run a program, print registers and stats
-  demo         a guided tour of the pipeline, one cycle at a time
+  demo         six short lessons on the pipeline, cycle by cycle
   tui          interactive simulator: step, rewind, watch the pipeline
   translate    C, C++ and Rust to RV32/RV64 assembly, and back
   serve        the browser simulator on this computer, no account needed
@@ -111,7 +115,7 @@ fn help_text(p: &Paint) -> String {
   completions  tab completion for bash, zsh or fish
 
 {examples}
-  riscvsim demo                 a guided tour, one cycle at a time
+  riscvsim demo                 lesson 1 of the course, cycle by cycle
   riscvsim run add.s            final registers + cycles, CPI, stalls
   riscvsim run add.s -v         watch every instruction retire
   riscvsim run wide.s --xlen=64 run with 64-bit registers
@@ -178,36 +182,39 @@ Long runs show a live status line; Ctrl-C stops with a summary.
 
 fn demo_help(p: &Paint) -> String {
     let mut s = format!(
-        "{title} {dot} a guided tour of the pipeline, one cycle at a time
+        "{title} {dot} a short course on the pipeline, one cycle at a time
 
 {usage}
   riscvsim demo [number|name] [options]
+  riscvsim demo --list
 
-On a terminal the tour is interactive: Enter next cycle, a autoplay,
-+/- speed, b back, r restart, q quit. Piped, it prints the same tour as
-text. Each cycle gets one plain sentence saying what happened and why.
+Six lessons, each a tiny program. On a terminal a lesson is interactive:
+Enter next cycle, a autoplay, +/- speed, b back, r restart, q quit.
+Piped, it prints the same lesson as text. Each cycle gets one plain
+sentence saying what happened and why.
 
 {options}
-  --summary   just run the sample and print registers and stats
+  --list      the lessons, with what each one shows
+  --summary   just run the lesson and print registers and stats
   -v          run it and show every instruction as it retires
   --json      the run result as JSON
 
-{samples}\n",
+{lessons}\n",
         dot = p.dot(),
         title = p.bold("riscvsim demo"),
         usage = p.bold("Usage"),
         options = p.bold("Options"),
-        samples = p.bold("Samples"),
+        lessons = p.bold("Lessons"),
     );
-    for (i, sample) in tui::samples::SAMPLES.iter().enumerate() {
-        s.push_str(&format!("  {}  {:<16} {}\n", i + 1, sample.file.trim_end_matches(".s"), p.gray(sample.name)));
+    for (i, lesson) in lessons::LESSONS.iter().enumerate() {
+        s.push_str(&format!("  {}  {:<12} {}\n", i + 1, lesson.slug, p.gray(lesson.title())));
     }
     s.push_str(&format!(
         "\n{examples}
-  riscvsim demo                 tour the first sample
-  riscvsim demo 3               why a wrong branch guess costs cycles
-  riscvsim demo 3 -v            the branch loop, instruction by instruction
-  riscvsim demo load-use",
+  riscvsim demo                 start the course at lesson 1
+  riscvsim demo 4               why a wrong branch guess costs cycles
+  riscvsim demo loops -v        the loop, instruction by instruction
+  riscvsim demo --list",
         examples = p.bold("Examples")
     ));
     s
@@ -218,18 +225,20 @@ fn tui_help(p: &Paint) -> String {
         "{title} {dot} the interactive simulator in your terminal
 
 {usage}
-  riscvsim tui [file.s] [--tour]
+  riscvsim tui [file.s] [--xlen=32|64] [--tour]
 
 Shows the source, the five pipeline stages, registers, memory and output.
 Keys: {right}/n step {dot} {left} back {dot} space run/pause {dot} r reset {dot} ? help {dot} q quit
-Needs a terminal of at least 72x20.
+Needs a terminal of at least 60x20.
 
 {options}
-  --tour   replay the first-run walkthrough
+  --xlen=32|64   register width (default 32), as in riscvsim run
+  --tour         replay the first-run walkthrough
 
 {examples}
   riscvsim tui                  start with a built-in sample
-  riscvsim tui add.s            open your program",
+  riscvsim tui add.s            open your program
+  riscvsim tui wide.s --xlen=64 step through a 64-bit program",
         right = p.sym("\u{2192}", "right"),
         left = p.sym("\u{2190}", "left"),
         title = p.bold("riscvsim tui"),
@@ -371,10 +380,11 @@ const DEMO_FLAGS: Spec = &[
     ("--max-cycles", true),
     ("--json", false),
     ("--summary", false),
+    ("--list", false),
     ("--interactive", false),
     ("-i", false),
 ];
-const TUI_FLAGS: Spec = &[("--tour", false)];
+const TUI_FLAGS: Spec = &[("--tour", false), ("--xlen", true)];
 const SERVE_FLAGS: Spec = &[("--port", true), ("--no-open", false), ("--verbose", false), ("-v", false)];
 const TRANSLATE_FLAGS: Spec = &[
     ("--from", true),
@@ -407,7 +417,7 @@ struct CommandDef {
 
 const CLI: &[CommandDef] = &[
     CommandDef { name: "run", about: "assemble and run a program", flags: RUN_FLAGS, operand: Operand::File },
-    CommandDef { name: "demo", about: "a guided tour of the pipeline", flags: DEMO_FLAGS, operand: Operand::Sample },
+    CommandDef { name: "demo", about: "a six-lesson course on the pipeline", flags: DEMO_FLAGS, operand: Operand::Sample },
     CommandDef { name: "tui", about: "the interactive simulator", flags: TUI_FLAGS, operand: Operand::File },
     CommandDef { name: "translate", about: "C, C++ and Rust to assembly, and back", flags: TRANSLATE_FLAGS, operand: Operand::File },
     CommandDef { name: "serve", about: "the browser simulator on this computer", flags: SERVE_FLAGS, operand: Operand::File },
@@ -718,9 +728,6 @@ fn cmd_run(args: &Args) -> ExitCode {
         Err(code) => return code,
     };
     if args.has(&["--interactive", "-i"]) {
-        if opts.xlen == 64 {
-            return usage_error("the interactive simulator is RV32 only; use riscvsim run <file> --xlen=64");
-        }
         return cmd_tui(args);
     }
     if args.has(&["--json"]) {
@@ -730,51 +737,69 @@ fn cmd_run(args: &Args) -> ExitCode {
 }
 
 fn cmd_demo(args: &Args) -> ExitCode {
-    use tui::samples::SAMPLES;
+    use lessons::{Pick, LESSONS};
+    if args.has(&["--list"]) {
+        for line in demo::menu(&Paint::new(), term::width()) {
+            println!("{line}");
+        }
+        return ExitCode::SUCCESS;
+    }
+    if args.positionals.len() > 1 {
+        return usage_error_with(
+            &format!("demo takes one lesson, but got {}", args.positionals.len()),
+            Some("for example: riscvsim demo 2"),
+            Some("riscvsim demo --list shows the lessons"),
+        );
+    }
     let pick = args.positionals.first().map(String::as_str);
     let found = match pick {
-        None => Some(&SAMPLES[0]),
-        Some(s) => match s.parse::<usize>() {
-            Ok(n) if (1..=SAMPLES.len()).contains(&n) => Some(&SAMPLES[n - 1]),
-            _ => SAMPLES.iter().find(|x| x.file.trim_end_matches(".s") == s || x.file == s),
-        },
+        None => Some(Pick::Lesson(1)),
+        Some(s) => lessons::find(s),
     };
-    let Some(sample) = found else {
-        let names: Vec<&str> = SAMPLES.iter().map(|x| x.file.trim_end_matches(".s")).collect();
-        let hint = diag::closest(pick.unwrap_or(""), names.iter().copied()).map(|n| format!("did you mean '{n}'?"));
-        return usage_error_with(
-            &format!("there is no sample '{}'", pick.unwrap_or("")),
-            hint.as_deref(),
-            Some(&format!("samples: 1-{} or {}", SAMPLES.len(), names.join(", "))),
-        );
+    let Some(found) = found else {
+        let pick = pick.unwrap_or("");
+        let (message, hint) = match pick.trim().parse::<i64>() {
+            Ok(_) => (format!("there is no lesson {pick}"), Some(format!("lessons are 1 to {}", LESSONS.len()))),
+            Err(_) => (
+                format!("there is no lesson called '{pick}'"),
+                diag::closest(&pick.to_ascii_lowercase(), lessons::names()).map(|n| format!("did you mean '{n}'?")),
+            ),
+        };
+        return usage_error_with(&message, hint.as_deref(), Some("riscvsim demo --list shows all six lessons"));
     };
-    let opts = match run_opts(args, sample.file.to_string()) {
+    let (tour, sample) = match found {
+        Pick::Lesson(n) => (demo::Tour::lesson(n), &LESSONS[n - 1].sample),
+        Pick::Sample(i) => {
+            let sample = &tui::samples::SAMPLES[i];
+            (demo::Tour::new(i + 1, sample), sample)
+        }
+    };
+    let mut opts = match run_opts(args, sample.file.to_string()) {
         Ok(o) => o,
         Err(code) => return code,
     };
+    if sample.xlen == 64 {
+        // An RV64 lesson always runs at 64 bits.
+        opts.xlen = 64;
+    }
     if args.has(&["--json"]) {
         return json_report(sample.source, &opts);
     }
-    // The guided tour, unless a run-style flag asks for the plain summary.
+    // The lesson, unless a run-style flag asks for the plain summary.
     let plain_run = args.flags.iter().any(|(f, _)| matches!(*f, "--verbose" | "-v" | "--xlen" | "--limit" | "--max-cycles" | "--summary"));
     if !plain_run {
-        let number = SAMPLES.iter().position(|x| x.file == sample.file).unwrap_or(0) + 1;
-        return demo::run(number, sample);
+        return demo::run(tour);
     }
     let code = run::cmd_source(sample.file, sample.source, &opts);
     if code == ExitCode::SUCCESS {
         let p = Paint::new();
         println!();
-        let idx = SAMPLES.iter().position(|x| x.file == sample.file).unwrap_or(0);
-        let next = (idx + 1) % SAMPLES.len();
-        println!(
-            "{}",
-            p.gray(&format!(
-                "Next: riscvsim demo {} ({}), or riscvsim tui to step through it",
-                next + 1,
-                SAMPLES[next].file.trim_end_matches(".s")
-            ))
-        );
+        let next = match found {
+            Pick::Lesson(n) if n < LESSONS.len() => format!("Next: {}, or riscvsim tui to step through it", lessons::next_line(n)),
+            Pick::Lesson(_) => "Next: riscvsim tui to step through your own program".to_string(),
+            Pick::Sample(_) => "Next: riscvsim demo --list for the six lessons".to_string(),
+        };
+        println!("{}", p.gray(&next));
     }
     code
 }
@@ -1075,7 +1100,11 @@ pub fn io_reason(error: &std::io::Error) -> String {
 fn cmd_tui(args: &Args) -> ExitCode {
     let file = args.positionals.first().map(std::path::PathBuf::from);
     let force_tour = args.has(&["--tour"]);
-    match tui::run(tui::Opts { file, force_tour }) {
+    let xlen = match xlen(args) {
+        Ok(x) => x,
+        Err(code) => return code,
+    };
+    match tui::run(tui::Opts { file, force_tour, xlen }) {
         // The session ended with /serve: the terminal is back to normal, so
         // hand the loaded program to the same server `riscvsim serve` uses.
         Ok(Some(request)) => serve_program(request.source, &request.file_name, request.port),
@@ -1147,7 +1176,10 @@ fn cmd_completions(args: &Args) -> ExitCode {
             },
         })
         .collect();
-    let samples: Vec<&str> = tui::samples::SAMPLES.iter().map(|s| s.file.trim_end_matches(".s")).collect();
+    // `riscvsim demo <TAB>`: lesson numbers, then lesson and sample names.
+    const NUMBERS: [&str; 9] = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    let mut samples: Vec<&str> = NUMBERS[..lessons::LESSONS.len().min(NUMBERS.len())].to_vec();
+    samples.extend(lessons::names());
     let script = match shell {
         "bash" => completions::bash(&cmds, &samples),
         "zsh" => completions::zsh(&cmds, &samples),

@@ -1,11 +1,14 @@
-//! Built-in sample programs: the SAME four programs the browser simulator
-//! ships (see the samples embedded in cli/web/index.html). Keep the two lists
-//! in sync when a sample changes.
+//! Built-in sample programs. The first four are the SAME programs the
+//! browser simulator ships (see the samples embedded in cli/web/index.html);
+//! keep the two lists in sync when one of them changes. The last one is an
+//! RV64 program for the terminal tools (`xlen: 64`).
 
 pub struct Sample {
     pub name: &'static str,
     pub file: &'static str,
     pub source: &'static str,
+    /// Register width the sample is written for: 32 or 64.
+    pub xlen: u32,
 }
 
 pub const SAMPLES: &[Sample] = &[
@@ -17,6 +20,7 @@ addi x1, x0, 5
 addi x2, x1, 3
 add  x3, x2, x1
 ",
+        xlen: 32,
     },
     Sample {
         name: "Load-use stall",
@@ -31,6 +35,7 @@ la   x2, value
 lw   x1, 0(x2)
 add  x3, x1, x4
 ",
+        xlen: 32,
     },
     Sample {
         name: "Branch prediction",
@@ -44,6 +49,7 @@ addi x1, x1, -1
 bne  x1, x0, loop
 addi x3, x0, 99
 ",
+        xlen: 32,
     },
     Sample {
         name: "Array sum",
@@ -65,5 +71,22 @@ bne  t1, x0, loop
 mv   a0, t2
 ecall
 ",
+        xlen: 32,
     },
+    RV64_SAMPLE,
 ];
+
+/// The RV64 sample: 64-bit values, and what the word instructions (addw)
+/// do to them.
+pub const RV64_SAMPLE: Sample = Sample {
+    name: "64-bit values",
+    file: "wide-values.s",
+    source: "# RV64 registers hold 64 bits; build 0x0000_0100_0000_0005
+addi x1, x0, 1     # x1 = 1
+slli x1, x1, 40    # x1 = 1 << 40
+addi x2, x1, 5     # x2 = 0x0000_0100_0000_0005
+addw x3, x2, x0    # addw keeps the low 32 bits: 5
+addi x4, x0, -1    # -1 sets all 64 bits
+",
+    xlen: 64,
+};

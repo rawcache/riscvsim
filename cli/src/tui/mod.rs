@@ -31,6 +31,8 @@ pub struct Opts {
     pub file: Option<PathBuf>,
     /// --tour: show the walkthrough even if the first-run marker exists.
     pub force_tour: bool,
+    /// Register width, from `--xlen` (32 or 64).
+    pub xlen: u32,
 }
 
 /// Put the terminal back the way we found it. Safe to call more than once
@@ -71,7 +73,8 @@ pub fn run(opts: Opts) -> Result<Option<ServeRequest>, String> {
             (Some(path.clone()), name, source)
         }
         None => {
-            let s = &samples::SAMPLES[0];
+            // A 64-bit session starts with the 64-bit sample.
+            let s = if opts.xlen == 64 { &samples::RV64_SAMPLE } else { &samples::SAMPLES[0] };
             (None, s.file.to_string(), s.source.to_string())
         }
     };
@@ -95,6 +98,7 @@ pub fn run(opts: Opts) -> Result<Option<ServeRequest>, String> {
         update_status,
         install_method,
     );
+    app.xlen = opts.xlen;
     app.boot();
 
     enable_raw_mode().map_err(|e| e.to_string())?;

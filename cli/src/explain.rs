@@ -1,16 +1,50 @@
 //! One plain-English sentence about what happened in a pipeline cycle.
 //!
-//! Shared by `riscvsim demo` (the guided tour) and the `tui` pipeline pane,
+//! Shared by `riscvsim demo` (the lessons) and the `tui` pipeline pane,
 //! so both always say the same thing. It reads only the engine's public
 //! per-cycle view (stall cause, forwards, flushes, predictor, register
 //! writes), so it needs no engine changes.
 
-use sim_engine::pipeline::{StageState, StageView};
-use sim_engine::Snapshot;
+use crate::machine::{Snap as Snapshot, StageState, StageView};
 
 /// The mnemonic of an instruction's text: `"lw x1, 0(x2)"` -> `"lw"`.
 pub fn mnemonic(text: &str) -> &str {
     text.split_whitespace().next().unwrap_or(text)
+}
+
+/// Instruction text that fits `room` columns without cutting a token:
+/// spaces collapse first (`addi x1, x0, 5` -> `addi x1,x0,5`), then whole
+/// operands drop from the right behind an ellipsis (`addi x1,x0…`), then
+/// all operands (`addi…`). Only a mnemonic wider than the room is cut.
+pub fn fit_instr(text: &str, room: usize, unicode: bool) -> String {
+    let ellipsis = if unicode { "…" } else { "~" };
+    let width = |s: &str| s.chars().count();
+    let spaced: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if width(&spaced) <= room {
+        return spaced;
+    }
+    let tight = spaced.replace(", ", ",");
+    if width(&tight) <= room {
+        return tight;
+    }
+    let (op, args) = tight.split_once(' ').unwrap_or((tight.as_str(), ""));
+    let parts: Vec<&str> = args.split(',').filter(|a| !a.is_empty()).collect();
+    for keep in (1..parts.len()).rev() {
+        let s = format!("{op} {}{ellipsis}", parts[..keep].join(","));
+        if width(&s) <= room {
+            return s;
+        }
+    }
+    let bare = format!("{op}{ellipsis}");
+    if width(&bare) <= room {
+        return bare;
+    }
+    if width(op) <= room {
+        return op.to_string();
+    }
+    let mut cut: String = op.chars().take(room.saturating_sub(1)).collect();
+    cut.push_str(ellipsis);
+    cut
 }
 
 /// `"ra"` -> `"x1"`; names that are already `xN` pass through.
@@ -28,13 +62,9 @@ pub fn x_name(reg: &str) -> String {
 }
 
 /// A register value as a learner reads it: decimal when small, hex when big.
+#[cfg(test)]
 fn value(v: u32) -> String {
-    let signed = v as i32;
-    if (-4096..=4096).contains(&signed) {
-        signed.to_string()
-    } else {
-        format!("0x{v:08x}")
-    }
+    crate::machine::short_value(v as u64, 32)
 }
 
 fn number_word(n: usize) -> String {
@@ -82,7 +112,7 @@ pub fn cycle(snap: &Snapshot) -> (Kind, String) {
         if halt.kind == "complete" {
             if let Some(w) = snap.view.reg_writes.first() {
                 let by = stage(snap, "WB").and_then(|s| s.text.as_deref()).map(mnemonic).unwrap_or("the last instruction");
-                return (Kind::Done, format!("{by} writes x{} = {}, and the program is finished.", w.reg, value(w.after)));
+                return (Kind::Done, format!("{by} writes x{} = {}, and the program is finished.", w.reg, snap.value(w.after)));
             }
             return (Kind::Done, "The program finished: the last instruction has left the pipeline.".into());
         }
@@ -147,7 +177,7 @@ pub fn cycle(snap: &Snapshot) -> (Kind, String) {
     if let Some(w) = view.reg_writes.first() {
         let by = stage(snap, "WB").and_then(|s| s.text.as_deref()).map(mnemonic).unwrap_or("an instruction");
         let reg = format!("x{}", w.reg);
-        return (Kind::Plain, format!("{by} finishes and writes {reg} = {}.", value(w.after)));
+        return (Kind::Plain, format!("{by} finishes and writes {reg} = {}.", snap.value(w.after)));
     }
 
     if let Some(text) = stage_instr(snap, "IF") {
@@ -179,11 +209,14 @@ pub fn cycle(snap: &Snapshot) -> (Kind, String) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sim_engine::{assemble, Pipeline};
 
     /// Run `src` and collect the sentence for each cycle (1-based index).
     fn sentences(src: &str) -> Vec<(Kind, String)> {
-        let mut p = Pipeline::new(assemble(src).expect("assembles"));
+        sentences_at(src, 32)
+    }
+
+    fn sentences_at(src: &str, xlen: u32) -> Vec<(Kind, String)> {
+        let mut p = crate::machine::build(src, xlen).expect("assembles").machine;
         let mut out = vec![cycle(&p.snapshot())];
         while !p.halted() && out.len() < 200 {
             p.step_cycle();
@@ -239,12 +272,34 @@ mod tests {
     #[test]
     fn every_sentence_is_plain_and_short() {
         for sample in crate::tui::samples::SAMPLES {
-            for (_, s) in sentences(sample.source) {
+            for (_, s) in sentences_at(sample.source, sample.xlen) {
                 assert!(s.chars().count() <= 120, "{s}");
                 assert!(s.ends_with('.'), "{s}");
                 assert!(!s.contains("Some(") && !s.contains("::"), "{s}");
             }
         }
+    }
+
+    #[test]
+    fn rv64_sentences_use_64_bit_values() {
+        let all = sentences_at(crate::tui::samples::RV64_SAMPLE.source, 64);
+        let text: Vec<&str> = all.iter().map(|(_, s)| s.as_str()).collect();
+        assert!(text.contains(&"addi finishes and writes x2 = 0x0000_0100_0000_0005."), "{text:#?}");
+        assert!(text.contains(&"addw finishes and writes x3 = 5."), "{text:#?}");
+        assert!(text.iter().any(|s| s.starts_with("addw needs x2 from addi")), "{text:#?}");
+        assert_eq!(all.last().unwrap().1, "addi writes x4 = -1, and the program is finished.");
+    }
+
+    #[test]
+    fn fit_instr_never_cuts_a_token() {
+        assert_eq!(fit_instr("add  x3, x2, x1", 20, true), "add x3, x2, x1");
+        assert_eq!(fit_instr("add  x3, x2, x1", 12, true), "add x3,x2,x1");
+        assert_eq!(fit_instr("add  x3, x2, x1", 11, true), "add x3,x2…");
+        assert_eq!(fit_instr("add  x3, x2, x1", 8, true), "add x3…");
+        assert_eq!(fit_instr("add  x3, x2, x1", 6, true), "add…");
+        assert_eq!(fit_instr("lw   x1, 0(x2)", 9, false), "lw x1~");
+        assert_eq!(fit_instr("ecall", 5, true), "ecall");
+        assert_eq!(fit_instr("ecall", 3, true), "ec…");
     }
 
     #[test]

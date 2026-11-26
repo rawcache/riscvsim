@@ -1,0 +1,64 @@
+
+  riscvsim › demo 2 · Waiting for memory
+  See why an add must wait one cycle for a load.
+
+   1  # A load reads memory in MEM, one stage later than the
+   2  # ALU, so the add right after it must wait one cycle.
+   3  .data
+   4  value:  .word 41
+   5
+   6  .text
+   7  addi x4, x0, 1     # x4 = 1
+   8  lui  x2, 0x10000   # x2 = 0x10000000, where value is
+   9  lw   x1, 0(x2)     # x1 = 41, read from memory
+  10  add  x3, x1, x4    # needs x1 now: one stall
+
+  cycle 1
+    IF addi x4, x0, 1  ID ·  EX ·  MEM ·  WB ·
+    › The first instruction, addi, is fetched from memory.
+
+  cycle 2
+    IF lui x2, 0x10000  ID addi x4, x0, 1  EX ·  MEM ·  WB ·
+    › addi is decoded and reads its source registers.
+
+  cycle 3
+    IF lw x1, 0(x2)  ID lui x2, 0x10000  EX addi x4, x0, 1  MEM ·  WB ·
+    › addi is computing in the ALU; everything else moves one stage on.
+
+  cycle 4
+    IF add x3, x1, x4  ID lw x1, 0(x2)  EX lui x2…  MEM addi x4,x0,1  WB ·
+    › lui is computing in the ALU; everything else moves one stage on.
+
+  cycle 5
+    IF ·  ID add x3, x1, x4  EX lw x1, 0(x2)  MEM lui x2…  WB addi x4,x0,1
+    ✓ x4 = 1
+    ! lw is reading memory. add must wait one cycle because it needs x1 from
+      lw.
+
+  cycle 6
+    IF ·  ID add x3, x1, x4  EX bubble  MEM lw x1, 0(x2)  WB lui x2, 0x10000
+    ✓ x2 = 0x10000000
+    › lui finishes and writes x2 = 0x10000000.
+
+  cycle 7
+    IF ·  ID ·  EX add x3, x1, x4  MEM bubble  WB lw x1, 0(x2)
+    ✓ x1 = 41
+    › add needs x1 from lw, so it is forwarded from the MEM/WB latch and
+      nobody waits.
+
+  cycle 8
+    IF ·  ID ·  EX ·  MEM add x3, x1, x4  WB bubble
+    › Nothing is left to fetch, so the pipeline is emptying.
+
+  cycle 9
+    IF ·  ID ·  EX ·  MEM ·  WB add x3, x1, x4
+    ✓ x3 = 42
+    ✓ add writes x3 = 42, and the program is finished.
+
+  ✓ 9 cycles · 4 instructions · CPI 2.25 · 1 stall · 0 mispredictions
+    Ends with x4 = 1 · x2 = 0x10000000 · x1 = 41 · x3 = 42
+    Why it slowed down:
+    • lw is reading memory. add must wait one cycle because it needs x1 from
+      lw.
+
+  Next: riscvsim demo 3 (Skipping the wait)

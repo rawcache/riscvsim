@@ -1,84 +1,93 @@
-# Builds riscvsim for macOS/Linux x arm64/x86_64 and publishes the tarballs
-# as GitHub release assets with the exact names install.sh, install.ps1 and
-# Formula/riscvsim.rb expect. Trigger: push a tag like v0.1.0.
+# Release riscvsim: on a version tag (v1.2.3), build the CLI for macOS
+# (arm64, x86_64) and Linux (x86_64), and attach the archives, one
+# SHA256SUMS file and install.sh to a GitHub release.
+#
+# Uses only actions/checkout, the preinstalled Rust toolchain and the
+# preinstalled gh CLI. The repository name comes from github.repository at
+# release time, so no owner name is written in this repo.
+
 name: release
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
 
 permissions:
   contents: write
 
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
+env:
+  TAG: ${{ github.ref_name }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_REPO: ${{ github.repository }}
 
 jobs:
-  preflight:
-    runs-on: ubuntu-24.04
+  create:
+    name: Create the release
+    runs-on: ubuntu-latest
     steps:
-      - name: Reject an already-published tag
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Create a draft release with notes
         run: |
-          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release $GITHUB_REF_NAME already exists. Published assets are immutable." >&2
-            exit 1
-          fi
+          cat > notes.md <<NOTES
+          ## Install
+
+          \`\`\`sh
+          curl -fsSL https://github.com/${GH_REPO}/releases/download/${TAG}/install.sh | sh
+          \`\`\`
+
+          Or download the archive for your system below, check it against
+          \`SHA256SUMS\`, and put \`riscvsim\` on your PATH. From source:
+          \`cargo install --path cli\`.
+
+          First command to try: \`riscvsim demo\`
+          NOTES
+          gh release create "$TAG" --draft --title "riscvsim $TAG" --notes-file notes.md
 
   build:
-    needs: preflight
+    name: Build ${{ matrix.asset }}
+    needs: create
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: macos-15
+          - runner: macos-14
             target: aarch64-apple-darwin
-            asset: riscvsim-macos-arm64.tar.gz
-          - os: macos-15
+            asset: riscvsim-macos-arm64
+          - runner: macos-14
             target: x86_64-apple-darwin
-            asset: riscvsim-macos-x86_64.tar.gz
-          - os: ubuntu-24.04
+            asset: riscvsim-macos-x86_64
+          - runner: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            asset: riscvsim-linux-x86_64.tar.gz
-          - os: ubuntu-24.04
-            target: aarch64-unknown-linux-gnu
-            asset: riscvsim-linux-arm64.tar.gz
-    runs-on: ${{ matrix.os }}
+            asset: riscvsim-linux-x86_64
+    runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v7
-
-      - name: Install target
-        run: rustup target add ${{ matrix.target }}
-
-      - name: Install aarch64 cross linker
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
-
+      - uses: actions/checkout@v4
       - name: Build
-        working-directory: cli
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Smoke test (native targets only)
-        if: matrix.target != 'aarch64-unknown-linux-gnu' && matrix.target != 'x86_64-apple-darwin'
-        working-directory: cli
+        env:
+          # Lets the binary check this repository's releases for updates.
+          RISCVSIM_RELEASE_REPO: ${{ github.repository }}
         run: |
-          ./target/${{ matrix.target }}/release/riscvsim --version
-          printf 'addi x1, x0, 5\naddi x2, x1, 3\nadd  x3, x2, x1\n' > /tmp/add.s
-          ./target/${{ matrix.target }}/release/riscvsim run /tmp/add.s | grep -q "program complete"
+          rustup target add "${{ matrix.target }}"
+          cargo build --release --locked --manifest-path cli/Cargo.toml --target "${{ matrix.target }}"
+      - name: Package and upload
+        run: |
+          mkdir -p dist
+          cp "cli/target/${{ matrix.target }}/release/riscvsim" dist/riscvsim
+          tar -czf "${{ matrix.asset }}.tar.gz" -C dist riscvsim
+          gh release upload "$TAG" "${{ matrix.asset }}.tar.gz" --clobber
 
-      - name: Package
-        run: tar -czf ${{ matrix.asset }} -C cli/target/${{ matrix.target }}/release riscvsim
-
-      - name: Upload release asset
-        uses: softprops/action-gh-release@v3
-        with:
-          files: ${{ matrix.asset }}
-          # Published release assets are immutable. A rerun for the same tag
-          # must fail instead of replacing archives and invalidating checksums.
-          overwrite_files: false
+  finish:
+    name: Checksums, installer, publish
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write SHA256SUMS and install.sh
+        run: |
+          mkdir -p out && cd out
+          gh release download "$TAG" --pattern '*.tar.gz'
+          sha256sum ./*.tar.gz | sed 's| \./| |' > SHA256SUMS
+          sed -e "s|__RISCVSIM_REPO__|${GH_REPO}|" -e "s|__RISCVSIM_TAG__|${TAG}|" ../.github/release/install.sh > install.sh
+          sh -n install.sh
+          gh release upload "$TAG" SHA256SUMS install.sh --clobber
+      - name: Publish
+        run: gh release edit "$TAG" --draft=false

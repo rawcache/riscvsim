@@ -1,0 +1,24 @@
+ ❯_ riscvsim v0.2.0  ·  wide-values.s  ·  RV64           ✕
+╭──────────────────────────────────────────────────────────╮
+│  Pipeline    Registers · Memory                          │
+│ IF  —                                                    │
+│ ID  addi x4, x0, -1                           0x00000010 │
+│ EX  addw x3, x2, x0                     ◂ x2 from EX/MEM │
+│ MEM addi x2, x1, 5                            0x00000008 │
+│ WB  slli x1, x1, 40                           0x00000004 │
+│                                                          │
+│› addw needs x2 from addi, so it is forwarded from the    │
+│  EX/MEM latch and nobody waits.                          │
+│cycles 6 · instr 2 · CPI 3.00 · stalls 0 · flushed 0      │
+╰──────────────────────────────────────────────────────────╯
+╭ terminal ────────────────────────────────────────────────╮
+│Loading wide-values.s...                                  │
+│Assembling program...                                     │
+│✓ assembled 5 instructions                                │
+│addi x1, x0, 1  x1: 0 -> 1                                │
+│slli x1, x1, 40  x1: 1 -> 1099511627776                   │
+╰──────────────────────────────────────────────────────────╯
+ [ Assemble ]  [ ◀ Back ]  [ Step ▶ ]  [ ▶ Run ]
+ speed ├━━━━━━━●───────┤ 10 cyc/s sample ▾ wide-values.s
+> Press Enter for commands
+ cycle 6, pc 0x00000014         → step · space run · q quit

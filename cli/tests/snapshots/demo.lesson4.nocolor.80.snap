@@ -1,0 +1,116 @@
+
+  riscvsim › demo 4 · Guessing wrong
+  A branch guesses, misses, and wrong work is thrown away.
+
+   1  # The pipeline guesses where a branch goes before it
+   2  # knows. A wrong guess throws away what came in behind it.
+   3  addi x1, x0, 3     # run the loop 3 times
+   4  addi x2, x0, 0
+   5  loop:
+   6  addi x2, x2, 1     # count each pass
+   7  addi x1, x1, -1
+   8  bne  x1, x0, loop  # guessed, then checked in EX
+   9  addi x3, x0, 99    # after the loop
+
+  cycle 1
+    IF addi x1, x0, 3  ID ·  EX ·  MEM ·  WB ·
+    › The first instruction, addi, is fetched from memory.
+
+  cycle 2
+    IF addi x2, x0, 0  ID addi x1, x0, 3  EX ·  MEM ·  WB ·
+    › addi is decoded and reads its source registers.
+
+  cycle 3
+    IF addi x2, x2, 1  ID addi x2, x0, 0  EX addi x1, x0, 3  MEM ·  WB ·
+    › addi is computing in the ALU; everything else moves one stage on.
+
+  cycle 4
+    IF addi x1,x1,-1  ID addi x2,x2,1  EX addi x2,x0,0  MEM addi x1,x0,3  WB ·
+    › addi is computing in the ALU; everything else moves one stage on.
+
+  cycle 5
+    IF bne x1,x0…  ID addi x1,x1…  EX addi x2,x2…  MEM addi x2…  WB addi x1…
+    ✓ x1 = 3
+    › addi needs x2 from addi, so it is forwarded from the EX/MEM latch and
+      nobody waits.
+
+  cycle 6
+    IF addi x3,x0…  ID bne x1,x0…  EX addi x1,x1…  MEM addi x2…  WB addi x2…
+    ✓ x2 = 0
+    › addi finishes and writes x2 = 0.
+
+  cycle 7
+    IF ·  ID ✗ addi x3,x0…  EX bne x1,x0…  MEM addi x1,x1,-1  WB addi x2,x2,1
+    ✓ x2 = 1
+    ✗ The branch was wrong (bne was guessed not taken, but it was taken), so
+      one instruction was thrown away.
+
+  cycle 8
+    IF addi x2,x2,1  ID flushed  EX flushed  MEM bne x1,x0…  WB addi x1,x1,-1
+    ✓ x1 = 2
+    › addi finishes and writes x1 = 2.
+
+  cycle 9
+    IF addi x1,x1,-1  ID addi x2,x2,1  EX flushed  MEM flushed  WB bne x1,x0…
+    › addi is decoded and reads its source registers.
+
+  cycle 10
+    IF bne x1,x0…  ID addi x1,x1,-1  EX addi x2,x2,1  MEM flushed  WB flushed
+    › addi is computing in the ALU; everything else moves one stage on.
+
+  cycle 11
+    IF addi x2,x2…  ID bne x1,x0…  EX addi x1,x1…  MEM addi x2,x2…  WB flushed
+    › addi is computing in the ALU; everything else moves one stage on.
+
+  cycle 12
+    IF addi x1,x1…  ID addi x2,x2…  EX bne x1,x0…  MEM addi x1…  WB addi x2…
+    ✓ x2 = 2
+    › bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
+      nobody waits.
+
+  cycle 13
+    IF bne x1,x0…  ID addi x1,x1…  EX addi x2,x2…  MEM bne x1,x0…  WB addi x1…
+    ✓ x1 = 1
+    › addi finishes and writes x1 = 1.
+
+  cycle 14
+    IF addi x2,x2…  ID bne x1,x0…  EX addi x1,x1…  MEM addi x2…  WB bne x1,x0…
+    › addi is computing in the ALU; everything else moves one stage on.
+
+  cycle 15
+    IF ✗ addi x1…  ID ✗ addi x2…  EX bne x1,x0…  MEM addi x1,x1…  WB addi x2…
+    ✓ x2 = 3
+    ✗ The branch was wrong (bne was guessed taken, but it fell through), so
+      two instructions were thrown away.
+
+  cycle 16
+    IF addi x3,x0,99  ID flushed  EX flushed  MEM bne x1,x0…  WB addi x1,x1,-1
+    ✓ x1 = 0
+    › addi finishes and writes x1 = 0.
+
+  cycle 17
+    IF ·  ID addi x3, x0, 99  EX flushed  MEM flushed  WB bne x1, x0, loop
+    › addi is decoded and reads its source registers.
+
+  cycle 18
+    IF ·  ID ·  EX addi x3, x0, 99  MEM flushed  WB flushed
+    › addi is computing in the ALU; everything else moves one stage on.
+
+  cycle 19
+    IF ·  ID ·  EX ·  MEM addi x3, x0, 99  WB flushed
+    › Nothing is left to fetch, so the pipeline is emptying.
+
+  cycle 20
+    IF ·  ID ·  EX ·  MEM ·  WB addi x3, x0, 99
+    ✓ x3 = 99
+    ✓ addi writes x3 = 99, and the program is finished.
+
+  ✓ 20 cycles · 12 instructions · CPI 1.67 · 0 stalls · 2 mispredictions
+    Ends with x1 = 0 · x2 = 3 · x3 = 99
+    Why it slowed down:
+    • The branch was wrong (bne was guessed not taken, but it was taken), so
+      one instruction was thrown away.
+    • The branch was wrong (bne was guessed taken, but it fell through), so
+      two instructions were thrown away.
+
+  Next: riscvsim demo 5 (Loops)

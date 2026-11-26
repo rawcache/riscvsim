@@ -1,0 +1,40 @@
+ ❯_ riscvsim v0.2.0  ·  array-sum.s  ·  cycle 5  ·  pc 0x00000014                                                    ✕
+╭ source · array-sum.s ──────────────────────╮╭────────────────────────────────────────────────────────────────────────╮
+│  1 # sum four words from memory into a0    ││  Pipeline    Registers · Memory                                        │
+│  2 .data                                   ││╭IF·Fetch────╮ ╭ID·Decode──╮ ╭EX·Execute──╮ ╭MEM·Memory─╮ ╭WB·Writeback╮│
+│  3 readings: .word 12, 7, 31, 4            │││lw t3, 0(t0)│ │addi t2,x0…│ │addi t1,x0,4│ │addi t0,t0…│ │lui t0…     ││
+│  4                                         │││            │ │           │ │            │ │           │ │            ││
+│  5 .text                                   │││0x00000010  │ │0x0000000c │ │0x00000008  │ │0x00000004 │ │0x00000000  ││
+│  6 la   t0, readings ‹MEM› ‹WB›            ││╰────────────╯ ╰───────────╯ ╰────────────╯ ╰───────────╯ ╰────────────╯│
+│▶ 7 addi t1, x0, 4 ‹EX›                     ││                                                                        │
+│  8 addi t2, x0, 0 ‹ID›                     ││                                                                        │
+│  9 loop:                                   ││                                                                        │
+│ 10 lw   t3, 0(t0) ‹IF›                     ││› lui finishes and writes x5 = 0x10000000.                              │
+│ 11 add  t2, t2, t3                         ││                                                                        │
+│ 12 addi t0, t0, 4                          ││                                                                        │
+│ 13 addi t1, t1, -1                         ││                                                                        │
+│ 14 bne  t1, x0, loop                       ││                                                                        │
+│ 15 mv   a0, t2                             ││                                                                        │
+│ 16 ecall                                   ││                                                                        │
+│                                            ││                                                                        │
+│                                            ││                                                                        │
+│                                            ││                                                                        │
+│                                            ││                                                                        │
+│                                            ││                                                                        │
+│                                            ││                                                                        │
+│                                            ││                                                                        │
+│                                            ││                                                                        │
+│                                            ││                                                                        │
+│                                            ││cycles 5 · instr 1 · CPI 5.00 · stalls 0 · flushed 0 · mispredict 0     │
+╰────────────────────────────────────────────╯╰────────────────────────────────────────────────────────────────────────╯
+╭ terminal ────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│> riscvsim tui array-sum.s                                                                                            │
+│Loading array-sum.s...                                                                                                │
+│Assembling program...                                                                                                 │
+│✓ assembled 11 instructions                                                                                           │
+│lui t0, 0x10000  x5: 0 -> 268435456                                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ [ Assemble ]  [ ◀ Back ]  [ Step ▶ ]  [ ▶ Run ]  [ ⟲ Reset ]
+ speed ├━━━━━━━●───────┤ 10 cyc/s sample ▾ array-sum.s
+> Press Enter for commands
+ cycle 5, pc 0x00000014                    → step · ← back · space run · +/- speed 10 cyc/s · r reset · ? help · q quit

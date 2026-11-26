@@ -1,0 +1,116 @@
+
+  <1>riscvsim<0> <36>›<0> <1>demo 4<0> · Guessing wrong
+  <90>A branch guesses, misses, and wrong work is thrown away.<0>
+
+  <90> 1  # The pipeline guesses where a branch goes before it<0>
+  <90> 2  # knows. A wrong guess throws away what came in behind it.<0>
+   3  addi x1, x0, 3     # run the loop 3 times
+   4  addi x2, x0, 0
+   5  loop:
+   6  addi x2, x2, 1     # count each pass
+   7  addi x1, x1, -1
+   8  bne  x1, x0, loop  # guessed, then checked in EX
+   9  addi x3, x0, 99    # after the loop
+
+  <1>cycle 1<0>
+    <36>IF<0> <1>addi x1, x0, 3<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>›<0> The first instruction, addi, is fetched from memory.
+
+  <1>cycle 2<0>
+    <36>IF<0> <1>addi x2, x0, 0<0>  <36>ID<0> <1>addi x1, x0, 3<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>›<0> addi is decoded and reads its source registers.
+
+  <1>cycle 3<0>
+    <36>IF<0> <1>addi x2, x2, 1<0>  <36>ID<0> <1>addi x2, x0, 0<0>  <36>EX<0> <1>addi x1, x0, 3<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>›<0> addi is computing in the ALU; everything else moves one stage on.
+
+  <1>cycle 4<0>
+    <36>IF<0> <1>addi x1,x1,-1<0>  <36>ID<0> <1>addi x2,x2,1<0>  <36>EX<0> <1>addi x2,x0,0<0>  <36>MEM<0> <1>addi x1,x0,3<0>  <36>WB<0> <90>·<0>
+    <36>›<0> addi is computing in the ALU; everything else moves one stage on.
+
+  <1>cycle 5<0>
+    <36>IF<0> <1>bne x1,x0…<0>  <36>ID<0> <1>addi x1,x1…<0>  <36>EX<0> <1>addi x2,x2…<0>  <36>MEM<0> <1>addi x2…<0>  <36>WB<0> <1>addi x1…<0>
+    <32>✓<0> <1;32>x1<0> = <1;32>3<0>
+    <36>›<0> addi needs x2 from addi, so it is forwarded from the EX/MEM latch and
+      nobody waits.
+
+  <1>cycle 6<0>
+    <36>IF<0> <1>addi x3,x0…<0>  <36>ID<0> <1>bne x1,x0…<0>  <36>EX<0> <1>addi x1,x1…<0>  <36>MEM<0> <1>addi x2…<0>  <36>WB<0> <1>addi x2…<0>
+    <32>✓<0> <1;32>x2<0> = <1;32>0<0>
+    <36>›<0> addi finishes and writes x2 = 0.
+
+  <1>cycle 7<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <31>✗ addi x3,x0…<0>  <36>EX<0> <1>bne x1,x0…<0>  <36>MEM<0> <1>addi x1,x1,-1<0>  <36>WB<0> <1>addi x2,x2,1<0>
+    <32>✓<0> <1;32>x2<0> = <1;32>1<0>
+    <31>✗<0> The branch was wrong (bne was guessed not taken, but it was taken), so
+      one instruction was thrown away.
+
+  <1>cycle 8<0>
+    <36>IF<0> <1>addi x2,x2,1<0>  <36>ID<0> <31>flushed<0>  <36>EX<0> <31>flushed<0>  <36>MEM<0> <1>bne x1,x0…<0>  <36>WB<0> <1>addi x1,x1,-1<0>
+    <32>✓<0> <1;32>x1<0> = <1;32>2<0>
+    <36>›<0> addi finishes and writes x1 = 2.
+
+  <1>cycle 9<0>
+    <36>IF<0> <1>addi x1,x1,-1<0>  <36>ID<0> <1>addi x2,x2,1<0>  <36>EX<0> <31>flushed<0>  <36>MEM<0> <31>flushed<0>  <36>WB<0> <1>bne x1,x0…<0>
+    <36>›<0> addi is decoded and reads its source registers.
+
+  <1>cycle 10<0>
+    <36>IF<0> <1>bne x1,x0…<0>  <36>ID<0> <1>addi x1,x1,-1<0>  <36>EX<0> <1>addi x2,x2,1<0>  <36>MEM<0> <31>flushed<0>  <36>WB<0> <31>flushed<0>
+    <36>›<0> addi is computing in the ALU; everything else moves one stage on.
+
+  <1>cycle 11<0>
+    <36>IF<0> <1>addi x2,x2…<0>  <36>ID<0> <1>bne x1,x0…<0>  <36>EX<0> <1>addi x1,x1…<0>  <36>MEM<0> <1>addi x2,x2…<0>  <36>WB<0> <31>flushed<0>
+    <36>›<0> addi is computing in the ALU; everything else moves one stage on.
+
+  <1>cycle 12<0>
+    <36>IF<0> <1>addi x1,x1…<0>  <36>ID<0> <1>addi x2,x2…<0>  <36>EX<0> <1>bne x1,x0…<0>  <36>MEM<0> <1>addi x1…<0>  <36>WB<0> <1>addi x2…<0>
+    <32>✓<0> <1;32>x2<0> = <1;32>2<0>
+    <36>›<0> bne needs x1 from addi, so it is forwarded from the EX/MEM latch and
+      nobody waits.
+
+  <1>cycle 13<0>
+    <36>IF<0> <1>bne x1,x0…<0>  <36>ID<0> <1>addi x1,x1…<0>  <36>EX<0> <1>addi x2,x2…<0>  <36>MEM<0> <1>bne x1,x0…<0>  <36>WB<0> <1>addi x1…<0>
+    <32>✓<0> <1;32>x1<0> = <1;32>1<0>
+    <36>›<0> addi finishes and writes x1 = 1.
+
+  <1>cycle 14<0>
+    <36>IF<0> <1>addi x2,x2…<0>  <36>ID<0> <1>bne x1,x0…<0>  <36>EX<0> <1>addi x1,x1…<0>  <36>MEM<0> <1>addi x2…<0>  <36>WB<0> <1>bne x1,x0…<0>
+    <36>›<0> addi is computing in the ALU; everything else moves one stage on.
+
+  <1>cycle 15<0>
+    <36>IF<0> <31>✗ addi x1…<0>  <36>ID<0> <31>✗ addi x2…<0>  <36>EX<0> <1>bne x1,x0…<0>  <36>MEM<0> <1>addi x1,x1…<0>  <36>WB<0> <1>addi x2…<0>
+    <32>✓<0> <1;32>x2<0> = <1;32>3<0>
+    <31>✗<0> The branch was wrong (bne was guessed taken, but it fell through), so
+      two instructions were thrown away.
+
+  <1>cycle 16<0>
+    <36>IF<0> <1>addi x3,x0,99<0>  <36>ID<0> <31>flushed<0>  <36>EX<0> <31>flushed<0>  <36>MEM<0> <1>bne x1,x0…<0>  <36>WB<0> <1>addi x1,x1,-1<0>
+    <32>✓<0> <1;32>x1<0> = <1;32>0<0>
+    <36>›<0> addi finishes and writes x1 = 0.
+
+  <1>cycle 17<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <1>addi x3, x0, 99<0>  <36>EX<0> <31>flushed<0>  <36>MEM<0> <31>flushed<0>  <36>WB<0> <1>bne x1, x0, loop<0>
+    <36>›<0> addi is decoded and reads its source registers.
+
+  <1>cycle 18<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <1>addi x3, x0, 99<0>  <36>MEM<0> <31>flushed<0>  <36>WB<0> <31>flushed<0>
+    <36>›<0> addi is computing in the ALU; everything else moves one stage on.
+
+  <1>cycle 19<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <1>addi x3, x0, 99<0>  <36>WB<0> <31>flushed<0>
+    <36>›<0> Nothing is left to fetch, so the pipeline is emptying.
+
+  <1>cycle 20<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <1>addi x3, x0, 99<0>
+    <32>✓<0> <1;32>x3<0> = <1;32>99<0>
+    <32>✓<0> addi writes x3 = 99, and the program is finished.
+
+  <32>✓<0> 20 cycles · 12 instructions · CPI 1.67 · 0 stalls · 2 mispredictions
+    <90>Ends with<0> <1;32>x1 = 0 · x2 = 3 · x3 = 99<0>
+    <90>Why it slowed down:<0>
+    • The branch was wrong (bne was guessed not taken, but it was taken), so
+      one instruction was thrown away.
+    • The branch was wrong (bne was guessed taken, but it fell through), so
+      two instructions were thrown away.
+
+  <1>Next:<0> <36>riscvsim demo 5 (Loops)<0>

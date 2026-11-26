@@ -1,0 +1,48 @@
+
+  <1>riscvsim<0> <36>›<0> <1>demo 3<0> · Skipping the wait
+  <90>Pass a result straight to the next instruction.<0>
+
+  <90> 1  # Each add needs the result just computed. Forwarding<0>
+  <90> 2  # hands it over between stages, so nothing waits.<0>
+   3  addi x1, x0, 5     # x1 = 5
+   4  addi x2, x1, 3     # needs x1: forwarded, x2 = 8
+   5  add  x3, x2, x1    # needs x2 and x1: x3 = 13
+
+  <1>cycle 1<0>
+    <36>IF<0> <1>addi x1, x0, 5<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>›<0> The first instruction, addi, is fetched from memory.
+
+  <1>cycle 2<0>
+    <36>IF<0> <1>addi x2, x1, 3<0>  <36>ID<0> <1>addi x1, x0, 5<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>›<0> addi is decoded and reads its source registers.
+
+  <1>cycle 3<0>
+    <36>IF<0> <1>add x3, x2, x1<0>  <36>ID<0> <1>addi x2, x1, 3<0>  <36>EX<0> <1>addi x1, x0, 5<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>›<0> addi is computing in the ALU; everything else moves one stage on.
+
+  <1>cycle 4<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <1>add x3, x2, x1<0>  <36>EX<0> <1>addi x2, x1, 3<0>  <36>MEM<0> <1>addi x1, x0, 5<0>  <36>WB<0> <90>·<0>
+    <36>›<0> addi needs x1 from addi, so it is forwarded from the EX/MEM latch and
+      nobody waits.
+
+  <1>cycle 5<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <1>add x3, x2, x1<0>  <36>MEM<0> <1>addi x2, x1, 3<0>  <36>WB<0> <1>addi x1, x0, 5<0>
+    <32>✓<0> <1;32>x1<0> = <1;32>5<0>
+    <36>›<0> add needs x2 and x1 from addi, so it is forwarded from the EX/MEM latch
+      and nobody waits.
+
+  <1>cycle 6<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <1>add x3, x2, x1<0>  <36>WB<0> <1>addi x2, x1, 3<0>
+    <32>✓<0> <1;32>x2<0> = <1;32>8<0>
+    <36>›<0> addi finishes and writes x2 = 8.
+
+  <1>cycle 7<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <1>add x3, x2, x1<0>
+    <32>✓<0> <1;32>x3<0> = <1;32>13<0>
+    <32>✓<0> add writes x3 = 13, and the program is finished.
+
+  <32>✓<0> 7 cycles · 3 instructions · CPI 2.33 · 0 stalls · 0 mispredictions
+    <90>Ends with<0> <1;32>x1 = 5 · x2 = 8 · x3 = 13<0>
+    <90>No stalls: forwarding kept every instruction moving.<0>
+
+  <1>Next:<0> <36>riscvsim demo 4 (Guessing wrong)<0>

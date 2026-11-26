@@ -1,0 +1,62 @@
+
+  riscvsim › demo 6 · Wide values · RV64
+  RV64 registers hold 64 bits; see what addw keeps.
+
+   1  # RV64 registers hold 64 bits; build 0x0000_0100_0000_0005
+   2  addi x1, x0, 1     # x1 = 1
+   3  slli x1, x1, 40    # x1 = 1 << 40
+   4  addi x2, x1, 5     # x2 = 0x0000_0100_0000_0005
+   5  addw x3, x2, x0    # addw keeps the low 32 bits: 5
+   6  addi x4, x0, -1    # -1 sets all 64 bits
+
+  cycle 1
+    IF addi x1, x0, 1  ID ·  EX ·  MEM ·  WB ·
+    › The first instruction, addi, is fetched from memory.
+
+  cycle 2
+    IF slli x1, x1, 40  ID addi x1, x0, 1  EX ·  MEM ·  WB ·
+    › addi is decoded and reads its source registers.
+
+  cycle 3
+    IF addi x2, x1, 5  ID slli x1, x1, 40  EX addi x1, x0, 1  MEM ·  WB ·
+    › addi is computing in the ALU; everything else moves one stage on.
+
+  cycle 4
+    IF addw x3,x2,x0  ID addi x2,x1,5  EX slli x1,x1…  MEM addi x1,x0,1  WB ·
+    › slli needs x1 from addi, so it is forwarded from the EX/MEM latch and
+      nobody waits.
+
+  cycle 5
+    IF addi x4,x0…  ID addw x3,x2…  EX addi x2,x1…  MEM slli x1…  WB addi x1…
+    ✓ x1 = 1
+    › addi needs x1 from slli, so it is forwarded from the EX/MEM latch and
+      nobody waits.
+
+  cycle 6
+    IF ·  ID addi x4,x0,-1  EX addw x3,x2,x0  MEM addi x2,x1,5  WB slli x1,x1…
+    ✓ x1 = 0x0000_0100_0000_0000
+    › addw needs x2 from addi, so it is forwarded from the EX/MEM latch and
+      nobody waits.
+
+  cycle 7
+    IF ·  ID ·  EX addi x4, x0, -1  MEM addw x3, x2, x0  WB addi x2, x1, 5
+    ✓ x2 = 0x0000_0100_0000_0005
+    › addi finishes and writes x2 = 0x0000_0100_0000_0005.
+
+  cycle 8
+    IF ·  ID ·  EX ·  MEM addi x4, x0, -1  WB addw x3, x2, x0
+    ✓ x3 = 5
+    › addw finishes and writes x3 = 5.
+
+  cycle 9
+    IF ·  ID ·  EX ·  MEM ·  WB addi x4, x0, -1
+    ✓ x4 = -1
+    ✓ addi writes x4 = -1, and the program is finished.
+
+  ✓ 9 cycles · 5 instructions · CPI 1.80 · 0 stalls · 0 mispredictions
+    Ends with x1 = 0x0000_0100_0000_0000 · x2 = 0x0000_0100_0000_0005
+              x3 = 5 · x4 = -1 (0xffff_ffff_ffff_ffff)
+    No stalls: forwarding kept every instruction moving.
+
+  ✓ You finished all six lessons.
+  Next: riscvsim tui to step through your own program

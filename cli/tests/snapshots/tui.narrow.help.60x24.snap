@@ -1,0 +1,24 @@
+ ❯_ riscvsim v0.2.0  ·  add-forward.s  ·  cycle 0        ✕
+╭─╭ keys ────────────────────────────────────────────────╮─╮
+│ │ → / n        step one cycle                          │ │
+│ │ ←            step back one cycle                     │ │
+│ │ space        run / pause                             │ │
+│ │ + / -        faster / slower (also ] and [)          │ │
+│ │ f            fast mode: full speed, no animation     │ │
+│ │ ↑ ↓ / j k    select a source line                    │ │
+│ │ b            breakpoint on the selected line         │ │
+│›│ r            reset to cycle 0                        │ │
+│ │ a            assemble again (reloads the file)       │ │
+│c│ tab / t      Pipeline or Registers + memory          │ │
+╰─│ h            registers in hex or decimal             │─╯
+╭ │ g / G        memory: data or stack                   │─╮
+│>│ PgUp / PgDn  memory: scroll a page                   │ │
+│L│ s            pick a sample program                   │ │
+│A│ /            type a command, e.g. /open, /serve      │ │
+│✓│ ?            this help (any key closes it)           │ │
+│ │ q            quit                                    │ │
+╰─│                                                      │─╯
+ [│ Example: press j until the line after a loop,        │
+ s│ b to set a breakpoint, then space to run to it.      │
+> ╰──────────────────────────────────────────────────────╯
+ ✓ assembled 3 instructions (press Run or Step)      q quit

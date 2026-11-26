@@ -1,0 +1,48 @@
+
+  riscvsim › demo 3 · Skipping the wait
+  Pass a result straight to the next instruction.
+
+   1  # Each add needs the result just computed. Forwarding
+   2  # hands it over between stages, so nothing waits.
+   3  addi x1, x0, 5     # x1 = 5
+   4  addi x2, x1, 3     # needs x1: forwarded, x2 = 8
+   5  add  x3, x2, x1    # needs x2 and x1: x3 = 13
+
+  cycle 1
+    IF addi x1, x0, 5  ID ·  EX ·  MEM ·  WB ·
+    › The first instruction, addi, is fetched from memory.
+
+  cycle 2
+    IF addi x2, x1, 3  ID addi x1, x0, 5  EX ·  MEM ·  WB ·
+    › addi is decoded and reads its source registers.
+
+  cycle 3
+    IF add x3, x2, x1  ID addi x2, x1, 3  EX addi x1, x0, 5  MEM ·  WB ·
+    › addi is computing in the ALU; everything else moves one stage on.
+
+  cycle 4
+    IF ·  ID add x3, x2, x1  EX addi x2, x1, 3  MEM addi x1, x0, 5  WB ·
+    › addi needs x1 from addi, so it is forwarded from the EX/MEM latch and
+      nobody waits.
+
+  cycle 5
+    IF ·  ID ·  EX add x3, x2, x1  MEM addi x2, x1, 3  WB addi x1, x0, 5
+    ✓ x1 = 5
+    › add needs x2 and x1 from addi, so it is forwarded from the EX/MEM latch
+      and nobody waits.
+
+  cycle 6
+    IF ·  ID ·  EX ·  MEM add x3, x2, x1  WB addi x2, x1, 3
+    ✓ x2 = 8
+    › addi finishes and writes x2 = 8.
+
+  cycle 7
+    IF ·  ID ·  EX ·  MEM ·  WB add x3, x2, x1
+    ✓ x3 = 13
+    ✓ add writes x3 = 13, and the program is finished.
+
+  ✓ 7 cycles · 3 instructions · CPI 2.33 · 0 stalls · 0 mispredictions
+    Ends with x1 = 5 · x2 = 8 · x3 = 13
+    No stalls: forwarding kept every instruction moving.
+
+  Next: riscvsim demo 4 (Guessing wrong)

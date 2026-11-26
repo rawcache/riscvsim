@@ -1,0 +1,17 @@
+
+  <1>riscvsim<0> <36>›<0> <1>demo<0> · a short course on the pipeline, in six lessons
+
+  <36> 1<0>  <1>Your first instructions<0>                                     <90>first-steps<0>
+      <90>Watch five instructions move through the five stages.<0>
+  <36> 2<0>  <1>Waiting for memory<0>                                             <90>load-use<0>
+      <90>See why an add must wait one cycle for a load.<0>
+  <36> 3<0>  <1>Skipping the wait<0>                                            <90>forwarding<0>
+      <90>Pass a result straight to the next instruction.<0>
+  <36> 4<0>  <1>Guessing wrong<0>                                                 <90>branches<0>
+      <90>A branch guesses, misses, and wrong work is thrown away.<0>
+  <36> 5<0>  <1>Loops<0>                                                             <90>loops<0>
+      <90>Add 1 to 10 and watch the counter count down.<0>
+  <36> 6<0>  <1>Wide values (RV64)<0>                                          <90>wide-values<0>
+      <90>RV64 registers hold 64 bits; see what addw keeps.<0>
+
+  <1>Start:<0> <36>riscvsim demo 1<0> <90>(or by name: riscvsim demo loops)<0>

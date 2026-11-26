@@ -1,0 +1,24 @@
+ ❯_ riscvsim v0.2.0  ·  branch-loop.s  ·  cycle 7        ✕
+╭──────────────────────────────────────────────────────────╮
+│  Pipeline    Registers · Memory                          │
+│ IF  —                                                    │
+│ ID  addi x3, x0, 99                            ✗ flushed │
+│ EX  bne x1, x0, loop                  ◂ x1=2 from EX/MEM │
+│ MEM addi x1, x1, -1                           0x0000000c │
+│ WB  addi x2, x2, 1                            0x00000008 │
+│                                                          │
+│✗ The branch was wrong (bne was guessed not taken, but it │
+│  was taken), so one instruction was thrown away.         │
+│cycles 7 · instr 3 · CPI 2.33 · stalls 0 · flushed 1      │
+╰──────────────────────────────────────────────────────────╯
+╭ terminal ────────────────────────────────────────────────╮
+│Assembling program...                                     │
+│✓ assembled 6 instructions                                │
+│addi x1, x0, 3  x1: 0 -> 3                                │
+│addi x2, x0, 0  x2: 2147483644 -> 0                       │
+│addi x2, x2, 1  x2: 0 -> 1                                │
+╰──────────────────────────────────────────────────────────╯
+ [ Assemble ]  [ ◀ Back ]  [ Step ▶ ]  [ ▶ Run ]
+ speed ├━━━━━━━●───────┤ 10 cyc/s sample ▾ branch-loop.s
+> Press Enter for commands
+ cycle 7, pc 0x00000008         → step · space run · q quit

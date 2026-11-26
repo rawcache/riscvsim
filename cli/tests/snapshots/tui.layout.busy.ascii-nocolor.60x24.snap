@@ -1,0 +1,24 @@
+ >_ riscvsim v0.2.0  *  array-sum.s  *  cycle 5          x
++----------------------------------------------------------+
+|  Pipeline    Registers + Memory                          |
+| IF  lw t3, 0(t0)                              0x00000010 |
+| ID  addi t2, x0, 0                            0x0000000c |
+| EX  addi t1, x0, 4                            0x00000008 |
+| MEM addi t0, t0, 0                            0x00000004 |
+| WB  lui t0, 0x10000                           0x00000000 |
+|                                                          |
+|> lui finishes and writes x5 = 0x10000000.                |
+|                                                          |
+|cycles 5 | instr 1 | CPI 5.00 | stalls 0 | flushed 0      |
++----------------------------------------------------------+
++ terminal ------------------------------------------------+
+|> riscvsim tui array-sum.s                                |
+|Loading array-sum.s...                                    |
+|Assembling program...                                     |
+|+ assembled 11 instructions                               |
+|lui t0, 0x10000  x5: 0 -> 268435456                       |
++----------------------------------------------------------+
+ [ Assemble ]  [ < Back ]  [ Step > ]  [ > Run ]
+ speed [=======O-------] 10 cyc/s sample v array-sum.s
+> Press Enter for commands
+ cycle 5, pc 0x00000014         > step | space run | q quit

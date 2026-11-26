@@ -1,0 +1,58 @@
+
+  <1>riscvsim<0> <36>›<0> <1>demo 1<0> · Your first instructions
+  <90>Watch five instructions move through the five stages.<0>
+
+  <90> 1  # Each line is one instruction. Every cycle, each one<0>
+  <90> 2  # moves one stage to the right: IF, ID, EX, MEM, WB.<0>
+   3  addi x1, x0, 6     # x1 = 0 + 6
+   4  addi x2, x0, 7     # x2 = 0 + 7
+   5  addi x3, x0, 100   # x3 = 100
+   6  addi x5, x0, 1     # x5 = 1
+   7  add  x4, x1, x2    # x4 = 6 + 7 = 13
+
+  <1>cycle 1<0>
+    <36>IF<0> <1>addi x1, x0, 6<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>›<0> The first instruction, addi, is fetched from memory.
+
+  <1>cycle 2<0>
+    <36>IF<0> <1>addi x2, x0, 7<0>  <36>ID<0> <1>addi x1, x0, 6<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>›<0> addi is decoded and reads its source registers.
+
+  <1>cycle 3<0>
+    <36>IF<0> <1>addi x3, x0, 100<0>  <36>ID<0> <1>addi x2, x0, 7<0>  <36>EX<0> <1>addi x1, x0, 6<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <90>·<0>
+    <36>›<0> addi is computing in the ALU; everything else moves one stage on.
+
+  <1>cycle 4<0>
+    <36>IF<0> <1>addi x5, x0, 1<0>  <36>ID<0> <1>addi x3,x0…<0>  <36>EX<0> <1>addi x2,x0,7<0>  <36>MEM<0> <1>addi x1,x0,6<0>  <36>WB<0> <90>·<0>
+    <36>›<0> addi is computing in the ALU; everything else moves one stage on.
+
+  <1>cycle 5<0>
+    <36>IF<0> <1>add x4,x1…<0>  <36>ID<0> <1>addi x5,x0…<0>  <36>EX<0> <1>addi x3,x0…<0>  <36>MEM<0> <1>addi x2…<0>  <36>WB<0> <1>addi x1…<0>
+    <32>✓<0> <1;32>x1<0> = <1;32>6<0>
+    <36>›<0> addi finishes and writes x1 = 6.
+
+  <1>cycle 6<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <1>add x4, x1, x2<0>  <36>EX<0> <1>addi x5,x0,1<0>  <36>MEM<0> <1>addi x3,x0…<0>  <36>WB<0> <1>addi x2,x0,7<0>
+    <32>✓<0> <1;32>x2<0> = <1;32>7<0>
+    <36>›<0> addi finishes and writes x2 = 7.
+
+  <1>cycle 7<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <1>add x4, x1, x2<0>  <36>MEM<0> <1>addi x5, x0, 1<0>  <36>WB<0> <1>addi x3, x0, 100<0>
+    <32>✓<0> <1;32>x3<0> = <1;32>100<0>
+    <36>›<0> addi finishes and writes x3 = 100.
+
+  <1>cycle 8<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <1>add x4, x1, x2<0>  <36>WB<0> <1>addi x5, x0, 1<0>
+    <32>✓<0> <1;32>x5<0> = <1;32>1<0>
+    <36>›<0> addi finishes and writes x5 = 1.
+
+  <1>cycle 9<0>
+    <36>IF<0> <90>·<0>  <36>ID<0> <90>·<0>  <36>EX<0> <90>·<0>  <36>MEM<0> <90>·<0>  <36>WB<0> <1>add x4, x1, x2<0>
+    <32>✓<0> <1;32>x4<0> = <1;32>13<0>
+    <32>✓<0> add writes x4 = 13, and the program is finished.
+
+  <32>✓<0> 9 cycles · 5 instructions · CPI 1.80 · 0 stalls · 0 mispredictions
+    <90>Ends with<0> <1;32>x1 = 6 · x2 = 7 · x3 = 100 · x5 = 1 · x4 = 13<0>
+    <90>No stalls: every instruction moved one stage each cycle.<0>
+
+  <1>Next:<0> <36>riscvsim demo 2 (Waiting for memory)<0>
