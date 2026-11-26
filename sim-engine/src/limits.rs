@@ -10,9 +10,14 @@ pub const MAX_SOURCE_BYTES: usize = 1024 * 1024;
 pub const MAX_LINE_LENGTH: usize = 16 * 1024;
 /// Deepest nesting the front ends accept: parentheses, brackets, blocks,
 /// statements and operators (`a + b + c` is three levels; each `else if`
-/// is one more). The worst case at this depth fits in half of a 1 MiB
-/// browser WASM stack even in a debug build (`tests/stack_budget.rs`).
+/// is one more), structs and unions defined or contained inside each
+/// other, and chains of `.`, `->`, `[ ]` and calls (`p->next` counts up to
+/// three levels, so about 20 hops fit in one expression). The worst case
+/// at this depth fits in half of a 1 MiB browser WASM stack even in a
+/// debug build (`tests/stack_budget.rs`).
 pub const MAX_NESTING_DEPTH: usize = 64;
+/// Largest struct, union, or array of them (one variable), in bytes.
+pub const MAX_STRUCT_BYTES: usize = 1024 * 1024;
 /// Most labels one assembly program may define.
 pub const MAX_LABELS: usize = 65_536;
 /// Longest string literal (assembler `.string`/`.ascii`, or source language).

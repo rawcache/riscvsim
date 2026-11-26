@@ -52,6 +52,7 @@ fn every_limit_is_documented_with_its_value() {
         ("MAX_SOURCE_BYTES", MAX_SOURCE_BYTES as u64),
         ("MAX_LINE_LENGTH", MAX_LINE_LENGTH as u64),
         ("MAX_NESTING_DEPTH", MAX_NESTING_DEPTH as u64),
+        ("MAX_STRUCT_BYTES", MAX_STRUCT_BYTES as u64),
         ("MAX_LABELS", MAX_LABELS as u64),
         ("MAX_STRING_LITERAL_BYTES", MAX_STRING_LITERAL_BYTES as u64),
         ("MAX_INSTRUCTIONS", MAX_INSTRUCTIONS as u64),
@@ -78,6 +79,8 @@ fn every_listed_c_construct_compiles() {
         ("pointers: & and *, arithmetic scaled by element size, arrays decay to pointers, pointer parameters & results", "int *at(int *a, int i) { return a + i; } int main() { int a[3] = {1, 2, 3}; int x = 0; int *p = &x; *p = *at(a, 2); return x; }"),
         ("globals with constant initializers", "int g = 4; int t[2] = {1, 2}; int main() { return g + t[1]; }"),
         ("string literals (read-only data)", "int main() { char *s = \"hi\"; return s[1]; }"),
+        ("enums & typedef", "typedef enum { A = 2, B } E; typedef int Num; int main() { E e = B; Num n = A; int a[B]; a[0] = e + n; return a[0]; }"),
+        ("structs & unions: nesting, arrays, pointers & ->, copies, {...} and .member initializers, by-value arguments & results", "struct P { int x; int y[2]; }; union U { int i; char c; }; struct P make(struct P p) { struct P *q = &p; q->x++; return p; } int main() { struct P a = {.x = 1, {2, 3}}; struct P b = make(a); union U u = {4}; return b.x + b.y[1] + u.i; }"),
         ("arithmetic, comparisons, bitwise & compound assignment, && || !", "int main() { int x = 5; x <<= 1; x ^= 3; return (x > 2 && !0) || x % 2; }"),
         ("if/else", "int main() { if (1) { return 1; } else { return 2; } }"),
         ("while/for/do-while", "int main() { int i = 0; while (i < 2) i++; for (; i < 4; i++) {} do { i++; } while (i < 6); return i; }"),
@@ -109,7 +112,11 @@ fn every_listed_c_construct_compiles() {
 fn every_listed_unsupported_c_construct_is_rejected_clearly() {
     let constructs = [
         ("function pointers & pointers to arrays", "int main() { int (*f)(int); return 0; }", "function pointers"),
-        ("structs & unions", "struct P { int x; }; int main() { return 0; }", "struct"),
+        ("bit-fields, flexible array members, anonymous members & function pointers in structs", "struct P { int x : 3; }; int main() { return 0; }", "bit-fields"),
+        ("bit-fields, flexible array members, anonymous members & function pointers in structs", "struct P { int n; int d[]; }; int main() { return 0; }", "flexible array members"),
+        ("bit-fields, flexible array members, anonymous members & function pointers in structs", "struct P { union { int a; }; }; int main() { return 0; }", "anonymous struct and union members"),
+        ("bit-fields, flexible array members, anonymous members & function pointers in structs", "struct P { int (*f)(int); }; int main() { return 0; }", "function pointers inside structs"),
+        ("variable-length arrays", "int main() { int n = 2; int a[n]; return 0; }", "variable-length arrays"),
         ("floats", "int main() { float f = 1; return 0; }", "floating point"),
         ("goto", "int main() { goto end; end: return 0; }", "goto"),
         ("#include & standard library calls", "#include <stdio.h>\nint main() { return 0; }", "#include"),
@@ -121,6 +128,10 @@ fn every_listed_unsupported_c_construct_is_rejected_clearly() {
     }
     let err = c_to_asm("int main() { long long x = 1; return x; }").unwrap_err().message;
     assert!(C_SUBSET_UNSUPPORTED.contains("64-bit integers on RV32") && err.contains("RV32"), "{err}");
+    let err = c_to_cpp("enum E { A };\nint main() { return A; }").unwrap_err().message;
+    assert!(C_SUBSET_UNSUPPORTED.contains("enums, structs & unions in C++ or Rust output") && err.contains("'enum'"), "{err}");
+    let err = cpp_to_rust("struct P { int x; };\nint main() { return 0; }").unwrap_err().message;
+    assert!(RUST_SUBSET_UNSUPPORTED.contains("C and C++ enums, structs & unions") && err.contains("to Rust"), "{err}");
     let err = c64("int main() { return printf(1); }").unwrap_err();
     assert!(err.contains("no standard library"), "{err}");
 }

@@ -30,16 +30,19 @@ mod cpp_to_rust;
 mod hir;
 mod identifiers;
 mod preprocess;
+mod records;
 mod rust_to_c;
 
-pub const C_SUBSET_SUPPORTED: &str = "char, short, int, long, long long, signed and unsigned (char is unsigned; ILP32 on RV32, LP64 on RV64) · casts & sizeof · character literals · local variables & fixed arrays · block scopes & shadowing · pointers: & and *, arithmetic scaled by element size, arrays decay to pointers, pointer parameters & results · pointer casts, void * & pointer-width integer casts · globals with constant initializers · string literals (read-only data) · arithmetic, comparisons, bitwise & compound assignment, && || ! · if/else · while/for/do-while · switch with fallthrough · break/continue (also continue inside switch) · functions (up to 7 integer args) · void functions & (void) parameter lists · recursion · prototypes without a body call hand-written assembly (psABI) · #define/#undef/#if/#ifdef";
-pub const C_SUBSET_UNSUPPORTED: &str = "function pointers & pointers to arrays · structs & unions · floats · goto · 64-bit integers on RV32 · #include & standard library calls";
-pub const CPP_SUBSET_SUPPORTED: &str = "int/bool variables · C integer types, casts & sizeof · fixed arrays · local auto with initializer · true/false · and/or/not · arithmetic & control flow incl. do-while & switch · functions (up to 7 int/bool args, including void helpers) · recursion · #define/#if preprocessor";
+pub const C_SUBSET_SUPPORTED: &str = "char, short, int, long, long long, signed and unsigned (char is unsigned; ILP32 on RV32, LP64 on RV64) · casts & sizeof · character literals · local variables & fixed arrays · block scopes & shadowing · pointers: & and *, arithmetic scaled by element size, arrays decay to pointers, pointer parameters & results · pointer casts, void * & pointer-width integer casts · globals with constant initializers · string literals (read-only data) · enums & typedef · structs & unions: nesting, arrays, pointers & ->, copies, {...} and .member initializers, by-value arguments & results · arithmetic, comparisons, bitwise & compound assignment, && || ! · if/else · while/for/do-while · switch with fallthrough · break/continue (also continue inside switch) · functions (up to 7 integer args) · void functions & (void) parameter lists · recursion · prototypes without a body call hand-written assembly (psABI) · #define/#undef/#if/#ifdef";
+pub const C_SUBSET_UNSUPPORTED: &str = "function pointers & pointers to arrays · bit-fields, flexible array members, anonymous members & function pointers in structs · variable-length arrays · floats · goto · 64-bit integers on RV32 · #include & standard library calls · enums, structs & unions in C++ or Rust output (they compile to assembly)";
+pub const CPP_SUBSET_SUPPORTED: &str = "int/bool variables · C integer types, casts & sizeof · fixed arrays · enums, typedef, structs & unions (with '.', copies, {...} initializers, by-value arguments & results) · local auto with initializer · true/false · and/or/not · arithmetic & control flow incl. do-while & switch · functions (up to 7 int/bool args, including void helpers) · recursion · #define/#if preprocessor";
 pub const CPP_SUBSET_UNSUPPORTED: &str = "classes & inheritance · templates · polymorphism · \
-overloading · pointers & references · globals · strings · floats · standard library";
+overloading · pointers & references · globals · strings · floats · standard library · \
+enums, structs & unions in C or Rust output (they compile to assembly)";
 pub const RUST_SUBSET_SUPPORTED: &str = "i32/bool values · let/let mut · fixed local arrays · \
 arithmetic & control flow · while/loop/for ranges · functions (up to 7 scalar args) · recursion";
-pub const RUST_SUBSET_UNSUPPORTED: &str = "references & lifetimes · structs/enums/traits · \
+pub const RUST_SUBSET_UNSUPPORTED: &str = "references & lifetimes · structs/enums/traits \
+(C and C++ enums, structs & unions do not translate to Rust) · \
 generics · closures & match · heap collections · strings · floats · macros & standard library";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -941,7 +944,7 @@ pub fn c_to_asm(source: &str) -> Result<String, TranslateError> {
 /// Source `int` values retain signed 32-bit semantics in the 64-bit program.
 pub fn c_to_asm64(source: &str) -> Result<String, TranslateError> {
     let tokens = lex(source)?;
-    let mut parser = Parser::new_c(tokens);
+    let mut parser = Parser::new_c(tokens).for_rv64();
     let unit = parser.parse_unit()?;
     let gen = CodeGen::new_rv64("C");
     gen.emit_unit(&unit)
@@ -949,7 +952,7 @@ pub fn c_to_asm64(source: &str) -> Result<String, TranslateError> {
 
 /// Compile the documented C++ int/bool subset to executable RV32IM.
 pub fn cpp_to_asm(source: &str) -> Result<String, TranslateError> {
-    let unit = parse_cpp_unit(source)?;
+    let unit = parse_cpp_unit(source, 32)?;
     let gen = CodeGen::new_cpp();
     gen.emit_unit(&unit)
 }
@@ -958,7 +961,7 @@ pub fn cpp_to_asm(source: &str) -> Result<String, TranslateError> {
 ///
 /// Source `int` values retain signed 32-bit semantics in the 64-bit program.
 pub fn cpp_to_asm64(source: &str) -> Result<String, TranslateError> {
-    let unit = parse_cpp_unit(source)?;
+    let unit = parse_cpp_unit(source, 64)?;
     let gen = CodeGen::new_rv64("C++");
     gen.emit_unit(&unit)
 }
@@ -982,10 +985,11 @@ pub fn translate_annotated(from: &str, xlen: u32, source: &str) -> Result<Vec<As
     let (unit, mut gen) = match from {
         "c" => {
             let tokens = lex(source)?;
-            let unit = Parser::new_c(tokens).parse_unit()?;
+            let parser = Parser::new_c(tokens);
+            let unit = if xlen == 64 { parser.for_rv64() } else { parser }.parse_unit()?;
             (unit, if xlen == 64 { CodeGen::new_rv64("C") } else { CodeGen::new() })
         }
-        "cpp" => (parse_cpp_unit(source)?, if xlen == 64 { CodeGen::new_rv64("C++") } else { CodeGen::new_cpp() }),
+        "cpp" => (parse_cpp_unit(source, if xlen == 64 { 64 } else { 32 })?, if xlen == 64 { CodeGen::new_rv64("C++") } else { CodeGen::new_cpp() }),
         other => {
             return Err(TranslateError::new(0, format!("annotated output is available for c and cpp, not {other}")));
         }
@@ -996,7 +1000,7 @@ pub fn translate_annotated(from: &str, xlen: u32, source: &str) -> Result<Vec<As
     let mut out = Vec::new();
     for line in asm.lines() {
         if let Some(n) = line.strip_prefix(ANNOTATE_MARK) {
-            current = n.trim().parse::<usize>().ok();
+            current = n.trim().parse::<usize>().ok().filter(|&n| n > 0);
             continue;
         }
         // The data section belongs to no single line.
@@ -1013,13 +1017,15 @@ pub fn c_to_cpp(source: &str) -> Result<String, TranslateError> {
     let tokens = lex(source)?;
     let mut parser = Parser::new_c(tokens);
     let unit = parser.parse_unit()?;
+    records::reject_user_types(&unit, "C", "C++")?;
     reject_memory_features(&unit, "C", "C++")?;
     Ok(SourceEmitter::new(SourceDialect::Cpp).emit(&unit))
 }
 
 /// Translate the documented C++ int/bool subset to compilable C subset source.
 pub fn cpp_to_c(source: &str) -> Result<String, TranslateError> {
-    let unit = parse_cpp_unit(source)?;
+    let unit = parse_cpp_unit(source, 32)?;
+    records::reject_user_types(&unit, "C++", "C")?;
     Ok(SourceEmitter::new(SourceDialect::C).emit(&unit))
 }
 
@@ -1107,12 +1113,11 @@ struct SpTok {
     line: usize,
 }
 
-const KEYWORDS: [&str; 12] = [
+const KEYWORDS: [&str; 16] = [
     "int", "if", "else", "while", "for", "return", "break", "continue", "do", "switch", "case",
-    "default",
+    "default", "struct", "union", "enum", "typedef",
 ];
-const BANNED: [(&str, &str); 4] = [
-    ("struct", "structs are not yet translatable"),
+const BANNED: [(&str, &str); 3] = [
     ("float", "floating point is not yet translatable"),
     ("double", "floating point is not yet translatable"),
     ("goto", "goto is not supported"),
@@ -1236,7 +1241,7 @@ fn c_type_name(value_type: ScalarType) -> String {
             } else {
                 C_INT_TYPES
                     .iter()
-                    .find(|(k, t)| *t == ScalarType::Int(base) && !k.starts_with("signed char"))
+                    .find(|(_, t)| *t == ScalarType::Int(base))
                     .map(|(k, _)| *k)
                     .unwrap_or("int")
             };
@@ -1496,7 +1501,7 @@ enum LexDialect {
     Rust,
 }
 
-const CPP_BANNED: [(&str, &str); 29] = [
+const CPP_BANNED: [(&str, &str); 27] = [
     ("class", "classes and inheritance are not supported"),
     ("template", "templates are not supported"),
     ("typename", "templates are not supported"),
@@ -1524,8 +1529,6 @@ const CPP_BANNED: [(&str, &str); 29] = [
     ("public", "classes and inheritance are not supported"),
     ("private", "classes and inheritance are not supported"),
     ("protected", "classes and inheritance are not supported"),
-    ("enum", "user-defined types are not supported"),
-    ("union", "user-defined types are not supported"),
     ("std", "the C++ standard library is not available"),
     ("this", "classes are not supported"),
     ("friend", "classes are not supported"),
@@ -1993,10 +1996,11 @@ there is no standard library here",
                     "unsupported: references are not translatable",
                 ));
             }
-            if s == "->" && dialect != LexDialect::Rust {
+            if s == "->" && dialect == LexDialect::Cpp {
                 return Err(TranslateError::new(
                     line,
-                    "unsupported: structs/pointers are not yet translatable",
+                    "unsupported: '->' needs pointers, which the C++ subset does not have; \
+                     use a struct variable and '.' instead",
                 ));
             }
             chars.next();
@@ -2053,10 +2057,19 @@ there is no standard library here",
                     "unsupported: methods, fields, and floating-point syntax are not supported",
                 ));
             }
-            return Err(TranslateError::new(
-                line,
-                "unsupported: floats/struct members are not yet translatable",
-            ));
+            // `.` selects a struct member; a `.` touching a digit is a
+            // floating-point literal, which the subsets do not have.
+            let after_number = matches!(toks.last(), Some(SpTok { tok: Tok::Int(_), .. }));
+            let before_digit = chars.clone().nth(1).is_some_and(|d| d.is_ascii_digit());
+            if after_number || before_digit {
+                return Err(TranslateError::new(
+                    line,
+                    "unsupported: floating point is not yet translatable; use integers",
+                ));
+            }
+            chars.next();
+            toks.push(SpTok { tok: Tok::Sym("."), line });
+            continue;
         }
         return Err(TranslateError::new(
             line,
@@ -2307,6 +2320,9 @@ struct Unit {
     /// First line that uses pointers, globals or strings (C only): such
     /// programs compile to assembly but not to other source languages yet.
     memory_line: Option<usize>,
+    /// First enum, struct, union or typedef (line and keyword): these
+    /// compile to assembly but not to other source languages yet.
+    user_types: Option<(usize, &'static str)>,
 }
 
 /// A C global variable or string literal, laid out in the data segment.
@@ -2319,6 +2335,11 @@ struct Global {
     init: Vec<GlobalInit>,
     readonly: bool,
     line: usize,
+    /// 0 for ordinary globals. A struct or union global is a byte array
+    /// (`value_type` is `unsigned char`) aligned to this many bytes; its
+    /// `init` holds one `Int` per byte, and an `Addr` stands for a whole
+    /// pointer-sized slot.
+    align: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -2809,10 +2830,11 @@ fn cpp_auto_preserves_c_int(expression: &Expr) -> bool {
     }
 }
 
-fn parse_cpp_unit(source: &str) -> Result<Unit, TranslateError> {
+fn parse_cpp_unit(source: &str, xlen: u8) -> Result<Unit, TranslateError> {
     let tokens = lex_cpp(source)?;
     reject_cpp_globals(&tokens)?;
     let mut parser = Parser::new(tokens);
+    parser.rec.xlen = xlen;
     let unit = parser.parse_unit()?;
     reject_cpp_overloading(&unit)?;
     validate_cpp_semantics(&unit)?;
@@ -3131,7 +3153,9 @@ fn reject_cpp_globals(tokens: &[SpTok]) -> Result<(), TranslateError> {
     brace_depth = 0;
     paren_depth = 0;
     for (index, token) in tokens.iter().enumerate() {
-        if brace_depth == 0 && paren_depth == 0 && is_type(&token.tok) {
+        // `typedef int Number;` names a type; it declares no variable
+        let after_typedef = index > 0 && tokens[index - 1].tok == Tok::Kw("typedef");
+        if brace_depth == 0 && paren_depth == 0 && is_type(&token.tok) && !after_typedef {
             let is_function = matches!(
                 (
                     tokens.get(index + 1).map(|next| &next.tok),
@@ -3318,6 +3342,7 @@ impl RustParser {
         Ok(Unit {
             globals: Vec::new(),
             memory_line: None,
+            user_types: None,
             funcs,
             prototypes: Vec::new(),
         })
@@ -3982,6 +4007,8 @@ struct Parser {
     /// String literals seen so far (they become read-only globals).
     strings: Vec<Vec<u8>>,
     memory_line: Option<usize>,
+    /// Enums, structs, unions and typedefs (see `records.rs`).
+    rec: Box<records::RecordState>,
 }
 
 /// Recursion budget for the parser backstop. Bracket nesting is limited
@@ -3997,12 +4024,28 @@ impl Parser {
             let line = toks.last().map(|t| t.line).unwrap_or(1);
             toks.push(SpTok { tok: Tok::Eof, line });
         }
-        Self { toks, pos: 0, depth: 0, synthetic: 0, pointers: false, strings: Vec::new(), memory_line: None }
+        Self {
+            toks,
+            pos: 0,
+            depth: 0,
+            synthetic: 0,
+            pointers: false,
+            strings: Vec::new(),
+            memory_line: None,
+            rec: Box::default(),
+        }
     }
 
     /// The C parser: the shared grammar plus pointers, globals and strings.
     fn new_c(toks: Vec<SpTok>) -> Self {
         Self { pointers: true, ..Self::new(toks) }
+    }
+
+    /// Lay out structs and unions for a 64-bit target (LP64) instead of
+    /// the default ILP32.
+    fn for_rv64(mut self) -> Self {
+        self.rec.xlen = 64;
+        self
     }
 
     fn mark_memory(&mut self, line: usize) {
@@ -4052,7 +4095,8 @@ impl Parser {
     fn parse_pointer_unary(&mut self, line: usize) -> Result<Expr, TranslateError> {
         let op = if self.next() == Tok::Sym("*") { "*" } else { "&" };
         self.mark_memory(line);
-        Ok(Expr::Unary(op, Box::new(self.parse_unary_operand()?), line))
+        let operand = self.parse_unary_operand()?;
+        self.pointer_unary(op, operand, line)
     }
 
     /// A string literal becomes a read-only global char array `__strN`
@@ -4150,6 +4194,20 @@ impl Parser {
         loop {
             match self.peek() {
                 Tok::Eof => break,
+                _ if self.record_type_at(0) => {
+                    let declaration_line = self.line();
+                    match self.parse_record_declaration(true)? {
+                        records::Declared::Nothing => {}
+                        records::Declared::Function(ParsedFunction::Definition(function)) => funcs.push(function),
+                        records::Declared::Function(ParsedFunction::Prototype(prototype)) => prototypes.push(prototype),
+                        records::Declared::Stmt(statement) => {
+                            if loose.is_empty() {
+                                loose_line = declaration_line;
+                            }
+                            loose.push(statement);
+                        }
+                    }
+                }
                 t if (matches!(t, Tok::Kw("bool") | Tok::Kw("void")) || is_c_int_kw(t))
                     && self.function_ahead() =>
                 {
@@ -4166,7 +4224,7 @@ impl Parser {
                 }
             }
         }
-        let mut globals = Vec::new();
+        let mut globals = self.take_record_globals();
         if !loose.is_empty()
             && self.pointers
             && funcs.iter().any(|f| f.name == "main")
@@ -4186,6 +4244,7 @@ impl Parser {
                 init,
                 readonly: true,
                 line: 0,
+                align: 0,
             });
         }
         if !loose.is_empty() {
@@ -4201,6 +4260,8 @@ impl Parser {
                     },
                 ));
             }
+            let mut body = self.take_hoisted();
+            body.append(&mut loose);
             funcs.push(Func {
                 name: "main".into(),
                 params: Vec::new(),
@@ -4209,7 +4270,7 @@ impl Parser {
                 param_lines: Vec::new(),
                 return_type: ScalarType::I32,
                 origin: FunctionOrigin::SyntheticMain,
-                body: loose,
+                body,
                 line: loose_line,
             });
         }
@@ -4254,7 +4315,13 @@ impl Parser {
                 }
             }
         }
-        Ok(Unit { funcs, prototypes, globals, memory_line: self.memory_line })
+        self.check_external_prototypes(&funcs, &prototypes)?;
+        if let Some(helper) = self.copy_helper()? {
+            funcs.push(helper);
+        }
+        self.strip_marks(&mut funcs)?;
+        let user_types = self.rec.first_use;
+        Ok(Unit { funcs, prototypes, globals, memory_line: self.memory_line, user_types })
     }
 
     /// Turn a top-level declaration into a global with a constant
@@ -4318,7 +4385,7 @@ impl Parser {
                     Some(e) => vec![initializer(&e, value_type).ok_or_else(|| bad(line))?],
                     None => Vec::new(),
                 };
-                Ok(Global { name, value_type, len: None, init, readonly: false, line })
+                Ok(Global { name, value_type, len: None, init, readonly: false, line, align: 0 })
             }
             Stmt::DeclArray(name, size, init, binding, _, line) => {
                 let value_type = binding.declared_type.unwrap_or(ScalarType::I32);
@@ -4326,7 +4393,7 @@ impl Parser {
                     .iter()
                     .map(|e| initializer(e, value_type).ok_or_else(|| bad(line)))
                     .collect::<Result<Vec<_>, _>>()?;
-                Ok(Global { name, value_type, len: Some(size), init, readonly: false, line })
+                Ok(Global { name, value_type, len: Some(size), init, readonly: false, line, align: 0 })
             }
             _ => Err(bad(0)),
         }
@@ -4366,107 +4433,23 @@ impl Parser {
                 ))
             }
         };
-        if name == "main" && return_type != ScalarType::I32 {
-            return Err(TranslateError::new(line, "main() must return int"));
-        }
-        self.expect_sym("(")?;
-        let mut params = Vec::new();
-        let mut param_types = Vec::new();
-        let mut param_lines = Vec::new();
-        if *self.peek() == Tok::Kw("void") && *self.peek2() == Tok::Sym(")") {
-            self.next(); // `f(void)`: no parameters
-        }
-        if !self.eat_sym(")") {
-            loop {
-                let parameter_type = match self.next() {
-                    Tok::Kw(k) if c_int_type(k).is_some() => c_int_type(k).unwrap_or(ScalarType::I32),
-                    Tok::Kw("bool") => ScalarType::Bool,
-                    Tok::Kw("void") if self.pointers && *self.peek() == Tok::Sym("*") => ScalarType::Unit,
-                    token => {
-                        return Err(TranslateError::new(
-                            self.line(),
-                            format!(
-                                "parameters must be 'int name' or 'bool name', found {}",
-                                show(&token)
-                            ),
-                        ))
-                    }
-                };
-                let parameter_type = if self.pointers {
-                    let l = self.line();
-                    self.parse_pointer_suffix(parameter_type, l, "pointer parameters")?
-                } else if self.eat_sym("*") {
-                    return Err(TranslateError::new(
-                        self.line(),
-                        "unsupported: pointer parameters are not yet translatable",
-                    ));
-                } else {
-                    parameter_type
-                };
-                let parameter_line = self.line();
-                match self.next() {
-                    Tok::Ident(p) => {
-                        params.push(p);
-                        param_types.push(parameter_type);
-                        param_lines.push(parameter_line);
-                    }
-                    t => {
-                        return Err(TranslateError::new(
-                            self.line(),
-                            format!("expected parameter name, found {}", show(&t)),
-                        ))
-                    }
-                }
-                if self.eat_sym(")") {
-                    break;
-                }
-                self.expect_sym(",")?;
-            }
-        }
-        if params.len() > 7 {
-            return Err(TranslateError::new(
-                line,
-                "unsupported: more than 7 parameters",
-            ));
-        }
-        if name == "main" && !params.is_empty() {
-            return Err(TranslateError::new(
-                line,
-                "main() cannot take parameters in the simulator entry model",
-            ));
-        }
-        if self.eat_sym(";") {
-            return Ok(ParsedFunction::Prototype(FunctionPrototype {
-                name,
-                parameters: params,
-                parameter_types: param_types,
-                return_type,
-                line,
-            }));
-        }
-        self.expect_sym("{")?;
-        let body = self.parse_block_body()?;
-        Ok(ParsedFunction::Definition(Func {
-            param_types,
-            param_mutability: vec![false; params.len()],
-            param_lines,
-            return_type,
-            origin: FunctionOrigin::Explicit,
-            name,
-            params,
-            body,
-            line,
-        }))
+        self.parse_function_rest(records::CTy::Scalar(return_type), name, line)
     }
 
     fn parse_block_body(&mut self) -> Result<Vec<Stmt>, TranslateError> {
+        // The block's scope for enums, typedefs and struct variables (an
+        // error abandons the whole parse, so it needs no pop).
+        self.rec.push_scope();
         let mut stmts = Vec::new();
         while !self.eat_sym("}") {
             if *self.peek() == Tok::Eof {
                 return Err(TranslateError::new(self.line(), "missing '}'"));
             }
             stmts.push(self.parse_stmt()?);
+            // the member stores of a struct initializer
+            self.rec.take_pending(&mut stmts);
         }
+        self.rec.pop_scope();
         Ok(stmts)
     }
 
@@ -4584,6 +4567,8 @@ impl Parser {
                     } else {
                         vec![statement]
                     };
+                    let mut statements = statements;
+                    self.rec.take_pending(&mut statements);
                     match segments.last_mut() {
                         Some(segment) => segment.extend(statements),
                         None => {
@@ -4654,6 +4639,12 @@ impl Parser {
     fn parse_case_constant(&mut self) -> Result<i64, TranslateError> {
         let line = self.line();
         let negative = self.eat_sym("-");
+        if let Tok::Ident(name) = self.peek() {
+            if let Some(value) = self.rec.enumerator(name) {
+                self.next();
+                return Ok(if negative { value.wrapping_neg() } else { value });
+            }
+        }
         match self.next() {
             Tok::Int(n) => Ok(if negative { n.wrapping_neg() } else { n }),
             other => Err(TranslateError::new(
@@ -4690,6 +4681,7 @@ impl Parser {
             })(),
             Tok::Kw("bool") | Tok::Kw("auto") => self.parse_decl(),
             ref t if is_c_int_kw(t) => self.parse_decl(),
+            _ if self.record_type_at(0) => self.parse_local_record_declaration(),
             Tok::Kw("void") if self.pointers => self.parse_decl(),
             Tok::Kw("do") => self.parse_do_while(line),
             Tok::Kw("switch") => self.parse_switch(line),
@@ -4747,13 +4739,75 @@ impl Parser {
                     },
                 ))
             })(),
-            Tok::Kw("for") => (|| -> Result<Stmt, TranslateError> {
+            Tok::Kw("for") => self.parse_for_rest(line),
+            Tok::Kw("return") => (|| -> Result<Stmt, TranslateError> {
                 self.next();
-                self.expect_sym("(")?;
+                if self.eat_sym(";") {
+                    let value = self.lower_return(None, line)?;
+                    Ok(Stmt::Return(value, ReturnProvenance::Explicit, line))
+                } else {
+                    let e = self.parse_expr()?;
+                    self.expect_sym(";")?;
+                    let value = self.lower_return(Some(e), line)?;
+                    Ok(Stmt::Return(value, ReturnProvenance::Explicit, line))
+                }
+            })(),
+            Tok::Kw("break") => (|| -> Result<Stmt, TranslateError> {
+                self.next();
+                self.expect_sym(";")?;
+                Ok(Stmt::Break(line))
+            })(),
+            Tok::Kw("continue") => (|| -> Result<Stmt, TranslateError> {
+                self.next();
+                self.expect_sym(";")?;
+                Ok(Stmt::Continue(line))
+            })(),
+            _ => (|| -> Result<Stmt, TranslateError> {
+                let e = self.parse_expr()?;
+                self.expect_sym(";")?;
+                Ok(Stmt::Expr(e, ExprStmtProvenance::Expression))
+            })(),
+        }
+    }
+
+    /// A struct, union, enum or typedef declaration inside a function.
+    #[inline(never)]
+    fn parse_local_record_declaration(&mut self) -> Result<Stmt, TranslateError> {
+        let line = self.line();
+        match self.parse_record_declaration(false)? {
+            records::Declared::Stmt(statement) => Ok(statement),
+            _ => Ok(Stmt::Expr(Expr::Num(0, ScalarType::I32, line), ExprStmtProvenance::Empty)),
+        }
+    }
+
+    /// `for (struct T *p = ...; ...)`
+    #[inline(never)]
+    fn parse_for_record_init(&mut self, line: usize) -> Result<Stmt, TranslateError> {
+        let declaration = self.parse_local_record_declaration()?;
+        if !self.rec.pending.is_empty() {
+            return Err(TranslateError::new(
+                line,
+                "'for' cannot declare a struct with an initializer inside its parentheses; declare it before the loop",
+            ));
+        }
+        Ok(declaration)
+    }
+
+    /// `for (` ... after the parenthesis, in the loop's own scope.
+    #[inline(never)]
+    fn parse_for_rest(&mut self, line: usize) -> Result<Stmt, TranslateError> {
+        self.next();
+        self.expect_sym("(")?;
+        // the loop's own scope (an error abandons the parse, no pop needed)
+        self.rec.push_scope();
+        {
+            {
                 let init = if self.eat_sym(";") {
                     None
                 } else {
-                    let s = if matches!(self.peek(), Tok::Kw("bool") | Tok::Kw("auto"))
+                    let s = if self.record_type_at(0) {
+                        self.parse_for_record_init(line)?
+                    } else if matches!(self.peek(), Tok::Kw("bool") | Tok::Kw("auto"))
                         || is_c_int_kw(self.peek())
                     {
                         self.parse_decl()?
@@ -4779,6 +4833,7 @@ impl Parser {
                     Some(e)
                 };
                 let (body, body_form) = self.parse_stmt_as_block()?;
+                self.rec.pop_scope();
                 Ok(Stmt::For(
                     init,
                     cond,
@@ -4790,32 +4845,7 @@ impl Parser {
                         line,
                     },
                 ))
-            })(),
-            Tok::Kw("return") => (|| -> Result<Stmt, TranslateError> {
-                self.next();
-                if self.eat_sym(";") {
-                    Ok(Stmt::Return(None, ReturnProvenance::Explicit, line))
-                } else {
-                    let e = self.parse_expr()?;
-                    self.expect_sym(";")?;
-                    Ok(Stmt::Return(Some(e), ReturnProvenance::Explicit, line))
-                }
-            })(),
-            Tok::Kw("break") => (|| -> Result<Stmt, TranslateError> {
-                self.next();
-                self.expect_sym(";")?;
-                Ok(Stmt::Break(line))
-            })(),
-            Tok::Kw("continue") => (|| -> Result<Stmt, TranslateError> {
-                self.next();
-                self.expect_sym(";")?;
-                Ok(Stmt::Continue(line))
-            })(),
-            _ => (|| -> Result<Stmt, TranslateError> {
-                let e = self.parse_expr()?;
-                self.expect_sym(";")?;
-                Ok(Stmt::Expr(e, ExprStmtProvenance::Expression))
-            })(),
+            }
         }
     }
 
@@ -4823,7 +4853,9 @@ impl Parser {
         if self.eat_sym("{") {
             Ok((self.parse_block_body()?, BodyForm::Braced))
         } else {
-            Ok((vec![self.parse_stmt()?], BodyForm::SingleStatement))
+            let mut body = vec![self.parse_stmt()?];
+            self.rec.take_pending(&mut body);
+            Ok((body, BodyForm::SingleStatement))
         }
     }
 
@@ -4876,6 +4908,45 @@ impl Parser {
                 ))
             }
         };
+        self.parse_decl_named(declaration_type, inferred, name, line)
+    }
+
+    /// A declaration after its type and name: `[N] = {...};`, `= value;`.
+    /// The name enters the parser's scope (it shadows outer enumerators,
+    /// typedefs and struct variables).
+    fn parse_decl_named(
+        &mut self,
+        declaration_type: Option<ScalarType>,
+        inferred: bool,
+        name: String,
+        line: usize,
+    ) -> Result<Stmt, TranslateError> {
+        let statement = self.parse_decl_named_inner(declaration_type, inferred, name, line)?;
+        match &statement {
+            Stmt::Decl(name, init, binding, _) => {
+                if let Some(e) = init {
+                    self.check_store(binding.declared_type, e, name, line)?;
+                }
+                self.rec.declare_scalar(name, binding.declared_type, None)
+            }
+            Stmt::DeclArray(name, size, init, binding, _, _) => {
+                for e in init {
+                    self.check_store(binding.declared_type, e, name, line)?;
+                }
+                self.rec.declare_scalar(name, binding.declared_type, Some(*size))
+            }
+            _ => {}
+        }
+        Ok(statement)
+    }
+
+    fn parse_decl_named_inner(
+        &mut self,
+        declaration_type: Option<ScalarType>,
+        inferred: bool,
+        name: String,
+        line: usize,
+    ) -> Result<Stmt, TranslateError> {
         if self.eat_sym("[") {
             if inferred {
                 return Err(TranslateError::new(
@@ -4889,20 +4960,17 @@ impl Parser {
                     "unsupported: bool arrays are not translatable; use int arrays",
                 ));
             }
-            let size = match self.next() {
-                Tok::Int(n) if n > 0 && n <= 4096 => Some(n as usize),
+            let size = match self.peek() {
                 // `char s[] = "..."` / `int a[] = {...}`: the size comes
                 // from the initializer
-                Tok::Sym("]") if self.pointers && *self.peek() == Tok::Sym("=") => {
-                    self.pos -= 1;
-                    None
-                }
-                _ => {
+                Tok::Sym("]") if self.pointers && *self.peek2() == Tok::Sym("=") => None,
+                Tok::Sym("]") => {
                     return Err(TranslateError::new(
                         line,
                         "array size must be a constant between 1 and 4096",
                     ))
                 }
+                _ => Some(self.parse_array_size(line)?),
             };
             self.expect_sym("]")?;
             let mut init = Vec::new();
@@ -5028,11 +5096,14 @@ impl Parser {
     fn assignment_rest(&mut self, lhs: Expr, provenance: AssignmentProvenance) -> Result<Expr, TranslateError> {
         let line = self.line();
         self.next();
+        if self.is_marked(&lhs) {
+            return self.record_assignment(lhs, provenance, line);
+        }
         let lv = self.assignment_target(&lhs, line)?;
         self.enter()?;
         let rhs = self.parse_assign();
         self.leave();
-        Ok(Expr::Assign(Box::new(lv), Box::new(rhs?), provenance, line))
+        self.finish_assignment(&lhs, lv, rhs?, provenance, line)
     }
 
     #[inline(never)]
@@ -5057,6 +5128,8 @@ enum Postfix {
     Call,
     Increment,
     As,
+    /// `.member` / `->member`
+    Member,
 }
 
 fn postfix_kind(token: &Tok) -> Postfix {
@@ -5065,6 +5138,7 @@ fn postfix_kind(token: &Tok) -> Postfix {
         Tok::Sym("(") => Postfix::Call,
         Tok::Sym("++") | Tok::Sym("--") => Postfix::Increment,
         Tok::Kw("as") => Postfix::As,
+        Tok::Sym(".") | Tok::Sym("->") => Postfix::Member,
         _ => Postfix::None,
     }
 }
@@ -5133,7 +5207,7 @@ impl Parser {
             let line = self.line();
             self.next();
             let rhs = self.parse_binary(prec + 1)?;
-            lhs = Expr::Binary(op, Box::new(lhs), Box::new(rhs), line);
+            lhs = self.record_binary(op, lhs, rhs, line)?;
         }
         Ok(lhs)
     }
@@ -5165,6 +5239,7 @@ impl Parser {
     #[inline(never)]
     fn parse_unary_other(&mut self, line: usize) -> Result<Expr, TranslateError> {
         match self.peek() {
+            Tok::Sym("(") if self.record_type_at(1) => self.record_cast(line),
             Tok::Sym("(") if is_c_int_kw(self.peek2()) && *self.peek3() == Tok::Sym(")") => (|| -> Result<Expr, TranslateError> {
                 // C cast: (type) operand
                 self.next();
@@ -5181,6 +5256,9 @@ impl Parser {
             })(),
             Tok::Ident(name) if name == "sizeof" => (|| -> Result<Expr, TranslateError> {
                 self.next();
+                if self.record_type_at(1) && *self.peek() == Tok::Sym("(") {
+                    return self.record_sizeof_type(line);
+                }
                 if *self.peek() == Tok::Sym("(") && is_c_int_kw(self.peek2()) && *self.peek3() == Tok::Sym(")") {
                     self.next();
                     let Tok::Kw(keyword) = self.next() else {
@@ -5194,7 +5272,8 @@ impl Parser {
                         .unwrap_or("sizeof(int)");
                     return Ok(Expr::Unary(op, Box::new(Expr::Num(0, ScalarType::I32, line)), line));
                 }
-                Ok(Expr::Unary("sizeof", Box::new(self.parse_unary_operand()?), line))
+                let operand = self.parse_unary_operand()?;
+                self.record_sizeof_expr(operand, line)
             })(),
             Tok::Sym("*") | Tok::Sym("&") if self.pointers => self.parse_pointer_unary(line),
             Tok::Sym("(")
@@ -5226,6 +5305,9 @@ impl Parser {
                 };
                 self.next();
                 let target = self.parse_unary_operand()?;
+                if self.is_marked(&target) {
+                    return self.record_increment(target, provenance, line);
+                }
                 let Some(lv) = Self::to_lvalue(&target) else {
                     return Err(TranslateError::new(line, "++/-- needs a variable"));
                 };
@@ -5243,13 +5325,24 @@ impl Parser {
     fn parse_postfix(&mut self) -> Result<Expr, TranslateError> {
         let line = self.line();
         let mut e = self.parse_primary()?;
+        let mut chain = 0usize;
         loop {
             let kind = postfix_kind(self.peek());
             if kind == Postfix::None {
                 return Ok(e);
             }
+            // `a.b.c.d...`, `p->next->next...`: bounded like operator chains
+            chain += 1;
+            if chain > crate::limits::MAX_NESTING_DEPTH {
+                return Err(self.long_chain_error());
+            }
             e = self.postfix_suffix(kind, e, line)?;
         }
+    }
+
+    #[inline(never)]
+    fn long_chain_error(&self) -> TranslateError {
+        TranslateError::new(self.line(), long_expression_message())
     }
 
     #[inline(never)]
@@ -5258,6 +5351,7 @@ impl Parser {
             Postfix::Index => self.index_suffix(e, line),
             Postfix::Call => self.call_suffix(e, line),
             Postfix::Increment => self.increment_suffix(e, line),
+            Postfix::Member => self.member_suffix(e, line),
             Postfix::As | Postfix::None => self.as_suffix(e, line),
         }
     }
@@ -5289,7 +5383,8 @@ impl Parser {
         self.expect_sym("]")?;
         match e {
             Expr::Var(name, l) => Ok(Expr::Index(name, Box::new(idx), l)),
-            _ => Err(TranslateError::new(line, "only simple arrays can be indexed (a[i])")),
+            // struct arrays and pointers, `s.name[i]`, `p->items[i]`
+            other => self.index_record(other, idx, line),
         }
     }
 
@@ -5309,7 +5404,7 @@ impl Parser {
                 self.expect_sym(",")?;
             }
         }
-        Ok(Expr::Call(name, args, l))
+        self.finish_call(name, args, l)
     }
 
     #[inline(never)]
@@ -5320,6 +5415,9 @@ impl Parser {
             AssignmentProvenance::PostfixDecrement
         };
         self.next();
+        if self.is_marked(&e) {
+            return self.record_increment(e, provenance, line);
+        }
         let Some(lv) = Self::to_lvalue(&e) else {
             return Err(TranslateError::new(line, "++/-- needs a variable"));
         };
@@ -5351,7 +5449,7 @@ impl Parser {
         match self.next() {
             Tok::Int(n) => Ok(Expr::Num(n, ScalarType::I32, line)),
             Tok::Bool(value) => Ok(Expr::Num(i64::from(value), ScalarType::Bool, line)),
-            Tok::Ident(n) => Ok(Expr::Var(n, line)),
+            Tok::Ident(n) => self.name_expr(n, line),
             Tok::Str(bytes) => Ok(self.string_literal(bytes, line)),
             t => Err(TranslateError::new(
                 line,
@@ -5690,7 +5788,7 @@ fn match_sym(s: &str) -> &'static str {
     [
         "==", "!=", "<=", ">=", "&&", "||", "<<", ">>", "+=", "-=", "*=", "/=", "%=", "++", "--",
         "&=", "|=", "^=", "<<=", ">>=", "+", "-", "*", "/", "%", "=", "<", ">", "!", "&", "|", "^", "~", "(", ")", "{", "}", "[",
-        "]", ";", ",", ":",
+        "]", ";", ",", ":", ".", "->",
     ]
     .iter()
     .find(|k| **k == s)
@@ -5886,6 +5984,16 @@ impl CodeGen {
             }
             for init in &g.init {
                 if let GlobalInit::Addr(target) = init {
+                    // struct and union images were type-checked by the parser
+                    if g.align > 0 {
+                        if !unit.globals.iter().any(|h| h.name == *target) {
+                            return Err(TranslateError::new(
+                                g.line,
+                                format!("global initializer refers to '{target}', which is not a global variable"),
+                            ));
+                        }
+                        continue;
+                    }
                     let Some(target_global) = unit.globals.iter().find(|h| h.name == *target) else {
                         return Err(TranslateError::new(
                             g.line,
@@ -5994,6 +6102,10 @@ impl CodeGen {
                     self.line(if readonly { ".section .rodata" } else { ".data" });
                     first = false;
                 }
+                if g.align > 0 {
+                    self.emit_record_data(g);
+                    continue;
+                }
                 let size = self.elem_bytes(g.value_type) as usize;
                 let directive = match size {
                     1 => ".byte",
@@ -6030,7 +6142,57 @@ impl CodeGen {
         self.globals = globals;
     }
 
+    /// A struct or union global: bytes, with each pointer initialized to
+    /// an address as one `.word` / `.dword`.
+    fn emit_record_data(&mut self, g: &Global) {
+        if g.align > 1 {
+            self.line(&format!(".align {}", g.align.trailing_zeros()));
+        }
+        let _ = writeln!(self.out, "{}:", Self::global_label(&g.name));
+        let pointer = if self.is_rv64() { 8 } else { 4 };
+        let mut bytes: Vec<String> = Vec::new();
+        let mut used = 0usize;
+        let mut zeros = 0usize;
+        let flush = |this: &mut Self, bytes: &mut Vec<String>, zeros: &mut usize| {
+            for chunk in bytes.chunks(16) {
+                this.line(&format!(".byte {}", chunk.join(", ")));
+            }
+            bytes.clear();
+            if *zeros > 0 {
+                this.line(&format!(".zero {zeros}"));
+                *zeros = 0;
+            }
+        };
+        for init in &g.init {
+            match init {
+                GlobalInit::Int(v) => {
+                    if *v == 0 && bytes.is_empty() {
+                        zeros += 1;
+                    } else {
+                        if zeros > 0 {
+                            flush(self, &mut bytes, &mut zeros);
+                        }
+                        bytes.push(((*v as u64) & 0xff).to_string());
+                    }
+                    used += 1;
+                }
+                GlobalInit::Addr(target) => {
+                    flush(self, &mut bytes, &mut zeros);
+                    let directive = if pointer == 8 { ".dword" } else { ".word" };
+                    self.line(&format!("{directive} {}", Self::global_label(target)));
+                    used += pointer;
+                }
+            }
+        }
+        zeros += g.len.unwrap_or(0).saturating_sub(used);
+        flush(self, &mut bytes, &mut zeros);
+    }
+
     fn emit_func(&mut self, f: &Func) -> Result<(), TranslateError> {
+        if self.annotate && f.line == 0 {
+            // generated code (the struct copy helper) belongs to no line
+            let _ = writeln!(self.out, "{ANNOTATE_MARK}0");
+        }
         self.mark(f.line);
         // Frame layout (sp stays fixed for the whole function):
         //   0..4/8       ra
@@ -8231,7 +8393,7 @@ mod tests {
     }
 
     fn assert_cpp_parses(source: &str) {
-        let unit = parse_cpp_unit(source).expect("C++ subset source should parse");
+        let unit = parse_cpp_unit(source, 32).expect("C++ subset source should parse");
         assert!(!unit.funcs.is_empty());
     }
 
@@ -8288,6 +8450,7 @@ mod tests {
             "bool ready(int value, bool enabled);
              bool ready(int value, bool enabled) { return enabled and value; }
              int main() { bool enabled = true; return ready(7, enabled); }",
+            32,
         )
         .expect("native C++ bool source should parse");
         assert_eq!(unit.prototypes.len(), 1);
@@ -8535,14 +8698,18 @@ mod tests {
     }
 
     #[test]
-    fn cpp_user_defined_types_fail_gracefully() {
+    fn cpp_user_defined_types_beyond_the_subset_fail_gracefully() {
+        // enums, structs and unions are part of the C++ subset now; classes
+        // and struct pointers are not.
+        assert_cpp_rejected("class Point { int x; };\nint main() { return 0; }", 1, "classes");
         assert_cpp_rejected(
-            "struct Point { int x; };\nint main() { return 0; }",
-            1,
-            "structs",
+            "struct P { int x; };\nint main() { P p; P *q = &p; return q->x; }",
+            2,
+            "unsupported",
         );
-        assert_cpp_rejected("enum Mode { Ready };", 1, "user-defined types");
-        assert_cpp_rejected("union Value { int number; };", 1, "user-defined types");
+        assert_cpp_parses("struct Point { int x; };\nint main() { Point p; p.x = 1; return p.x; }");
+        assert_cpp_parses("enum Mode { Ready };\nint main() { return Ready; }");
+        assert_cpp_parses("union Value { int number; };\nint main() { Value v; v.number = 2; return v.number; }");
     }
 
     #[test]
@@ -9423,7 +9590,7 @@ mod tests {
         assert!(cpp.contains(" and "), "{cpp}");
         assert!(cpp.contains("not blocked"), "{cpp}");
         assert!(cpp.contains(" or "), "{cpp}");
-        parse_cpp_unit(&cpp).expect("translated C++ should parse");
+        parse_cpp_unit(&cpp, 32).expect("translated C++ should parse");
         assert_eq!(run_cpp(&cpp), 7);
     }
 
@@ -9883,9 +10050,11 @@ mod tests {
     }
 
     #[test]
-    fn c_struct_fails_gracefully() {
-        let err = c_to_asm("struct P { int x; };").unwrap_err();
-        assert!(err.message.contains("struct"), "message: {}", err.message);
+    fn c_struct_bit_fields_fail_gracefully() {
+        // Structs compile now; the parts of them the subset leaves out
+        // still fail with a clear message.
+        let err = c_to_asm("struct P { int x : 3; };\nint main() { return 0; }").unwrap_err();
+        assert!(err.message.contains("bit-fields ('x' has a : width)"), "message: {}", err.message);
     }
 
     // -- asm → C ------------------------------------------------------------

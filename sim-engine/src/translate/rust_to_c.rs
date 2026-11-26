@@ -894,7 +894,7 @@ mod tests {
                 error.line, error.message
             )
         });
-        super::super::parse_cpp_unit(&translated).unwrap_or_else(|error| {
+        super::super::parse_cpp_unit(&translated, 32).unwrap_or_else(|error| {
             panic!(
                 "translated C++ did not reparse at line {}: {}\n{translated}",
                 error.line, error.message

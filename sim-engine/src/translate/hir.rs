@@ -112,6 +112,7 @@ pub(super) fn typed_hir_from_c(source: &str) -> Result<TypedHir, TranslateError>
     let tokens = lex(source)?;
     let mut parser = Parser::new_c(tokens);
     let unit = parser.parse_unit()?;
+    super::records::reject_user_types(&unit, "C", "Rust")?;
     super::reject_memory_features(&unit, "C", "Rust")?;
     super::reject_extended_types(&unit, "C", "Rust")?;
     Ok(build_hir(HirLanguage::C, unit))
@@ -122,7 +123,8 @@ pub(super) fn typed_hir_from_rust(source: &str) -> Result<TypedHir, TranslateErr
 }
 
 pub(super) fn typed_hir_from_cpp(source: &str) -> Result<TypedHir, TranslateError> {
-    let unit = parse_cpp_unit(source)?;
+    let unit = parse_cpp_unit(source, 32)?;
+    super::records::reject_user_types(&unit, "C++", "Rust")?;
     super::reject_extended_types(&unit, "C++", "Rust")?;
     Ok(build_hir(HirLanguage::Cpp, unit))
 }

@@ -222,6 +222,8 @@ pub fn vocabulary(lang: Lang) -> &'static [&'static str] {
             "*", "/", "%", "<<", ">>", "&", "|", "^", "!", "~", "&&", "||", "?", ":", "++", "--",
             "+=", "0", "1", "2147483647", "-2147483648", "99999999999999999999", "0x10", "'a'",
             "\"s\"", "#define", "#include", "\n", "true", "false", "auto", "sizeof", "/*", "//",
+            "union", "enum", "typedef", ".", "->", "P", "struct P", "struct P {", "int x;", "} p;",
+            "p.x", "p->x", "{1, 2}", ".x =",
         ],
         Lang::Rust => &[
             "fn", "let", "mut", "if", "else", "while", "loop", "for", "in", "..", "..=", "match",

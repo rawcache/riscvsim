@@ -151,7 +151,46 @@ pub fn worst_cases(lang: Lang) -> Vec<(&'static str, String)> {
                     "index nesting",
                     main(format!("return {}0{};", "a[".repeat(depth - 1), "]".repeat(depth - 1))),
                 ));
+                // Structs and unions defined inside each other: the type
+                // parser, layout, initializer matcher and member chains
+                // recurse (or loop) once per level.
+                for kind in ["struct", "union"] {
+                    let open: String = (0..depth).map(|i| format!("{kind} S{i} {{ ")).collect();
+                    let close = format!("int v; {}}};", "} m; ".repeat(depth - 1));
+                    let types = format!("{open}{close}\n");
+                    cases.push((
+                        if kind == "struct" { "struct nesting" } else { "union nesting" },
+                        format!("{types}int main() {{ return 0; }}\n"),
+                    ));
+                    cases.push((
+                        if kind == "struct" { "nested initializer" } else { "nested union initializer" },
+                        format!(
+                            "{types}int main() {{ {kind} S0 x = {}1{}; return x{}.v; }}\n",
+                            "{".repeat(depth),
+                            "}".repeat(depth),
+                            ".m".repeat(depth - 1)
+                        ),
+                    ));
+                }
             }
+        }
+    }
+    // Deep struct nesting without braces (each typedef wraps the last one):
+    // the record depth limit bounds it.
+    for depth in [limit - 1, limit, limit + 1, 300] {
+        if let Lang::C | Lang::Cpp = lang {
+            let mut types = String::from("typedef struct { int v; } T0;\n");
+            for i in 1..depth {
+                types.push_str(&format!("typedef struct {{ T{} m; }} T{i};\n", i - 1));
+            }
+            cases.push((
+                "typedef nesting",
+                format!(
+                    "{types}int main() {{ T{} x = {{1}}; return x{}.v; }}\n",
+                    depth - 1,
+                    ".m".repeat(depth - 1)
+                ),
+            ));
         }
     }
     // Chains that brackets do not show: the parser backstop bounds these.
@@ -184,6 +223,20 @@ pub fn worst_cases(lang: Lang) -> Vec<(&'static str, String)> {
                     main(format!("{} x = 2; return x;", "if (x == 1) x = 1; else ".repeat(depth))),
                 ));
                 cases.push(("assignment chain", main(format!("int y; {}1; return x;", "x = y = ".repeat(depth)))));
+                cases.push((
+                    "struct copy chain",
+                    format!(
+                        "struct P {{ int v; }};\nint main() {{ struct P a; struct P b; a.v = 1; {}a; return b.v; }}\n",
+                        "b = ".repeat(depth)
+                    ),
+                ));
+                cases.push((
+                    "member chain",
+                    format!(
+                        "struct L {{ int v; struct L *n; struct L *self; }};\nint main() {{ struct L a; a.v = 1; a.n = &a; return a{}.v; }}\n",
+                        ".n->n->self->self".repeat(depth / 4)
+                    ),
+                ));
                 cases.push(("macro nesting", format!(
                     "#define F(a) (a)\nint main() {{ return {}1{}; }}\n",
                     "F(".repeat(depth.min(limit + 1)),
